@@ -1,0 +1,76 @@
+@layer components {
+  .side-nav {
+    @apply flex-col flex-auto flex-shrink-0 z-20 transition-all ease-in-out duration-200 print:hidden sticky top-0 h-screen;
+  }
+
+  .side-nav-content {
+    height: calc(100vh - theme("spacing.16"));
+    @apply overflow-y-auto;
+  }
+
+  .side-nav-light {
+    @apply bg-white border-r border-gray-200;
+  }
+
+  .side-nav-dark {
+    @apply bg-gray-800 border-r border-gray-600;
+  }
+
+  .side-nav-bg {
+    border-right: 1px solid rgba(41, 196, 216, 0.15);
+    background: linear-gradient(180deg, #0D1938 0%, #1B2D6E 60%, #243d8f 100%);
+    color: #ffffff;
+
+    .menu-title {
+      color: rgba(255, 255, 255, 0.65) !important;
+    }
+
+    .menu-item {
+      color: rgba(255, 255, 255, 0.92);
+
+      &.menu-item-hoverable:hover {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.12);
+      }
+
+      &.menu-item-active {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.18);
+      }
+    }
+
+    .menu-collapse-item {
+      color: rgba(255, 255, 255, 0.92);
+
+      &:hover {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.12);
+      }
+
+      &.menu-collapse-item-active {
+        color: #ffffff;
+        background-color: rgba(255, 255, 255, 0.18);
+      }
+    }
+
+    .menu-item svg,
+    .menu-collapse-item svg {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .menu-item.menu-item-active svg,
+    .menu-collapse-item.menu-collapse-item-active svg {
+      color: #ffffff;
+    }
+
+    .text-gray-500,
+    .text-gray-600,
+    .text-gray-400 {
+      color: rgba(255, 255, 255, 0.65) !important;
+    }
+  }
+
+  .side-nav-bg.dark {
+    background: linear-gradient(180deg, #060d1e 0%, #0D1938 60%, #1B2D6E 100%);
+  }
+}

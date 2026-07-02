@@ -1,0 +1,158 @@
+import {
+    NAV_ITEM_TYPE_TITLE,
+    NAV_ITEM_TYPE_ITEM,
+} from '@/constants/navigation.constant'
+
+import type { NavigationTree } from '@/@types/navigation'
+
+const navigationConfig: NavigationTree[] = [
+    // === DASHBOARD (all roles) ===
+    {
+        key:          'home',
+        path:         '/home',
+        title:        'Dashboard',
+        translateKey: 'nav.home',
+        icon:         'home',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    [],
+        subMenu:      [],
+    },
+
+    // === SALES SECTION ===
+    {
+        key:          'nav.sales',
+        path:         '',
+        title:        'Sales',
+        translateKey: 'nav.sales',
+        icon:         '',
+        type:         NAV_ITEM_TYPE_TITLE,
+        authority:    ['sales', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'klien',
+        path:         '/klien',
+        title:        'Klien',
+        translateKey: 'nav.klien',
+        icon:         'handshake',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['sales', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'project',
+        path:         '/project',
+        title:        'Project',
+        translateKey: 'nav.project',
+        icon:         'briefcase',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['sales', 'manager'],
+        subMenu:      [],
+    },
+
+    // === OPERASIONAL SECTION ===
+    {
+        key:          'nav.operasional',
+        path:         '',
+        title:        'Operasional',
+        translateKey: 'nav.operasional',
+        icon:         '',
+        type:         NAV_ITEM_TYPE_TITLE,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'armada',
+        path:         '/armada',
+        title:        'Armada',
+        translateKey: 'nav.armada',
+        icon:         'truck',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'supir',
+        path:         '/supir',
+        title:        'Supir',
+        translateKey: 'nav.supir',
+        icon:         'users',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'vendor',
+        path:         '/vendor',
+        title:        'Vendor',
+        translateKey: 'nav.vendor',
+        icon:         'building',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'jadwal',
+        path:         '/jadwal',
+        title:        'Jadwal',
+        translateKey: 'nav.jadwal',
+        icon:         'calendar',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'trip',
+        path:         '/trip',
+        title:        'Trip Monitor',
+        translateKey: 'nav.trip',
+        icon:         'mapPin',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'laporan',
+        path:         '/laporan',
+        title:        'Laporan',
+        translateKey: 'nav.laporan',
+        icon:         'clipboard',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'keuangan', 'manager'],
+        subMenu:      [],
+    },
+
+    // === KEUANGAN SECTION ===
+    {
+        key:          'nav.keuangan',
+        path:         '',
+        title:        'Keuangan',
+        translateKey: 'nav.keuangan',
+        icon:         '',
+        type:         NAV_ITEM_TYPE_TITLE,
+        authority:    ['keuangan', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'faktur',
+        path:         '/faktur',
+        title:        'Faktur',
+        translateKey: 'nav.faktur',
+        icon:         'receipt',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['keuangan', 'manager'],
+        subMenu:      [],
+    },
+    {
+        key:          'rekonsiliasi',
+        path:         '/rekonsiliasi',
+        title:        'Rekonsiliasi',
+        translateKey: 'nav.rekonsiliasi',
+        icon:         'repeat',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['keuangan', 'manager'],
+        subMenu:      [],
+    },
+]
+
+export default navigationConfig
