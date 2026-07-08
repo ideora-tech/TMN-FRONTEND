@@ -32,9 +32,10 @@ export default {
 
                     return {
                         id:          json.data.pengguna.id_pengguna,
-                        name:        json.data.pengguna.username,
+                        name:        json.data.pengguna.karyawan?.nama_karyawan ?? json.data.pengguna.username,
                         email:       json.data.pengguna.email,
                         accessToken: json.data.token,
+                        kodePeran:   json.data.pengguna.kode_peran ?? null,
                     }
                 } catch {
                     return null
@@ -45,8 +46,10 @@ export default {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.accessToken = (user as Record<string, unknown>).accessToken
+                const u = user as Record<string, unknown>
+                token.accessToken = u.accessToken
                 token.id          = user.id
+                token.kodePeran   = u.kodePeran ?? null
             }
             return token
         },
@@ -57,7 +60,10 @@ export default {
                 user: {
                     ...session.user,
                     id:        token.id as string,
-                    authority: ['user'],
+                    kodePeran: token.kodePeran as string | null,
+                    authority: token.kodePeran
+                        ? [(token.kodePeran as string).toLowerCase()]
+                        : ['user'],
                 },
             }
         },

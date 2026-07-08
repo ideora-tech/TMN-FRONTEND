@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
@@ -8,17 +8,18 @@ import { ROUTES } from '@/constants/route.constant'
 import { laporanService, Laporan } from '@/services/laporan.service'
 import dayjs from 'dayjs'
 
-export default function LaporanDetailPage({ params }: { params: { id: string } }) {
+export default function LaporanDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
     const [laporan, setLaporan] = useState<Laporan | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        laporanService.get(params.id)
+        laporanService.get(id)
             .then(setLaporan)
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
-    }, [params.id])
+    }, [id])
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!laporan) return <div className="p-6 text-red-500">Laporan tidak ditemukan.</div>

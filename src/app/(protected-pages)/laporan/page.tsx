@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tooltip, toast, Notification } from '@/components/ui'
@@ -9,6 +9,8 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { laporanService, Laporan } from '@/services/laporan.service'
 import dayjs from 'dayjs'
+import axios from 'axios'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export default function LaporanPage() {
     const router = useRouter()
@@ -21,6 +23,7 @@ export default function LaporanPage() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
+    const [downloading, setDownloading] = useState<'excel' | 'pdf' | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -33,12 +36,34 @@ export default function LaporanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const downloadFile = async (url: string, filename: string, type: 'excel' | 'pdf') => {
+        setDownloading(type)
+        try {
+            const res = await axios.get(url, { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloading(null)
+        }
+    }
+
+    const handleExcelDownload = () => downloadFile(API_ENDPOINTS.LAPORAN_EXPORT_EXCEL, `laporan-${new Date().toISOString().slice(0,10)}.xlsx`, 'excel')
+    const handlePdfDownload   = () => downloadFile(API_ENDPOINTS.LAPORAN_EXPORT_PDF,   `laporan-${new Date().toISOString().slice(0,10)}.pdf`,  'pdf')
 
     const filteredList = list.filter(l =>
         !search || l.id_proyek.toLowerCase().includes(search.toLowerCase())
@@ -92,14 +117,29 @@ export default function LaporanPage() {
                 header={{
                     content: <h4>Laporan</h4>,
                     extra: (
-                        <Button
-                            variant="solid" size="sm"
-                            customColorClass={() => 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white border-emerald-500'}
-                            icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.LAPORAN_BARU)}
-                        >
-                            Buat Laporan
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm" variant="default"
+                                loading={downloading === 'excel'}
+                                onClick={handleExcelDownload}
+                            >
+                                Export Excel
+                            </Button>
+                            <Button
+                                size="sm" variant="default"
+                                loading={downloading === 'pdf'}
+                                onClick={handlePdfDownload}
+                            >
+                                Export PDF
+                            </Button>
+                            <Button
+                                variant="solid" size="sm"
+                                icon={<HiPlusCircle />}
+                                onClick={() => router.push(ROUTES.LAPORAN_BARU)}
+                            >
+                                Buat Laporan
+                            </Button>
+                        </div>
                     ),
                     bordered: false,
                 }}

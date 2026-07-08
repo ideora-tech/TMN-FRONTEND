@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
@@ -47,7 +47,7 @@ export default function RekonsiliasiPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -112,7 +112,6 @@ export default function RekonsiliasiPage() {
                     extra: (
                         <Button
                             variant="solid" size="sm"
-                            customColorClass={() => 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white border-emerald-500'}
                             icon={<HiPlusCircle />}
                             onClick={() => router.push(ROUTES.REKONSILIASI_BARU)}
                         >

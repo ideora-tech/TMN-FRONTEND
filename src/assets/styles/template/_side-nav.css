@@ -30,12 +30,12 @@
 
       &.menu-item-hoverable:hover {
         color: #ffffff;
-        background-color: rgba(255, 255, 255, 0.12);
+        background-color: rgba(255, 255, 255, 0.10);
       }
 
       &.menu-item-active {
         color: #ffffff;
-        background-color: rgba(255, 255, 255, 0.18);
+        background-color: rgba(74, 148, 255, 0.28);
       }
     }
 
@@ -44,12 +44,12 @@
 
       &:hover {
         color: #ffffff;
-        background-color: rgba(255, 255, 255, 0.12);
+        background-color: rgba(255, 255, 255, 0.10);
       }
 
       &.menu-collapse-item-active {
         color: #ffffff;
-        background-color: rgba(255, 255, 255, 0.18);
+        background-color: rgba(255, 255, 255, 0.08);
       }
     }
 
@@ -60,7 +60,7 @@
 
     .menu-item.menu-item-active svg,
     .menu-collapse-item.menu-collapse-item-active svg {
-      color: #ffffff;
+      color: #4a94ff;
     }
 
     .text-gray-500,

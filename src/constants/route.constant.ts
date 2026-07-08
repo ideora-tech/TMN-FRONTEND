@@ -39,4 +39,63 @@ export const ROUTES = {
     REKONSILIASI:        '/rekonsiliasi',
     REKONSILIASI_BARU:   '/rekonsiliasi/baru',
     REKONSILIASI_DETAIL: (id: string) => `/rekonsiliasi/${id}`,
+
+    PENGGUNA:        '/pengguna',
+    PENGGUNA_BARU:   '/pengguna/baru',
+    PENGGUNA_DETAIL: (id: string) => `/pengguna/${id}`,
+
+    PERAN:        '/peran',
+    PERAN_BARU:   '/peran/baru',
+    PERAN_DETAIL: (id: string) => `/peran/${id}`,
+
+    JENIS_KENDARAAN:        '/jenis-kendaraan',
+    JENIS_KENDARAAN_BARU:   '/jenis-kendaraan/baru',
+    JENIS_KENDARAAN_DETAIL: (id: string) => `/jenis-kendaraan/${id}`,
+
+    LOKASI_KANTOR:        '/lokasi-kantor',
+    LOKASI_KANTOR_BARU:   '/lokasi-kantor/baru',
+    LOKASI_KANTOR_DETAIL: (id: string) => `/lokasi-kantor/${id}`,
+
+    KONTRAK_VENDOR:        '/kontrak-vendor',
+    KONTRAK_VENDOR_BARU:   '/kontrak-vendor/baru',
+    KONTRAK_VENDOR_DETAIL: (id: string) => `/kontrak-vendor/${id}`,
+
+    DEPARTEMEN:        '/departemen',
+    DEPARTEMEN_BARU:   '/departemen/baru',
+    DEPARTEMEN_DETAIL: (id: string) => `/departemen/${id}`,
+
+    JABATAN:        '/jabatan',
+    JABATAN_BARU:   '/jabatan/baru',
+    JABATAN_DETAIL: (id: string) => `/jabatan/${id}`,
+
+    KARYAWAN:        '/karyawan',
+    KARYAWAN_BARU:   '/karyawan/baru',
+    KARYAWAN_DETAIL: (id: string) => `/karyawan/${id}`,
+
+    PENUGASAN:        '/penugasan',
+    PENUGASAN_BARU:   '/penugasan/baru',
+    PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,
+
+    PERUSAHAAN:        '/perusahaan',
+    PERUSAHAAN_BARU:   '/perusahaan/baru',
+    PERUSAHAAN_DETAIL: (id: string) => `/perusahaan/${id}`,
+
+    MENU_ADMIN:        '/menu-admin',
+    MENU_ADMIN_BARU:   '/menu-admin/baru',
+    MENU_ADMIN_DETAIL: (id: string) => `/menu-admin/${id}`,
+
+    MODUL:        '/modul',
+    MODUL_BARU:   '/modul/baru',
+    MODUL_DETAIL: (id: string) => `/modul/${id}`,
+
+    LOG_ERROR:        '/log-error',
+    LOG_ERROR_DETAIL: (id: string) => `/log-error/${id}`,
+
+    RUTE:        '/rute',
+    RUTE_BARU:   '/rute/baru',
+    RUTE_DETAIL: (id: string) => `/rute/${id}`,
+
+    PENAWARAN:        '/penawaran',
+    PENAWARAN_BARU:   '/penawaran/baru',
+    PENAWARAN_DETAIL: (id: string) => `/penawaran/${id}`,
 } as const

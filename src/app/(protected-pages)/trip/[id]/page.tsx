@@ -1,11 +1,13 @@
-'use client'
-import { useEffect, useState } from 'react'
+﻿'use client'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { tripService, Trip, StatusTrip } from '@/services/trip.service'
+import { formatRupiah } from '@/utils/formatNumber'
+import axios from 'axios'
 import dayjs from 'dayjs'
 
 const statusClass: Record<string, string> = {
@@ -15,25 +17,52 @@ const statusClass: Record<string, string> = {
     dibatalkan:  'bg-red-100 text-red-500',
 }
 
-export default function TripDetailPage({ params }: { params: { id: string } }) {
+type LaporanItem = {
+    id_faktur_item: string
+    deskripsi: string
+    qty: number
+    harga_satuan: number
+    subtotal: number
+    nomor_faktur: string
+}
+
+type RekapBiaya = {
+    total_bbm: number
+    total_uang_jalan: number
+    total_biaya_lain: number
+    total_keseluruhan: number
+    items: LaporanItem[]
+}
+
+export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
-    const [trip, setTrip]       = useState<Trip | null>(null)
-    const [statuses, setStatuses] = useState<StatusTrip[]>([])
-    const [loading, setLoading] = useState(true)
+    const [trip, setTrip]                 = useState<Trip | null>(null)
+    const [statuses, setStatuses]         = useState<StatusTrip[]>([])
+    const [loading, setLoading]           = useState(true)
+    const [rekap, setRekap]               = useState<RekapBiaya | null>(null)
+    const [rekapLoading, setRekapLoading] = useState(true)
 
     useEffect(() => {
-        tripService.get(params.id)
+        tripService.get(id)
             .then(setTrip)
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
-    }, [params.id])
+    }, [id])
 
     useEffect(() => {
-        const load = () => tripService.getStatus(params.id).then(setStatuses).catch(console.error)
+        const load = () => tripService.getStatus(id).then(setStatuses).catch(console.error)
         load()
         const interval = setInterval(load, 30_000)
         return () => clearInterval(interval)
-    }, [params.id])
+    }, [id])
+
+    useEffect(() => {
+        axios.get(`/api/proxy/trip/${id}/rekap-biaya`)
+            .then(res => setRekap(res.data?.data ?? null))
+            .catch(() => {}) // silently fail if no data yet
+            .finally(() => setRekapLoading(false))
+    }, [id])
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!trip)   return <div className="p-6 text-red-500">Trip tidak ditemukan.</div>
@@ -96,6 +125,78 @@ export default function TripDetailPage({ params }: { params: { id: string } }) {
                             </div>
                         ))}
                     </div>
+                )}
+            </Card>
+
+            <Card>
+                <div className="flex justify-between items-center mb-4">
+                    <h5>Rekap Biaya</h5>
+                    {rekapLoading && <span className="text-xs text-gray-400">Memuat...</span>}
+                </div>
+
+                {!rekapLoading && (!rekap || rekap.total_keseluruhan === 0) ? (
+                    <div className="text-gray-400 text-sm">Belum ada data biaya untuk trip ini.</div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-4">
+                            {[
+                                { label: 'Total BBM',         value: rekap?.total_bbm ?? 0 },
+                                { label: 'Total Uang Jalan',  value: rekap?.total_uang_jalan ?? 0 },
+                                { label: 'Total Biaya Lain',  value: rekap?.total_biaya_lain ?? 0 },
+                                { label: 'Total Keseluruhan', value: rekap?.total_keseluruhan ?? 0, highlight: true },
+                            ].map(({ label, value, highlight }) => (
+                                <div
+                                    key={label}
+                                    className={`rounded-lg p-3 ${highlight
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                        : 'bg-gray-50 dark:bg-gray-800'
+                                    }`}
+                                >
+                                    <div className={`text-xs mb-1 ${highlight ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500'}`}>
+                                        {label}
+                                    </div>
+                                    <div className={`font-semibold text-sm ${highlight ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                                        {formatRupiah(value)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {rekap && rekap.items.length > 0 && (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-2 pr-4 text-gray-500 font-medium">Deskripsi</th>
+                                            <th className="text-left py-2 pr-4 text-gray-500 font-medium">No. Faktur</th>
+                                            <th className="text-right py-2 pr-4 text-gray-500 font-medium">Qty</th>
+                                            <th className="text-right py-2 pr-4 text-gray-500 font-medium">Harga Satuan</th>
+                                            <th className="text-right py-2 text-gray-500 font-medium">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rekap.items.map(item => (
+                                            <tr key={item.id_faktur_item} className="border-b last:border-b-0">
+                                                <td className="py-2 pr-4">{item.deskripsi}</td>
+                                                <td className="py-2 pr-4 text-gray-500 font-mono text-xs">{item.nomor_faktur}</td>
+                                                <td className="py-2 pr-4 text-right">{item.qty}</td>
+                                                <td className="py-2 pr-4 text-right">{formatRupiah(item.harga_satuan)}</td>
+                                                <td className="py-2 text-right font-medium">{formatRupiah(item.subtotal)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2">
+                                            <td colSpan={4} className="pt-2 pr-4 text-gray-500 font-medium">Total</td>
+                                            <td className="pt-2 text-right font-bold text-blue-700 dark:text-blue-300">
+                                                {formatRupiah(rekap.total_keseluruhan)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
+                    </>
                 )}
             </Card>
         </div>

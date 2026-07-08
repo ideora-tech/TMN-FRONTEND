@@ -7,6 +7,7 @@ import {
 } from '@/configs/routes.config'
 import { REDIRECT_URL_KEY } from '@/constants/app.constant'
 import appConfig from '@/configs/app.config'
+import { matchRoute } from '@/utils/queryRoute'
 
 const { auth } = NextAuth(authConfig)
 
@@ -51,16 +52,19 @@ export default auth((req) => {
         )
     }
 
-    /** Uncomment this and `import { protectedRoutes } from '@/configs/routes.config'` if you want to enable role based access */
-    // if (isSignedIn && nextUrl.pathname !== '/access-denied') {
-    //     const routeMeta = protectedRoutes[nextUrl.pathname]
-    //     const includedRole = routeMeta?.authority.some((role) => req.auth?.user?.authority.includes(role))
-    //     if (!includedRole) {
-    //         return Response.redirect(
-    //             new URL('/access-denied', nextUrl),
-    //         )
-    //     }
-    // }
+    /** Role-based access: a route with an empty `authority` array is open to any signed-in user */
+    if (isSignedIn && nextUrl.pathname !== '/access-denied') {
+        const routeMeta = matchRoute(nextUrl.pathname)
+        const authority = routeMeta?.authority ?? []
+        const sessionUser = req.auth?.user as Record<string, unknown> | undefined
+        const userAuthority = (sessionUser?.authority as string[] | undefined) ?? []
+        const isAllowed = authority.length === 0 || authority.some((role) => userAuthority.includes(role))
+        if (!isAllowed) {
+            return Response.redirect(
+                new URL('/access-denied', nextUrl),
+            )
+        }
+    }
 })
 
 export const config = {

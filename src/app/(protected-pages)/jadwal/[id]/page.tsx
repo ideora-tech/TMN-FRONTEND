@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { Card, toast, Notification } from '@/components/ui'
@@ -25,7 +25,8 @@ const statusClass: Record<string, string> = {
     dibatalkan: 'bg-red-100 text-red-500',
 }
 
-export default function JadwalDetailPage({ params }: { params: { id: string } }) {
+export default function JadwalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
     const [jadwal, setJadwal]       = useState<Jadwal | null>(null)
     const [tripStatuses, setTripStatuses] = useState<TripStatus[]>([])
@@ -34,10 +35,10 @@ export default function JadwalDetailPage({ params }: { params: { id: string } })
     useEffect(() => {
         const load = async () => {
             try {
-                const j = await jadwalService.get(params.id)
+                const j = await jadwalService.get(id)
                 setJadwal(j)
                 try {
-                    const tripRes = await axios.get(API_ENDPOINTS.TRIP, { params: { id_jadwal: params.id } })
+                    const tripRes = await axios.get(API_ENDPOINTS.TRIP, { params: { id_jadwal: id } })
                     const trips = tripRes.data?.data
                     if (trips && trips.length > 0) {
                         const statusRes = await axios.get(API_ENDPOINTS.TRIP_STATUS(trips[0].id_trip))
@@ -51,7 +52,7 @@ export default function JadwalDetailPage({ params }: { params: { id: string } })
             }
         }
         load()
-    }, [params.id])
+    }, [id])
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!jadwal) return <div className="p-6 text-red-500">Jadwal tidak ditemukan.</div>

@@ -19,13 +19,8 @@ const STATUS_OPTIONS = [
 export default function ProjectBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        id_klien: '',
-        kode_proyek: '',
-        nama_proyek: '',
-        tanggal_mulai: '',
-        tanggal_selesai: '',
-        status: 'draft',
-        keterangan: '',
+        id_klien: '', kode_proyek: '', nama_proyek: '',
+        tanggal_mulai: '', tanggal_selesai: '', status: 'draft', keterangan: '',
     })
     const [klienOptions, setKlienOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
@@ -51,13 +46,9 @@ export default function ProjectBaruPage() {
         setLoading(true)
         try {
             await projectService.create({
-                id_klien: form.id_klien,
-                kode_proyek: form.kode_proyek,
-                nama_proyek: form.nama_proyek,
-                tanggal_mulai: form.tanggal_mulai || undefined,
-                tanggal_selesai: form.tanggal_selesai || undefined,
-                status: form.status || undefined,
-                keterangan: form.keterangan || undefined,
+                id_klien: form.id_klien, kode_proyek: form.kode_proyek, nama_proyek: form.nama_proyek,
+                tanggal_mulai: form.tanggal_mulai || undefined, tanggal_selesai: form.tanggal_selesai || undefined,
+                status: form.status || undefined, keterangan: form.keterangan || undefined,
             })
             toast.push(<Notification type="success" title="Proyek berhasil ditambahkan" />)
             router.push(ROUTES.PROYEK)
@@ -71,11 +62,8 @@ export default function ProjectBaruPage() {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
-                >
+                <button type="button" onClick={() => router.back()}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
@@ -84,71 +72,48 @@ export default function ProjectBaruPage() {
                 </div>
             </div>
             <Card>
-                <div className="flex flex-col gap-1">
-                    <FormItem label="Klien" asterisk invalid={!!errors.id_klien} errorMessage={errors.id_klien}>
-                        <Select
-                            placeholder="Cari atau pilih klien..."
-                            options={klienOptions}
-                            value={klienOptions.find(o => o.value === form.id_klien) ?? null}
-                            onChange={(opt) => setForm(p => ({ ...p, id_klien: opt?.value ?? '' }))}
-                            invalid={!!errors.id_klien}
-                        />
-                    </FormItem>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                    <div className="sm:col-span-2">
+                        <FormItem label="Klien" asterisk invalid={!!errors.id_klien} errorMessage={errors.id_klien}>
+                            <Select placeholder="Cari atau pilih klien..." options={klienOptions}
+                                value={klienOptions.find(o => o.value === form.id_klien) ?? null}
+                                onChange={(opt) => setForm(p => ({ ...p, id_klien: opt?.value ?? '' }))}
+                                invalid={!!errors.id_klien} />
+                        </FormItem>
+                    </div>
                     <FormItem label="Kode Proyek" asterisk invalid={!!errors.kode_proyek} errorMessage={errors.kode_proyek}>
-                        <Input
-                            placeholder="Contoh: PRY-2024-001"
-                            value={form.kode_proyek}
-                            invalid={!!errors.kode_proyek}
-                            onChange={(e) => setForm(p => ({ ...p, kode_proyek: e.target.value }))}
-                        />
+                        <Input placeholder="Contoh: PRY-2024-001" value={form.kode_proyek} invalid={!!errors.kode_proyek}
+                            onChange={(e) => setForm(p => ({ ...p, kode_proyek: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Nama Proyek" asterisk invalid={!!errors.nama_proyek} errorMessage={errors.nama_proyek}>
-                        <Input
-                            placeholder="Nama proyek"
-                            value={form.nama_proyek}
-                            invalid={!!errors.nama_proyek}
-                            onChange={(e) => setForm(p => ({ ...p, nama_proyek: e.target.value }))}
-                        />
+                        <Input placeholder="Nama proyek" value={form.nama_proyek} invalid={!!errors.nama_proyek}
+                            onChange={(e) => setForm(p => ({ ...p, nama_proyek: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Tanggal Mulai">
-                        <DatePicker
-                            value={form.tanggal_mulai ? new Date(form.tanggal_mulai) : null}
-                            onChange={(date) => setForm(p => ({ ...p, tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
-                        />
+                        <DatePicker value={form.tanggal_mulai ? new Date(form.tanggal_mulai) : null}
+                            onChange={(date) => setForm(p => ({ ...p, tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="Tanggal Selesai">
-                        <DatePicker
-                            value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
-                            onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
-                        />
+                        <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
+                            onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="Status">
-                        <Select
-                            options={STATUS_OPTIONS}
+                        <Select options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
-                            onChange={(opt) => setForm(p => ({ ...p, status: opt?.value ?? 'draft' }))}
-                        />
+                            onChange={(opt) => setForm(p => ({ ...p, status: opt?.value ?? 'draft' }))} />
                     </FormItem>
-                    <FormItem label="Keterangan">
-                        <textarea
-                            rows={3}
-                            value={form.keterangan}
-                            onChange={(e) => setForm(p => ({ ...p, keterangan: e.target.value }))}
-                            placeholder="Keterangan tambahan (opsional)"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
-                        />
-                    </FormItem>
+                    <div className="sm:col-span-2">
+                        <FormItem label="Keterangan">
+                            <textarea rows={3} value={form.keterangan}
+                                onChange={(e) => setForm(p => ({ ...p, keterangan: e.target.value }))}
+                                placeholder="Keterangan tambahan (opsional)"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800" />
+                        </FormItem>
+                    </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => router.back()}>Batal</Button>
-                    <Button
-                        variant="solid"
-                        customColorClass={() => 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white border-emerald-500'}
-                        loading={loading}
-                        onClick={handleSubmit}
-                    >
-                        Simpan
-                    </Button>
+                    <Button variant="solid" loading={loading} onClick={handleSubmit}>Simpan</Button>
                 </div>
             </Card>
         </div>

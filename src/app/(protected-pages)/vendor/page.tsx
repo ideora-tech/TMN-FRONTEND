@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tooltip, toast, Notification } from '@/components/ui'
@@ -36,7 +36,7 @@ export default function VendorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -61,7 +61,7 @@ export default function VendorPage() {
     const filteredList = list.filter(v =>
         !search ||
         v.nama_vendor.toLowerCase().includes(search.toLowerCase()) ||
-        (v.kontak ?? '').toLowerCase().includes(search.toLowerCase())
+        (v.telepon ?? '').toLowerCase().includes(search.toLowerCase())
     )
 
     const columns: ColumnDef<Vendor>[] = [
@@ -85,8 +85,8 @@ export default function VendorPage() {
             },
         },
         {
-            header: 'Kontak', accessorKey: 'kontak', size: 180,
-            cell: ({ row }: CellContext<Vendor, unknown>) => row.original.kontak ?? '-',
+            header: 'Telepon', accessorKey: 'telepon', size: 180,
+            cell: ({ row }: CellContext<Vendor, unknown>) => row.original.telepon ?? '-',
         },
         {
             header: 'Email', accessorKey: 'email', size: 220,
@@ -127,7 +127,6 @@ export default function VendorPage() {
                     extra: (
                         <Button
                             variant="solid" size="sm"
-                            customColorClass={() => 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white border-emerald-500'}
                             icon={<HiPlusCircle />}
                             onClick={() => router.push(ROUTES.VENDOR_BARU)}
                         >
@@ -141,7 +140,7 @@ export default function VendorPage() {
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"
-                        placeholder="Cari nama atau kontak vendor... (tekan Enter)"
+                        placeholder="Cari nama atau telepon vendor... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />

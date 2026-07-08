@@ -50,7 +50,7 @@ export default function JadwalPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
 

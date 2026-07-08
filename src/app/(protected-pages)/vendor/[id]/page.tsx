@@ -1,9 +1,9 @@
-'use client'
-import { useEffect, useState } from 'react'
+﻿'use client'
+import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiPlusCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -18,34 +18,58 @@ const MEKANISME_OPTIONS = [
     { value: 'full',        label: 'Full' },
 ]
 
-export default function VendorDetailPage({ params }: { params: { id: string } }) {
+const AKTIF_OPTIONS = [
+    { value: '1', label: 'Aktif' },
+    { value: '0', label: 'Nonaktif' },
+]
+
+export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
     const [vendor, setVendor]   = useState<Vendor | null>(null)
     const [kontraks, setKontraks] = useState<KontrakVendor[]>([])
     const [loading, setLoading] = useState(true)
+    const [editing, setEditing] = useState(false)
+    const [form, setForm]       = useState<Partial<Vendor>>({})
+    const [saving, setSaving]   = useState(false)
     const [showKontrakForm, setShowKontrakForm] = useState(false)
     const [kontrakForm, setKontrakForm] = useState({ mekanisme: 'unit_only' as Mekanisme, nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
     const [addingKontrak, setAddingKontrak] = useState(false)
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
-            const [v, k] = await Promise.all([vendorService.get(params.id), vendorService.listKontrak(params.id)])
+            const [v, k] = await Promise.all([vendorService.get(id), vendorService.listKontrak(id)])
             setVendor(v)
+            setForm(v)
             setKontraks(k)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }
+    }, [id])
 
-    useEffect(() => { loadData() }, [params.id])
+    useEffect(() => { loadData() }, [loadData])
+
+    const handleSave = async () => {
+        setSaving(true)
+        try {
+            const updated = await vendorService.update(id, form)
+            setVendor(updated)
+            setEditing(false)
+            toast.push(<Notification type="success" title="Data vendor berhasil diperbarui" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSaving(false)
+        }
+    }
 
     const handleKontrakSubmit = async () => {
         setAddingKontrak(true)
         try {
             await vendorService.createKontrak({
-                id_vendor: params.id,
+                id_vendor: id,
                 mekanisme: kontrakForm.mekanisme,
                 nilai_kontrak: kontrakForm.nilai_kontrak ? Number(kontrakForm.nilai_kontrak) : undefined,
                 tanggal_mulai: kontrakForm.tanggal_mulai || undefined,
@@ -54,7 +78,7 @@ export default function VendorDetailPage({ params }: { params: { id: string } })
             toast.push(<Notification type="success" title="Kontrak berhasil ditambahkan" />)
             setShowKontrakForm(false)
             setKontrakForm({ mekanisme: 'unit_only', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
-            setKontraks(await vendorService.listKontrak(params.id))
+            setKontraks(await vendorService.listKontrak(id))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -64,6 +88,8 @@ export default function VendorDetailPage({ params }: { params: { id: string } })
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!vendor) return <div className="p-6 text-red-500">Vendor tidak ditemukan.</div>
+
+    const initial = vendor.nama_vendor?.charAt(0).toUpperCase() ?? 'V'
 
     return (
         <div className="flex flex-col gap-4">
@@ -81,21 +107,103 @@ export default function VendorDetailPage({ params }: { params: { id: string } })
                 </div>
             </div>
 
-            <Card className="mb-4">
-                <div className="flex flex-col gap-0">
-                    {[
-                        { label: 'Kontak', value: vendor.kontak ?? '-' },
-                        { label: 'Email',  value: vendor.email  ?? '-' },
-                        { label: 'Alamat', value: vendor.alamat ?? '-' },
-                    ].map(({ label, value }) => (
-                        <div key={label} className="flex justify-between py-2 border-b last:border-b-0">
-                            <span className="text-gray-500">{label}</span>
-                            <span className="font-medium">{value}</span>
+            {/* Vendor info card */}
+            <Card>
+                {!editing ? (
+                    <>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold text-xl flex-shrink-0 select-none">
+                                    {initial}
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">{vendor.nama_vendor}</p>
+                                    <p className="text-sm text-gray-500 mt-1">{vendor.email ?? 'Tidak ada email'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${vendor.aktif ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
+                                    {vendor.aktif ? 'Aktif' : 'Nonaktif'}
+                                </span>
+                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                            </div>
                         </div>
-                    ))}
-                </div>
+                        <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                            {([
+                                { label: 'Kode Vendor', value: vendor.kode_vendor },
+                                { label: 'Nama Vendor', value: vendor.nama_vendor },
+                                { label: 'Telepon',     value: vendor.telepon ?? <span className="text-gray-400">—</span> },
+                                { label: 'Email',       value: vendor.email ?? <span className="text-gray-400">—</span> },
+                            ]).map(({ label, value }) => (
+                                <div key={label}>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
+                                </div>
+                            ))}
+                        </div>
+                        {vendor.alamat && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Alamat</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-line">{vendor.alamat}</p>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-4 mb-5">
+                            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold text-xl flex-shrink-0 select-none">
+                                {form.nama_vendor?.charAt(0).toUpperCase() ?? initial}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">Edit Vendor</p>
+                                <p className="text-sm text-gray-500 mt-0.5">Perbarui informasi vendor di bawah ini</p>
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
+                        <form onSubmit={e => { e.preventDefault(); handleSave() }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="Kode Vendor">
+                                <Input value={form.kode_vendor ?? ''} onChange={(e) => setForm(p => ({ ...p, kode_vendor: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Nama Vendor">
+                                <Input value={form.nama_vendor ?? ''} onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Telepon">
+                                <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Email">
+                                <Input type="email" value={form.email ?? ''} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Status">
+                                <Select
+                                    isSearchable={false}
+                                    options={AKTIF_OPTIONS}
+                                    value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
+                                    onChange={(opt) => opt && setForm(p => ({ ...p, aktif: opt.value === '1' }))}
+                                />
+                            </FormItem>
+                            <div className="sm:col-span-2">
+                                <FormItem label="Alamat">
+                                    <textarea
+                                        rows={3}
+                                        value={form.alamat ?? ''}
+                                        onChange={(e) => setForm(p => ({ ...p, alamat: e.target.value }))}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
+                                    />
+                                </FormItem>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-6">
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor) }}>Batal</Button>
+                            <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
+                        </div>
+                        </form>
+                    </>
+                )}
             </Card>
 
+            {/* Kontrak card */}
             <Card
                 header={{
                     content: <h5>Kontrak</h5>,
@@ -111,7 +219,8 @@ export default function VendorDetailPage({ params }: { params: { id: string } })
             >
                 {showKontrakForm && (
                     <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-800">
-                        <div className="flex flex-col gap-1">
+                        <form onSubmit={e => { e.preventDefault(); handleKontrakSubmit() }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                             <FormItem label="Mekanisme">
                                 <Select
                                     isSearchable={false}
@@ -142,11 +251,12 @@ export default function VendorDetailPage({ params }: { params: { id: string } })
                             </FormItem>
                         </div>
                         <div className="flex gap-2 mt-4">
-                            <Button variant="solid" loading={addingKontrak} onClick={handleKontrakSubmit}>
+                            <Button type="submit" variant="solid" loading={addingKontrak}>
                                 Simpan Kontrak
                             </Button>
-                            <Button variant="plain" onClick={() => setShowKontrakForm(false)}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => setShowKontrakForm(false)}>Batal</Button>
                         </div>
+                        </form>
                     </div>
                 )}
 

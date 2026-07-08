@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
@@ -13,7 +13,8 @@ const statusClass: Record<string, string> = {
     selesai: 'bg-emerald-100 text-emerald-600',
 }
 
-export default function RekonsiliasiDetailPage({ params }: { params: { id: string } }) {
+export default function RekonsiliasiDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
     const [rekonsiliasi, setRekonsiliasi] = useState<Rekonsiliasi | null>(null)
     const [loading, setLoading]   = useState(true)
@@ -21,16 +22,16 @@ export default function RekonsiliasiDetailPage({ params }: { params: { id: strin
     const [updating, setUpdating] = useState(false)
 
     useEffect(() => {
-        rekonsiliasiService.get(params.id)
+        rekonsiliasiService.get(id)
             .then(r => { setRekonsiliasi(r); setCatatan(r.catatan_keuangan ?? '') })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
-    }, [params.id])
+    }, [id])
 
     const handleUpdate = async (markSelesai: boolean) => {
         setUpdating(true)
         try {
-            const updated = await rekonsiliasiService.update(params.id, {
+            const updated = await rekonsiliasiService.update(id, {
                 catatan_keuangan: catatan || undefined,
                 ...(markSelesai ? { status: 'selesai' } : {}),
             })
@@ -99,19 +100,10 @@ export default function RekonsiliasiDetailPage({ params }: { params: { id: strin
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 mb-4"
                     />
                     <div className="flex gap-2">
-                        <Button
-                            variant="plain"
-                            loading={updating}
-                            onClick={() => handleUpdate(false)}
-                        >
+                        <Button variant="plain" loading={updating} onClick={() => handleUpdate(false)}>
                             Simpan Catatan
                         </Button>
-                        <Button
-                            variant="solid"
-                            customColorClass={() => 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white border-emerald-500'}
-                            loading={updating}
-                            onClick={() => handleUpdate(true)}
-                        >
+                        <Button variant="solid" loading={updating} onClick={() => handleUpdate(true)}>
                             Tandai Selesai
                         </Button>
                     </div>

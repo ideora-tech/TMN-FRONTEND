@@ -3,10 +3,12 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export interface Vendor {
     id_vendor: string
+    kode_vendor: string
     nama_vendor: string
-    kontak?: string
+    telepon?: string
     alamat?: string
     email?: string
+    aktif: boolean
 }
 
 export interface KontrakVendor {

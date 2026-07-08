@@ -10,6 +10,15 @@ import { PiUserDuotone, PiSignOutDuotone } from 'react-icons/pi'
 
 import type { JSX } from 'react'
 
+const ROLE_LABEL: Record<string, string> = {
+    SUPERADMIN: 'Super Admin',
+    ADMIN:      'Admin',
+    MANAGER:    'Manager',
+    SALES:      'Sales',
+    DISPATCHER: 'Operasional',
+    KEUANGAN:   'Keuangan',
+}
+
 type DropdownList = {
     label: string
     path: string
@@ -31,12 +40,25 @@ const _UserDropdown = () => {
             : { icon: <PiUserDuotone /> }),
     }
 
+    const kodePeran = (session?.user as Record<string, unknown>)?.kodePeran as string | null
+    const roleLabel = kodePeran ? (ROLE_LABEL[kodePeran] ?? kodePeran) : ''
+
     return (
         <Dropdown
             className="flex"
             toggleClassName="flex items-center"
             renderTitle={
-                <div className="cursor-pointer flex items-center">
+                <div className="cursor-pointer flex items-center gap-3">
+                    <div className="hidden sm:flex flex-col items-end">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight">
+                            {session?.user?.name || 'Pengguna'}
+                        </span>
+                        {roleLabel && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                                {roleLabel}
+                            </span>
+                        )}
+                    </div>
                     <Avatar size={32} {...avatarProps} />
                 </div>
             }

@@ -1,9 +1,9 @@
-'use client'
-import { useEffect, useState } from 'react'
+﻿'use client'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -21,25 +21,26 @@ const statusClass: Record<string, string> = {
     nonaktif: 'bg-red-100 text-red-500',
 }
 
-export default function SupirDetailPage({ params }: { params: { id: string } }) {
+export default function SupirDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params)
     const router = useRouter()
-    const [supir, setSupir]   = useState<Supir | null>(null)
+    const [supir, setSupir]     = useState<Supir | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Supir>>({})
     const [saving, setSaving]   = useState(false)
 
     useEffect(() => {
-        supirService.get(params.id)
+        supirService.get(id)
             .then(s => { setSupir(s); setForm(s) })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
-    }, [params.id])
+    }, [id])
 
     const handleSave = async () => {
         setSaving(true)
         try {
-            const updated = await supirService.update(params.id, form)
+            const updated = await supirService.update(id, form)
             setSupir(updated)
             setEditing(false)
             toast.push(<Notification type="success" title="Data supir berhasil diperbarui" />)
@@ -57,9 +58,11 @@ export default function SupirDetailPage({ params }: { params: { id: string } }) 
         ? Math.ceil((new Date(supir.tgl_kadaluarsa_sim).getTime() - Date.now()) / 86400000)
         : null
     const simWarning = daysLeft !== null && daysLeft < 30
+    const initial = supir.nama?.charAt(0).toUpperCase() ?? '?'
 
     return (
         <div className="flex flex-col gap-4">
+            {/* Page header */}
             <div className="flex items-center gap-3">
                 <button
                     type="button"
@@ -74,52 +77,96 @@ export default function SupirDetailPage({ params }: { params: { id: string } }) 
                 </div>
             </div>
 
+            {/* SIM expiry warning */}
             {simWarning && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10">
-                    Peringatan: SIM kadaluarsa dalam {daysLeft} hari ({supir.tgl_kadaluarsa_sim})
+                <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
+                    <span>
+                        SIM kadaluarsa dalam <strong>{daysLeft} hari</strong> ({supir.tgl_kadaluarsa_sim})
+                    </span>
                 </div>
             )}
 
             <Card>
-                <div className="flex justify-end mb-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusClass[supir.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                        {supir.status}
-                    </span>
-                </div>
-
                 {!editing ? (
                     <>
-                        <div className="flex flex-col gap-0">
-                            {[
-                                { label: 'Nama',    value: supir.nama },
-                                { label: 'No SIM',  value: supir.no_sim },
-                                { label: 'Jenis SIM', value: supir.jenis_sim },
+                        {/* Profile header */}
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold text-xl flex-shrink-0 select-none">
+                                    {initial}
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">{supir.nama}</p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        SIM {supir.jenis_sim ?? '-'} &nbsp;·&nbsp; {supir.no_sim ?? '-'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass[supir.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                                    {supir.status}
+                                </span>
+                                <Button
+                                    variant="solid"
+                                    size="sm"
+                                    icon={<HiOutlinePencilAlt />}
+                                    onClick={() => setEditing(true)}
+                                >
+                                    Edit
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
+
+                        {/* Info grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                            {([
+                                { label: 'Nomor SIM',      value: supir.no_sim ?? '-' },
+                                { label: 'Jenis SIM',      value: supir.jenis_sim ?? '-' },
                                 {
                                     label: 'Kadaluarsa SIM',
                                     value: supir.tgl_kadaluarsa_sim
-                                        ? <span className={simWarning ? 'text-red-500 font-medium' : ''}>{supir.tgl_kadaluarsa_sim}</span>
-                                        : '-',
+                                        ? <span className={simWarning ? 'text-amber-600 font-semibold dark:text-amber-400' : ''}>{supir.tgl_kadaluarsa_sim}</span>
+                                        : <span className="text-gray-400">—</span>,
                                 },
-                                { label: 'Telepon', value: supir.telepon ?? '-' },
-                                { label: 'Status',  value: supir.status },
-                            ].map(({ label, value }) => (
-                                <div key={label} className="flex justify-between py-2 border-b last:border-b-0">
-                                    <span className="text-gray-500">{label}</span>
-                                    <span className="font-medium">{value}</span>
+                                {
+                                    label: 'Telepon',
+                                    value: supir.telepon ?? <span className="text-gray-400">—</span>,
+                                },
+                            ]).map(({ label, value }) => (
+                                <div key={label}>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+                                        {label}
+                                    </p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
                                 </div>
                             ))}
-                        </div>
-                        <div className="flex gap-2 mt-6">
-                            <Button variant="solid" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>
-                                Edit
-                            </Button>
                         </div>
                     </>
                 ) : (
                     <>
-                        <div className="flex flex-col gap-1">
+                        {/* Edit header */}
+                        <div className="flex items-center gap-4 mb-5">
+                            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold text-xl flex-shrink-0 select-none">
+                                {form.nama?.charAt(0).toUpperCase() ?? initial}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">Edit Data Supir</p>
+                                <p className="text-sm text-gray-500 mt-0.5">Perbarui informasi supir di bawah ini</p>
+                            </div>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
+
+                        <form onSubmit={e => { e.preventDefault(); handleSave() }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                             <FormItem label="Nama">
                                 <Input value={form.nama ?? ''} onChange={(e) => setForm(p => ({ ...p, nama: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Telepon">
+                                <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
                             </FormItem>
                             <FormItem label="No SIM">
                                 <Input value={form.no_sim ?? ''} onChange={(e) => setForm(p => ({ ...p, no_sim: e.target.value }))} />
@@ -138,9 +185,6 @@ export default function SupirDetailPage({ params }: { params: { id: string } }) 
                                     onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
                                 />
                             </FormItem>
-                            <FormItem label="Telepon">
-                                <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
-                            </FormItem>
                             <FormItem label="Status">
                                 <Select
                                     isSearchable={false}
@@ -150,10 +194,11 @@ export default function SupirDetailPage({ params }: { params: { id: string } }) 
                                 />
                             </FormItem>
                         </div>
-                        <div className="flex gap-2 mt-6">
-                            <Button variant="solid" loading={saving} onClick={handleSave}>Simpan</Button>
-                            <Button variant="plain" onClick={() => { setEditing(false); setForm(supir) }}>Batal</Button>
+                        <div className="flex justify-end gap-2 mt-6">
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(supir) }}>Batal</Button>
+                            <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
+                        </form>
                     </>
                 )}
             </Card>

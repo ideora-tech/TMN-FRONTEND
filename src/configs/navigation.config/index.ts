@@ -49,6 +49,16 @@ const navigationConfig: NavigationTree[] = [
         authority:    ['sales', 'manager'],
         subMenu:      [],
     },
+    {
+        key:          'penawaran',
+        path:         '/penawaran',
+        title:        'Penawaran',
+        translateKey: 'nav.penawaran',
+        icon:         'notepad',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['sales', 'manager'],
+        subMenu:      [],
+    },
 
     // === OPERASIONAL SECTION ===
     {
@@ -92,6 +102,16 @@ const navigationConfig: NavigationTree[] = [
         subMenu:      [],
     },
     {
+        key:          'rute',
+        path:         '/rute',
+        title:        'Rute',
+        translateKey: 'nav.rute',
+        icon:         'path',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['dispatcher', 'manager'],
+        subMenu:      [],
+    },
+    {
         key:          'jadwal',
         path:         '/jadwal',
         title:        'Jadwal',
@@ -119,6 +139,28 @@ const navigationConfig: NavigationTree[] = [
         icon:         'clipboard',
         type:         NAV_ITEM_TYPE_ITEM,
         authority:    ['dispatcher', 'keuangan', 'manager'],
+        subMenu:      [],
+    },
+
+    // === PENGATURAN SECTION ===
+    {
+        key:          'nav.pengaturan',
+        path:         '',
+        title:        'Pengaturan',
+        translateKey: 'nav.pengaturan',
+        icon:         '',
+        type:         NAV_ITEM_TYPE_TITLE,
+        authority:    ['admin', 'superadmin'],
+        subMenu:      [],
+    },
+    {
+        key:          'log-error',
+        path:         '/log-error',
+        title:        'Log Error',
+        translateKey: 'nav.logError',
+        icon:         'bug',
+        type:         NAV_ITEM_TYPE_ITEM,
+        authority:    ['admin', 'superadmin'],
         subMenu:      [],
     },
 

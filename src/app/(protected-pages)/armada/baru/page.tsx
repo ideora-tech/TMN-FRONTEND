@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
@@ -48,11 +48,8 @@ export default function ArmadaBaruPage() {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
-                >
+                <button type="button" onClick={() => router.back()}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
@@ -61,54 +58,36 @@ export default function ArmadaBaruPage() {
                 </div>
             </div>
             <Card>
-                <div className="flex flex-col gap-1">
+                <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
-                        <Input
-                            placeholder="Contoh: B 1234 XYZ"
-                            value={form.nopol}
-                            invalid={!!errors.nopol}
-                            onChange={(e) => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))}
-                        />
+                        <Input placeholder="Contoh: B 1234 XYZ" value={form.nopol} invalid={!!errors.nopol}
+                            onChange={(e) => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))} />
                     </FormItem>
                     <FormItem label="Merk" asterisk invalid={!!errors.merk} errorMessage={errors.merk}>
-                        <Input
-                            placeholder="Contoh: Toyota"
-                            value={form.merk}
-                            invalid={!!errors.merk}
-                            onChange={(e) => setForm(p => ({ ...p, merk: e.target.value }))}
-                        />
+                        <Input placeholder="Contoh: Toyota" value={form.merk} invalid={!!errors.merk}
+                            onChange={(e) => setForm(p => ({ ...p, merk: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Model">
-                        <Input
-                            placeholder="Contoh: Kijang Innova"
-                            value={form.model}
-                            onChange={(e) => setForm(p => ({ ...p, model: e.target.value }))}
-                        />
+                        <Input placeholder="Contoh: Kijang Innova" value={form.model}
+                            onChange={(e) => setForm(p => ({ ...p, model: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Tahun" asterisk invalid={!!errors.tahun} errorMessage={errors.tahun}>
-                        <Input
-                            type="number"
-                            placeholder="Contoh: 2022"
-                            value={form.tahun}
-                            invalid={!!errors.tahun}
-                            min={1990}
-                            max={2100}
-                            onChange={(e) => setForm(p => ({ ...p, tahun: e.target.value }))}
-                        />
+                        <Input type="number" placeholder="Contoh: 2022" value={form.tahun} invalid={!!errors.tahun}
+                            min={1990} max={2100} onChange={(e) => setForm(p => ({ ...p, tahun: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Status">
-                        <Select
-                            isSearchable={false}
+                        <Select isSearchable={false}
                             value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                             options={STATUS_OPTIONS}
-                            onChange={(option) => option && setForm(p => ({ ...p, status: option.value as Status }))}
-                        />
+                            onChange={(option) => option && setForm(p => ({ ...p, status: option.value as Status }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
-                    <Button variant="plain" onClick={() => router.back()}>Batal</Button>
-                    <Button variant="solid" loading={loading} onClick={handleSubmit}>Simpan</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
+            </form>
             </Card>
         </div>
     )

@@ -24,7 +24,7 @@ FROM node:20-alpine AS runner
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3003
+ENV PORT=3009
 
 WORKDIR /app
 
@@ -38,6 +38,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
-EXPOSE 3003
+EXPOSE 3009
 
 CMD ["node", "server.js"]

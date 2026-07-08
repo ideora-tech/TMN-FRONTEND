@@ -15,9 +15,7 @@ import Link from 'next/link'
 import {
     SIDE_NAV_WIDTH,
     SIDE_NAV_COLLAPSED_WIDTH,
-    SIDE_NAV_CONTENT_GUTTER,
     HEADER_HEIGHT,
-    LOGO_X_GUTTER,
 } from '@/constants/theme.constant'
 import type { Mode } from '@/@types/theme'
 
@@ -79,16 +77,16 @@ const SideNav = ({
                 style={{ height: HEADER_HEIGHT }}
             >
                 <Logo
-                    imgClass="h-9 brightness-0 invert flex-shrink-0"
+                    imgClass="h-14 brightness-0 invert flex-shrink-0"
                     mode={mode || defaultMode}
                     type="full"
                 />
                 {!sideNavCollapse && (
                     <div className="flex flex-col leading-tight min-w-0">
-                        <span className="text-white font-bold text-sm leading-tight truncate">
+                        <span className="text-white font-bold text-lg leading-tight truncate">
                             PT Sulita
                         </span>
-                        <span className="text-xs leading-tight truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                        <span className="text-base leading-tight truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
                             Logistik Indonesia
                         </span>
                     </div>
@@ -102,7 +100,7 @@ const SideNav = ({
                         routeKey={currentRouteKey}
                         direction={direction}
                         translationSetup={translationSetup}
-                        userAuthority={session?.user?.authroity || []}
+                        userAuthority={session?.user?.authority || []}
                     />
                 </ScrollBar>
             </div>

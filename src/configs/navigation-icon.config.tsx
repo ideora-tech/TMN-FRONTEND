@@ -10,6 +10,15 @@ import {
     PiReceiptDuotone,
     PiRepeatDuotone,
     PiHandshakeDuotone,
+    PiGearDuotone,
+    PiUserCheckDuotone,
+    PiShieldCheckDuotone,
+    PiDatabaseDuotone,
+    PiStackDuotone,
+    PiUserCircleDuotone,
+    PiPathDuotone,
+    PiNotepadDuotone,
+    PiBugDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -25,8 +34,17 @@ const navigationIcon: NavigationIcons = {
     calendar:  <PiCalendarDuotone />,
     mapPin:    <PiMapPinDuotone />,
     clipboard: <PiClipboardTextDuotone />,
-    receipt:   <PiReceiptDuotone />,
-    repeat:    <PiRepeatDuotone />,
+    receipt:    <PiReceiptDuotone />,
+    repeat:     <PiRepeatDuotone />,
+    settings:   <PiGearDuotone />,
+    userCheck:  <PiUserCheckDuotone />,
+    shield:     <PiShieldCheckDuotone />,
+    database:   <PiDatabaseDuotone />,
+    layers:     <PiStackDuotone />,
+    userCircle: <PiUserCircleDuotone />,
+    path:       <PiPathDuotone />,
+    notepad:    <PiNotepadDuotone />,
+    bug:        <PiBugDuotone />,
 }
 
 export default navigationIcon

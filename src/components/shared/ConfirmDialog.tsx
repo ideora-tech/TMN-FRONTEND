@@ -76,6 +76,11 @@ const StatusIcon = ({ status }: { status: StatusType }) => {
     }
 }
 
+const TYPE_CONFIRM_CLASS: Partial<Record<StatusType, (s: { active: boolean; unclickable: boolean }) => string>> = {
+    danger:  () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-transparent',
+    warning: () => 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white border-transparent',
+}
+
 const ConfirmDialog = (props: ConfirmDialogProps) => {
     const {
         type = 'info',
@@ -122,6 +127,7 @@ const ConfirmDialog = (props: ConfirmDialogProps) => {
                         size="sm"
                         variant="solid"
                         onClick={handleConfirm}
+                        customColorClass={TYPE_CONFIRM_CLASS[type]}
                         {...confirmButtonProps}
                     >
                         {confirmText}

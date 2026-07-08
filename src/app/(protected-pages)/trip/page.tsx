@@ -51,7 +51,7 @@ export default function TripPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
 

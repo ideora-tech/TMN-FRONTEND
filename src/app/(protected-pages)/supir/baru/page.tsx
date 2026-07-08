@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
@@ -48,11 +48,8 @@ export default function SupirBaruPage() {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
-                >
+                <button type="button" onClick={() => router.back()}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
@@ -61,35 +58,37 @@ export default function SupirBaruPage() {
                 </div>
             </div>
             <Card>
-                <div className="flex flex-col gap-1">
+                <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
-                        <Input placeholder="Nama lengkap supir" value={form.nama} invalid={!!errors.nama} onChange={(e) => setForm(p => ({ ...p, nama: e.target.value }))} />
+                        <Input placeholder="Nama lengkap supir" value={form.nama} invalid={!!errors.nama}
+                            onChange={(e) => setForm(p => ({ ...p, nama: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Telepon">
+                        <Input placeholder="Nomor telepon" value={form.telepon}
+                            onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
                     </FormItem>
                     <FormItem label="No SIM" asterisk invalid={!!errors.no_sim} errorMessage={errors.no_sim}>
-                        <Input placeholder="Nomor SIM" value={form.no_sim} invalid={!!errors.no_sim} onChange={(e) => setForm(p => ({ ...p, no_sim: e.target.value }))} />
+                        <Input placeholder="Nomor SIM" value={form.no_sim} invalid={!!errors.no_sim}
+                            onChange={(e) => setForm(p => ({ ...p, no_sim: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Jenis SIM">
-                        <Select
-                            isSearchable={false}
+                        <Select isSearchable={false}
                             value={JENIS_SIM_OPTIONS.find(o => o.value === form.jenis_sim) ?? null}
                             options={JENIS_SIM_OPTIONS}
-                            onChange={(option) => option && setForm(p => ({ ...p, jenis_sim: option.value }))}
-                        />
+                            onChange={(option) => option && setForm(p => ({ ...p, jenis_sim: option.value }))} />
                     </FormItem>
                     <FormItem label="Tgl Kadaluarsa SIM">
                         <DatePicker
                             value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
-                            onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
-                        />
-                    </FormItem>
-                    <FormItem label="Telepon">
-                        <Input placeholder="Nomor telepon" value={form.telepon} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
+                            onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
-                    <Button variant="plain" onClick={() => router.back()}>Batal</Button>
-                    <Button variant="solid" loading={loading} onClick={handleSubmit}>Simpan</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
+            </form>
             </Card>
         </div>
     )
