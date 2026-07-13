@@ -7,6 +7,7 @@ export interface Penugasan {
     id_penugasan: string
     id_proyek: string
     id_armada: string | null
+    id_supir: string | null
     id_karyawan: string | null
     tanggal_tugas: string | null
     status: StatusPenugasan
@@ -19,11 +20,19 @@ export const penugasanService = {
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params: { id_proyek: idProyek, page, limit: 15 } })
         return data as { data: Penugasan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
+    async listByArmada(idArmada: string, page = 1, limit = 50) {
+        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params: { id_armada: idArmada, page, limit } })
+        return data as { data: Penugasan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+    async listBySupir(idSupir: string, page = 1, limit = 50) {
+        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params: { id_supir: idSupir, page, limit } })
+        return data as { data: Penugasan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_DETAIL(id))
         return data.data as Penugasan
     },
-    async create(payload: { id_proyek: string; id_armada?: string; id_karyawan?: string; tanggal_tugas?: string; status?: string }) {
+    async create(payload: { id_proyek: string; id_armada?: string; id_supir?: string; id_karyawan?: string; tanggal_tugas?: string; status?: string }) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN, payload)
         return data.data as Penugasan
     },

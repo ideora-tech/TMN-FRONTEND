@@ -1,15 +1,18 @@
-﻿'use client'
-import { use, useEffect, useState } from 'react'
+'use client'
+import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, DatePicker, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineExternalLink } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugasan.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { supirService, Supir } from '@/services/supir.service'
+import { jadwalService, Jadwal } from '@/services/jadwal.service'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -19,15 +22,24 @@ const STATUS_OPTIONS = [
 ]
 
 const STATUS_CLASS: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    aktif:   'bg-emerald-100 text-emerald-600',
-    selesai: 'bg-blue-100 text-blue-600',
-    batal:   'bg-red-100 text-red-500',
+    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
+    aktif:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+}
+
+const JADWAL_STATUS_CLASS: Record<string, string> = {
+    terjadwal:  'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    berjalan:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
 export default function PenugasanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router  = useRouter()
+
+    // penugasan
     const [penugasan, setPenugasan] = useState<Penugasan | null>(null)
     const [loading, setLoading]     = useState(true)
     const [editing, setEditing]     = useState(false)
@@ -35,43 +47,77 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [saving, setSaving]       = useState(false)
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
+
+    // jadwal
+    const [jadwalList, setJadwalList]     = useState<Jadwal[]>([])
+    const [jadwalLoading, setJadwalLoading] = useState(false)
+    const [showJadwalForm, setShowJadwalForm] = useState(false)
+    const [jadwalForm, setJadwalForm] = useState({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
+    const [addingJadwal, setAddingJadwal] = useState(false)
+    const [deleteJadwalTarget, setDeleteJadwalTarget] = useState<Jadwal | null>(null)
+    const [deletingJadwal, setDeletingJadwal] = useState(false)
 
     useEffect(() => {
         Promise.all([
             penugasanService.get(id),
             karyawanService.list(1),
             armadaService.list(1),
-        ]).then(async ([p, karyawan, armada]) => {
+            supirService.list(1),
+        ]).then(async ([p, karyawan, armada, supir]) => {
             setPenugasan(p)
             setForm(p)
             const karyawanOpts = karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))
-            const armadaOpts = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
+            const armadaOpts   = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
+            const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` }))
 
             if (p.id_karyawan && !karyawanOpts.some(o => o.value === p.id_karyawan)) {
                 try {
                     const k = await karyawanService.get(p.id_karyawan)
                     karyawanOpts.unshift({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })
-                } catch { /* assigned karyawan may have been deleted */ }
+                } catch { /* karyawan sudah dihapus */ }
             }
             if (p.id_armada && !armadaOpts.some(o => o.value === p.id_armada)) {
                 try {
                     const a = await armadaService.get(p.id_armada)
                     armadaOpts.unshift({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })
-                } catch { /* assigned armada may have been deleted */ }
+                } catch { /* armada sudah dihapus */ }
+            }
+            if (p.id_supir && !supirOpts.some(o => o.value === p.id_supir)) {
+                try {
+                    const s = await supirService.get(p.id_supir)
+                    supirOpts.unshift({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })
+                } catch { /* supir sudah dihapus */ }
             }
 
             setKaryawanOptions(karyawanOpts)
             setArmadaOptions(armadaOpts)
+            setSupirOptions(supirOpts)
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [id])
+
+    const fetchJadwal = useCallback(async () => {
+        setJadwalLoading(true)
+        try {
+            const res = await jadwalService.listByPenugasan(id)
+            setJadwalList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setJadwalLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => { fetchJadwal() }, [fetchJadwal])
 
     const handleSave = async () => {
         setSaving(true)
         try {
             const updated = await penugasanService.update(id, {
-                id_karyawan:   form.id_karyawan ?? null,
                 id_armada:     form.id_armada ?? null,
+                id_supir:      form.id_supir ?? null,
+                id_karyawan:   form.id_karyawan ?? null,
                 tanggal_tugas: form.tanggal_tugas ?? null,
                 status:        form.status,
             })
@@ -85,14 +131,55 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
+    const handleAddJadwal = async () => {
+        setAddingJadwal(true)
+        try {
+            await jadwalService.create({
+                id_penugasan:   id,
+                waktu_berangkat: jadwalForm.waktu_berangkat
+                    ? dayjs(jadwalForm.waktu_berangkat).format('YYYY-MM-DD HH:mm:ss')
+                    : null,
+                rute:           jadwalForm.rute || null,
+                estimasi_tiba:  jadwalForm.estimasi_tiba
+                    ? dayjs(jadwalForm.estimasi_tiba).format('YYYY-MM-DD HH:mm:ss')
+                    : null,
+            })
+            toast.push(<Notification type="success" title="Jadwal berhasil ditambahkan" />)
+            setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
+            setShowJadwalForm(false)
+            fetchJadwal()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setAddingJadwal(false)
+        }
+    }
+
+    const handleDeleteJadwal = async () => {
+        if (!deleteJadwalTarget) return
+        setDeletingJadwal(true)
+        try {
+            await jadwalService.delete(deleteJadwalTarget.id_jadwal)
+            toast.push(<Notification type="success" title="Jadwal berhasil dihapus" />)
+            setDeleteJadwalTarget(null)
+            fetchJadwal()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDeletingJadwal(false)
+        }
+    }
+
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!penugasan) return <div className="p-6 text-red-500">Penugasan tidak ditemukan.</div>
 
     const karyawanLabel = karyawanOptions.find(o => o.value === penugasan.id_karyawan)?.label ?? penugasan.id_karyawan ?? '—'
     const armadaLabel   = armadaOptions.find(o => o.value === penugasan.id_armada)?.label ?? penugasan.id_armada ?? '—'
+    const supirLabel    = supirOptions.find(o => o.value === penugasan.id_supir)?.label ?? penugasan.id_supir ?? '—'
 
     return (
         <div className="flex flex-col gap-4">
+            {/* Header */}
             <div className="flex items-center gap-3">
                 <button type="button" onClick={() => router.push(ROUTES.PENUGASAN)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
@@ -104,6 +191,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 </div>
             </div>
 
+            {/* Info Penugasan */}
             <Card>
                 {!editing ? (
                     <>
@@ -115,24 +203,26 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 <div>
                                     <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">Penugasan</p>
                                     <p className="text-sm text-gray-500 mt-1">
-                                        {penugasan.tanggal_tugas ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY') : 'Tanggal belum diset'}
+                                        {penugasan.tanggal_tugas
+                                            ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY')
+                                            : 'Tanggal belum diset'}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLASS[penugasan.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                                <Tag className={`text-xs font-semibold ${STATUS_CLASS[penugasan.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                     {penugasan.status}
-                                </span>
+                                </Tag>
                                 <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'ID Proyek',     value: penugasan.id_proyek ?? <span className="text-gray-400">—</span> },
-                                { label: 'Tanggal Tugas', value: penugasan.tanggal_tugas ?? <span className="text-gray-400">—</span> },
-                                { label: 'Karyawan',      value: karyawanLabel },
+                                { label: 'Tanggal Tugas', value: penugasan.tanggal_tugas ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Armada',        value: armadaLabel },
+                                { label: 'Supir',         value: supirLabel },
+                                { label: 'Karyawan PIC',  value: karyawanLabel },
                                 { label: 'Dibuat',        value: dayjs(penugasan.dibuat_pada).format('DD MMM YYYY HH:mm') },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -149,54 +239,164 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 P
                             </div>
                             <div>
-                                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">Edit Penugasan</p>
+                                <p className="font-semibold text-base">Edit Penugasan</p>
                                 <p className="text-sm text-gray-500 mt-0.5">Perbarui data penugasan di bawah ini</p>
                             </div>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Karyawan">
-                                <Select
-                                    placeholder="Pilih karyawan..."
-                                    options={karyawanOptions}
-                                    value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))}
-                                    isClearable
-                                />
-                            </FormItem>
-                            <FormItem label="Armada">
-                                <Select
-                                    placeholder="Pilih armada..."
-                                    options={armadaOptions}
-                                    value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))}
-                                    isClearable
-                                />
-                            </FormItem>
-                            <FormItem label="Tanggal Tugas">
-                                <DatePicker
-                                    value={form.tanggal_tugas ? new Date(form.tanggal_tugas) : null}
-                                    onChange={(date) => setForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : null }))}
-                                />
-                            </FormItem>
-                            <FormItem label="Status">
-                                <Select
-                                    isSearchable={false}
-                                    options={STATUS_OPTIONS}
-                                    value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))}
-                                />
-                            </FormItem>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(penugasan) }}>Batal</Button>
-                            <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
-                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                <FormItem label="Supir">
+                                    <Select isClearable placeholder="Pilih supir..."
+                                        options={supirOptions}
+                                        value={supirOptions.find(o => o.value === form.id_supir) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_supir: opt?.value ?? null }))} />
+                                </FormItem>
+                                <FormItem label="Armada">
+                                    <Select isClearable placeholder="Pilih armada..."
+                                        options={armadaOptions}
+                                        value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))} />
+                                </FormItem>
+                                <FormItem label="Karyawan PIC">
+                                    <Select isClearable placeholder="Pilih karyawan penanggung jawab..."
+                                        options={karyawanOptions}
+                                        value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
+                                </FormItem>
+                                <FormItem label="Tanggal Tugas">
+                                    <DatePicker
+                                        value={form.tanggal_tugas ? new Date(form.tanggal_tugas) : null}
+                                        onChange={date => setForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
+                                </FormItem>
+                                <FormItem label="Status">
+                                    <Select isSearchable={false} options={STATUS_OPTIONS}
+                                        value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
+                                </FormItem>
+                            </div>
+                            <div className="flex justify-end gap-2 mt-6">
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(penugasan) }}>Batal</Button>
+                                <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
+                            </div>
                         </form>
                     </>
                 )}
             </Card>
+
+            {/* Jadwal Keberangkatan */}
+            <Card>
+                <div className="flex items-center justify-between mb-1">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Jadwal Keberangkatan</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {jadwalList.length} jadwal terdaftar
+                        </p>
+                    </div>
+                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowJadwalForm(v => !v)}>
+                        Tambah Jadwal
+                    </Button>
+                </div>
+
+                {/* Form tambah jadwal */}
+                {showJadwalForm && (
+                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="Waktu Berangkat">
+                                <DatePicker.DateTimepicker
+                                    value={jadwalForm.waktu_berangkat ? new Date(jadwalForm.waktu_berangkat) : null}
+                                    onChange={date => setJadwalForm(p => ({ ...p, waktu_berangkat: date ? date.toISOString() : '' }))} />
+                            </FormItem>
+                            <FormItem label="Estimasi Tiba">
+                                <DatePicker.DateTimepicker
+                                    value={jadwalForm.estimasi_tiba ? new Date(jadwalForm.estimasi_tiba) : null}
+                                    onChange={date => setJadwalForm(p => ({ ...p, estimasi_tiba: date ? date.toISOString() : '' }))} />
+                            </FormItem>
+                            <div className="sm:col-span-2">
+                                <FormItem label="Rute">
+                                    <Input placeholder="Contoh: Jakarta → Surabaya via Tol Trans Jawa"
+                                        value={jadwalForm.rute}
+                                        onChange={e => setJadwalForm(p => ({ ...p, rute: e.target.value }))} />
+                                </FormItem>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button size="sm" variant="plain" icon={<HiOutlineX />}
+                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' }) }}>
+                                Batal
+                            </Button>
+                            <Button size="sm" variant="solid" loading={addingJadwal} onClick={handleAddJadwal}>
+                                Simpan
+                            </Button>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
+                    </div>
+                )}
+
+                {jadwalLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : jadwalList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada jadwal untuk penugasan ini</p>
+                ) : (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Tiba</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="pb-3" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {jadwalList.map(j => (
+                                    <tr key={j.id_jadwal}>
+                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                            {j.tgl_keberangkatan
+                                                ? dayjs(j.tgl_keberangkatan).format('DD MMM YYYY HH:mm')
+                                                : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+                                            {j.estimasi_tiba
+                                                ? dayjs(j.estimasi_tiba).format('DD MMM YYYY HH:mm')
+                                                : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
+                                            {j.rute ?? <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            <Tag className={`text-xs font-semibold ${JADWAL_STATUS_CLASS[j.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {j.status}
+                                            </Tag>
+                                        </td>
+                                        <td className="py-3 text-right whitespace-nowrap">
+                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />} className="mr-1"
+                                                onClick={() => router.push(ROUTES.JADWAL_DETAIL(j.id_jadwal))} />
+                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
+                                                onClick={() => setDeleteJadwalTarget(j)} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            {/* Confirm Hapus Jadwal */}
+            <ConfirmDialog isOpen={!!deleteJadwalTarget} type="danger" title="Hapus Jadwal?"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                onClose={() => setDeleteJadwalTarget(null)}
+                onCancel={() => setDeleteJadwalTarget(null)}
+                onConfirm={handleDeleteJadwal}
+                confirmButtonProps={{ loading: deletingJadwal }}>
+                <p>Jadwal tanggal <strong>
+                    {deleteJadwalTarget?.tgl_keberangkatan
+                        ? dayjs(deleteJadwalTarget.tgl_keberangkatan).format('DD MMM YYYY HH:mm')
+                        : '—'}
+                </strong> akan dihapus.</p>
+            </ConfirmDialog>
         </div>
     )
 }

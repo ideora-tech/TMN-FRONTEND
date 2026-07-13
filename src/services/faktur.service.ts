@@ -23,6 +23,10 @@ export const fakturService = {
         const { data } = await axios.get(API_ENDPOINTS.FAKTUR, { params: { page, limit: 15 } })
         return data as { data: Faktur[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
+    async listByKlien(idKlien: string, page = 1, limit = 50) {
+        const { data } = await axios.get(API_ENDPOINTS.FAKTUR, { params: { id_klien: idKlien, page, limit } })
+        return data as { data: Faktur[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.FAKTUR_DETAIL(id))
         return data.data as Faktur

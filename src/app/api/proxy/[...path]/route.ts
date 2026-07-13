@@ -24,15 +24,19 @@ async function handler(
         headers['Authorization'] = `Bearer ${token}`
     }
 
-    const isFormData = request.headers.get('content-type')?.includes('multipart/form-data')
+    const contentType = request.headers.get('content-type') ?? ''
+    const isFormData  = contentType.includes('multipart/form-data')
 
-    if (!isFormData) {
+    if (isFormData) {
+        // Forward the original Content-Type WITH the boundary — Laravel needs it to parse fields
+        headers['Content-Type'] = contentType
+    } else {
         headers['Content-Type'] = 'application/json'
     }
 
     let body: BodyInit | undefined
     if (!['GET', 'HEAD'].includes(request.method)) {
-        body = isFormData ? await request.blob() : await request.text()
+        body = isFormData ? await request.arrayBuffer() : await request.text()
     }
 
     const response = await fetch(backendUrl, {

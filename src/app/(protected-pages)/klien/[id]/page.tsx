@@ -1,25 +1,50 @@
-﻿'use client'
-import { use, useEffect, useState } from 'react'
+'use client'
+import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Select, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
+import { Card, Button, FormItem, Input, Tag, toast, Notification, Spinner } from '@/components/ui'
+import Select from '@/components/ui/Select'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink } from 'react-icons/hi'
+import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { klienService, Klien } from '@/services/klien.service'
+import { projectService, Project } from '@/services/project.service'
+import { fakturService, Faktur } from '@/services/faktur.service'
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
     { value: '0', label: 'Nonaktif' },
 ]
 
+const PROYEK_STATUS_CLASS: Record<string, string> = {
+    draft:  'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    aktif:  'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai:'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    batal:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+}
+
+const FAKTUR_STATUS_CLASS: Record<string, string> = {
+    draft:    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    terkirim: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
+    lunas:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    batal:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+}
+
 export default function KlienDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params)
-    const router = useRouter()
+    const { id }    = use(params)
+    const router    = useRouter()
+
     const [klien, setKlien]     = useState<Klien | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Klien>>({})
     const [saving, setSaving]   = useState(false)
+
+    const [proyekList, setProyekList]         = useState<Project[]>([])
+    const [proyekLoading, setProyekLoading]   = useState(false)
+    const [fakturList, setFakturList]         = useState<Faktur[]>([])
+    const [fakturLoading, setFakturLoading]   = useState(false)
 
     useEffect(() => {
         klienService.get(id)
@@ -28,18 +53,38 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
             .finally(() => setLoading(false))
     }, [id])
 
+    const fetchProyek = useCallback(async () => {
+        setProyekLoading(true)
+        try {
+            const res = await projectService.listByKlien(id)
+            setProyekList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally { setProyekLoading(false) }
+    }, [id])
+
+    const fetchFaktur = useCallback(async () => {
+        setFakturLoading(true)
+        try {
+            const res = await fakturService.listByKlien(id)
+            setFakturList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally { setFakturLoading(false) }
+    }, [id])
+
+    useEffect(() => { fetchProyek() }, [fetchProyek])
+    useEffect(() => { fetchFaktur() }, [fetchFaktur])
+
     const handleSave = async () => {
         setSaving(true)
         try {
             const updated = await klienService.update(id, form)
-            setKlien(updated)
-            setEditing(false)
+            setKlien(updated); setEditing(false)
             toast.push(<Notification type="success" title="Data klien berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setSaving(false)
-        }
+        } finally { setSaving(false) }
     }
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
@@ -47,8 +92,12 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
 
     const initial = klien.nama_klien?.charAt(0).toUpperCase() ?? 'K'
 
+    const totalFaktur   = fakturList.reduce((s, f) => s + f.total, 0)
+    const lunasFaktur   = fakturList.filter(f => f.status === 'lunas').reduce((s, f) => s + f.total, 0)
+
     return (
         <div className="flex flex-col gap-4">
+            {/* Header */}
             <div className="flex items-center gap-3">
                 <button type="button" onClick={() => router.push(ROUTES.KLIEN)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
@@ -60,6 +109,24 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
             </div>
 
+            {/* Summary stats */}
+            {!proyekLoading && !fakturLoading && (proyekList.length > 0 || fakturList.length > 0) && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                        { label: 'Total Proyek',    value: proyekList.length, color: 'text-gray-700 dark:text-gray-200' },
+                        { label: 'Proyek Aktif',    value: proyekList.filter(p => p.status === 'aktif').length, color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'Total Tagihan',   value: formatRupiah(totalFaktur), color: 'text-yellow-700 dark:text-yellow-400' },
+                        { label: 'Total Lunas',     value: formatRupiah(lunasFaktur), color: 'text-blue-600 dark:text-blue-400' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-4 py-3 text-center">
+                            <p className={`text-lg font-bold ${color} truncate`}>{value}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Info Klien */}
             <Card>
                 {!editing ? (
                     <>
@@ -115,46 +182,145 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Klien">
-                                <Input value={form.kode_klien ?? ''} onChange={(e) => setForm(p => ({ ...p, kode_klien: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Nama Klien">
-                                <Input value={form.nama_klien ?? ''} onChange={(e) => setForm(p => ({ ...p, nama_klien: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Email">
-                                <Input type="email" value={form.email ?? ''} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Telepon">
-                                <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Kontak PIC">
-                                <Input value={form.kontak_pic ?? ''} onChange={(e) => setForm(p => ({ ...p, kontak_pic: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Status">
-                                <Select
-                                    options={AKTIF_OPTIONS}
-                                    value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))}
-                                />
-                            </FormItem>
-                            <div className="sm:col-span-2">
-                                <FormItem label="Alamat">
-                                    <textarea
-                                        rows={3}
-                                        value={form.alamat ?? ''}
-                                        onChange={(e) => setForm(p => ({ ...p, alamat: e.target.value }))}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800"
-                                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                <FormItem label="Kode Klien">
+                                    <Input value={form.kode_klien ?? ''} onChange={e => setForm(p => ({ ...p, kode_klien: e.target.value }))} />
                                 </FormItem>
+                                <FormItem label="Nama Klien">
+                                    <Input value={form.nama_klien ?? ''} onChange={e => setForm(p => ({ ...p, nama_klien: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="Email">
+                                    <Input type="email" value={form.email ?? ''} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="Telepon">
+                                    <Input value={form.telepon ?? ''} onChange={e => setForm(p => ({ ...p, telepon: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="Kontak PIC">
+                                    <Input value={form.kontak_pic ?? ''} onChange={e => setForm(p => ({ ...p, kontak_pic: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="Status">
+                                    <Select isSearchable={false} options={AKTIF_OPTIONS}
+                                        value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
+                                </FormItem>
+                                <div className="sm:col-span-2">
+                                    <FormItem label="Alamat">
+                                        <Input textArea rows={3} value={form.alamat ?? ''}
+                                            onChange={e => setForm(p => ({ ...p, alamat: e.target.value }))} />
+                                    </FormItem>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(klien) }}>Batal</Button>
-                            <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
-                        </div>
+                            <div className="flex justify-end gap-2 mt-6">
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(klien) }}>Batal</Button>
+                                <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
+                            </div>
                         </form>
                     </>
+                )}
+            </Card>
+
+            {/* Riwayat Proyek */}
+            <Card>
+                <div className="flex items-center justify-between mb-1">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Proyek</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Semua proyek yang pernah dikerjakan untuk klien ini</p>
+                    </div>
+                    <Button size="sm" variant="solid" onClick={() => router.push(ROUTES.PROYEK_BARU)}>+ Proyek Baru</Button>
+                </div>
+
+                {proyekLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : proyekList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada proyek untuk klien ini</p>
+                ) : (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Mulai</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="pb-3" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {proyekList.map(p => (
+                                    <tr key={p.id_proyek}>
+                                        <td className="py-3 pr-4 font-mono text-xs text-gray-500">{p.kode_proyek}</td>
+                                        <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{p.nama_proyek}</td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap text-xs">
+                                            {p.tanggal_mulai ? dayjs(p.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            <Tag className={`text-xs font-semibold ${PROYEK_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {p.status}
+                                            </Tag>
+                                        </td>
+                                        <td className="py-3 text-right">
+                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
+                                                onClick={() => router.push(ROUTES.PROYEK_DETAIL(p.id_proyek))} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            {/* Riwayat Faktur */}
+            <Card>
+                <div className="mb-1">
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Faktur</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Semua faktur yang pernah dibuat untuk klien ini</p>
+                </div>
+
+                {fakturLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : fakturList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada faktur untuk klien ini</p>
+                ) : (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">No. Faktur</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jatuh Tempo</th>
+                                    <th className="pb-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Total</th>
+                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="pb-3" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {fakturList.map(f => (
+                                    <tr key={f.id_faktur}>
+                                        <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{f.nomor_faktur}</td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap text-xs">
+                                            {f.tanggal_faktur ? dayjs(f.tanggal_faktur).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap text-xs">
+                                            {f.jatuh_tempo ? dayjs(f.jatuh_tempo).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                            {formatRupiah(f.total)}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            <Tag className={`text-xs font-semibold ${FAKTUR_STATUS_CLASS[f.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {f.status}
+                                            </Tag>
+                                        </td>
+                                        <td className="py-3 text-right">
+                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
+                                                onClick={() => router.push(ROUTES.FAKTUR_DETAIL(f.id_faktur))} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </Card>
         </div>

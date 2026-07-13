@@ -5,46 +5,51 @@ import { Card, Button, Tag, Tooltip, toast, Notification } from '@/components/ui
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import type { ColumnDef } from '@/components/shared/DataTable'
+import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
-import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { supirService, Supir } from '@/services/supir.service'
+import dayjs from 'dayjs'
 
 const STATUS_CLASS: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    aktif:   'bg-emerald-100 text-emerald-600',
-    selesai: 'bg-blue-100 text-blue-600',
-    batal:   'bg-red-100 text-red-500',
+    pending: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
+    aktif:   'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+    batal:   'bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400',
 }
 
 export default function PenugasanPage() {
     const router = useRouter()
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
-    const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
-    const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [armadaMap, setArmadaMap]         = useState<Record<string, Armada>>({})
+    const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [selectedProyek, setSelectedProyek] = useState<string>('')
-    const [list, setList]         = useState<Penugasan[]>([])
-    const [loading, setLoading]   = useState(false)
+    const [list, setList]             = useState<Penugasan[]>([])
+    const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]              = useState(15)
-    const [total, setTotal]       = useState(0)
+    const [pageSize]                    = useState(15)
+    const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Penugasan | null>(null)
 
     useEffect(() => {
         projectService.list(1).then(res =>
             setProyekOptions(res.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
         ).catch(() => {})
-        karyawanService.list(1).then(res =>
-            setKaryawanOptions(res.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
-        ).catch(() => {})
-        armadaService.list(1).then(res =>
-            setArmadaOptions(res.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
-        ).catch(() => {})
+        armadaService.list(1).then(res => {
+            const map: Record<string, Armada> = {}
+            res.data.forEach((a: Armada) => { map[a.id_armada] = a })
+            setArmadaMap(map)
+        }).catch(() => {})
+        supirService.list(1).then(res => {
+            const map: Record<string, Supir> = {}
+            res.data.forEach((s: Supir) => { map[s.id_supir] = s })
+            setSupirMap(map)
+        }).catch(() => {})
     }, [])
 
     const fetchData = useCallback(async () => {
@@ -79,35 +84,68 @@ export default function PenugasanPage() {
     }
 
     const columns: ColumnDef<Penugasan>[] = [
-        { header: 'No', cell: (props) => props.row.index + 1 + (currentPage - 1) * pageSize, size: 60 },
         {
-            header: 'Karyawan', accessorKey: 'id_karyawan',
-            cell: ({ row }) => karyawanOptions.find(o => o.value === row.original.id_karyawan)?.label ?? row.original.id_karyawan ?? '-',
+            header: 'No', id: 'no', size: 60,
+            cell: (props: CellContext<Penugasan, unknown>) =>
+                props.row.index + 1 + (currentPage - 1) * pageSize,
         },
         {
             header: 'Armada', accessorKey: 'id_armada',
-            cell: ({ row }) => armadaOptions.find(o => o.value === row.original.id_armada)?.label ?? row.original.id_armada ?? '-',
+            cell: ({ row }) => {
+                const arm = row.original.id_armada ? armadaMap[row.original.id_armada] : null
+                return arm ? (
+                    <div>
+                        <p className="font-semibold">{arm.nopol}</p>
+                        <p className="text-xs text-gray-400">{arm.merk} {arm.model ?? ''}</p>
+                    </div>
+                ) : <span className="text-gray-400">—</span>
+            },
         },
-        { header: 'Tanggal Tugas', accessorKey: 'tanggal_tugas', cell: ({ row }) => row.original.tanggal_tugas ?? '-' },
         {
-            header: 'Status', accessorKey: 'status',
+            header: 'Supir', accessorKey: 'id_supir',
+            cell: ({ row }) => {
+                const sup = row.original.id_supir ? supirMap[row.original.id_supir] : null
+                return sup ? (
+                    <div>
+                        <p className="font-medium">{sup.nama}</p>
+                        <p className="text-xs text-gray-400">SIM {sup.jenis_sim}</p>
+                    </div>
+                ) : <span className="text-gray-400">—</span>
+            },
+        },
+        {
+            header: 'Tanggal Tugas', accessorKey: 'tanggal_tugas', size: 150,
+            cell: ({ row }) => row.original.tanggal_tugas
+                ? dayjs(row.original.tanggal_tugas).format('DD MMM YYYY')
+                : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Status', accessorKey: 'status', size: 120,
             cell: ({ row }) => (
-                <Tag className={STATUS_CLASS[row.original.status] ?? 'bg-gray-100 text-gray-700'}>
+                <Tag className={STATUS_CLASS[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
                     {row.original.status}
                 </Tag>
             ),
         },
         {
-            header: 'Aksi', id: 'aksi',
+            header: '', id: 'aksi', size: 90,
             cell: ({ row }) => (
-                <div className="flex gap-1">
+                <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail">
-                        <Button size="xs" variant="plain" icon={<HiOutlineEye />}
-                            onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(row.original.id_penugasan))} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(row.original.id_penugasan))}
+                        >
+                            <HiOutlineEye className="text-lg" />
+                        </span>
                     </Tooltip>
                     <Tooltip title="Hapus">
-                        <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                            onClick={() => setDeleteTarget(row.original)} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}
+                        >
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
                     </Tooltip>
                 </div>
             ),
@@ -116,35 +154,37 @@ export default function PenugasanPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="font-bold">Penugasan</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Penugasan karyawan dan armada ke proyek</p>
-                </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.PENUGASAN_BARU)}>
-                    Tambah Penugasan
-                </Button>
-            </div>
-
-            <Card>
-                <div className="mb-4 max-w-md">
+            <Card
+                header={{
+                    content: <h4>Penugasan</h4>,
+                    extra: (
+                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                            onClick={() => router.push(ROUTES.PENUGASAN_BARU)}>
+                            Tambah Penugasan
+                        </Button>
+                    ),
+                    bordered: false,
+                }}
+                bodyClass="p-0"
+            >
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <Select
-                        placeholder="Pilih proyek terlebih dahulu..."
+                        className="w-96"
+                        placeholder="Pilih proyek untuk melihat penugasan..."
                         options={proyekOptions}
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}
-                        onChange={(opt) => { setSelectedProyek(opt?.value ?? ''); setCurrentPage(1) }}
+                        onChange={(opt) => { setSelectedProyek((opt as { value: string } | null)?.value ?? ''); setCurrentPage(1) }}
                     />
                 </div>
 
                 {!selectedProyek ? (
-                    <div className="py-10 text-center text-gray-400 text-sm">
+                    <div className="py-12 text-center text-gray-400 text-sm">
                         Pilih proyek di atas untuk melihat daftar penugasan
                     </div>
                 ) : (
                     <DataTable
                         columns={columns}
-                        data={list}
+                        data={list as unknown[]}
                         loading={loading}
                         pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
                         onPaginationChange={setCurrentPage}
@@ -152,15 +192,10 @@ export default function PenugasanPage() {
                 )}
             </Card>
 
-            <ConfirmDialog
-                isOpen={!!deleteTarget}
-                type="danger"
-                title="Hapus Penugasan"
-                onClose={() => setDeleteTarget(null)}
-                onConfirm={handleDelete}
-                confirmButtonProps={{ loading: submitting, variant: 'solid', className: 'bg-red-600 hover:bg-red-700' }}
-            >
-                <p>Hapus penugasan ini? Armada yang digunakan akan dikembalikan ke status tersedia.</p>
+            <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Penugasan"
+                onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
+                confirmButtonProps={{ loading: submitting }}>
+                <p>Hapus penugasan ini? Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
         </div>
     )

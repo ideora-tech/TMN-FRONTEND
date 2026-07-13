@@ -50,7 +50,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         try {
             const updated = await kontrakVendorService.update(id, {
                 mekanisme:       form.mekanisme,
-                nilai_kontrak:   form.nilai_kontrak_str ? Number(form.nilai_kontrak_str) : null,
+                nilai_kontrak:   Number(form.nilai_kontrak_str || '0'),
                 tanggal_mulai:   form.tanggal_mulai ?? null,
                 tanggal_selesai: form.tanggal_selesai ?? null,
                 status:          form.status ?? null,

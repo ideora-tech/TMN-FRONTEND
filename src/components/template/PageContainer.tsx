@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import Container from '@/components/shared/Container'
 import Footer from './Footer'
+import AppBreadcrumb from '@/components/shared/AppBreadcrumb'
 import useLayout from '@/utils/hooks/useLayout'
 import classNames from '@/utils/classNames'
 import {
@@ -165,6 +166,7 @@ const PageContainer = (props: PageContainerProps) => {
                                 !footer && 'pb-0 sm:pb-0 md:pb-0',
                             )}
                         >
+                            <AppBreadcrumb />
                             <PageContainerHeader
                                 {...header}
                                 gutterLess={pageContainerType === 'gutterless'}

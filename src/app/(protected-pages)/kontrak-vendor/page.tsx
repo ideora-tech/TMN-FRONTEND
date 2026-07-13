@@ -10,6 +10,7 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
+import dayjs from 'dayjs'
 
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only:   'Unit Only',
@@ -63,36 +64,87 @@ export default function KontrakVendorPage() {
     }
 
     const filteredList = list.filter(k =>
-        !search || (k.vendor?.nama_vendor ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        !search ||
+        (k.vendor?.nama_vendor ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (k.mekanisme ?? '').toLowerCase().includes(search.toLowerCase())
     )
 
     const columns: ColumnDef<KontrakVendor>[] = [
-        { header: 'No', cell: (props: CellContext<KontrakVendor, unknown>) => props.row.index + 1 + (currentPage - 1) * pageSize, size: 60 },
-        { header: 'Vendor', accessorKey: 'vendor', cell: ({ row }) => row.original.vendor?.nama_vendor ?? row.original.id_vendor },
-        { header: 'Mekanisme', accessorKey: 'mekanisme', cell: ({ row }) => MEKANISME_LABEL[row.original.mekanisme] ?? row.original.mekanisme },
-        { header: 'Nilai Kontrak', accessorKey: 'nilai_kontrak', cell: ({ row }) => row.original.nilai_kontrak ? formatRupiah(row.original.nilai_kontrak) : '-' },
-        { header: 'Mulai', accessorKey: 'tanggal_mulai', cell: ({ row }) => row.original.tanggal_mulai ?? '-' },
-        { header: 'Selesai', accessorKey: 'tanggal_selesai', cell: ({ row }) => row.original.tanggal_selesai ?? '-' },
         {
-            header: 'Status', accessorKey: 'status',
-            cell: ({ row }) => row.original.status ? (
-                <Tag className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100">
-                    {row.original.status}
-                </Tag>
-            ) : '-',
+            header: 'No', id: 'no', size: 60,
+            cell: (props: CellContext<KontrakVendor, unknown>) =>
+                props.row.index + 1 + (currentPage - 1) * pageSize,
         },
         {
-            header: 'Aksi', id: 'aksi',
+            header: 'Vendor', accessorKey: 'vendor',
             cell: ({ row }) => (
-                <div className="flex gap-1">
+                <span className="font-semibold">
+                    {row.original.vendor?.nama_vendor ?? row.original.id_vendor}
+                </span>
+            ),
+        },
+        {
+            header: 'Mekanisme', accessorKey: 'mekanisme', size: 160,
+            cell: ({ row }) => (
+                <Tag className="bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                    {MEKANISME_LABEL[row.original.mekanisme] ?? row.original.mekanisme}
+                </Tag>
+            ),
+        },
+        {
+            header: 'Nilai Kontrak', accessorKey: 'nilai_kontrak', size: 180,
+            cell: ({ row }) => row.original.nilai_kontrak
+                ? <span className="font-semibold tabular-nums">{formatRupiah(row.original.nilai_kontrak)}</span>
+                : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Mulai', accessorKey: 'tanggal_mulai', size: 140,
+            cell: ({ row }) => row.original.tanggal_mulai
+                ? dayjs(row.original.tanggal_mulai).format('DD MMM YYYY')
+                : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Selesai', accessorKey: 'tanggal_selesai', size: 140,
+            cell: ({ row }) => {
+                const tgl = row.original.tanggal_selesai
+                if (!tgl) return <span className="text-gray-400">—</span>
+                const expired = dayjs(tgl).isBefore(dayjs(), 'day')
+                return (
+                    <span className={expired ? 'text-red-500 font-medium' : ''}>
+                        {dayjs(tgl).format('DD MMM YYYY')}
+                    </span>
+                )
+            },
+        },
+        {
+            header: 'Status', accessorKey: 'status', size: 120,
+            cell: ({ row }) => {
+                const tgl = row.original.tanggal_selesai
+                const expired = tgl ? dayjs(tgl).isBefore(dayjs(), 'day') : false
+                if (!tgl) return <Tag className="bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Tidak berbatas</Tag>
+                if (expired) return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
+                return <Tag className="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Aktif</Tag>
+            },
+        },
+        {
+            header: '', id: 'aksi', size: 90,
+            cell: ({ row }) => (
+                <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail">
-                        <Button size="xs" variant="plain" icon={<HiOutlineEye />}
-                            onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(row.original.id_kontrak_vendor))} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(row.original.id_kontrak_vendor))}
+                        >
+                            <HiOutlineEye className="text-lg" />
+                        </span>
                     </Tooltip>
                     <Tooltip title="Hapus">
-                        <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                            onClick={() => setDeleteTarget(row.original)} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}
+                        >
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
                     </Tooltip>
                 </div>
             ),
@@ -100,26 +152,42 @@ export default function KontrakVendorPage() {
     ]
 
     return (
-        <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Kontrak Vendor</h2>
-                <Button size="sm" variant="solid" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.KONTRAK_VENDOR_BARU)}>Tambah Kontrak</Button>
-            </div>
-
-            <Card>
-                <div className="flex gap-2 mb-4">
-                    <Input placeholder="Cari vendor / mekanisme..."
-                        value={searchInput} onChange={e => setSearchInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSearchSubmit()}
-                        prefix={<HiOutlineSearch />} className="w-72" />
-                    <Button size="sm" onClick={handleSearchSubmit}>Cari</Button>
-                    {search && <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={handleSearchClear} />}
+        <div className="flex flex-col gap-4">
+            <Card
+                header={{
+                    content: <h4>Kontrak Vendor</h4>,
+                    extra: (
+                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                            onClick={() => router.push(ROUTES.KONTRAK_VENDOR_BARU)}>
+                            Tambah Kontrak
+                        </Button>
+                    ),
+                    bordered: false,
+                }}
+                bodyClass="p-0"
+            >
+                <div className="px-4 py-3">
+                    <Input
+                        className="w-80"
+                        placeholder="Cari nama vendor / mekanisme..."
+                        suffix={
+                            searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                        }
+                        value={searchInput}
+                        onChange={e => setSearchInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
+                    />
                 </div>
-                <DataTable columns={columns} data={filteredList} loading={loading}
+                <DataTable
+                    columns={columns}
+                    data={filteredList as unknown[]}
+                    loading={loading}
                     noData={!loading && filteredList.length === 0}
                     pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
-                    onPaginationChange={setCurrentPage} />
+                    onPaginationChange={setCurrentPage}
+                />
             </Card>
 
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Kontrak"

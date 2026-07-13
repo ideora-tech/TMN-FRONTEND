@@ -17,6 +17,10 @@ export const projectService = {
         const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { page, limit: 15 } })
         return data as { data: Project[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
+    async listByKlien(idKlien: string, page = 1, limit = 50) {
+        const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { id_klien: idKlien, page, limit } })
+        return data as { data: Project[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.PROYEK_DETAIL(id))
         return data.data as Project

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Select, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
@@ -17,11 +17,18 @@ const STATUS_OPTIONS = [
 ]
 
 export default function ProjectBaruPage() {
-    const router = useRouter()
+    const router       = useRouter()
+    const searchParams = useSearchParams()
     const [form, setForm] = useState({
-        id_klien: '', kode_proyek: '', nama_proyek: '',
-        tanggal_mulai: '', tanggal_selesai: '', status: 'draft', keterangan: '',
+        id_klien:          searchParams.get('id_klien') ?? '',
+        kode_proyek:       '',
+        nama_proyek:       searchParams.get('nama_proyek') ?? '',
+        tanggal_mulai:     '',
+        tanggal_selesai:   '',
+        status:            'draft',
+        keterangan:        '',
     })
+    const fromPenawaran = searchParams.get('id_penawaran')
     const [klienOptions, setKlienOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({})
@@ -68,7 +75,9 @@ export default function ProjectBaruPage() {
                 </button>
                 <div>
                     <h3 className="font-bold">Tambah Proyek Baru</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Daftarkan proyek baru ke sistem</p>
+                    <p className="text-gray-500 text-sm mt-0.5">
+                        {fromPenawaran ? 'Proyek dari penawaran yang disetujui' : 'Daftarkan proyek baru ke sistem'}
+                    </p>
                 </div>
             </div>
             <Card>

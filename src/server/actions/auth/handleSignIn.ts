@@ -22,11 +22,11 @@ export const onSignInWithCredentials = async (
         if (error instanceof AuthError) {
             /** Customize error message based on AuthError */
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            switch ((error.type as any).type) {
+            switch (error.type) {
                 case 'CredentialsSignin':
-                    return { error: 'Invalid credentials!' }
+                    return { error: 'Username atau password salah' }
                 default:
-                    return { error: 'Something went wrong!' }
+                    return { error: 'Terjadi kesalahan, coba lagi' }
             }
         }
         throw error

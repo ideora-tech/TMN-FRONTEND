@@ -19,6 +19,16 @@ import {
     PiPathDuotone,
     PiNotepadDuotone,
     PiBugDuotone,
+    PiSignatureDuotone,
+    PiIdentificationCardDuotone,
+    PiTreeStructureDuotone,
+    PiMedalDuotone,
+    PiCarProfileDuotone,
+    PiMapTrifoldDuotone,
+    PiUsersThreeDuotone,
+    PiKeyDuotone,
+    PiBuildingOfficeDuotone,
+    PiPuzzlePieceDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -42,9 +52,19 @@ const navigationIcon: NavigationIcons = {
     database:   <PiDatabaseDuotone />,
     layers:     <PiStackDuotone />,
     userCircle: <PiUserCircleDuotone />,
-    path:       <PiPathDuotone />,
-    notepad:    <PiNotepadDuotone />,
-    bug:        <PiBugDuotone />,
+    path:          <PiPathDuotone />,
+    notepad:       <PiNotepadDuotone />,
+    bug:           <PiBugDuotone />,
+    contract:      <PiSignatureDuotone />,
+    idCard:        <PiIdentificationCardDuotone />,
+    treeStructure: <PiTreeStructureDuotone />,
+    medal:         <PiMedalDuotone />,
+    carProfile:    <PiCarProfileDuotone />,
+    map:           <PiMapTrifoldDuotone />,
+    usersThree:    <PiUsersThreeDuotone />,
+    key:           <PiKeyDuotone />,
+    office:        <PiBuildingOfficeDuotone />,
+    puzzle:        <PiPuzzlePieceDuotone />,
 }
 
 export default navigationIcon

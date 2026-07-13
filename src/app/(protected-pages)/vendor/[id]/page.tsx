@@ -261,27 +261,55 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 )}
 
                 {kontraks.length === 0 ? (
-                    <div className="text-gray-400 text-sm py-4">Belum ada kontrak.</div>
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                        <span className="text-4xl mb-2">📄</span>
+                        <p className="text-sm font-medium">Belum ada kontrak</p>
+                        <p className="text-xs mt-1">Klik &quot;Tambah Kontrak&quot; untuk menambahkan</p>
+                    </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto -mx-5">
                         <table className="min-w-full text-sm">
                             <thead>
-                                <tr className="border-b">
-                                    <th className="py-2 text-left text-gray-500 font-medium pr-4">Mekanisme</th>
-                                    <th className="py-2 text-left text-gray-500 font-medium pr-4">Nilai</th>
-                                    <th className="py-2 text-left text-gray-500 font-medium pr-4">Mulai</th>
-                                    <th className="py-2 text-left text-gray-500 font-medium">Selesai</th>
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mekanisme</th>
+                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nilai Kontrak</th>
+                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mulai</th>
+                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Selesai</th>
+                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {kontraks.map(k => (
-                                    <tr key={k.id_kontrak} className="border-b last:border-b-0">
-                                        <td className="py-2 pr-4">{k.mekanisme}</td>
-                                        <td className="py-2 pr-4">{k.nilai_kontrak ? formatRupiah(k.nilai_kontrak) : '-'}</td>
-                                        <td className="py-2 pr-4">{k.tanggal_mulai ?? '-'}</td>
-                                        <td className="py-2">{k.tanggal_selesai ?? '-'}</td>
-                                    </tr>
-                                ))}
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {kontraks.map(k => {
+                                    const label = MEKANISME_OPTIONS.find(o => o.value === k.mekanisme)?.label ?? k.mekanisme
+                                    const isExpired = k.tanggal_selesai ? dayjs(k.tanggal_selesai).isBefore(dayjs(), 'day') : false
+                                    return (
+                                        <tr key={k.id_kontrak} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <td className="py-3.5 px-5">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                    {label}
+                                                </span>
+                                            </td>
+                                            <td className="py-3.5 px-5 font-semibold text-gray-800 dark:text-gray-100 tabular-nums">
+                                                {k.nilai_kontrak ? formatRupiah(k.nilai_kontrak) : <span className="text-gray-400 font-normal">—</span>}
+                                            </td>
+                                            <td className="py-3.5 px-5 text-gray-600 dark:text-gray-400">
+                                                {k.tanggal_mulai ? dayjs(k.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                            </td>
+                                            <td className="py-3.5 px-5 text-gray-600 dark:text-gray-400">
+                                                {k.tanggal_selesai ? dayjs(k.tanggal_selesai).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                            </td>
+                                            <td className="py-3.5 px-5">
+                                                {!k.tanggal_selesai ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Tidak ada masa berlaku</span>
+                                                ) : isExpired ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">Kadaluarsa</span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Aktif</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>

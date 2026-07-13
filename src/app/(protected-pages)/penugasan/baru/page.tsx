@@ -11,6 +11,7 @@ import { penugasanService, StatusPenugasan } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { supirService, Supir } from '@/services/supir.service'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -22,11 +23,12 @@ const STATUS_OPTIONS = [
 export default function PenugasanBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        id_proyek: '', id_karyawan: '', id_armada: '', tanggal_tugas: '', status: 'pending' as StatusPenugasan,
+        id_proyek: '', id_armada: '', id_supir: '', id_karyawan: '', tanggal_tugas: '', status: 'pending' as StatusPenugasan,
     })
     const [proyekOptions, setProyekOptions]     = useState<{ value: string; label: string }[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
 
@@ -35,12 +37,16 @@ export default function PenugasanBaruPage() {
             projectService.list(1),
             karyawanService.list(1),
             armadaService.list(1),
-        ]).then(([proyek, karyawan, armada]) => {
+            supirService.list(1),
+        ]).then(([proyek, karyawan, armada, supir]) => {
             setProyekOptions(proyek.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
             setKaryawanOptions(karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
             setArmadaOptions(armada.data
                 .filter((a: Armada) => a.status === 'aktif')
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
+            setSupirOptions(supir.data
+                .filter((s: Supir) => s.status === 'aktif')
+                .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
         }).catch(() => {})
     }, [])
 
@@ -57,8 +63,9 @@ export default function PenugasanBaruPage() {
         try {
             await penugasanService.create({
                 id_proyek:     form.id_proyek,
-                id_karyawan:   form.id_karyawan || undefined,
                 id_armada:     form.id_armada || undefined,
+                id_supir:      form.id_supir || undefined,
+                id_karyawan:   form.id_karyawan || undefined,
                 tanggal_tugas: form.tanggal_tugas || undefined,
                 status:        form.status,
             })
@@ -98,12 +105,12 @@ export default function PenugasanBaruPage() {
                             />
                         </FormItem>
                     </div>
-                    <FormItem label="Karyawan">
+                    <FormItem label="Supir">
                         <Select
-                            placeholder="Pilih karyawan..."
-                            options={karyawanOptions}
-                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
-                            onChange={(opt) => setForm(p => ({ ...p, id_karyawan: opt?.value ?? '' }))}
+                            placeholder="Pilih supir..."
+                            options={supirOptions}
+                            value={supirOptions.find(o => o.value === form.id_supir) ?? null}
+                            onChange={(opt) => setForm(p => ({ ...p, id_supir: opt?.value ?? '' }))}
                             isClearable
                         />
                     </FormItem>
@@ -113,6 +120,15 @@ export default function PenugasanBaruPage() {
                             options={armadaOptions}
                             value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
                             onChange={(opt) => setForm(p => ({ ...p, id_armada: opt?.value ?? '' }))}
+                            isClearable
+                        />
+                    </FormItem>
+                    <FormItem label="Karyawan PIC">
+                        <Select
+                            placeholder="Pilih karyawan penanggung jawab..."
+                            options={karyawanOptions}
+                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                            onChange={(opt) => setForm(p => ({ ...p, id_karyawan: opt?.value ?? '' }))}
                             isClearable
                         />
                     </FormItem>

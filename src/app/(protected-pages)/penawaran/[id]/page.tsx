@@ -5,7 +5,7 @@ import { Card, Button, FormItem, Input, Tag, toast, Notification } from '@/compo
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -126,6 +126,43 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     <p className="text-gray-500 text-sm mt-0.5">{data.judul}</p>
                 </div>
             </div>
+
+            {/* Banner aksi setelah disetujui */}
+            {data.status === 'disetujui' && (
+                <Card className="border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                    <div className="flex items-start gap-3">
+                        <HiOutlineLightBulb className="text-emerald-600 dark:text-emerald-400 text-xl flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Penawaran Disetujui</p>
+                            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
+                                {data.id_proyek
+                                    ? 'Penawaran ini sudah terhubung ke proyek.'
+                                    : 'Langkah selanjutnya: buat proyek berdasarkan penawaran ini, lalu tambahkan penugasan di halaman proyek.'}
+                            </p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                            {data.id_proyek ? (
+                                <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />}
+                                    onClick={() => router.push(ROUTES.PROYEK_DETAIL(data.id_proyek!))}>
+                                    Lihat Proyek
+                                </Button>
+                            ) : (
+                                <Button size="sm" variant="solid"
+                                    onClick={() => {
+                                        const params = new URLSearchParams({
+                                            ...(data.id_klien ? { id_klien: data.id_klien } : {}),
+                                            nama_proyek: data.judul,
+                                            id_penawaran: data.id_penawaran,
+                                        })
+                                        router.push(`${ROUTES.PROYEK_BARU}?${params}`)
+                                    }}>
+                                    Buat Proyek
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             {nextStatuses.length > 0 && (
                 <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
