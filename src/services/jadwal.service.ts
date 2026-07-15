@@ -13,8 +13,8 @@ export interface Jadwal {
 }
 
 export const jadwalService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.JADWAL, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15) {
+        const { data } = await axios.get(API_ENDPOINTS.JADWAL, { params: { page, limit } })
         return data as { data: Jadwal[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
 

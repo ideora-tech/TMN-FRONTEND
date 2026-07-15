@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, toast, Notification } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
+import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 
@@ -53,6 +55,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
     const [pendingStatus, setPendingStatus] = useState<PenawaranStatus | null>(null)
     const [statusLoading, setStatusLoading] = useState(false)
+    const [downloadingPdf, setDownloadingPdf] = useState(false)
 
     useEffect(() => {
         penawaranService.get(id)
@@ -102,6 +105,26 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setStatusLoading(false)
+        }
+    }
+
+    const handleDownloadPdf = async () => {
+        if (!data) return
+        setDownloadingPdf(true)
+        try {
+            const res = await axios.get(API_ENDPOINTS.PENAWARAN_PDF(id), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `penawaran-${data.nomor_penawaran}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingPdf(false)
         }
     }
 
@@ -211,6 +234,9 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 <Tag className={`${STATUS_CLASS[data.status] ?? ''} border-0`}>
                                     {STATUS_LABEL[data.status] ?? data.status}
                                 </Tag>
+                                <Button size="sm" variant="default" loading={downloadingPdf} onClick={handleDownloadPdf}>
+                                    Download PDF
+                                </Button>
                                 {data.status === 'draft' && (
                                     <Button
                                         variant="solid"

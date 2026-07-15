@@ -11,6 +11,7 @@ export interface Penugasan {
     id_karyawan: string | null
     tanggal_tugas: string | null
     status: StatusPenugasan
+    estimasi_biaya?: number | null
     dibuat_pada: string
     diubah_pada: string
 }

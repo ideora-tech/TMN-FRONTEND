@@ -12,8 +12,8 @@ export interface Armada {
 }
 
 export const armadaService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.ARMADA, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA, { params: { page, limit } })
         return data as { data: Armada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

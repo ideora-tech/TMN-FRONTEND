@@ -145,4 +145,33 @@ export const API_ENDPOINTS = {
     FAKTUR_EXPORT_PDF:     '/api/proxy/faktur/export/pdf',
     LAPORAN_EXPORT_EXCEL:  '/api/proxy/laporan/export/excel',
     LAPORAN_EXPORT_PDF:    '/api/proxy/laporan/export/pdf',
+
+    // Trip lanjutan
+    TRIP_REKAP_BIAYA:        (id: string) => `/api/proxy/trip/${id}/rekap-biaya`,
+    TRIP_BATALKAN:           (id: string) => `/api/proxy/trip/${id}/batalkan`,
+    TRIP_LAPORAN_PERJALANAN: (idTrip: string) => `/api/proxy/trip/${idTrip}/laporan-perjalanan`,
+    LAPORAN_PERJALANAN_DETAIL: (id: string) => `/api/proxy/laporan-perjalanan/${id}`,
+    LAPORAN_PERJALANAN_FOTO:   (id: string) => `/api/proxy/laporan-perjalanan/${id}/foto`,
+    LAPORAN_PERJALANAN_FOTO_DELETE: (id: string, idFoto: string) => `/api/proxy/laporan-perjalanan/${id}/foto/${idFoto}`,
+
+    // Dokumen Vendor
+    VENDOR_DOKUMEN:        (idVendor: string) => `/api/proxy/vendor/${idVendor}/dokumen`,
+    VENDOR_DOKUMEN_UPDATE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
+    VENDOR_DOKUMEN_DELETE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
+
+    // Penawaran PDF
+    PENAWARAN_PDF: (id: string) => `/api/proxy/penawaran/${id}/pdf`,
+
+    // Laporan Operasional
+    LAPORAN_TRIP:           '/api/proxy/laporan/trip',
+    LAPORAN_TRIP_RINGKASAN: '/api/proxy/laporan/trip/ringkasan',
+    LAPORAN_TRIP_EXPORT_EXCEL: '/api/proxy/laporan/trip/export/excel',
+    LAPORAN_TRIP_EXPORT_PDF:   '/api/proxy/laporan/trip/export/pdf',
+    LAPORAN_KARYAWAN_EXPORT_EXCEL: '/api/proxy/laporan/karyawan/export/excel',
+    LAPORAN_KARYAWAN_EXPORT_PDF:   '/api/proxy/laporan/karyawan/export/pdf',
+    LAPORAN_ARMADA_EXPORT_EXCEL:   '/api/proxy/laporan/armada/export/excel',
+    LAPORAN_ARMADA_EXPORT_PDF:     '/api/proxy/laporan/armada/export/pdf',
+
+    // Klien (riwayat proyek)
+    KLIEN_PROYEK: (id: string) => `/api/proxy/klien/${id}/proyek`,
 } as const

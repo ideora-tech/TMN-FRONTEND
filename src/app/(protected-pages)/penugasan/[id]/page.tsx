@@ -13,6 +13,7 @@ import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jadwalService, Jadwal } from '@/services/jadwal.service'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -120,6 +121,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 id_karyawan:   form.id_karyawan ?? null,
                 tanggal_tugas: form.tanggal_tugas ?? null,
                 status:        form.status,
+                estimasi_biaya: form.estimasi_biaya ?? null,
             })
             setPenugasan(updated)
             setEditing(false)
@@ -223,6 +225,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 { label: 'Armada',        value: armadaLabel },
                                 { label: 'Supir',         value: supirLabel },
                                 { label: 'Karyawan PIC',  value: karyawanLabel },
+                                { label: 'Estimasi Biaya', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },
                                 { label: 'Dibuat',        value: dayjs(penugasan.dibuat_pada).format('DD MMM YYYY HH:mm') },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -273,6 +276,11 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                     <Select isSearchable={false} options={STATUS_OPTIONS}
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
+                                </FormItem>
+                                <FormItem label="Estimasi Biaya">
+                                    <Input prefix="Rp" placeholder="0"
+                                        value={form.estimasi_biaya ? formatNum(Number(form.estimasi_biaya)) : ''}
+                                        onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">

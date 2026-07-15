@@ -1,13 +1,21 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
+import CalendarView from '@/components/shared/CalendarView'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { jadwalService, Jadwal } from '@/services/jadwal.service'
+
+const EVENT_COLOR: Record<Jadwal['status'], string> = {
+    terjadwal:  'blue',
+    berjalan:   'green',
+    selesai:    'purple',
+    dibatalkan: 'red',
+}
 
 type StatusOption = { value: string; label: string }
 
@@ -29,6 +37,8 @@ const STATUS_TAG: Record<string, string> = {
 export default function JadwalPage() {
     const router = useRouter()
 
+    const [mode, setMode] = useState<'tabel' | 'kalender'>('tabel')
+
     const [list, setList]       = useState<Jadwal[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -38,6 +48,9 @@ export default function JadwalPage() {
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
+
+    const [calendarList, setCalendarList]       = useState<Jadwal[]>([])
+    const [calendarLoading, setCalendarLoading] = useState(false)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -52,7 +65,39 @@ export default function JadwalPage() {
         }
     }, [currentPage])
 
-    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => {
+        if (mode === 'tabel') fetchData()
+    }, [fetchData, mode])
+
+    const fetchCalendar = useCallback(async () => {
+        setCalendarLoading(true)
+        try {
+            const res = await jadwalService.list(1, 200)
+            setCalendarList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setCalendarLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (mode === 'kalender') fetchCalendar()
+    }, [mode, fetchCalendar])
+
+    const events = useMemo(
+        () =>
+            calendarList
+                .filter(j => j.waktu_berangkat)
+                .map(j => ({
+                    id: j.id_jadwal,
+                    title: j.rute ?? 'Jadwal',
+                    start: j.waktu_berangkat as string,
+                    ...(j.estimasi_tiba ? { end: j.estimasi_tiba } : {}),
+                    extendedProps: { eventColor: EVENT_COLOR[j.status] ?? 'blue' },
+                })),
+        [calendarList],
+    )
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
@@ -107,39 +152,74 @@ export default function JadwalPage() {
     return (
         <div className="flex flex-col gap-4">
             <Card
-                header={{ content: <h4>Jadwal</h4>, bordered: false }}
+                header={{
+                    content: <h4>Jadwal</h4>,
+                    extra: (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                size="sm" variant={mode === 'tabel' ? 'solid' : 'default'}
+                                onClick={() => setMode('tabel')}
+                            >
+                                Tabel
+                            </Button>
+                            <Button
+                                size="sm" variant={mode === 'kalender' ? 'solid' : 'default'}
+                                onClick={() => setMode('kalender')}
+                            >
+                                Kalender
+                            </Button>
+                        </div>
+                    ),
+                    bordered: false,
+                }}
                 bodyClass="p-0"
             >
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <Input
-                        className="flex-1"
-                        placeholder="Cari rute... (tekan Enter)"
-                        suffix={
-                            searchInput
-                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
-                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
-                        }
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
-                    />
-                    <div className="w-44 shrink-0">
-                        <Select<StatusOption>
-                            options={STATUS_OPTIONS}
-                            value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
-                            onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
+                {mode === 'tabel' ? (
+                    <>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                            <Input
+                                className="flex-1"
+                                placeholder="Cari rute... (tekan Enter)"
+                                suffix={
+                                    searchInput
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                        : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                                }
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
+                            />
+                            <div className="w-44 shrink-0">
+                                <Select<StatusOption>
+                                    options={STATUS_OPTIONS}
+                                    value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
+                                    onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
+                                />
+                            </div>
+                        </div>
+                        <DataTable
+                            columns={columns}
+                            data={filteredList as unknown[]}
+                            loading={loading}
+                            noData={!loading && filteredList.length === 0}
+                            pagingData={{ total, pageIndex: currentPage, pageSize }}
+                            onPaginationChange={setCurrentPage}
+                            onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                         />
+                    </>
+                ) : (
+                    <div className="p-4">
+                        {calendarLoading ? (
+                            <div className="text-gray-500 p-6">Memuat...</div>
+                        ) : (
+                            <CalendarView
+                                wrapperClass="h-[700px]"
+                                events={events}
+                                eventClick={(info) => router.push(ROUTES.JADWAL_DETAIL(info.event.id))}
+                            />
+                        )}
                     </div>
-                </div>
-                <DataTable
-                    columns={columns}
-                    data={filteredList as unknown[]}
-                    loading={loading}
-                    noData={!loading && filteredList.length === 0}
-                    pagingData={{ total, pageIndex: currentPage, pageSize }}
-                    onPaginationChange={setCurrentPage}
-                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-                />
+                )}
             </Card>
         </div>
     )

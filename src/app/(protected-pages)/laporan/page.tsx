@@ -11,9 +11,12 @@ import { laporanService, Laporan } from '@/services/laporan.service'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import LaporanTripTab from './LaporanTripTab'
 
 export default function LaporanPage() {
     const router = useRouter()
+
+    const [tab, setTab] = useState<'proyek' | 'trip'>('proyek')
 
     const [list, setList]       = useState<Laporan[]>([])
     const [loading, setLoading] = useState(false)
@@ -119,55 +122,77 @@ export default function LaporanPage() {
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button
-                                size="sm" variant="default"
-                                loading={downloading === 'excel'}
-                                onClick={handleExcelDownload}
+                                size="sm" variant={tab === 'proyek' ? 'solid' : 'default'}
+                                onClick={() => setTab('proyek')}
                             >
-                                Export Excel
+                                Laporan Proyek
                             </Button>
                             <Button
-                                size="sm" variant="default"
-                                loading={downloading === 'pdf'}
-                                onClick={handlePdfDownload}
+                                size="sm" variant={tab === 'trip' ? 'solid' : 'default'}
+                                onClick={() => setTab('trip')}
                             >
-                                Export PDF
+                                Laporan Trip
                             </Button>
-                            <Button
-                                variant="solid" size="sm"
-                                icon={<HiPlusCircle />}
-                                onClick={() => router.push(ROUTES.LAPORAN_BARU)}
-                            >
-                                Buat Laporan
-                            </Button>
+                            {tab === 'proyek' && (
+                                <>
+                                    <Button
+                                        size="sm" variant="default"
+                                        loading={downloading === 'excel'}
+                                        onClick={handleExcelDownload}
+                                    >
+                                        Export Excel
+                                    </Button>
+                                    <Button
+                                        size="sm" variant="default"
+                                        loading={downloading === 'pdf'}
+                                        onClick={handlePdfDownload}
+                                    >
+                                        Export PDF
+                                    </Button>
+                                    <Button
+                                        variant="solid" size="sm"
+                                        icon={<HiPlusCircle />}
+                                        onClick={() => router.push(ROUTES.LAPORAN_BARU)}
+                                    >
+                                        Buat Laporan
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     ),
                     bordered: false,
                 }}
                 bodyClass="p-0"
             >
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <Input
-                        className="flex-1"
-                        placeholder="Cari ID proyek... (tekan Enter)"
-                        suffix={
-                            searchInput
-                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
-                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
-                        }
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
-                    />
-                </div>
-                <DataTable
-                    columns={columns}
-                    data={filteredList as unknown[]}
-                    loading={loading}
-                    noData={!loading && filteredList.length === 0}
-                    pagingData={{ total, pageIndex: currentPage, pageSize }}
-                    onPaginationChange={setCurrentPage}
-                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-                />
+                {tab === 'proyek' ? (
+                    <>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                            <Input
+                                className="flex-1"
+                                placeholder="Cari ID proyek... (tekan Enter)"
+                                suffix={
+                                    searchInput
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                        : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                                }
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
+                            />
+                        </div>
+                        <DataTable
+                            columns={columns}
+                            data={filteredList as unknown[]}
+                            loading={loading}
+                            noData={!loading && filteredList.length === 0}
+                            pagingData={{ total, pageIndex: currentPage, pageSize }}
+                            onPaginationChange={setCurrentPage}
+                            onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                        />
+                    </>
+                ) : (
+                    <LaporanTripTab />
+                )}
             </Card>
         </div>
     )

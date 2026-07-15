@@ -1,15 +1,14 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { klienService, Klien } from '@/services/klien.service'
-import { projectService, Project } from '@/services/project.service'
+import { klienService, Klien, KlienProyek } from '@/services/klien.service'
 import { fakturService, Faktur } from '@/services/faktur.service'
 
 const AKTIF_OPTIONS = [
@@ -18,10 +17,10 @@ const AKTIF_OPTIONS = [
 ]
 
 const PROYEK_STATUS_CLASS: Record<string, string> = {
-    draft:  'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    aktif:  'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    selesai:'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    batal:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+    draft:   'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    aktif:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 const FAKTUR_STATUS_CLASS: Record<string, string> = {
@@ -41,10 +40,15 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
     const [form, setForm]       = useState<Partial<Klien>>({})
     const [saving, setSaving]   = useState(false)
 
-    const [proyekList, setProyekList]         = useState<Project[]>([])
-    const [proyekLoading, setProyekLoading]   = useState(false)
+    const [proyekSummary, setProyekSummary]     = useState<KlienProyek[]>([])
+    const [proyekLoading, setProyekLoading]     = useState(false)
     const [fakturList, setFakturList]         = useState<Faktur[]>([])
     const [fakturLoading, setFakturLoading]   = useState(false)
+
+    const [proyekTableList, setProyekTableList]       = useState<KlienProyek[]>([])
+    const [proyekTableLoading, setProyekTableLoading] = useState(false)
+    const [proyekPage, setProyekPage]                 = useState(1)
+    const [proyekMeta, setProyekMeta]                 = useState({ total: 0, totalPages: 1 })
 
     useEffect(() => {
         klienService.get(id)
@@ -53,14 +57,29 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
             .finally(() => setLoading(false))
     }, [id])
 
-    const fetchProyek = useCallback(async () => {
+    // Ringkasan (dipakai kartu statistik) — ambil sampel proyek terbaru terlepas dari halaman tabel di bawah
+    const fetchProyekSummary = useCallback(async () => {
         setProyekLoading(true)
         try {
-            const res = await projectService.listByKlien(id)
-            setProyekList(res.data)
+            const res = await klienService.listProyek(id, 1, 100)
+            setProyekSummary(res.data)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setProyekLoading(false) }
+    }, [id])
+
+    // Tabel "Riwayat Proyek" — paginated dari backend. Menerima `page` secara eksplisit
+    // (bukan bergantung pada state proyekPage) supaya tidak ada race saat id klien berganti.
+    const fetchProyekTable = useCallback(async (page: number) => {
+        setProyekPage(page)
+        setProyekTableLoading(true)
+        try {
+            const res = await klienService.listProyek(id, page, 10)
+            setProyekTableList(res.data)
+            setProyekMeta({ total: res.meta.total, totalPages: res.meta.totalPages })
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally { setProyekTableLoading(false) }
     }, [id])
 
     const fetchFaktur = useCallback(async () => {
@@ -73,7 +92,11 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
         } finally { setFakturLoading(false) }
     }, [id])
 
-    useEffect(() => { fetchProyek() }, [fetchProyek])
+    useEffect(() => { fetchProyekSummary() }, [fetchProyekSummary])
+    // fetchProyekTable diambil ulang identitasnya setiap `id` berganti (lihat useCallback di atas),
+    // sehingga effect ini otomatis reset ke halaman 1 setiap kali klien berganti — tanpa effect terpisah
+    // yang bisa balapan dengan effect fetch berbasis proyekPage.
+    useEffect(() => { fetchProyekTable(1) }, [fetchProyekTable])
     useEffect(() => { fetchFaktur() }, [fetchFaktur])
 
     const handleSave = async () => {
@@ -95,6 +118,12 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
     const totalFaktur   = fakturList.reduce((s, f) => s + f.total, 0)
     const lunasFaktur   = fakturList.filter(f => f.status === 'lunas').reduce((s, f) => s + f.total, 0)
 
+    // "Proyek Aktif" dihitung dari sampel listProyek(id,1,100) — jujurkan dengan awalan "≥" bila
+    // total proyek klien melebihi jumlah baris sampel yang diambil (artinya sampel tidak lengkap).
+    const proyekAktifSampleCount = proyekSummary.filter(p => p.status === 'aktif').length
+    const proyekAktifIsEstimate  = proyekMeta.total > proyekSummary.length
+    const proyekAktifDisplay: string | number = proyekAktifIsEstimate ? `≥${proyekAktifSampleCount}` : proyekAktifSampleCount
+
     return (
         <div className="flex flex-col gap-4">
             {/* Header */}
@@ -110,16 +139,22 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {/* Summary stats */}
-            {!proyekLoading && !fakturLoading && (proyekList.length > 0 || fakturList.length > 0) && (
+            {!proyekLoading && !fakturLoading && (proyekSummary.length > 0 || fakturList.length > 0) && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                        { label: 'Total Proyek',    value: proyekList.length, color: 'text-gray-700 dark:text-gray-200' },
-                        { label: 'Proyek Aktif',    value: proyekList.filter(p => p.status === 'aktif').length, color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'Total Tagihan',   value: formatRupiah(totalFaktur), color: 'text-yellow-700 dark:text-yellow-400' },
-                        { label: 'Total Lunas',     value: formatRupiah(lunasFaktur), color: 'text-blue-600 dark:text-blue-400' },
-                    ].map(({ label, value, color }) => (
+                        { label: 'Total Proyek',    value: proyekMeta.total as string | number, color: 'text-gray-700 dark:text-gray-200', tooltip: undefined as string | undefined },
+                        { label: 'Proyek Aktif',    value: proyekAktifDisplay, color: 'text-emerald-600 dark:text-emerald-400', tooltip: proyekAktifIsEstimate ? 'Dihitung dari 100 proyek terbaru' : undefined },
+                        { label: 'Total Tagihan',   value: formatRupiah(totalFaktur) as string | number, color: 'text-yellow-700 dark:text-yellow-400', tooltip: undefined as string | undefined },
+                        { label: 'Total Lunas',     value: formatRupiah(lunasFaktur) as string | number, color: 'text-blue-600 dark:text-blue-400', tooltip: undefined as string | undefined },
+                    ].map(({ label, value, color, tooltip }) => (
                         <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-4 py-3 text-center">
-                            <p className={`text-lg font-bold ${color} truncate`}>{value}</p>
+                            {tooltip ? (
+                                <Tooltip title={tooltip}>
+                                    <p className={`text-lg font-bold ${color} truncate cursor-help`}>{value}</p>
+                                </Tooltip>
+                            ) : (
+                                <p className={`text-lg font-bold ${color} truncate`}>{value}</p>
+                            )}
                             <p className="text-xs text-gray-400 mt-0.5">{label}</p>
                         </div>
                     ))}
@@ -229,44 +264,61 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                     <Button size="sm" variant="solid" onClick={() => router.push(ROUTES.PROYEK_BARU)}>+ Proyek Baru</Button>
                 </div>
 
-                {proyekLoading ? (
+                {proyekTableLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
-                ) : proyekList.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada proyek untuk klien ini</p>
+                ) : proyekTableList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada proyek</p>
                 ) : (
-                    <div className="overflow-x-auto mt-4">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Mulai</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="pb-3" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {proyekList.map(p => (
-                                    <tr key={p.id_proyek}>
-                                        <td className="py-3 pr-4 font-mono text-xs text-gray-500">{p.kode_proyek}</td>
-                                        <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{p.nama_proyek}</td>
-                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap text-xs">
-                                            {p.tanggal_mulai ? dayjs(p.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            <Tag className={`text-xs font-semibold ${PROYEK_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {p.status}
-                                            </Tag>
-                                        </td>
-                                        <td className="py-3 text-right">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.PROYEK_DETAIL(p.id_proyek))} />
-                                        </td>
+                    <>
+                        <div className="overflow-x-auto mt-4">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode Proyek</th>
+                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
+                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Mulai</th>
+                                        <th className="pb-3" />
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {proyekTableList.map(p => (
+                                        <tr key={p.id_proyek}>
+                                            <td className="py-3 pr-4 font-mono text-xs text-gray-500">{p.kode_proyek}</td>
+                                            <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{p.nama_proyek}</td>
+                                            <td className="py-3 pr-4">
+                                                <Tag className={`text-xs font-semibold ${PROYEK_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    {p.status}
+                                                </Tag>
+                                            </td>
+                                            <td className="py-3 pr-4 text-gray-500 whitespace-nowrap text-xs">
+                                                {p.tanggal_mulai ? dayjs(p.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
+                                            </td>
+                                            <td className="py-3 text-right">
+                                                <Tooltip title="Detail">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                        onClick={() => router.push(ROUTES.PROYEK_DETAIL(p.id_proyek))}
+                                                    >
+                                                        <HiOutlineEye className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {proyekMeta.totalPages > 1 && (
+                            <div className="flex items-center justify-end gap-3 mt-4">
+                                <span className="text-xs text-gray-400">Halaman {proyekPage} dari {proyekMeta.totalPages}</span>
+                                <Button size="xs" variant="plain" disabled={proyekPage <= 1}
+                                    onClick={() => fetchProyekTable(proyekPage - 1)}>Sebelumnya</Button>
+                                <Button size="xs" variant="plain" disabled={proyekPage >= proyekMeta.totalPages}
+                                    onClick={() => fetchProyekTable(proyekPage + 1)}>Selanjutnya</Button>
+                            </div>
+                        )}
+                    </>
                 )}
             </Card>
 

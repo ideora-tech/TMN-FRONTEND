@@ -12,8 +12,8 @@ export interface Supir {
 }
 
 export const supirService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.SUPIR, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15) {
+        const { data } = await axios.get(API_ENDPOINTS.SUPIR, { params: { page, limit } })
         return data as { data: Supir[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -40,8 +40,13 @@ export const dokumenArmadaService = {
     },
 
     async update(idArmada: string, id: string, payload: Partial<DocPayload>, file?: File | null) {
-        const body = file ? buildFormData({ jenis_dokumen: payload.jenis_dokumen ?? '', ...payload }, file) : payload
-        const { data } = await axios.put(API_ENDPOINTS.ARMADA_DOKUMEN_UPDATE(idArmada, id), body)
+        if (file) {
+            const fd = buildFormData({ jenis_dokumen: payload.jenis_dokumen ?? '', ...payload }, file)
+            fd.append('_method', 'PUT')
+            const { data } = await axios.post(API_ENDPOINTS.ARMADA_DOKUMEN_UPDATE(idArmada, id), fd)
+            return data.data as DokumenArmada
+        }
+        const { data } = await axios.put(API_ENDPOINTS.ARMADA_DOKUMEN_UPDATE(idArmada, id), payload)
         return data.data as DokumenArmada
     },
 

@@ -45,6 +45,20 @@ async function handler(
         body,
     })
 
+    const respContentType = response.headers.get('content-type') ?? ''
+    if (!respContentType.includes('application/json')) {
+        const buf = await response.arrayBuffer()
+        return new NextResponse(buf, {
+            status: response.status,
+            headers: {
+                'Content-Type': respContentType || 'application/octet-stream',
+                ...(response.headers.get('content-disposition')
+                    ? { 'Content-Disposition': response.headers.get('content-disposition')! }
+                    : {}),
+            },
+        })
+    }
+
     const data = await response.json().catch(() => null)
     return NextResponse.json(data, { status: response.status })
 }

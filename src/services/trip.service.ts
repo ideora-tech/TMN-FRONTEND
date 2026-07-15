@@ -32,4 +32,20 @@ export const tripService = {
         const { data } = await axios.get(API_ENDPOINTS.TRIP_STATUS(id))
         return data.data as StatusTrip[]
     },
+    async create(payload: { id_jadwal: string; catatan?: string | null }) {
+        const { data } = await axios.post(API_ENDPOINTS.TRIP, payload)
+        return data.data as Trip
+    },
+    async checkin(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.TRIP_CHECKIN(id))
+        return data.data as Trip
+    },
+    async checkout(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.TRIP_CHECKOUT(id))
+        return data.data as Trip
+    },
+    async batalkan(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.TRIP_BATALKAN(id))
+        return data.data as Trip
+    },
 }

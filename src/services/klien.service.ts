@@ -12,9 +12,18 @@ export interface Klien {
     aktif: boolean
 }
 
+export interface KlienProyek {
+    id_proyek: string
+    kode_proyek: string
+    nama_proyek: string
+    status: 'draft' | 'aktif' | 'selesai' | 'batal'
+    tanggal_mulai?: string | null
+    tanggal_selesai?: string | null
+}
+
 export const klienService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.KLIEN, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15) {
+        const { data } = await axios.get(API_ENDPOINTS.KLIEN, { params: { page, limit } })
         return data as { data: Klien[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {
@@ -31,5 +40,9 @@ export const klienService = {
     },
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.KLIEN_DETAIL(id))
+    },
+    async listProyek(id: string, page = 1, limit = 10) {
+        const { data } = await axios.get(API_ENDPOINTS.KLIEN_PROYEK(id), { params: { page, limit } })
+        return data as { data: KlienProyek[]; meta: { page: number; limit: number; total: number; totalPages: number } }
     },
 }
