@@ -274,7 +274,7 @@ function DataTable<T>(props: DataTableProps<T>) {
     return (
         <Loading loading={Boolean(loading && data.length !== 0)} type="cover">
             <Table {...rest}>
-                <THead>
+                <THead className="bg-blue-50 dark:bg-blue-500/10">
                     {table.getHeaderGroups().map((headerGroup) => (
                         <Tr key={headerGroup.id}>
                             {headerGroup.headers.map((header) => {

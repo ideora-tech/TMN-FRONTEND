@@ -8,6 +8,8 @@ export interface Rute {
     nama_rute: string
     asal: string | null
     tujuan: string | null
+    id_lokasi_asal: string | null
+    id_lokasi_tujuan: string | null
     estimasi_jarak_km: number | null
     estimasi_durasi_menit: number | null
     keterangan: string | null
@@ -19,8 +21,8 @@ export interface Rute {
 export interface RutePayload {
     kode_rute: string
     nama_rute: string
-    asal?: string | null
-    tujuan?: string | null
+    id_lokasi_asal?: string | null
+    id_lokasi_tujuan?: string | null
     estimasi_jarak_km?: number | null
     estimasi_durasi_menit?: number | null
     keterangan?: string | null

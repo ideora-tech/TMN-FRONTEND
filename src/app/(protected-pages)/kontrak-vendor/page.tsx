@@ -153,19 +153,17 @@ export default function KontrakVendorPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Kontrak Vendor</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.KONTRAK_VENDOR_BARU)}>
-                            Tambah Kontrak
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Kontrak Vendor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola kontrak kerja sama vendor</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.KONTRAK_VENDOR_BARU)}>
+                    Tambah Kontrak
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="px-4 py-3">
                     <Input
                         className="w-80"

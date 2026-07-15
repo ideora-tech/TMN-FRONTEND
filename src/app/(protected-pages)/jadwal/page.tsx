@@ -151,9 +151,14 @@ export default function JadwalPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Jadwal</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Jadwal keberangkatan trip</p>
+                </div>
+            </div>
             <Card
                 header={{
-                    content: <h4>Jadwal</h4>,
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button

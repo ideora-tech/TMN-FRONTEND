@@ -439,7 +439,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         {laporan.biaya_lain.length > 0 && (
                             <div className="overflow-x-auto mt-4">
                                 <table className="w-full text-sm">
-                                    <thead>
+                                    <thead className="bg-blue-50 dark:bg-blue-500/10">
                                         <tr className="border-b">
                                             <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
                                             <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>
@@ -497,12 +497,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                         onChange={e => setFotoKeterangan(e.target.value)}
                                     />
                                 </FormItem>
-                                <Upload accept=".jpg,.jpeg,.png,.pdf" showList={false} uploadLimit={1}
-                                    onChange={files => setFotoFile(files[0] ?? null)}>
-                                    <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                        {fotoFile ? fotoFile.name : 'Pilih file'}
-                                    </Button>
-                                </Upload>
+                                <FormItem label="File" asterisk className="mb-0">
+                                    <Upload accept=".jpg,.jpeg,.png,.pdf" showList={false} uploadLimit={1}
+                                        onChange={files => setFotoFile(files[0] ?? null)}>
+                                        <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
+                                            {fotoFile ? fotoFile.name : 'Pilih file'}
+                                        </Button>
+                                    </Upload>
+                                </FormItem>
                                 <Button
                                     type="button"
                                     size="sm"
@@ -577,7 +579,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         {rekap && rekap.items.length > 0 && (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead>
+                                    <thead className="bg-blue-50 dark:bg-blue-500/10">
                                         <tr className="border-b">
                                             <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
                                             <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>

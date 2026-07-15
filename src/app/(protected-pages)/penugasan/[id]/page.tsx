@@ -13,6 +13,9 @@ import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jadwalService, Jadwal } from '@/services/jadwal.service'
+import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
+import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
+import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 const STATUS_OPTIONS = [
@@ -36,6 +39,19 @@ const JADWAL_STATUS_CLASS: Record<string, string> = {
     dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
+const MEKANISME_CLASS: Record<string, string> = {
+    unit_only:   'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    unit_driver: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    full:        'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
+}
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+}
+
+function shortId(id?: string | null) {
+    return id ? id.slice(0, 8) : '—'
+}
+
 export default function PenugasanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router  = useRouter()
@@ -50,11 +66,17 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
 
+    // info sumber vendor (read-only, ditampilkan hanya bila sumber === 'vendor')
+    const [kontrakVendorInfo, setKontrakVendorInfo] = useState<KontrakVendor | null>(null)
+    const [armadaVendorInfo, setArmadaVendorInfo]   = useState<ArmadaVendor | null>(null)
+    const [supirVendorInfo, setSupirVendorInfo]     = useState<SupirVendor | null>(null)
+
     // jadwal
     const [jadwalList, setJadwalList]     = useState<Jadwal[]>([])
     const [jadwalLoading, setJadwalLoading] = useState(false)
     const [showJadwalForm, setShowJadwalForm] = useState(false)
     const [jadwalForm, setJadwalForm] = useState({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
+    const [jadwalErrors, setJadwalErrors] = useState<Partial<Record<keyof typeof jadwalForm, string>>>({})
     const [addingJadwal, setAddingJadwal] = useState(false)
     const [deleteJadwalTarget, setDeleteJadwalTarget] = useState<Jadwal | null>(null)
     const [deletingJadwal, setDeletingJadwal] = useState(false)
@@ -94,6 +116,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             setKaryawanOptions(karyawanOpts)
             setArmadaOptions(armadaOpts)
             setSupirOptions(supirOpts)
+
+            if (p.sumber === 'vendor') {
+                if (p.id_kontrak_vendor) kontrakVendorService.get(p.id_kontrak_vendor).then(setKontrakVendorInfo).catch(() => {})
+                if (p.id_armada_vendor)  armadaVendorService.get(p.id_armada_vendor).then(setArmadaVendorInfo).catch(() => {})
+                if (p.id_supir_vendor)   supirVendorService.get(p.id_supir_vendor).then(setSupirVendorInfo).catch(() => {})
+            }
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [id])
@@ -115,9 +143,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const handleSave = async () => {
         setSaving(true)
         try {
+            const isVendor = penugasan?.sumber === 'vendor'
             const updated = await penugasanService.update(id, {
-                id_armada:     form.id_armada ?? null,
-                id_supir:      form.id_supir ?? null,
+                // penugasan vendor: unit & supir dikelola saat pembuatan penugasan vendor,
+                // jangan kirim id_armada/id_supir agar nilai existing tidak tersentuh.
+                id_armada:     isVendor ? undefined : (form.id_armada ?? null),
+                id_supir:      isVendor ? undefined : (form.id_supir ?? null),
                 id_karyawan:   form.id_karyawan ?? null,
                 tanggal_tugas: form.tanggal_tugas ?? null,
                 status:        form.status,
@@ -133,7 +164,15 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
+    const validateJadwal = () => {
+        const e: Partial<Record<keyof typeof jadwalForm, string>> = {}
+        if (!jadwalForm.waktu_berangkat) e.waktu_berangkat = 'Waktu berangkat wajib diisi'
+        setJadwalErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleAddJadwal = async () => {
+        if (!validateJadwal()) return
         setAddingJadwal(true)
         try {
             await jadwalService.create({
@@ -148,6 +187,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             })
             toast.push(<Notification type="success" title="Jadwal berhasil ditambahkan" />)
             setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
+            setJadwalErrors({})
             setShowJadwalForm(false)
             fetchJadwal()
         } catch (err) {
@@ -234,6 +274,55 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 </div>
                             ))}
                         </div>
+
+                        {penugasan.sumber === 'vendor' && (
+                            <>
+                                <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Sumber Vendor</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-5">
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Kontrak</p>
+                                            {kontrakVendorInfo ? (
+                                                <Tag className={`text-xs font-semibold ${MEKANISME_CLASS[kontrakVendorInfo.mekanisme] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    {MEKANISME_LABEL[kontrakVendorInfo.mekanisme] ?? kontrakVendorInfo.mekanisme}
+                                                </Tag>
+                                            ) : (
+                                                <p className="text-sm font-mono text-gray-600 dark:text-gray-300">{shortId(penugasan.id_kontrak_vendor)}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Armada Vendor</p>
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                {armadaVendorInfo ? (
+                                                    <>
+                                                        <span className="font-mono font-semibold">{armadaVendorInfo.nopol}</span>
+                                                        {armadaVendorInfo.nama_vendor && <span className="text-gray-400"> — {armadaVendorInfo.nama_vendor}</span>}
+                                                    </>
+                                                ) : (
+                                                    <span className="font-mono text-xs">{shortId(penugasan.id_armada_vendor)}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Supir Vendor</p>
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                {penugasan.id_supir_vendor ? (
+                                                    supirVendorInfo
+                                                        ? supirVendorInfo.nama
+                                                        : <span className="font-mono text-xs">{shortId(penugasan.id_supir_vendor)}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">— (pakai supir internal)</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-4">
+                                        Detail kontrak/unit/supir vendor dikelola saat pembuatan penugasan vendor.
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </>
                 ) : (
                     <>
@@ -249,18 +338,28 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Supir">
-                                    <Select isClearable placeholder="Pilih supir..."
-                                        options={supirOptions}
-                                        value={supirOptions.find(o => o.value === form.id_supir) ?? null}
-                                        onChange={opt => setForm(p => ({ ...p, id_supir: opt?.value ?? null }))} />
-                                </FormItem>
-                                <FormItem label="Armada">
-                                    <Select isClearable placeholder="Pilih armada..."
-                                        options={armadaOptions}
-                                        value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                        onChange={opt => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))} />
-                                </FormItem>
+                                {penugasan.sumber === 'vendor' ? (
+                                    <div className="sm:col-span-2 -mt-1 mb-2">
+                                        <p className="text-xs text-gray-400">
+                                            Unit &amp; supir penugasan vendor tidak dapat diubah dari halaman ini.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <FormItem label="Supir">
+                                            <Select isClearable placeholder="Pilih supir..."
+                                                options={supirOptions}
+                                                value={supirOptions.find(o => o.value === form.id_supir) ?? null}
+                                                onChange={opt => setForm(p => ({ ...p, id_supir: opt?.value ?? null }))} />
+                                        </FormItem>
+                                        <FormItem label="Armada">
+                                            <Select isClearable placeholder="Pilih armada..."
+                                                options={armadaOptions}
+                                                value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
+                                                onChange={opt => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))} />
+                                        </FormItem>
+                                    </>
+                                )}
                                 <FormItem label="Karyawan PIC">
                                     <Select isClearable placeholder="Pilih karyawan penanggung jawab..."
                                         options={karyawanOptions}
@@ -310,7 +409,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 {showJadwalForm && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Waktu Berangkat">
+                            <FormItem label="Waktu Berangkat" asterisk invalid={!!jadwalErrors.waktu_berangkat} errorMessage={jadwalErrors.waktu_berangkat}>
                                 <DatePicker.DateTimepicker
                                     value={jadwalForm.waktu_berangkat ? new Date(jadwalForm.waktu_berangkat) : null}
                                     onChange={date => setJadwalForm(p => ({ ...p, waktu_berangkat: date ? date.toISOString() : '' }))} />
@@ -330,7 +429,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
-                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' }) }}>
+                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' }); setJadwalErrors({}) }}>
                                 Batal
                             </Button>
                             <Button size="sm" variant="solid" loading={addingJadwal} onClick={handleAddJadwal}>
@@ -348,13 +447,13 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
-                            <thead>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Tiba</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="pb-3" />
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Tiba</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

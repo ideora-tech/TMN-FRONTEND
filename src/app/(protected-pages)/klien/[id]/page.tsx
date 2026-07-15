@@ -272,13 +272,13 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                     <>
                         <div className="overflow-x-auto mt-4">
                             <table className="w-full text-sm">
-                                <thead>
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode Proyek</th>
-                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
-                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                        <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Mulai</th>
-                                        <th className="pb-3" />
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode Proyek</th>
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Mulai</th>
+                                        <th className="py-2.5" />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -336,14 +336,14 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
-                            <thead>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">No. Faktur</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jatuh Tempo</th>
-                                    <th className="pb-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Total</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="pb-3" />
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">No. Faktur</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jatuh Tempo</th>
+                                    <th className="py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Total</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

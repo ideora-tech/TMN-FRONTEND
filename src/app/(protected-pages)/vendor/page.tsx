@@ -121,22 +121,20 @@ export default function VendorPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Vendor</h4>,
-                    extra: (
-                        <Button
-                            variant="solid" size="sm"
-                            icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.VENDOR_BARU)}
-                        >
-                            Tambah Vendor
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Vendor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master vendor</p>
+                </div>
+                <Button
+                    variant="solid" size="sm"
+                    icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.VENDOR_BARU)}
+                >
+                    Tambah Vendor
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"

@@ -113,10 +113,13 @@ export default function TripPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{ content: <h4>Monitor Trip</h4>, bordered: false }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Trip</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Monitor seluruh trip</p>
+                </div>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"

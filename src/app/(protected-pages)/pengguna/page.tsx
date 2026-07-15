@@ -126,19 +126,17 @@ export default function PenggunaPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Pengguna</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.PENGGUNA_BARU)}>
-                            Tambah Pengguna
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Pengguna</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola akun pengguna sistem</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.PENGGUNA_BARU)}>
+                    Tambah Pengguna
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari username atau email... (tekan Enter)"
                         suffix={searchInput

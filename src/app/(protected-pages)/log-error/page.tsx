@@ -64,12 +64,18 @@ export default function LogErrorPage() {
             cell: ({ row }) => <span className="text-xs text-gray-500">{dayjs(row.original.dibuat_pada).format('DD MMM YYYY HH:mm')}</span>,
         },
         {
-            header: 'Aksi', id: 'aksi', size: 60,
+            header: '', id: 'aksi', size: 60,
             cell: ({ row }) => (
-                <Tooltip title="Lihat Detail">
-                    <Button size="xs" variant="plain" icon={<HiOutlineEye />}
-                        onClick={() => router.push(ROUTES.LOG_ERROR_DETAIL(row.original.id_log_error))} />
-                </Tooltip>
+                <div className="flex items-center justify-end">
+                    <Tooltip title="Detail">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.LOG_ERROR_DETAIL(row.original.id_log_error))}
+                        >
+                            <HiOutlineEye className="text-lg" />
+                        </span>
+                    </Tooltip>
+                </div>
             ),
         },
     ]

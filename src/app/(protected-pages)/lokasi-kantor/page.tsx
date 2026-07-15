@@ -127,19 +127,17 @@ export default function LokasiKantorPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Lokasi Kantor</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.LOKASI_KANTOR_BARU)}>
-                            Tambah Lokasi
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Lokasi Kantor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master lokasi kantor</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.LOKASI_KANTOR_BARU)}>
+                    Tambah Lokasi
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari nama lokasi atau kota... (tekan Enter)"
                         suffix={searchInput

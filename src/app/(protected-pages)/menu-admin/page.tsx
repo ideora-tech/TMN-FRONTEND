@@ -1,14 +1,28 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { menuService, MenuItem } from '@/services/menu.service'
+
+type FilterOption = { value: string; label: string }
+
+const STATUS_OPTIONS: FilterOption[] = [
+    { value: '',        label: 'Semua Status' },
+    { value: 'aktif',   label: 'Aktif' },
+    { value: 'nonaktif', label: 'Nonaktif' },
+]
+
+const INDUK_OPTIONS: FilterOption[] = [
+    { value: '',    label: 'Semua Induk' },
+    { value: 'root', label: 'Root' },
+    { value: 'sub',  label: 'Sub-menu' },
+]
 
 export default function MenuAdminPage() {
     const router = useRouter()
@@ -19,6 +33,11 @@ export default function MenuAdminPage() {
     const [pageSize]              = useState(50)
     const [total, setTotal]       = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null)
+
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch]           = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
+    const [indukFilter, setIndukFilter]   = useState('')
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -34,6 +53,18 @@ export default function MenuAdminPage() {
     }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    const handleSearchSubmit = () => setSearch(searchInput)
+    const handleSearchClear  = () => { setSearchInput(''); setSearch('') }
+
+    const filteredList = list.filter(m => {
+        const matchSearch = !search ||
+            m.nama_menu.toLowerCase().includes(search.toLowerCase()) ||
+            (m.path ?? '').toLowerCase().includes(search.toLowerCase())
+        const matchStatus = !statusFilter || (statusFilter === 'aktif' ? m.aktif : !m.aktif)
+        const matchInduk = !indukFilter || (indukFilter === 'root' ? !m.id_menu_induk : !!m.id_menu_induk)
+        return matchSearch && matchStatus && matchInduk
+    })
 
     const handleDelete = async () => {
         if (!deleteTarget) return
@@ -65,16 +96,24 @@ export default function MenuAdminPage() {
             ),
         },
         {
-            header: 'Aksi', id: 'aksi',
+            header: '', id: 'aksi', size: 90,
             cell: ({ row }) => (
-                <div className="flex gap-1">
+                <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail">
-                        <Button size="xs" variant="plain" icon={<HiOutlineEye />}
-                            onClick={() => router.push(ROUTES.MENU_ADMIN_DETAIL(row.original.id_menu))} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.MENU_ADMIN_DETAIL(row.original.id_menu))}
+                        >
+                            <HiOutlineEye className="text-lg" />
+                        </span>
                     </Tooltip>
                     <Tooltip title="Hapus">
-                        <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                            onClick={() => setDeleteTarget(row.original)} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}
+                        >
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
                     </Tooltip>
                 </div>
             ),
@@ -93,8 +132,37 @@ export default function MenuAdminPage() {
                     Tambah Menu
                 </Button>
             </div>
-            <Card>
-                <DataTable columns={columns} data={list} loading={loading}
+            <Card bodyClass="p-0">
+                <div className="flex items-center gap-3 px-4 py-3">
+                    <Input
+                        className="flex-1"
+                        placeholder="Cari nama menu atau path... (tekan Enter)"
+                        suffix={
+                            searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                        }
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
+                    />
+                    <div className="w-40 shrink-0">
+                        <Select<FilterOption>
+                            options={INDUK_OPTIONS}
+                            value={INDUK_OPTIONS.find(o => o.value === indukFilter) ?? INDUK_OPTIONS[0]}
+                            onChange={(opt) => setIndukFilter((opt as FilterOption).value)}
+                        />
+                    </div>
+                    <div className="w-44 shrink-0">
+                        <Select<FilterOption>
+                            options={STATUS_OPTIONS}
+                            value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
+                            onChange={(opt) => setStatusFilter((opt as FilterOption).value)}
+                        />
+                    </div>
+                </div>
+                <DataTable columns={columns} data={filteredList} loading={loading}
+                    noData={!loading && filteredList.length === 0}
                     pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
                     onPaginationChange={setCurrentPage} />
             </Card>

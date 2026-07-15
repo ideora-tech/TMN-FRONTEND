@@ -66,16 +66,24 @@ export default function PerusahaanPage() {
             ),
         },
         {
-            header: 'Aksi', id: 'aksi',
+            header: '', id: 'aksi', size: 90,
             cell: ({ row }) => (
-                <div className="flex gap-1">
+                <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail">
-                        <Button size="xs" variant="plain" icon={<HiOutlineEye />}
-                            onClick={() => router.push(ROUTES.PERUSAHAAN_DETAIL(row.original.id_perusahaan))} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.PERUSAHAAN_DETAIL(row.original.id_perusahaan))}
+                        >
+                            <HiOutlineEye className="text-lg" />
+                        </span>
                     </Tooltip>
                     <Tooltip title="Hapus">
-                        <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                            onClick={() => setDeleteTarget(row.original)} />
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}
+                        >
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
                     </Tooltip>
                 </div>
             ),

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Button, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
@@ -56,7 +57,7 @@ export default function PenugasanPage() {
         if (!selectedProyek) return
         setLoading(true)
         try {
-            const res = await penugasanService.list(selectedProyek, currentPage)
+            const res = await penugasanService.list(selectedProyek, currentPage, 'internal')
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -154,19 +155,23 @@ export default function PenugasanPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Penugasan</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.PENUGASAN_BARU)}>
-                            Tambah Penugasan
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Penugasan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola penugasan armada dan supir</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.PENUGASAN_BARU)}>
+                    Tambah Penugasan
+                </Button>
+            </div>
+            <p className="text-xs text-gray-400 -mt-2">
+                Penugasan vendor dikelola di menu{' '}
+                <Link href={ROUTES.PENUGASAN_VENDOR} className="text-blue-600 hover:underline dark:text-blue-400">
+                    Operasional Vendor →
+                </Link>
+            </p>
+            <Card bodyClass="p-0">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <Select
                         className="w-96"

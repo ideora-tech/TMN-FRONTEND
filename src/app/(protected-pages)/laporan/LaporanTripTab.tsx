@@ -14,6 +14,7 @@ import {
     LaporanTripRow,
     LaporanTripFilter,
     LaporanTripRingkasan,
+    SumberTrip,
 } from '@/services/laporanOperasional.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { supirService, Supir } from '@/services/supir.service'
@@ -24,6 +25,12 @@ type Option = { value: string; label: string }
 const KLIEN_ALL: Option  = { value: '', label: 'Semua Klien' }
 const SUPIR_ALL: Option  = { value: '', label: 'Semua Supir' }
 const ARMADA_ALL: Option = { value: '', label: 'Semua Armada' }
+const SUMBER_ALL: Option = { value: '', label: 'Semua Sumber' }
+const SUMBER_OPTIONS: Option[] = [
+    SUMBER_ALL,
+    { value: 'internal', label: 'Internal' },
+    { value: 'vendor', label: 'Vendor' },
+]
 
 const STATUS_TRIP_LABEL: Record<string, string> = {
     belum_mulai: 'Belum Mulai',
@@ -37,6 +44,16 @@ const STATUS_TRIP_TAG: Record<string, string> = {
     berjalan:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
     selesai:     'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+}
+
+const SUMBER_TRIP_LABEL: Record<string, string> = {
+    internal: 'Internal',
+    vendor:   'Vendor',
+}
+
+const SUMBER_TRIP_TAG: Record<string, string> = {
+    internal: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    vendor:   'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100',
 }
 
 const RINGKASAN_EMPTY: LaporanTripRingkasan = { jumlah_trip: 0, total_biaya: 0 }
@@ -58,6 +75,7 @@ export default function LaporanTripTab() {
     const [idKlien, setIdKlien]   = useState('')
     const [idSupir, setIdSupir]   = useState('')
     const [idArmada, setIdArmada] = useState('')
+    const [sumber, setSumber]     = useState('')
 
     // Filter aktif (sudah diterapkan)
     const [appliedFilter, setAppliedFilter] = useState<LaporanTripFilter>({})
@@ -112,6 +130,7 @@ export default function LaporanTripTab() {
             id_klien: idKlien || undefined,
             id_supir: idSupir || undefined,
             id_armada: idArmada || undefined,
+            sumber: (sumber || undefined) as SumberTrip | undefined,
         })
         setCurrentPage(1)
     }
@@ -122,6 +141,7 @@ export default function LaporanTripTab() {
         setIdKlien('')
         setIdSupir('')
         setIdArmada('')
+        setSumber('')
         setAppliedFilter({})
         setCurrentPage(1)
     }
@@ -183,6 +203,14 @@ export default function LaporanTripTab() {
             cell: ({ row }: CellContext<LaporanTripRow, unknown>) => row.original.nama_supir ?? '-',
         },
         {
+            header: 'Sumber', accessorKey: 'sumber', size: 100,
+            cell: ({ row }: CellContext<LaporanTripRow, unknown>) => (
+                <Tag className={SUMBER_TRIP_TAG[row.original.sumber] ?? 'bg-gray-100 text-gray-600'}>
+                    {SUMBER_TRIP_LABEL[row.original.sumber] ?? row.original.sumber}
+                </Tag>
+            ),
+        },
+        {
             header: 'Status', accessorKey: 'status', size: 120,
             cell: ({ row }: CellContext<LaporanTripRow, unknown>) => (
                 <Tag className={STATUS_TRIP_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
@@ -236,6 +264,14 @@ export default function LaporanTripTab() {
                         options={armadaOptions}
                         value={armadaOptions.find(o => o.value === idArmada) ?? ARMADA_ALL}
                         onChange={(opt) => setIdArmada((opt as Option)?.value ?? '')}
+                    />
+                </div>
+                <div className="w-48 shrink-0">
+                    <div className="text-xs text-gray-500 mb-1">Sumber</div>
+                    <Select<Option>
+                        options={SUMBER_OPTIONS}
+                        value={SUMBER_OPTIONS.find(o => o.value === sumber) ?? SUMBER_ALL}
+                        onChange={(opt) => setSumber((opt as Option)?.value ?? '')}
                     />
                 </div>
                 <div className="flex items-center gap-2">

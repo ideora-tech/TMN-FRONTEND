@@ -164,7 +164,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b text-gray-500 text-xs">
                                     <th className="text-left py-2 pr-4 font-medium w-48">Menu</th>
                                     <th className="py-2 px-3 text-center font-medium w-20">Semua</th>

@@ -136,9 +136,21 @@ export default function FakturPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Faktur</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola faktur dan penagihan klien</p>
+                </div>
+                <Button
+                    variant="solid" size="sm"
+                    icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.FAKTUR_BARU)}
+                >
+                    Buat Faktur
+                </Button>
+            </div>
             <Card
                 header={{
-                    content: <h4>Faktur</h4>,
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button
@@ -154,13 +166,6 @@ export default function FakturPage() {
                                 onClick={handlePdfDownload}
                             >
                                 Export PDF
-                            </Button>
-                            <Button
-                                variant="solid" size="sm"
-                                icon={<HiPlusCircle />}
-                                onClick={() => router.push(ROUTES.FAKTUR_BARU)}
-                            >
-                                Buat Faktur
                             </Button>
                         </div>
                     ),

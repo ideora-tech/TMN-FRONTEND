@@ -116,9 +116,23 @@ export default function LaporanPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Laporan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Laporan proyek dan trip</p>
+                </div>
+                {tab === 'proyek' && (
+                    <Button
+                        variant="solid" size="sm"
+                        icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.LAPORAN_BARU)}
+                    >
+                        Buat Laporan
+                    </Button>
+                )}
+            </div>
             <Card
                 header={{
-                    content: <h4>Laporan</h4>,
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button
@@ -148,13 +162,6 @@ export default function LaporanPage() {
                                         onClick={handlePdfDownload}
                                     >
                                         Export PDF
-                                    </Button>
-                                    <Button
-                                        variant="solid" size="sm"
-                                        icon={<HiPlusCircle />}
-                                        onClick={() => router.push(ROUTES.LAPORAN_BARU)}
-                                    >
-                                        Buat Laporan
                                     </Button>
                                 </>
                             )}

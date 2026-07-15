@@ -32,16 +32,22 @@ export default function PenawaranBaruPage() {
     const router = useRouter()
     const [form, setForm]     = useState<FormState>(INIT)
     const [saving, setSaving] = useState(false)
+    const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
     const set = (field: keyof FormState, value: string) =>
         setForm(p => ({ ...p, [field]: value }))
 
+    const validate = () => {
+        const e: Partial<Record<keyof FormState, string>> = {}
+        if (!form.nomor_penawaran.trim()) e.nomor_penawaran = 'Nomor penawaran wajib diisi'
+        if (!form.judul.trim())           e.judul           = 'Judul penawaran wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!form.nomor_penawaran.trim() || !form.judul.trim()) {
-            toast.push(<Notification type="warning" title="Nomor dan judul penawaran wajib diisi" />)
-            return
-        }
+        if (!validate()) return
         setSaving(true)
         try {
             await penawaranService.create({
@@ -82,17 +88,19 @@ export default function PenawaranBaruPage() {
             <Card>
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Nomor Penawaran" asterisk>
+                        <FormItem label="Nomor Penawaran" asterisk invalid={!!errors.nomor_penawaran} errorMessage={errors.nomor_penawaran}>
                             <Input
                                 placeholder="Contoh: PNW-2026-001"
                                 value={form.nomor_penawaran}
+                                invalid={!!errors.nomor_penawaran}
                                 onChange={e => set('nomor_penawaran', e.target.value)}
                             />
                         </FormItem>
-                        <FormItem label="Judul Penawaran" asterisk>
+                        <FormItem label="Judul Penawaran" asterisk invalid={!!errors.judul} errorMessage={errors.judul}>
                             <Input
                                 placeholder="Contoh: Penawaran Jasa Pengiriman Q3 2026"
                                 value={form.judul}
+                                invalid={!!errors.judul}
                                 onChange={e => set('judul', e.target.value)}
                             />
                         </FormItem>

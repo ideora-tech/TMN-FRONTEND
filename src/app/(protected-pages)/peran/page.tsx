@@ -132,19 +132,17 @@ export default function PeranPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Peran & Akses</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.PERAN_BARU)}>
-                            Tambah Peran
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Peran & Akses</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola peran dan hak akses pengguna</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.PERAN_BARU)}>
+                    Tambah Peran
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari kode atau nama peran... (tekan Enter)"
                         suffix={searchInput

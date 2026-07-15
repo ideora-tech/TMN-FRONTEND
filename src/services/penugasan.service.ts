@@ -2,6 +2,7 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export type StatusPenugasan = 'pending' | 'aktif' | 'selesai' | 'batal'
+export type SumberPenugasan = 'internal' | 'vendor'
 
 export interface Penugasan {
     id_penugasan: string
@@ -12,13 +13,19 @@ export interface Penugasan {
     tanggal_tugas: string | null
     status: StatusPenugasan
     estimasi_biaya?: number | null
+    sumber: SumberPenugasan
+    id_kontrak_vendor: string | null
+    id_armada_vendor: string | null
+    id_supir_vendor: string | null
     dibuat_pada: string
     diubah_pada: string
 }
 
 export const penugasanService = {
-    async list(idProyek: string, page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params: { id_proyek: idProyek, page, limit: 15 } })
+    async list(idProyek: string, page = 1, sumber?: SumberPenugasan) {
+        const params: Record<string, string | number> = { id_proyek: idProyek, page, limit: 15 }
+        if (sumber) params.sumber = sumber
+        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params })
         return data as { data: Penugasan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async listByArmada(idArmada: string, page = 1, limit = 50) {
@@ -33,7 +40,19 @@ export const penugasanService = {
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_DETAIL(id))
         return data.data as Penugasan
     },
-    async create(payload: { id_proyek: string; id_armada?: string; id_supir?: string; id_karyawan?: string; tanggal_tugas?: string; status?: string }) {
+    async create(payload: {
+        id_proyek: string
+        id_armada?: string
+        id_supir?: string | null
+        id_karyawan?: string
+        tanggal_tugas?: string
+        status?: string
+        estimasi_biaya?: number | null
+        sumber?: SumberPenugasan
+        id_kontrak_vendor?: string
+        id_armada_vendor?: string
+        id_supir_vendor?: string | null
+    }) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN, payload)
         return data.data as Penugasan
     },

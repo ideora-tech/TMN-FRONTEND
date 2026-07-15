@@ -153,19 +153,17 @@ export default function PenawaranPage() {
     ]
 
     return (
-        <>
-            <Card
-                header={{
-                    content: <h4 className="font-bold">Daftar Penawaran</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.PENAWARAN_BARU)}>
-                            + Buat Penawaran
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Penawaran</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Daftar penawaran ke klien</p>
+                </div>
+                <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.PENAWARAN_BARU)}>
+                    + Buat Penawaran
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
@@ -207,6 +205,6 @@ export default function PenawaranPage() {
             >
                 <p>Penawaran draft ini akan dihapus. Lanjutkan?</p>
             </ConfirmDialog>
-        </>
+        </div>
     )
 }

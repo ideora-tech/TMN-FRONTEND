@@ -61,6 +61,13 @@ export default function RutePage() {
 
     const columns: ColumnDef<Rute>[] = [
         {
+            header: 'No',
+            id: 'no',
+            size: 60,
+            cell: (props: CellContext<Rute, unknown>) =>
+                (currentPage - 1) * pageSize + props.row.index + 1,
+        },
+        {
             header: 'Rute',
             accessorKey: 'nama_rute',
             cell: (props: CellContext<Rute, unknown>) => {
@@ -137,11 +144,15 @@ export default function RutePage() {
     ]
 
     return (
-        <>
-            <Card
-                header={{ content: <h4 className="font-bold">Manajemen Rute</h4>, extra: <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.RUTE_BARU)}>+ Tambah Rute</Button>, bordered: false }}
-                bodyClass="p-0"
-            >
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Rute</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master rute perjalanan</p>
+                </div>
+                <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.RUTE_BARU)}>+ Tambah Rute</Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
@@ -184,6 +195,6 @@ export default function RutePage() {
             >
                 <p>Rute ini akan dihapus secara permanen. Lanjutkan?</p>
             </ConfirmDialog>
-        </>
+        </div>
     )
 }

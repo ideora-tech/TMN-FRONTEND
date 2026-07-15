@@ -118,6 +118,36 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
 
+    // === OPERASIONAL VENDOR ===
+    {
+        key: 'nav.operasionalVendor', path: '', title: 'Operasional Vendor',
+        translateKey: 'nav.operasionalVendor', icon: '',
+        type: NAV_ITEM_TYPE_TITLE,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'armada-vendor', path: '/armada-vendor', title: 'Armada Vendor',
+        translateKey: 'nav.armadaVendor', icon: 'truck',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'supir-vendor', path: '/supir-vendor', title: 'Supir Vendor',
+        translateKey: 'nav.supirVendor', icon: 'users',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'penugasan-vendor', path: '/penugasan-vendor', title: 'Penugasan Vendor',
+        translateKey: 'nav.penugasanVendor', icon: 'clipboard',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+
     // === SDM ===
     {
         key: 'nav.sdm', path: '', title: 'SDM',
@@ -215,10 +245,10 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'modul', path: '/modul', title: 'Modul',
-        translateKey: 'nav.modul', icon: 'puzzle',
+        key: 'lokasi', path: '/lokasi', title: 'Lokasi',
+        translateKey: 'nav.lokasi', icon: 'mapPin',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: SUPERADMIN_ONLY,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
     {

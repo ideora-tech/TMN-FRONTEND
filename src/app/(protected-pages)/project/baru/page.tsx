@@ -81,6 +81,7 @@ export default function ProjectBaruPage() {
                 </div>
             </div>
             <Card>
+                <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <div className="sm:col-span-2">
                         <FormItem label="Klien" asterisk invalid={!!errors.id_klien} errorMessage={errors.id_klien}>
@@ -121,9 +122,10 @@ export default function ProjectBaruPage() {
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
-                    <Button variant="plain" onClick={() => router.back()}>Batal</Button>
-                    <Button variant="solid" loading={loading} onClick={handleSubmit}>Simpan</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
+                </form>
             </Card>
         </div>
     )

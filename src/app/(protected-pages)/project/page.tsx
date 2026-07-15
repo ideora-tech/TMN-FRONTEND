@@ -156,23 +156,21 @@ export default function ProjectPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Proyek</h4>,
-                    extra: (
-                        <Button
-                            variant="solid"
-                            size="sm"
-                            icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.PROYEK_BARU)}
-                        >
-                            Tambah Proyek
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Proyek</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola proyek klien</p>
+                </div>
+                <Button
+                    variant="solid"
+                    size="sm"
+                    icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.PROYEK_BARU)}
+                >
+                    Tambah Proyek
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"

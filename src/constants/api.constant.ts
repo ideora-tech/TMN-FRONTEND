@@ -115,10 +115,6 @@ export const API_ENDPOINTS = {
     MENU:        '/api/proxy/menu',
     MENU_DETAIL: (id: string) => `/api/proxy/menu/${id}`,
 
-    // Modul
-    MODUL:        '/api/proxy/modul',
-    MODUL_DETAIL: (id: string) => `/api/proxy/modul/${id}`,
-
     // Log Error
     LOG_ERROR:        '/api/proxy/log-error',
     LOG_ERROR_DETAIL: (id: string) => `/api/proxy/log-error/${id}`,
@@ -174,4 +170,16 @@ export const API_ENDPOINTS = {
 
     // Klien (riwayat proyek)
     KLIEN_PROYEK: (id: string) => `/api/proxy/klien/${id}/proyek`,
+
+    // Armada Vendor
+    ARMADA_VENDOR:        '/api/proxy/armada-vendor',
+    ARMADA_VENDOR_DETAIL: (id: string) => `/api/proxy/armada-vendor/${id}`,
+
+    // Supir Vendor
+    SUPIR_VENDOR:        '/api/proxy/supir-vendor',
+    SUPIR_VENDOR_DETAIL: (id: string) => `/api/proxy/supir-vendor/${id}`,
+
+    // Lokasi
+    LOKASI:        '/api/proxy/lokasi',
+    LOKASI_DETAIL: (id: string) => `/api/proxy/lokasi/${id}`,
 } as const

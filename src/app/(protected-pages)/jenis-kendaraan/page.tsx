@@ -128,19 +128,17 @@ export default function JenisKendaraanPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Jenis Kendaraan</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.JENIS_KENDARAAN_BARU)}>
-                            Tambah Jenis
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Jenis Kendaraan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master jenis kendaraan</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.JENIS_KENDARAAN_BARU)}>
+                    Tambah Jenis
+                </Button>
+            </div>
+            <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari kode atau nama jenis... (tekan Enter)"
                         suffix={searchInput

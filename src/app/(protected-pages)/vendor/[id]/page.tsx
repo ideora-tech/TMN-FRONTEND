@@ -11,6 +11,8 @@ import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { vendorService, Vendor, KontrakVendor } from '@/services/vendor.service'
 import { dokumenVendorService, DokumenVendor } from '@/services/dokumenVendor.service'
+import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
+import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 
 type Mekanisme = 'unit_only' | 'unit_driver' | 'full'
 
@@ -89,6 +91,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     const [deleteDocTarget, setDeleteDocTarget] = useState<DokumenVendor | null>(null)
     const [deletingDoc, setDeletingDoc]         = useState(false)
 
+    // ringkasan armada & supir vendor
+    const [armadaVendorList, setArmadaVendorList] = useState<ArmadaVendor[]>([])
+    const [armadaVendorLoading, setArmadaVendorLoading] = useState(false)
+    const [supirVendorList, setSupirVendorList]   = useState<SupirVendor[]>([])
+    const [supirVendorLoading, setSupirVendorLoading]   = useState(false)
+
     const loadData = useCallback(async () => {
         try {
             const [v, k] = await Promise.all([vendorService.get(id), vendorService.listKontrak(id)])
@@ -112,6 +120,34 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     }, [id])
 
     useEffect(() => { fetchDokumen() }, [fetchDokumen])
+
+    const fetchArmadaVendor = useCallback(async () => {
+        setArmadaVendorLoading(true)
+        try {
+            const res = await armadaVendorService.list(1, 5, id)
+            setArmadaVendorList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setArmadaVendorLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => { fetchArmadaVendor() }, [fetchArmadaVendor])
+
+    const fetchSupirVendor = useCallback(async () => {
+        setSupirVendorLoading(true)
+        try {
+            const res = await supirVendorService.list(1, 5, id)
+            setSupirVendorList(res.data)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSupirVendorLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => { fetchSupirVendor() }, [fetchSupirVendor])
 
     const handleSave = async () => {
         setSaving(true)
@@ -389,14 +425,14 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
-                            <thead>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nomor</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Berlaku s/d</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="pb-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">File</th>
-                                    <th className="pb-3" />
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nomor</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Berlaku s/d</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">File</th>
+                                    <th className="py-2.5" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -442,6 +478,97 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 )}
             </Card>
 
+            {/* Ringkasan Armada Vendor & Supir Vendor */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card
+                    header={{
+                        content: <h5>Armada Vendor</h5>,
+                        extra: (
+                            <Button variant="default" size="sm"
+                                onClick={() => router.push(`${ROUTES.ARMADA_VENDOR}?id_vendor=${id}`)}>
+                                Kelola
+                            </Button>
+                        ),
+                        bordered: false,
+                    }}
+                >
+                    {armadaVendorLoading ? (
+                        <div className="flex justify-center py-6"><Spinner /></div>
+                    ) : armadaVendorList.length === 0 ? (
+                        <p className="text-gray-400 text-sm py-6 text-center">Belum ada data</p>
+                    ) : (
+                        <div className="overflow-x-auto -mx-5">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nopol</th>
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Merk</th>
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {armadaVendorList.map(a => (
+                                        <tr key={a.id_armada_vendor} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <td className="py-2.5 px-5 font-mono font-semibold text-gray-800 dark:text-gray-100">{a.nopol}</td>
+                                            <td className="py-2.5 px-5 text-gray-600 dark:text-gray-400">{a.merk ?? <span className="text-gray-400">—</span>}</td>
+                                            <td className="py-2.5 px-5">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${a.aktif ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                    {a.aktif ? 'Aktif' : 'Nonaktif'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+
+                <Card
+                    header={{
+                        content: <h5>Supir Vendor</h5>,
+                        extra: (
+                            <Button variant="default" size="sm"
+                                onClick={() => router.push(`${ROUTES.SUPIR_VENDOR}?id_vendor=${id}`)}>
+                                Kelola
+                            </Button>
+                        ),
+                        bordered: false,
+                    }}
+                >
+                    {supirVendorLoading ? (
+                        <div className="flex justify-center py-6"><Spinner /></div>
+                    ) : supirVendorList.length === 0 ? (
+                        <p className="text-gray-400 text-sm py-6 text-center">Belum ada data</p>
+                    ) : (
+                        <div className="overflow-x-auto -mx-5">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nama</th>
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Telepon</th>
+                                        <th className="py-2 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {supirVendorList.map(s => (
+                                        <tr key={s.id_supir_vendor} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <td className="py-2.5 px-5 font-semibold text-gray-800 dark:text-gray-100">{s.nama}</td>
+                                            <td className="py-2.5 px-5 text-gray-600 dark:text-gray-400">{s.telepon ?? <span className="text-gray-400">—</span>}</td>
+                                            <td className="py-2.5 px-5">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.aktif ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                    {s.aktif ? 'Aktif' : 'Nonaktif'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            </div>
+
             {/* Kontrak card */}
             <Card
                 header={{
@@ -460,7 +587,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-800">
                         <form onSubmit={e => { e.preventDefault(); handleKontrakSubmit() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Mekanisme">
+                            <FormItem label="Mekanisme" asterisk>
                                 <Select
                                     isSearchable={false}
                                     value={MEKANISME_OPTIONS.find(o => o.value === kontrakForm.mekanisme) ?? null}
@@ -508,13 +635,13 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 ) : (
                     <div className="overflow-x-auto -mx-5">
                         <table className="min-w-full text-sm">
-                            <thead>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mekanisme</th>
-                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nilai Kontrak</th>
-                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mulai</th>
-                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Selesai</th>
-                                    <th className="py-3 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mekanisme</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nilai Kontrak</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Mulai</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Selesai</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

@@ -84,10 +84,6 @@ export const ROUTES = {
     MENU_ADMIN_BARU:   '/menu-admin/baru',
     MENU_ADMIN_DETAIL: (id: string) => `/menu-admin/${id}`,
 
-    MODUL:        '/modul',
-    MODUL_BARU:   '/modul/baru',
-    MODUL_DETAIL: (id: string) => `/modul/${id}`,
-
     LOG_ERROR:        '/log-error',
     LOG_ERROR_DETAIL: (id: string) => `/log-error/${id}`,
 
@@ -98,4 +94,19 @@ export const ROUTES = {
     PENAWARAN:        '/penawaran',
     PENAWARAN_BARU:   '/penawaran/baru',
     PENAWARAN_DETAIL: (id: string) => `/penawaran/${id}`,
+
+    ARMADA_VENDOR:        '/armada-vendor',
+    ARMADA_VENDOR_BARU:   '/armada-vendor/baru',
+    ARMADA_VENDOR_DETAIL: (id: string) => `/armada-vendor/${id}`,
+
+    SUPIR_VENDOR:        '/supir-vendor',
+    SUPIR_VENDOR_BARU:   '/supir-vendor/baru',
+    SUPIR_VENDOR_DETAIL: (id: string) => `/supir-vendor/${id}`,
+
+    LOKASI:        '/lokasi',
+    LOKASI_BARU:   '/lokasi/baru',
+    LOKASI_DETAIL: (id: string) => `/lokasi/${id}`,
+
+    PENUGASAN_VENDOR:      '/penugasan-vendor',
+    PENUGASAN_VENDOR_BARU: '/penugasan-vendor/baru',
 } as const

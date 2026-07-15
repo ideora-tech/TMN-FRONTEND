@@ -27,7 +27,6 @@ const SEGMENT_LABELS: Record<string, string> = {
     jabatan:          'Jabatan',
     karyawan:         'Karyawan',
     perusahaan:       'Perusahaan',
-    modul:            'Modul',
     'menu-admin':     'Menu Admin',
     'log-error':      'Log Error',
     rute:             'Rute',

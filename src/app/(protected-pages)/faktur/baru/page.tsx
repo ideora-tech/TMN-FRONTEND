@@ -182,12 +182,12 @@ export default function FakturBaruPage() {
                 >
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
-                            <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-700/40">
-                                    <th className="py-3 pl-5 pr-3 text-left text-gray-500 font-medium">Deskripsi</th>
-                                    <th className="py-3 px-3 text-left text-gray-500 font-medium w-20">Qty</th>
-                                    <th className="py-3 px-3 text-left text-gray-500 font-medium w-36">Harga Satuan</th>
-                                    <th className="py-3 px-3 text-right text-gray-500 font-medium w-36">Subtotal</th>
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr>
+                                    <th className="py-2.5 pl-5 pr-3 text-left text-gray-500 font-medium">Deskripsi</th>
+                                    <th className="py-2.5 px-3 text-left text-gray-500 font-medium w-20">Qty</th>
+                                    <th className="py-2.5 px-3 text-left text-gray-500 font-medium w-36">Harga Satuan</th>
+                                    <th className="py-2.5 px-3 text-right text-gray-500 font-medium w-36">Subtotal</th>
                                     <th className="w-12"></th>
                                 </tr>
                             </thead>

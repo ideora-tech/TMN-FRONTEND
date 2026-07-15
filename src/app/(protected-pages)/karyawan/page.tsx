@@ -88,18 +88,17 @@ export default function KaryawanPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <Card
-                header={{
-                    content: <h4>Karyawan</h4>,
-                    extra: (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>
-                            Tambah Karyawan
-                        </Button>
-                    ),
-                    bordered: false,
-                }}
-            >
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="font-bold">Karyawan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master karyawan</p>
+                </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>
+                    Tambah Karyawan
+                </Button>
+            </div>
+            <Card>
                 {/* Search + Filter */}
                 <div className="flex items-center gap-3 mb-5">
                     <Input className="flex-1" placeholder="Cari NIK atau nama karyawan... (tekan Enter)"

@@ -2,6 +2,7 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export type StatusTrip = 'belum_mulai' | 'berjalan' | 'selesai' | 'dibatalkan'
+export type SumberTrip = 'internal' | 'vendor'
 
 export interface LaporanTripRow {
     id_trip: string
@@ -13,6 +14,7 @@ export interface LaporanTripRow {
     status: StatusTrip
     jarak_tempuh_km: number | null
     total_biaya: number
+    sumber: SumberTrip
 }
 
 export interface LaporanTripFilter {
@@ -21,6 +23,7 @@ export interface LaporanTripFilter {
     id_klien?: string
     id_supir?: string
     id_armada?: string
+    sumber?: SumberTrip
 }
 
 export interface LaporanTripRingkasan {

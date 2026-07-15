@@ -2,11 +2,15 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification, Tag } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { ruteService, Rute, RutePayload } from '@/services/rute.service'
+import { lokasiService } from '@/services/lokasi.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
+
+type LokasiOption = { value: string; label: string }
 
 export default function RuteDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -16,6 +20,16 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<RutePayload> & { estimasi_jarak_km_str?: string; estimasi_durasi_menit_str?: string }>({})
     const [saving, setSaving]   = useState(false)
+    const [lokasiOptions, setLokasiOptions] = useState<LokasiOption[]>([])
+
+    useEffect(() => {
+        lokasiService.list(1, 100)
+            .then(res => setLokasiOptions(res.data.map(l => ({
+                value: l.id_lokasi,
+                label: `${l.nama_lokasi}${l.kota ? ' — ' + l.kota : ''}`,
+            }))))
+            .catch(() => {})
+    }, [])
 
     useEffect(() => {
         ruteService.get(id)
@@ -23,6 +37,8 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                 setData(d)
                 setForm({
                     ...d,
+                    id_lokasi_asal: d.id_lokasi_asal ?? '',
+                    id_lokasi_tujuan: d.id_lokasi_tujuan ?? '',
                     estimasi_jarak_km_str: d.estimasi_jarak_km != null ? String(d.estimasi_jarak_km) : '',
                     estimasi_durasi_menit_str: d.estimasi_durasi_menit != null ? String(d.estimasi_durasi_menit) : '',
                 })
@@ -37,8 +53,8 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
             const updated = await ruteService.update(id, {
                 kode_rute: form.kode_rute,
                 nama_rute: form.nama_rute,
-                asal: form.asal || null,
-                tujuan: form.tujuan || null,
+                id_lokasi_asal: form.id_lokasi_asal || null,
+                id_lokasi_tujuan: form.id_lokasi_tujuan || null,
                 estimasi_jarak_km: form.estimasi_jarak_km_str ? parseFloat(form.estimasi_jarak_km_str) : null,
                 estimasi_durasi_menit: form.estimasi_durasi_menit_str ? parseInt(form.estimasi_durasi_menit_str) : null,
                 keterangan: form.keterangan || null,
@@ -47,6 +63,8 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
             setData(updated)
             setForm({
                 ...updated,
+                id_lokasi_asal: updated.id_lokasi_asal ?? '',
+                id_lokasi_tujuan: updated.id_lokasi_tujuan ?? '',
                 estimasi_jarak_km_str: updated.estimasi_jarak_km != null ? String(updated.estimasi_jarak_km) : '',
                 estimasi_durasi_menit_str: updated.estimasi_durasi_menit != null ? String(updated.estimasi_durasi_menit) : '',
             })
@@ -146,10 +164,22 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                     <Input value={form.nama_rute ?? ''} onChange={e => setForm(p => ({ ...p, nama_rute: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Asal">
-                                    <Input value={form.asal ?? ''} onChange={e => setForm(p => ({ ...p, asal: e.target.value }))} />
+                                    <Select<LokasiOption> isClearable isSearchable placeholder="Pilih lokasi asal..."
+                                        options={lokasiOptions}
+                                        value={lokasiOptions.find(o => o.value === form.id_lokasi_asal) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_lokasi_asal: opt?.value ?? '' }))} />
+                                    {!form.id_lokasi_asal && data.asal && (
+                                        <p className="text-xs text-gray-400 mt-1">Teks lama: {data.asal}</p>
+                                    )}
                                 </FormItem>
                                 <FormItem label="Tujuan">
-                                    <Input value={form.tujuan ?? ''} onChange={e => setForm(p => ({ ...p, tujuan: e.target.value }))} />
+                                    <Select<LokasiOption> isClearable isSearchable placeholder="Pilih lokasi tujuan..."
+                                        options={lokasiOptions}
+                                        value={lokasiOptions.find(o => o.value === form.id_lokasi_tujuan) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_lokasi_tujuan: opt?.value ?? '' }))} />
+                                    {!form.id_lokasi_tujuan && data.tujuan && (
+                                        <p className="text-xs text-gray-400 mt-1">Teks lama: {data.tujuan}</p>
+                                    )}
                                 </FormItem>
                                 <FormItem label="Estimasi Jarak (km)">
                                     <Input type="number" step="0.01" min="0" value={form.estimasi_jarak_km_str ?? ''} onChange={e => setForm(p => ({ ...p, estimasi_jarak_km_str: e.target.value }))} />
@@ -171,6 +201,8 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                     setEditing(false)
                                     setForm({
                                         ...data,
+                                        id_lokasi_asal: data.id_lokasi_asal ?? '',
+                                        id_lokasi_tujuan: data.id_lokasi_tujuan ?? '',
                                         estimasi_jarak_km_str: data.estimasi_jarak_km != null ? String(data.estimasi_jarak_km) : '',
                                         estimasi_durasi_menit_str: data.estimasi_durasi_menit != null ? String(data.estimasi_durasi_menit) : '',
                                     })
