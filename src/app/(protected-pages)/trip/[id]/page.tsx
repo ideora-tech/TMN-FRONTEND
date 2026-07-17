@@ -28,9 +28,9 @@ import axios from 'axios'
 import dayjs from 'dayjs'
 
 const STATUS_TAG: Record<string, string> = {
-    belum_mulai: 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300',
-    berjalan:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    selesai:     'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    belum_mulai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    berjalan:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:     'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
     dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
@@ -39,6 +39,35 @@ const STATUS_LABEL: Record<string, string> = {
     berjalan:    'Berjalan',
     selesai:     'Selesai',
     dibatalkan:  'Dibatalkan',
+}
+
+const EKSTENSI_GAMBAR = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+
+const ekstensiFile = (url: string): string =>
+    (url.split('?')[0].split('.').pop() ?? '').toLowerCase()
+
+/** Preview file laporan: gambar tampil apa adanya; PDF/file lain (atau gambar gagal load) tampil placeholder. */
+function FotoPreview({ url, alt }: { url: string; alt: string }) {
+    const [gagal, setGagal] = useState(false)
+    const ekstensi = ekstensiFile(url)
+
+    if (!EKSTENSI_GAMBAR.includes(ekstensi) || gagal) {
+        return (
+            <div className="w-full h-32 flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400">
+                <HiOutlineDocumentText className="text-3xl" />
+                <span className="text-xs font-semibold uppercase">{ekstensi || 'File'}</span>
+            </div>
+        )
+    }
+
+    return (
+        <img
+            src={url}
+            alt={alt}
+            className="w-full max-h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+            onError={() => setGagal(true)}
+        />
+    )
 }
 
 type RekapBiaya = {
@@ -312,8 +341,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             ...(trip.waktu_berangkat
                                 ? [{ label: 'Waktu Berangkat', value: dayjs(trip.waktu_berangkat).format('DD MMM YYYY HH:mm') as React.ReactNode }]
                                 : []),
-                            { label: 'ID Trip',   value: <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{trip.id_trip}</span> },
-                            { label: 'ID Jadwal', value: <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{trip.id_jadwal}</span> },
+                            { label: 'Status', value: STATUS_LABEL[trip.status] ?? trip.status },
                             {
                                 label: 'Check-in',
                                 value: trip.waktu_checkin ? dayjs(trip.waktu_checkin).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">-</span>,
@@ -500,7 +528,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
                 {!showLaporanForm && laporan && (
                     <>
-                        <div className="flex flex-col gap-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {[
                                 ...(laporan.id_jenis_bbm
                                     ? [{ label: 'Jenis BBM', value: jenisBbmList.find(j => j.id_jenis_bbm === laporan.id_jenis_bbm)?.nama_bbm ?? '-' }]
@@ -513,9 +541,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 { label: 'Jarak Tempuh',   value: `${formatNum(laporan.jarak_tempuh_km)} km` },
                                 { label: 'Catatan Insiden', value: laporan.catatan_insiden || '-' },
                             ].map(({ label, value }) => (
-                                <div key={label} className="flex justify-between py-2 border-b last:border-b-0">
-                                    <span className="text-gray-500">{label}</span>
-                                    <span className="font-medium">{value}</span>
+                                <div key={label}>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+                                        {label}
+                                    </p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
                                 </div>
                             ))}
                         </div>
@@ -551,11 +581,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     {laporan.foto.map(f => (
                                         <div key={f.id_foto} className="relative group">
                                             <a href={f.url_file} target="_blank" rel="noreferrer">
-                                                <img
-                                                    src={f.url_file}
-                                                    alt={f.keterangan ?? 'Foto laporan perjalanan'}
-                                                    className="w-full max-h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                                                />
+                                                <FotoPreview url={f.url_file} alt={f.keterangan ?? 'Foto laporan perjalanan'} />
                                             </a>
                                             {f.keterangan && (
                                                 <p className="text-xs text-gray-500 mt-1 truncate">{f.keterangan}</p>

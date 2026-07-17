@@ -54,7 +54,7 @@ export default function TarifRuteDetailPage({ params }: { params: Promise<{ id: 
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({
                 value: r.id_rute,
-                label: `${r.nama_rute}${r.asal && r.tujuan ? ` (${r.asal} → ${r.tujuan})` : ''}`,
+                label: `${r.nama_rute}${r.asal && r.tujuan ? ` (${r.asal} → ${r.tujuan})` : ''}${r.estimasi_jarak_km != null ? ` — ${formatNum(r.estimasi_jarak_km, r.estimasi_jarak_km % 1 ? 1 : 0)} km` : ''}`,
             }))))
             .catch(() => {})
         jenisKendaraanService.list(1)

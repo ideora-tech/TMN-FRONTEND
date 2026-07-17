@@ -27,7 +27,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
         lokasiService.list(1, 200)
             .then(res => setLokasiOptions(res.data.map(l => ({
                 value: l.id_lokasi,
-                label: `${l.nama_lokasi}${l.kota ? ' — ' + l.kota : ''}`,
+                label: `${l.nama_lokasi}${l.kota && l.kota.trim().toLowerCase() !== l.nama_lokasi.trim().toLowerCase() ? ' — ' + l.kota : ''}`,
             }))))
             .catch(() => {})
     }, [])

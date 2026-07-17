@@ -479,7 +479,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         onChange={e => setForm(p => ({ ...p, judul: e.target.value }))}
                                     />
                                 </FormItem>
-                                <FormItem label="Nilai Penawaran" extra={items.length > 0 ? 'Otomatis dari item rate card' : undefined}>
+                                <FormItem label="Nilai Penawaran" extra={items.length > 0 ? <span className="text-xs text-gray-400 ml-2">(otomatis dari item rate card)</span> : undefined}>
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
@@ -532,7 +532,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
                                         <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
                                     </div>
-                                    <Button type="button" size="sm" icon={<HiOutlinePlus />}
+                                    <Button type="button" size="sm" variant="solid" icon={<HiOutlinePlus />}
                                         onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
                                         Tambah Item
                                     </Button>
@@ -558,12 +558,16 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                             <Select<Option> isSearchable placeholder="Pilih rute..."
                                                                 options={ruteOptions}
                                                                 value={ruteOptions.find(o => o.value === it.id_rute) ?? null}
+                                                                menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                                 onChange={opt => setItemRute(i, opt?.value ?? '')} />
                                                         </td>
                                                         <td className="px-3 py-2">
                                                             <Select<Option> isSearchable placeholder="Pilih jenis..."
                                                                 options={jenisOptions}
                                                                 value={jenisOptions.find(o => o.value === it.id_jenis_kendaraan) ?? null}
+                                                                menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                                 onChange={opt => setItemJenis(i, opt?.value ?? '')} />
                                                         </td>
                                                         <td className="px-3 py-2">

@@ -25,10 +25,10 @@ const statusClass: Record<string, string> = {
 }
 
 const JADWAL_STATUS_CLASS: Record<string, string> = {
-    terjadwal:  'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    berjalan:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    selesai:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+    terjadwal:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    berjalan:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:    'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+    dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 export default function SupirDetailPage({ params }: { params: Promise<{ id: string }> }) {

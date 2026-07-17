@@ -2,7 +2,8 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlineCheck, HiOutlinePaperAirplane, HiOutlineX } from 'react-icons/hi'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -19,12 +20,21 @@ const STATUS_LABEL: Record<string, string> = {
     draft: 'Draft', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Batal',
 }
 
+// Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
+const NEXT_STATUS: Record<string, string[]> = {
+    draft:    ['terkirim', 'batal'],
+    terkirim: ['lunas', 'batal'],
+    lunas:    [],
+    batal:    [],
+}
+
 export default function FakturDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
     const [faktur, setFaktur]     = useState<Faktur | null>(null)
     const [loading, setLoading]   = useState(true)
     const [updating, setUpdating] = useState(false)
+    const [pendingStatus, setPendingStatus] = useState<string | null>(null)
 
     useEffect(() => {
         fakturService.get(id)
@@ -43,6 +53,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setUpdating(false)
+            setPendingStatus(null)
         }
     }
 
@@ -66,6 +77,53 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran faktur</p>
                 </div>
             </div>
+
+            {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
+            {(NEXT_STATUS[faktur.status] ?? []).length > 0 && (
+                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Ubah Status Faktur
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[faktur.status] ?? faktur.status}</span>
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {(NEXT_STATUS[faktur.status] ?? []).map(s => (
+                                <Button
+                                    key={s}
+                                    size="sm"
+                                    variant="default"
+                                    className={`${STATUS_CLASS[s]} border border-current`}
+                                    onClick={() => setPendingStatus(s)}
+                                >
+                                    {`-> ${STATUS_LABEL[s]}`}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            )}
+
+            <ConfirmDialog
+                isOpen={!!pendingStatus}
+                type={pendingStatus === 'batal' ? 'danger' : 'info'}
+                title="Ubah Status Faktur"
+                confirmText="Ya, Ubah"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: updating }}
+                onClose={() => setPendingStatus(null)}
+                onCancel={() => setPendingStatus(null)}
+                onConfirm={() => pendingStatus && handleStatus(pendingStatus)}
+            >
+                <p className="text-sm">
+                    Ubah status faktur ke{' '}
+                    <span className="font-semibold">{pendingStatus ? STATUS_LABEL[pendingStatus] : ''}</span>?{' '}
+                    Tindakan ini tidak dapat dibatalkan.
+                </p>
+            </ConfirmDialog>
 
             <Card>
                 <div className="flex items-start justify-between gap-4">
@@ -99,46 +157,6 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     ))}
                 </div>
 
-                {faktur.status !== 'lunas' && faktur.status !== 'batal' && (
-                    <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Ubah Status</p>
-                        <div className="flex gap-2 flex-wrap">
-                            {faktur.status !== 'terkirim' && (
-                                <Button
-                                    variant="solid"
-                                    size="sm"
-                                    icon={<HiOutlinePaperAirplane />}
-                                    customColorClass={() => 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white border-blue-500'}
-                                    loading={updating}
-                                    onClick={() => handleStatus('terkirim')}
-                                >
-                                    Kirim Faktur
-                                </Button>
-                            )}
-                            {faktur.status === 'terkirim' && (
-                                <Button
-                                    variant="solid"
-                                    size="sm"
-                                    icon={<HiOutlineCheck />}
-                                    loading={updating}
-                                    onClick={() => handleStatus('lunas')}
-                                >
-                                    Tandai Lunas
-                                </Button>
-                            )}
-                            <Button
-                                variant="plain"
-                                size="sm"
-                                icon={<HiOutlineX />}
-                                customColorClass={() => 'text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border-transparent'}
-                                loading={updating}
-                                onClick={() => handleStatus('batal')}
-                            >
-                                Batalkan
-                            </Button>
-                        </div>
-                    </div>
-                )}
             </Card>
 
             {faktur.items && faktur.items.length > 0 && (

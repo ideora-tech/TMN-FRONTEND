@@ -24,7 +24,6 @@ const STATUS_CLASS: Record<string, string> = {
     batal:   'bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400',
 }
 
-// Tag status unit armada (spec: tersedia=emerald, digunakan=blue, perawatan=amber, tidak_aktif=red)
 const UNIT_STATUS_CLASS: Record<string, string> = {
     tersedia:    'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
     digunakan:   'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
@@ -48,10 +47,9 @@ const STATUS_OPTIONS: { value: StatusPenugasan; label: string }[] = [
 
 type Pasangan = {
     supir: Supir
-    armada: Armada | null // null bila armada default tidak ditemukan di daftar
+    armada: Armada | null
 }
 
-// Dialog Tambah: pilih tanggal tugas & estimasi biaya untuk semua pasangan yang dicentang.
 type CreateFormState = {
     tanggal_tugas: string
     estimasi_biaya: string
@@ -61,7 +59,6 @@ const EMPTY_CREATE_FORM: CreateFormState = {
     tanggal_tugas: '', estimasi_biaya: '',
 }
 
-// Dialog Edit: form biasa — ganti armada ATAU supir secara independen, tanpa saling menimpa.
 type EditFormState = {
     id_armada: string
     id_supir: string
@@ -91,41 +88,38 @@ export default function PenugasanPage() {
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Penugasan | null>(null)
 
-    // Ubah status massal — pakai row-selection bawaan DataTable (selectable + checkboxChecked terkontrol)
     const tableRef = useRef<DataTableResetHandle | HTMLTableElement | null>(null)
-    const [selectedIds, setSelectedIds]         = useState<string[]>([]) // id_penugasan yang tercentang di tabel
+    const [selectedIds, setSelectedIds]         = useState<string[]>([])
     const [bulkStatus, setBulkStatus]           = useState<StatusPenugasan | null>(null)
     const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
     const [bulkSubmitting, setBulkSubmitting]   = useState(false)
     const [hasilUbahStatus, setHasilUbahStatus] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
 
-    // Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (TIDAK berubah).
     const [createDialogOpen, setCreateDialogOpen]       = useState(false)
     const [createForm, setCreateForm]                   = useState<CreateFormState>(EMPTY_CREATE_FORM)
-    const [checkedIds, setCheckedIds]                   = useState<string[]>([]) // id_supir yang dicentang
+    const [checkedIds, setCheckedIds]                   = useState<string[]>([])
     const [pairSearch, setPairSearch]                   = useState('')
     const [createFormErrors, setCreateFormErrors]       = useState<Partial<Record<'pasangan' | 'tanggal_tugas', string>>>({})
     const [createSubmitting, setCreateSubmitting]       = useState(false)
 
-    // Dialog Edit Penugasan — form biasa (Select Armada, Select Supir, Tanggal, Biaya, Status).
     const [editDialogOpen, setEditDialogOpen]     = useState(false)
     const [editTarget, setEditTarget]             = useState<Penugasan | null>(null)
     const [editForm, setEditForm]                 = useState<EditFormState>(EMPTY_EDIT_FORM)
     const [editFormErrors, setEditFormErrors]     = useState<Partial<Record<'id_armada' | 'id_supir' | 'tanggal_tugas', string>>>({})
     const [editSubmitting, setEditSubmitting]     = useState(false)
 
-    // dialog hasil pembuatan massal (sebagian/semua gagal)
     const [hasilPenugasan, setHasilPenugasan] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
 
-    // status fetch armada/supir — dipakai oleh kedua dialog (Tambah: tabel pasangan, Edit: opsi Select)
     const [pasanganLoading, setPasanganLoading] = useState(false)
     const [pasanganError, setPasanganError]     = useState(false)
 
-    // Refetch armada & supir — dipanggil saat mount dan setiap kali salah satu dialog dibuka,
-    // supaya status unit (tersedia/digunakan/dst) tidak basi setelah aksi sebelumnya.
+    const pasanganLoadedRef = useRef(false)
+
     const fetchArmadaSupir = useCallback(async () => {
-        setPasanganLoading(true)
-        setPasanganError(false)
+        if (!pasanganLoadedRef.current) {
+            setPasanganLoading(true)
+            setPasanganError(false)
+        }
         try {
             const [armadaRes, supirRes] = await Promise.all([
                 armadaService.list(1, 100),
@@ -138,8 +132,12 @@ export default function PenugasanPage() {
             supirRes.data.forEach((s: Supir) => { sMap[s.id_supir] = s })
             setSupirMap(sMap)
             setSupirList(supirRes.data)
+            pasanganLoadedRef.current = true
+            setPasanganError(false)
         } catch {
-            setPasanganError(true)
+            if (!pasanganLoadedRef.current) {
+                setPasanganError(true)
+            }
         } finally {
             setPasanganLoading(false)
         }
@@ -152,7 +150,6 @@ export default function PenugasanPage() {
         fetchArmadaSupir()
     }, [fetchArmadaSupir])
 
-    // Pasangan supir–armada (dialog Tambah): semua supir aktif yang punya armada default & armadanya tersedia.
     const pasanganList = useMemo<Pasangan[]>(() => {
         return supirList
             .filter(s => s.status === 'aktif' && s.id_armada_default)
@@ -189,7 +186,6 @@ export default function PenugasanPage() {
         setCreateFormErrors(prev => ({ ...prev, pasangan: undefined }))
     }
 
-    // Opsi Select Armada (dialog Edit): armada tersedia + armada yang sedang terpasang di penugasan ini.
     const armadaOptionsForEdit = useMemo(() => {
         const opts = Object.values(armadaMap)
             .filter(a => a.status === 'tersedia' || a.id_armada === editTarget?.id_armada)
@@ -205,7 +201,6 @@ export default function PenugasanPage() {
         return opts
     }, [armadaMap, editTarget])
 
-    // Opsi Select Supir (dialog Edit): supir aktif + supir yang sedang terpasang di penugasan ini.
     const supirOptionsForEdit = useMemo(() => {
         const opts = supirList
             .filter(s => s.status === 'aktif' || s.id_supir === editTarget?.id_supir)
@@ -241,13 +236,8 @@ export default function PenugasanPage() {
         try {
             await penugasanService.delete(deleteTarget.id_penugasan)
             toast.push(<Notification type="success" title="Penugasan berhasil dihapus" />)
-            // Baris yang dihapus harus keluar dari centang massal — kalau tidak,
-            // bar aksi & teks konfirmasi massal menghitung baris yang sudah tiada.
             const sisaCentang = selectedIds.filter(id => id !== deleteTarget.id_penugasan)
             if (sisaCentang.length === 0) {
-                // Reset internal DataTable juga — tanpa ini header checkbox tetap
-                // menampilkan tanda indeterminate dari entri seleksi yang basi.
-                // Reset penuh aman hanya saat tidak ada baris lain tercentang.
                 clearBulkSelection()
             } else {
                 setSelectedIds(sisaCentang)
@@ -261,9 +251,6 @@ export default function PenugasanPage() {
         }
     }
 
-    // ---- Ubah status massal ----
-
-    // Kosongkan centang: state halaman + state internal DataTable (supaya header checkbox ikut reset).
     const clearBulkSelection = () => {
         setSelectedIds([])
         const t = tableRef.current
@@ -284,21 +271,16 @@ export default function PenugasanPage() {
     }
 
     const handlePageChange = (page: number) => {
-        setSelectedIds([]) // pindah halaman = kosongkan centang (state internal DataTable sudah direset sendiri)
+        setSelectedIds([])
         setCurrentPage(page)
     }
 
-    // Status tujuan tidak boleh "nempel" saat semua centang dilepas manual —
-    // begitu bar aksi muncul lagi, pilihannya harus mulai dari kosong agar
-    // Terapkan tidak langsung enabled dengan status lama yang tak dimaksud.
     useEffect(() => {
         if (selectedIds.length === 0) setBulkStatus(null)
     }, [selectedIds.length])
 
     const bulkStatusLabel = STATUS_OPTIONS.find(o => o.value === bulkStatus)?.label ?? ''
 
-    // Jumlah target aktual = irisan centang dengan list halaman ini — dipakai di teks
-    // konfirmasi massal supaya angka yang dikonfirmasi = angka yang benar-benar dieksekusi.
     const bulkTargetCount = useMemo(
         () => list.filter(p => selectedIds.includes(p.id_penugasan)).length,
         [list, selectedIds])
@@ -307,8 +289,6 @@ export default function PenugasanPage() {
         if (!bulkStatus || selectedIds.length === 0) return
         const targets = list.filter(p => selectedIds.includes(p.id_penugasan))
         if (targets.length === 0) {
-            // Semua baris tercentang sudah tidak ada di list (mis. terhapus) —
-            // tutup dialog + beri umpan balik, jangan return diam-diam.
             setBulkConfirmOpen(false)
             setBulkStatus(null)
             clearBulkSelection()
@@ -356,7 +336,7 @@ export default function PenugasanPage() {
         setPairSearch('')
         setCreateFormErrors({})
         setCreateDialogOpen(true)
-        fetchArmadaSupir() // refresh status unit — jangan blok pembukaan modal
+        fetchArmadaSupir()
     }
 
     const closeCreateDialog = () => setCreateDialogOpen(false)
@@ -372,7 +352,7 @@ export default function PenugasanPage() {
         })
         setEditFormErrors({})
         setEditDialogOpen(true)
-        fetchArmadaSupir() // refresh status unit — jangan blok pembukaan modal
+        fetchArmadaSupir()
     }
 
     const closeEditDialog = () => setEditDialogOpen(false)
@@ -616,7 +596,6 @@ export default function PenugasanPage() {
                     />
                 </div>
 
-                {/* Bar aksi ubah status massal — muncul saat ≥1 baris tercentang */}
                 {selectedProyek && selectedIds.length > 0 && (
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-500/10 flex flex-wrap items-center gap-3">
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
@@ -680,7 +659,6 @@ export default function PenugasanPage() {
                 <p>Hapus penugasan ini? Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
 
-            {/* Konfirmasi ubah status massal */}
             <ConfirmDialog isOpen={bulkConfirmOpen} type="warning" title="Ubah Status Massal"
                 confirmText="Ya, Ubah" cancelText="Batal"
                 onClose={() => setBulkConfirmOpen(false)} onConfirm={handleBulkApply}
@@ -688,7 +666,6 @@ export default function PenugasanPage() {
                 <p>Ubah status {bulkTargetCount} penugasan menjadi {bulkStatusLabel}?</p>
             </ConfirmDialog>
 
-            {/* Dialog Hasil Ubah Status (sebagian/semua gagal saat ubah status massal) */}
             <Dialog isOpen={!!hasilUbahStatus} onRequestClose={() => setHasilUbahStatus(null)} width={520}>
                 <h5 className="text-base font-semibold mb-1">Hasil Ubah Status</h5>
                 {hasilUbahStatus && (
@@ -724,7 +701,6 @@ export default function PenugasanPage() {
                 </div>
             </Dialog>
 
-            {/* Dialog Tambah Penugasan — list pasangan supir–armada multi-centang */}
             <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
@@ -837,7 +813,6 @@ export default function PenugasanPage() {
                 </form>
             </Dialog>
 
-            {/* Dialog Edit Penugasan — form biasa: ganti armada ATAU supir tanpa saling menimpa */}
             <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} width={520}>
                 <h5 className="text-base font-semibold mb-1">Edit Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
@@ -915,7 +890,6 @@ export default function PenugasanPage() {
                 </form>
             </Dialog>
 
-            {/* Dialog Hasil Penugasan (sebagian/semua gagal saat pembuatan massal) */}
             <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} width={520}>
                 <h5 className="text-base font-semibold mb-1">Hasil Penugasan</h5>
                 {hasilPenugasan && (

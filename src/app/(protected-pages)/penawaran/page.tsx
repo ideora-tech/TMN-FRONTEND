@@ -76,6 +76,11 @@ export default function PenawaranPage() {
 
     const columns: ColumnDef<Penawaran>[] = [
         {
+            header: 'No', id: 'no', size: 60,
+            cell: ({ row }: CellContext<Penawaran, unknown>) =>
+                (currentPage - 1) * pageSize + row.index + 1,
+        },
+        {
             header: 'Penawaran',
             accessorKey: 'nomor_penawaran',
             cell: (props: CellContext<Penawaran, unknown>) => {

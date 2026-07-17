@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineSearch, HiOutlineX, HiOutlineChevronUp, HiOutlineChevronDown } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { menuService, MenuItem } from '@/services/menu.service'
@@ -33,6 +33,7 @@ export default function MenuAdminPage() {
     const [pageSize]              = useState(50)
     const [total, setTotal]       = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null)
+    const [movingId, setMovingId] = useState<string | null>(null)
 
     const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
@@ -66,6 +67,32 @@ export default function MenuAdminPage() {
         return matchSearch && matchStatus && matchInduk
     })
 
+    const siblingsOf = (menu: MenuItem) =>
+        list
+            .filter(m => (m.id_menu_induk ?? null) === (menu.id_menu_induk ?? null))
+            .sort((a, b) => a.urutan - b.urutan || a.nama_menu.localeCompare(b.nama_menu))
+
+    const handleMove = async (menu: MenuItem, arah: 'naik' | 'turun') => {
+        const siblings = siblingsOf(menu)
+        const idx = siblings.findIndex(m => m.id_menu === menu.id_menu)
+        const targetIdx = arah === 'naik' ? idx - 1 : idx + 1
+        if (idx < 0 || targetIdx < 0 || targetIdx >= siblings.length) return
+        const reordered = [...siblings]
+        ;[reordered[idx], reordered[targetIdx]] = [reordered[targetIdx], reordered[idx]]
+        setMovingId(menu.id_menu)
+        try {
+            const changed = reordered
+                .map((m, i) => ({ m, urutanBaru: i + 1 }))
+                .filter(({ m, urutanBaru }) => m.urutan !== urutanBaru)
+            await Promise.all(changed.map(({ m, urutanBaru }) => menuService.update(m.id_menu, { urutan: urutanBaru })))
+            await fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMovingId(null)
+        }
+    }
+
     const handleDelete = async () => {
         if (!deleteTarget) return
         setSubmitting(true)
@@ -96,9 +123,34 @@ export default function MenuAdminPage() {
             ),
         },
         {
-            header: '', id: 'aksi', size: 90,
-            cell: ({ row }) => (
+            header: '', id: 'aksi', size: 150,
+            cell: ({ row }) => {
+                const sibs = siblingsOf(row.original)
+                const idx = sibs.findIndex(m => m.id_menu === row.original.id_menu)
+                const isFirst = idx <= 0
+                const isLast = idx === sibs.length - 1
+                const busy = movingId !== null
+                const btnBase = 'inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors'
+                const btnOn = 'cursor-pointer bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                const btnOff = 'opacity-40 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                return (
                 <div className="flex items-center justify-end gap-2">
+                    <Tooltip title="Naik">
+                        <span
+                            className={`${btnBase} ${isFirst || busy ? btnOff : btnOn}`}
+                            onClick={() => { if (!isFirst && !busy) handleMove(row.original, 'naik') }}
+                        >
+                            <HiOutlineChevronUp className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Turun">
+                        <span
+                            className={`${btnBase} ${isLast || busy ? btnOff : btnOn}`}
+                            onClick={() => { if (!isLast && !busy) handleMove(row.original, 'turun') }}
+                        >
+                            <HiOutlineChevronDown className="text-lg" />
+                        </span>
+                    </Tooltip>
                     <Tooltip title="Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -116,7 +168,8 @@ export default function MenuAdminPage() {
                         </span>
                     </Tooltip>
                 </div>
-            ),
+                )
+            },
         },
     ]
 

@@ -320,7 +320,7 @@ function DataTable<T>(props: DataTableProps<T>) {
                     />
                 ) : (
                     <TBody>
-                        {noData ? (
+                        {noData || data.length === 0 ? (
                             <Tr>
                                 <Td
                                     className="hover:bg-transparent"
@@ -333,7 +333,7 @@ function DataTable<T>(props: DataTableProps<T>) {
                                             <>
                                                 <FileNotFound />
                                                 <span className="font-semibold">
-                                                    No data found!
+                                                    Data tidak ditemukan
                                                 </span>
                                             </>
                                         )}

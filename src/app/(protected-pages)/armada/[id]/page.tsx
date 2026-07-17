@@ -23,9 +23,9 @@ const RAWAT_STATUS_OPTIONS = [
 ]
 
 const RAWAT_STATUS_CLASS: Record<string, string> = {
-    terjadwal:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
-    dalam_proses: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    selesai:      'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    terjadwal:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    dalam_proses: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:      'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
 }
 
 const PENUGASAN_STATUS_CLASS: Record<string, string> = {

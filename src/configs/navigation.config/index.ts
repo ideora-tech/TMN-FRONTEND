@@ -32,10 +32,10 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'project', path: '/project', title: 'Project',
-        translateKey: 'nav.project', icon: 'briefcase',
+        key: 'tarifRute', path: '/tarif-rute', title: 'Tarif Rute',
+        translateKey: 'nav.tarifRute', icon: 'fileText',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: ['sales', 'manager', 'superadmin', 'admin'],
+        authority: ['sales', 'manager', 'admin', 'superadmin'],
         subMenu: [],
     },
     {
@@ -46,10 +46,10 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'tarifRute', path: '/tarif-rute', title: 'Tarif Rute',
-        translateKey: 'nav.tarifRute', icon: 'fileText',
+        key: 'project', path: '/project', title: 'Project',
+        translateKey: 'nav.project', icon: 'briefcase',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: ['sales', 'manager', 'admin', 'superadmin'],
+        authority: ['sales', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
 
