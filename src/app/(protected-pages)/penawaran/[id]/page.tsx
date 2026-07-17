@@ -2,12 +2,17 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, toast, Notification } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
+import { tarifRuteService } from '@/services/tarifRute.service'
+import { ruteService, Rute } from '@/services/rute.service'
+import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+import { klienService, Klien } from '@/services/klien.service'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -34,11 +39,28 @@ const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
 }
 
 interface EditForm {
+    id_klien:          string
     judul:             string
     nilai_str:         string
     tanggal_penawaran: string
     tanggal_berlaku:   string
     catatan:           string
+}
+
+interface ItemForm {
+    id_rute:              string
+    id_jenis_kendaraan:   string
+    id_tarif_rute:        string | null
+    harga_satuan_str:     string
+    estimasi_ritase_str:  string
+    keterangan:           string
+}
+
+type Option = { value: string; label: string }
+
+const ITEM_KOSONG: ItemForm = {
+    id_rute: '', id_jenis_kendaraan: '', id_tarif_rute: null,
+    harga_satuan_str: '', estimasi_ritase_str: '1', keterangan: '',
 }
 
 export default function PenawaranDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -50,9 +72,84 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [editing, setEditing] = useState(false)
     const [saving, setSaving]   = useState(false)
     const [form, setForm]       = useState<EditForm>({
-        judul: '', nilai_str: '', tanggal_penawaran: '', tanggal_berlaku: '', catatan: '',
+        id_klien: '', judul: '', nilai_str: '', tanggal_penawaran: '', tanggal_berlaku: '', catatan: '',
     })
     const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({})
+
+    const [items, setItems] = useState<ItemForm[]>([])
+    const [itemError, setItemError] = useState('')
+    const [ruteOptions, setRuteOptions] = useState<Option[]>([])
+    const [jenisOptions, setJenisOptions] = useState<Option[]>([])
+    const [klienOptions, setKlienOptions] = useState<Option[]>([])
+
+    useEffect(() => {
+        ruteService.list({ limit: 100 })
+            .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
+            .catch(() => {})
+        jenisKendaraanService.list(1)
+            .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
+            .catch(() => {})
+        klienService.list(1, 100)
+            .then(res => setKlienOptions(res.data.map((k: Klien) => ({ value: k.id_klien, label: k.nama_klien }))))
+            .catch(() => {})
+    }, [])
+
+    const totalItems = items.reduce(
+        (sum, it) => sum + Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1), 0)
+
+    const updateItem = (index: number, patch: Partial<ItemForm>) => {
+        setItems(prev => {
+            const next = [...prev]
+            next[index] = { ...next[index], ...patch }
+            return next
+        })
+    }
+
+    // Auto-fill harga: kontrak klien menang, fallback harga umum; tetap bisa diedit manual.
+    // Guard stale response: id_rute/id_jenis_kendaraan dicapture saat pemanggilan; hasil hanya
+    // diterapkan bila baris pada index tsb (dibaca via functional setItems) masih punya
+    // kombinasi rute+jenis yang sama saat resolusi selesai — mencegah overwrite oleh respons basi
+    // ketika user re-pilih rute/jenis dengan cepat.
+    const autoFillHarga = async (index: number, idRute: string, idJenis: string) => {
+        if (!idRute || !idJenis) return
+        try {
+            const tarif = await tarifRuteService.resolusi({
+                id_rute: idRute,
+                id_jenis_kendaraan: idJenis,
+                id_klien: form.id_klien || undefined,
+                tanggal: form.tanggal_penawaran || undefined,
+            })
+            if (!tarif) return
+            setItems(prev => {
+                const row = prev[index]
+                if (!row || row.id_rute !== idRute || row.id_jenis_kendaraan !== idJenis) return prev
+                const next = [...prev]
+                next[index] = {
+                    ...row,
+                    id_tarif_rute: tarif.id_tarif_rute,
+                    harga_satuan_str: String(Math.round(tarif.harga)),
+                }
+                return next
+            })
+        } catch { /* tarif tidak ketemu → isi manual */ }
+    }
+
+    const setItemRute = (index: number, value: string) => {
+        updateItem(index, { id_rute: value })
+        autoFillHarga(index, value, items[index].id_jenis_kendaraan)
+    }
+
+    const setItemJenis = (index: number, value: string) => {
+        updateItem(index, { id_jenis_kendaraan: value })
+        autoFillHarga(index, items[index].id_rute, value)
+    }
+
+    const validateItems = () => {
+        if (items.length === 0) return true
+        const invalid = items.some(it => !it.id_rute || !it.id_jenis_kendaraan || !it.harga_satuan_str)
+        setItemError(invalid ? 'Setiap item wajib punya rute, jenis kendaraan, dan harga' : '')
+        return !invalid
+    }
 
     const validate = () => {
         const e: Partial<Record<keyof EditForm, string>> = {}
@@ -70,29 +167,57 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             .then(d => {
                 setData(d)
                 setForm({
+                    id_klien:          d.id_klien ?? '',
                     judul:             d.judul,
                     nilai_str:         d.nilai_penawaran != null ? String(d.nilai_penawaran) : '',
                     tanggal_penawaran: d.tanggal_penawaran ?? '',
                     tanggal_berlaku:   d.tanggal_berlaku ?? '',
                     catatan:           d.catatan ?? '',
                 })
+                setItems((d.items ?? []).map(it => ({
+                    id_rute:             it.id_rute,
+                    id_jenis_kendaraan:  it.id_jenis_kendaraan,
+                    id_tarif_rute:       it.id_tarif_rute,
+                    harga_satuan_str:    String(Math.round(it.harga_satuan)),
+                    estimasi_ritase_str: String(it.estimasi_ritase),
+                    keterangan:          it.keterangan ?? '',
+                })))
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [id])
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate() || !validateItems()) return
         setSaving(true)
         try {
             const updated = await penawaranService.update(id, {
+                id_klien:          form.id_klien || null,
                 judul:             form.judul,
-                nilai_penawaran:   form.nilai_str ? Number(form.nilai_str) : null,
+                nilai_penawaran:   items.length > 0
+                    ? undefined
+                    : (form.nilai_str ? Number(form.nilai_str) : null),
                 tanggal_penawaran: form.tanggal_penawaran || null,
                 tanggal_berlaku:   form.tanggal_berlaku || null,
                 catatan:           form.catatan || null,
+                items: items.map(it => ({
+                    id_rute: it.id_rute,
+                    id_jenis_kendaraan: it.id_jenis_kendaraan,
+                    id_tarif_rute: it.id_tarif_rute,
+                    harga_satuan: Number(it.harga_satuan_str || 0),
+                    estimasi_ritase: Number(it.estimasi_ritase_str || 1),
+                    keterangan: it.keterangan.trim() || null,
+                })),
             })
             setData(updated)
+            setItems((updated.items ?? []).map(it => ({
+                id_rute:             it.id_rute,
+                id_jenis_kendaraan:  it.id_jenis_kendaraan,
+                id_tarif_rute:       it.id_tarif_rute,
+                harga_satuan_str:    String(Math.round(it.harga_satuan)),
+                estimasi_ritase_str: String(it.estimasi_ritase),
+                keterangan:          it.keterangan ?? '',
+            })))
             setEditing(false)
             setErrors({})
             toast.push(<Notification type="success" title="Penawaran berhasil diperbarui" />)
@@ -295,6 +420,38 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 </div>
                             ))}
                         </div>
+
+                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                            <p className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Item Rute (Rate Card)</p>
+                            {data.items && data.items.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                            <tr className="text-left text-gray-600 dark:text-gray-300">
+                                                <th className="px-3 py-2 font-semibold min-w-[200px]">Rute</th>
+                                                <th className="px-3 py-2 font-semibold min-w-[150px]">Jenis Kendaraan</th>
+                                                <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
+                                                <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                                <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {data.items.map(it => (
+                                                <tr key={it.id_penawaran_item} className="border-b border-gray-100 dark:border-gray-700">
+                                                    <td className="px-3 py-2">{it.nama_rute ?? '-'}</td>
+                                                    <td className="px-3 py-2">{it.nama_jenis ?? '-'}</td>
+                                                    <td className="px-3 py-2">{formatRupiah(it.harga_satuan)}</td>
+                                                    <td className="px-3 py-2">{it.estimasi_ritase}</td>
+                                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatRupiah(it.subtotal)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-400">Belum ada item rute pada penawaran ini.</p>
+                            )}
+                        </div>
                     </>
                 ) : (
                     <>
@@ -322,11 +479,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         onChange={e => setForm(p => ({ ...p, judul: e.target.value }))}
                                     />
                                 </FormItem>
-                                <FormItem label="Nilai Penawaran">
+                                <FormItem label="Nilai Penawaran" extra={items.length > 0 ? 'Otomatis dari item rate card' : undefined}>
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
-                                        value={form.nilai_str ? formatNum(Number(form.nilai_str)) : ''}
+                                        disabled={items.length > 0}
+                                        value={items.length > 0
+                                            ? formatNum(totalItems)
+                                            : (form.nilai_str ? formatNum(Number(form.nilai_str)) : '')}
                                         onChange={e =>
                                             setForm(p => ({
                                                 ...p,
@@ -335,7 +495,12 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         }
                                     />
                                 </FormItem>
-                                <div />
+                                <FormItem label="Klien">
+                                    <Select<Option> isClearable isSearchable placeholder="Pilih klien (opsional)"
+                                        options={klienOptions}
+                                        value={klienOptions.find(o => o.value === form.id_klien) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_klien: opt?.value ?? '' }))} />
+                                </FormItem>
                                 <FormItem label="Tanggal Penawaran">
                                     <DatePicker inputFormat="DD/MM/YYYY"
                                         value={form.tanggal_penawaran ? dayjs(form.tanggal_penawaran).toDate() : null}
@@ -360,6 +525,81 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                     />
                                 </FormItem>
                             </div>
+
+                            <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
+                                    </div>
+                                    <Button type="button" size="sm" icon={<HiOutlinePlus />}
+                                        onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
+                                        Tambah Item
+                                    </Button>
+                                </div>
+                                {itemError && <p className="text-red-500 text-sm mb-2">{itemError}</p>}
+                                {items.length > 0 && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                                <tr className="text-left text-gray-600 dark:text-gray-300">
+                                                    <th className="px-3 py-2 font-semibold min-w-[200px]">Rute</th>
+                                                    <th className="px-3 py-2 font-semibold min-w-[150px]">Jenis Kendaraan</th>
+                                                    <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
+                                                    <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                                    <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
+                                                    <th className="px-3 py-2 w-12"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {items.map((it, i) => (
+                                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700 align-top">
+                                                        <td className="px-3 py-2">
+                                                            <Select<Option> isSearchable placeholder="Pilih rute..."
+                                                                options={ruteOptions}
+                                                                value={ruteOptions.find(o => o.value === it.id_rute) ?? null}
+                                                                onChange={opt => setItemRute(i, opt?.value ?? '')} />
+                                                        </td>
+                                                        <td className="px-3 py-2">
+                                                            <Select<Option> isSearchable placeholder="Pilih jenis..."
+                                                                options={jenisOptions}
+                                                                value={jenisOptions.find(o => o.value === it.id_jenis_kendaraan) ?? null}
+                                                                onChange={opt => setItemJenis(i, opt?.value ?? '')} />
+                                                        </td>
+                                                        <td className="px-3 py-2">
+                                                            <Input prefix="Rp" placeholder="0"
+                                                                value={it.harga_satuan_str ? formatNum(Number(it.harga_satuan_str)) : ''}
+                                                                onChange={e => updateItem(i, {
+                                                                    harga_satuan_str: e.target.value.replace(/\D/g, ''),
+                                                                })} />
+                                                        </td>
+                                                        <td className="px-3 py-2">
+                                                            <Input type="number" min="1"
+                                                                value={it.estimasi_ritase_str}
+                                                                onChange={e => updateItem(i, { estimasi_ritase_str: e.target.value })} />
+                                                        </td>
+                                                        <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
+                                                            {formatRupiah(Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1))}
+                                                        </td>
+                                                        <td className="px-3 py-2 pt-3">
+                                                            <span
+                                                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 cursor-pointer transition-colors"
+                                                                onClick={() => setItems(prev => prev.filter((_, idx) => idx !== i))}
+                                                            ><HiOutlineTrash /></span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="flex justify-end mt-3">
+                                            <p className="text-sm">Total Nilai Penawaran:{' '}
+                                                <span className="font-bold text-base">{formatRupiah(totalItems)}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex justify-end gap-2 mt-6">
                                 <Button
                                     type="button"

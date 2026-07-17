@@ -45,6 +45,13 @@ const navigationConfig: NavigationTree[] = [
         authority: ['sales', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
+    {
+        key: 'tarifRute', path: '/tarif-rute', title: 'Tarif Rute',
+        translateKey: 'nav.tarifRute', icon: 'fileText',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['sales', 'manager', 'admin', 'superadmin'],
+        subMenu: [],
+    },
 
     // === OPERASIONAL ===
     {
@@ -256,6 +263,13 @@ const navigationConfig: NavigationTree[] = [
         translateKey: 'nav.jenisBbm', icon: 'gasPump',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'parameterBok', path: '/parameter-bok', title: 'Parameter BOK',
+        translateKey: 'nav.parameterBok', icon: 'wrench',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['manager', 'admin', 'superadmin'],
         subMenu: [],
     },
     {

@@ -24,7 +24,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
     const [errors, setErrors]   = useState<Partial<Record<keyof RutePayload, string>>>({})
 
     useEffect(() => {
-        lokasiService.list(1, 100)
+        lokasiService.list(1, 200)
             .then(res => setLokasiOptions(res.data.map(l => ({
                 value: l.id_lokasi,
                 label: `${l.nama_lokasi}${l.kota ? ' — ' + l.kota : ''}`,

@@ -18,6 +18,7 @@ export interface Penawaran {
     aktif: boolean
     dibuat_pada: string
     diubah_pada: string
+    items?: PenawaranItem[]
 }
 
 export interface PenawaranPayload {
@@ -29,6 +30,33 @@ export interface PenawaranPayload {
     tanggal_penawaran?: string | null
     tanggal_berlaku?: string | null
     catatan?: string | null
+    items?: PenawaranItemPayload[]
+}
+
+export interface PenawaranItem {
+    id_penawaran_item: string
+    id_penawaran: string
+    id_rute: string
+    id_jenis_kendaraan: string
+    id_tarif_rute: string | null
+    kode_rute: string | null
+    nama_rute: string | null
+    asal: string | null
+    tujuan: string | null
+    nama_jenis: string | null
+    harga_satuan: number
+    estimasi_ritase: number
+    subtotal: number
+    keterangan: string | null
+}
+
+export interface PenawaranItemPayload {
+    id_rute: string
+    id_jenis_kendaraan: string
+    id_tarif_rute?: string | null
+    harga_satuan: number
+    estimasi_ritase?: number
+    keterangan?: string | null
 }
 
 export const penawaranService = {

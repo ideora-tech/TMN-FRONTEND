@@ -207,4 +207,14 @@ export const API_ENDPOINTS = {
     JENIS_BBM:        '/api/proxy/jenis-bbm',
     JENIS_BBM_DETAIL: (id: string) => `/api/proxy/jenis-bbm/${id}`,
     JENIS_BBM_HARGA:  (id: string) => `/api/proxy/jenis-bbm/${id}/harga`,
+
+    // Tarif Rute
+    TARIF_RUTE:              '/api/proxy/tarif-rute',
+    TARIF_RUTE_DETAIL:       (id: string) => `/api/proxy/tarif-rute/${id}`,
+    TARIF_RUTE_RESOLUSI:     '/api/proxy/tarif-rute/resolusi',
+    TARIF_RUTE_ESTIMASI_BOK: '/api/proxy/tarif-rute/estimasi-bok',
+
+    // Parameter BOK
+    PARAMETER_BOK:        '/api/proxy/parameter-bok',
+    PARAMETER_BOK_DETAIL: (id: string) => `/api/proxy/parameter-bok/${id}`,
 } as const

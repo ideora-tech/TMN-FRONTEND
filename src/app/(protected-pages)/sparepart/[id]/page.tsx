@@ -148,9 +148,11 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                     <div className="flex gap-2">
                         {!editing && (
                             <>
-                                <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setStokOpen(true)}>Tambah Stok</Button>
                                 <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
-                                <Button size="sm" variant="plain" icon={<HiOutlineTrash />} onClick={() => setDeleteOpen(true)}>Hapus</Button>
+                                <Button size="sm" variant="solid"
+                                    customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
+                                    icon={<HiOutlineTrash />} onClick={() => setDeleteOpen(true)}>Hapus</Button>
+                                <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setStokOpen(true)}>Tambah Stok</Button>
                             </>
                         )}
                     </div>
@@ -227,7 +229,15 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
             <Card>
                 <div className="flex items-center justify-between mb-4">
                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Mutasi Stok (20 terakhir)</p>
-                    {mutasiLoading && <Spinner size={20} />}
+                    <div className="flex items-center gap-3">
+                        {mutasiLoading && <Spinner size={20} />}
+                        <p className="text-sm text-gray-500">
+                            Total stok saat ini:{' '}
+                            <span className="font-bold text-gray-800 dark:text-gray-100">
+                                {formatNum(sparepart.stok)} {sparepart.satuan}
+                            </span>
+                        </p>
+                    </div>
                 </div>
                 {mutasi.length === 0 && !mutasiLoading ? (
                     <p className="text-gray-400 text-sm py-4 text-center">Belum ada mutasi stok</p>
@@ -250,7 +260,9 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                         <td className="py-3 pr-4">
                                             <Tag className={`text-xs font-semibold ${MUTASI_CLASS[m.jenis] ?? 'bg-gray-100 text-gray-600'}`}>{m.jenis}</Tag>
                                         </td>
-                                        <td className="py-3 pr-4 text-right font-mono text-xs">{m.qty > 0 && m.jenis !== 'keluar' ? '+' : m.jenis === 'keluar' ? '-' : ''}{formatNum(Math.abs(m.qty))}</td>
+                                        <td className={`py-3 pr-4 text-right font-mono text-xs font-semibold ${
+                                            m.jenis === 'keluar' || m.qty < 0 ? 'text-red-500' : 'text-emerald-600'
+                                        }`}>{m.jenis === 'keluar' || m.qty < 0 ? '-' : '+'}{formatNum(Math.abs(m.qty))}</td>
                                         <td className="py-3 pr-4 text-right whitespace-nowrap">{m.harga != null ? formatRupiah(m.harga) : <span className="text-gray-400">—</span>}</td>
                                         <td className="py-3 text-gray-600 dark:text-gray-400 max-w-[240px] truncate">{m.keterangan ?? <span className="text-gray-400">—</span>}</td>
                                     </tr>

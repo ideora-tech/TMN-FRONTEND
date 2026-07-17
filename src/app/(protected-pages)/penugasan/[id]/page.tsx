@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -17,6 +17,7 @@ import { ruteService, Rute } from '@/services/rute.service'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
+import { tarifRuteService } from '@/services/tarifRute.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 const STATUS_OPTIONS = [
@@ -65,8 +66,13 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [saving, setSaving]       = useState(false)
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [armadaList, setArmadaList]           = useState<Armada[]>([])         // simpan objek utuh utk id_jenis_kendaraan
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
     const [supirList, setSupirList]              = useState<Supir[]>([])
+    const [idRuteEstimasi, setIdRuteEstimasi]   = useState('')
+    // hanya true setelah user benar-benar mengubah armada / rute estimasi — mencegah auto-fill
+    // menimpa estimasi_biaya tersimpan saat efek ini terpicu oleh load awal (hidrasi/fetch), bukan aksi user.
+    const bolehAutoFill = useRef(false)
 
     // info sumber vendor (read-only, ditampilkan hanya bila sumber === 'vendor')
     const [kontrakVendorInfo, setKontrakVendorInfo] = useState<KontrakVendor | null>(null)
@@ -101,6 +107,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` }))
             const ruteOpts     = rute.data.map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))
             let supirData: Supir[] = supir.data
+            let armadaData: Armada[] = armada.data
 
             if (p.id_karyawan && !karyawanOpts.some(o => o.value === p.id_karyawan)) {
                 try {
@@ -112,6 +119,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 try {
                     const a = await armadaService.get(p.id_armada)
                     armadaOpts.unshift({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })
+                    armadaData = [a, ...armadaData]
                 } catch { /* armada sudah dihapus */ }
             }
             if (p.id_supir && !supirOpts.some(o => o.value === p.id_supir)) {
@@ -124,6 +132,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
 
             setKaryawanOptions(karyawanOpts)
             setArmadaOptions(armadaOpts)
+            setArmadaList(armadaData)
             setSupirOptions(supirOpts)
             setSupirList(supirData)
             setRuteOptions(ruteOpts)
@@ -142,6 +151,8 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         try {
             const res = await jadwalService.listByPenugasan(id)
             setJadwalList(res.data)
+            // default rute estimasi dari jadwal pertama bila ada — tidak menimpa pilihan manual user
+            setIdRuteEstimasi(prev => prev || (res.data[0]?.id_rute ?? ''))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -150,6 +161,21 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     }, [id])
 
     useEffect(() => { fetchJadwal() }, [fetchJadwal])
+
+    // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
+    // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
+    useEffect(() => {
+        if (!bolehAutoFill.current) return
+        const armada = armadaList.find(a => a.id_armada === form.id_armada)
+        if (!armada?.id_jenis_kendaraan || !idRuteEstimasi) return
+        let aktif = true
+        tarifRuteService.estimasiBok({ id_rute: idRuteEstimasi, id_jenis_kendaraan: armada.id_jenis_kendaraan })
+            .then(est => {
+                if (aktif && est) setForm(p => ({ ...p, estimasi_biaya: Math.round(est.harga_pokok) }))
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [form.id_armada, idRuteEstimasi, armadaList])
 
     const handleSave = async () => {
         setSaving(true)
@@ -167,6 +193,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             })
             setPenugasan(updated)
             setEditing(false)
+            bolehAutoFill.current = false
             toast.push(<Notification type="success" title="Penugasan berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -375,7 +402,10 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             <Select isClearable placeholder="Pilih armada..."
                                                 options={armadaOptions}
                                                 value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                                onChange={opt => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))} />
+                                                onChange={opt => {
+                                                    bolehAutoFill.current = true
+                                                    setForm(p => ({ ...p, id_armada: opt?.value ?? null }))
+                                                }} />
                                         </FormItem>
                                     </>
                                 )}
@@ -395,14 +425,23 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
                                 </FormItem>
-                                <FormItem label="Estimasi Biaya">
+                                <FormItem label="Rute (untuk estimasi biaya)">
+                                    <Select isClearable isSearchable placeholder="Pilih rute..."
+                                        options={ruteOptions}
+                                        value={ruteOptions.find(o => o.value === idRuteEstimasi) ?? null}
+                                        onChange={opt => {
+                                            bolehAutoFill.current = true
+                                            setIdRuteEstimasi(opt?.value ?? '')
+                                        }} />
+                                </FormItem>
+                                <FormItem label="Estimasi Biaya" extra="Terisi otomatis dari BOK bila armada & rute dipilih — bisa diubah">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.estimasi_biaya ? formatNum(Number(form.estimasi_biaya)) : ''}
                                         onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
-                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(penugasan) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { bolehAutoFill.current = false; setEditing(false); setForm(penugasan) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>

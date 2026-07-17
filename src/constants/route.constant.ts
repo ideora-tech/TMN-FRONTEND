@@ -123,4 +123,12 @@ export const ROUTES = {
 
     PENUGASAN_VENDOR:      '/penugasan-vendor',
     PENUGASAN_VENDOR_BARU: '/penugasan-vendor/baru',
+
+    TARIF_RUTE:        '/tarif-rute',
+    TARIF_RUTE_BARU:   '/tarif-rute/baru',
+    TARIF_RUTE_DETAIL: (id: string) => `/tarif-rute/${id}`,
+
+    PARAMETER_BOK:        '/parameter-bok',
+    PARAMETER_BOK_BARU:   '/parameter-bok/baru',
+    PARAMETER_BOK_DETAIL: (id: string) => `/parameter-bok/${id}`,
 } as const

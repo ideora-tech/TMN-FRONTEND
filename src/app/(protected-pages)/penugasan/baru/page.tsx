@@ -1,7 +1,7 @@
 ﻿'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, DatePicker, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
@@ -12,6 +12,9 @@ import { projectService, Project } from '@/services/project.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { tarifRuteService } from '@/services/tarifRute.service'
+import { ruteService, Rute } from '@/services/rute.service'
+import { formatNum } from '@/utils/formatNumber'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -28,8 +31,12 @@ export default function PenugasanBaruPage() {
     const [proyekOptions, setProyekOptions]     = useState<{ value: string; label: string }[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [armadaList, setArmadaList]           = useState<Armada[]>([])         // simpan objek utuh utk id_jenis_kendaraan
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
     const [supirList, setSupirList]              = useState<Supir[]>([])
+    const [ruteEstimasiOptions, setRuteEstimasiOptions] = useState<{ value: string; label: string }[]>([])
+    const [idRuteEstimasi, setIdRuteEstimasi]   = useState('')
+    const [estimasiBiayaStr, setEstimasiBiayaStr] = useState('')
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
 
@@ -45,11 +52,33 @@ export default function PenugasanBaruPage() {
             setArmadaOptions(armada.data
                 .filter((a: Armada) => a.aktif !== false)
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
+            setArmadaList(armada.data)
             const supirAktif = supir.data.filter((s: Supir) => s.status === 'aktif')
             setSupirOptions(supirAktif.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
             setSupirList(supirAktif)
         }).catch(() => {})
+
+        ruteService.list({ limit: 100 })
+            .then(res => setRuteEstimasiOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
+            .catch(() => {})
     }, [])
+
+    // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
+    // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
+    useEffect(() => {
+        const armada = armadaList.find(a => a.id_armada === form.id_armada)
+        if (!armada?.id_jenis_kendaraan || !idRuteEstimasi) return
+        let aktif = true
+        tarifRuteService.estimasiBok({
+            id_rute: idRuteEstimasi,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+        })
+            .then(est => {
+                if (aktif && est) setEstimasiBiayaStr(String(Math.round(est.harga_pokok)))
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [form.id_armada, idRuteEstimasi, armadaList])
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
@@ -69,6 +98,7 @@ export default function PenugasanBaruPage() {
                 id_karyawan:   form.id_karyawan || undefined,
                 tanggal_tugas: form.tanggal_tugas || undefined,
                 status:        form.status,
+                estimasi_biaya: estimasiBiayaStr ? Number(estimasiBiayaStr) : undefined,
             })
             toast.push(<Notification type="success" title="Penugasan berhasil dibuat" />)
             router.push(ROUTES.PENUGASAN)
@@ -131,6 +161,17 @@ export default function PenugasanBaruPage() {
                             onChange={(opt) => setForm(p => ({ ...p, id_armada: opt?.value ?? '' }))}
                             isClearable
                         />
+                    </FormItem>
+                    <FormItem label="Rute (untuk estimasi biaya)">
+                        <Select isClearable isSearchable placeholder="Pilih rute..."
+                            options={ruteEstimasiOptions}
+                            value={ruteEstimasiOptions.find(o => o.value === idRuteEstimasi) ?? null}
+                            onChange={opt => setIdRuteEstimasi(opt?.value ?? '')} />
+                    </FormItem>
+                    <FormItem label="Estimasi Biaya" extra="Terisi otomatis dari BOK bila armada & rute dipilih — bisa diubah">
+                        <Input prefix="Rp" placeholder="0"
+                            value={estimasiBiayaStr ? formatNum(Number(estimasiBiayaStr)) : ''}
+                            onChange={e => setEstimasiBiayaStr(e.target.value.replace(/\D/g, ''))} />
                     </FormItem>
                     <FormItem label="Karyawan PIC">
                         <Select

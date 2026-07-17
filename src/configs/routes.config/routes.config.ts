@@ -46,6 +46,8 @@ export const protectedRoutes: Routes = {
     ...listRoute('lokasi-kantor', 'lokasi-kantor'),
     ...listRoute('lokasi', 'lokasi'),
     ...listRoute('jenis-bbm', 'jenis-bbm'),
+    ...listRoute('tarif-rute', 'tarif-rute'),
+    ...listRoute('parameter-bok', 'parameter-bok', ADMIN_ONLY),
     ...listRoute('departemen', 'departemen'),
     ...listRoute('jabatan', 'jabatan'),
     ...listRoute('karyawan', 'karyawan'),
