@@ -1,5 +1,5 @@
 ﻿'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -8,14 +8,24 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { supirService } from '@/services/supir.service'
+import { armadaService, Armada } from '@/services/armada.service'
 
 const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
 export default function SupirBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '' })
+    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '', id_armada_default: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
+    const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
+
+    useEffect(() => {
+        armadaService.list(1, 100)
+            .then(res => setArmadaOptions(res.data
+                .filter((a: Armada) => a.aktif !== false)
+                .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk ?? ''}`.trim() }))))
+            .catch(() => {})
+    }, [])
 
     const validate = () => {
         const e: Partial<typeof form> = {}
@@ -35,6 +45,7 @@ export default function SupirBaruPage() {
                 jenis_sim: form.jenis_sim,
                 tgl_kadaluarsa_sim: form.tgl_kadaluarsa_sim || undefined,
                 telepon: form.telepon || undefined,
+                id_armada_default: form.id_armada_default || undefined,
             })
             toast.push(<Notification type="success" title="Supir berhasil ditambahkan" />)
             router.push(ROUTES.SUPIR)
@@ -82,6 +93,13 @@ export default function SupirBaruPage() {
                         <DatePicker
                             value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
                             onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                    </FormItem>
+                    <FormItem label="Armada Default">
+                        <Select isClearable
+                            placeholder="Pilih armada default..."
+                            options={armadaOptions}
+                            value={armadaOptions.find(o => o.value === form.id_armada_default) ?? null}
+                            onChange={(option) => setForm(p => ({ ...p, id_armada_default: option?.value ?? '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">

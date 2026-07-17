@@ -96,7 +96,14 @@ const ConfirmDialog = (props: ConfirmDialogProps) => {
     } = props
 
     const handleCancel = () => {
-        onCancel?.()
+        if (onCancel) {
+            onCancel()
+            return
+        }
+        // Fallback: banyak pemakaian hanya mengirim onClose (tombol X) tanpa onCancel —
+        // tombol Cancel harus tetap bisa menutup dialog.
+        const close = (rest as { onClose?: (e?: unknown) => void }).onClose
+        close?.()
     }
 
     const handleConfirm = () => {

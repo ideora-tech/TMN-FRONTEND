@@ -252,6 +252,13 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
+        key: 'jenis-bbm', path: '/jenis-bbm', title: 'Jenis BBM',
+        translateKey: 'nav.jenisBbm', icon: 'gasPump',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
         key: 'log-error', path: '/log-error', title: 'Log Error',
         translateKey: 'nav.logError', icon: 'bug',
         type: NAV_ITEM_TYPE_ITEM,

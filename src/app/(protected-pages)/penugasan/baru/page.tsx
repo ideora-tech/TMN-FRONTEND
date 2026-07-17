@@ -29,6 +29,7 @@ export default function PenugasanBaruPage() {
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
+    const [supirList, setSupirList]              = useState<Supir[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
 
@@ -42,11 +43,11 @@ export default function PenugasanBaruPage() {
             setProyekOptions(proyek.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
             setKaryawanOptions(karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
             setArmadaOptions(armada.data
-                .filter((a: Armada) => a.status === 'aktif')
+                .filter((a: Armada) => a.aktif !== false)
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
-            setSupirOptions(supir.data
-                .filter((s: Supir) => s.status === 'aktif')
-                .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
+            const supirAktif = supir.data.filter((s: Supir) => s.status === 'aktif')
+            setSupirOptions(supirAktif.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
+            setSupirList(supirAktif)
         }).catch(() => {})
     }, [])
 
@@ -110,7 +111,15 @@ export default function PenugasanBaruPage() {
                             placeholder="Pilih supir..."
                             options={supirOptions}
                             value={supirOptions.find(o => o.value === form.id_supir) ?? null}
-                            onChange={(opt) => setForm(p => ({ ...p, id_supir: opt?.value ?? '' }))}
+                            onChange={(opt) => {
+                                const selectedId = opt?.value ?? ''
+                                const selected = supirList.find(s => s.id_supir === selectedId)
+                                setForm(p => ({
+                                    ...p,
+                                    id_supir: selectedId,
+                                    ...(selected?.id_armada_default ? { id_armada: selected.id_armada_default } : {}),
+                                }))
+                            }}
                             isClearable
                         />
                     </FormItem>

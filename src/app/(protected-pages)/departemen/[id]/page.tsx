@@ -19,6 +19,7 @@ export default function DepartemenDetailPage({ params }: { params: Promise<{ id:
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Departemen>>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
     const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
 
@@ -35,7 +36,16 @@ export default function DepartemenDetailPage({ params }: { params: Promise<{ id:
           .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.kode_departemen?.trim()) e.kode_departemen = 'Kode Departemen wajib diisi'
+        if (!form.nama_departemen?.trim()) e.nama_departemen = 'Nama Departemen wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await departemenService.update(id, {
@@ -44,7 +54,7 @@ export default function DepartemenDetailPage({ params }: { params: Promise<{ id:
                 id_departemen_induk: form.id_departemen_induk ?? null,
                 aktif:               form.aktif,
             })
-            setData(updated); setEditing(false)
+            setData(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Departemen berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -117,11 +127,11 @@ export default function DepartemenDetailPage({ params }: { params: Promise<{ id:
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Departemen">
-                                <Input value={form.kode_departemen ?? ''} onChange={e => setForm(p => ({ ...p, kode_departemen: e.target.value }))} />
+                            <FormItem label="Kode Departemen" asterisk invalid={!!errors.kode_departemen} errorMessage={errors.kode_departemen}>
+                                <Input value={form.kode_departemen ?? ''} invalid={!!errors.kode_departemen} onChange={e => setForm(p => ({ ...p, kode_departemen: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Nama Departemen">
-                                <Input value={form.nama_departemen ?? ''} onChange={e => setForm(p => ({ ...p, nama_departemen: e.target.value }))} />
+                            <FormItem label="Nama Departemen" asterisk invalid={!!errors.nama_departemen} errorMessage={errors.nama_departemen}>
+                                <Input value={form.nama_departemen ?? ''} invalid={!!errors.nama_departemen} onChange={e => setForm(p => ({ ...p, nama_departemen: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Departemen Induk">
                                 <Select isClearable isSearchable placeholder="Pilih induk..."
@@ -136,7 +146,7 @@ export default function DepartemenDetailPage({ params }: { params: Promise<{ id:
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

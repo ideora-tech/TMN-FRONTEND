@@ -27,7 +27,17 @@ function buildFormData(payload: DocPayload, file: File): FormData {
     return fd
 }
 
+export interface DokumenArmadaWithArmada extends DokumenArmada {
+    armada_nopol: string | null
+    armada_merk: string | null
+}
+
 export const dokumenArmadaService = {
+    async listAll(params?: { page?: number; limit?: number; id_armada?: string; jenis_dokumen?: string }) {
+        const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA, { params })
+        return data as { data: DokumenArmadaWithArmada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+
     async list(idArmada: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_DOKUMEN(idArmada))
         return data.data as DokumenArmada[]

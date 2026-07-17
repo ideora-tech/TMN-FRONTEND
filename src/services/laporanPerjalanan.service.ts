@@ -20,6 +20,8 @@ export interface LaporanPerjalanan {
     jarak_tempuh_km: number
     uang_jalan: number
     catatan_insiden: string | null
+    id_jenis_bbm: string | null
+    jumlah_liter: number | null
     biaya_lain: BiayaLain[]
     foto: FotoLaporan[]
 }
@@ -29,6 +31,8 @@ export type LaporanPerjalananPayload = {
     jarak_tempuh_km: number
     uang_jalan: number
     catatan_insiden?: string | null
+    id_jenis_bbm?: string | null
+    jumlah_liter?: number | null
     biaya_lain: { nama_biaya: string; nominal: number }[]
 }
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineExternalLink, HiOutlinePhotograph } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -14,6 +14,7 @@ import { dokumenArmadaService, DokumenArmada } from '@/services/dokumenArmada.se
 import { perawatanArmadaService, PerawatanArmada } from '@/services/perawatanArmada.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
 
 const RAWAT_STATUS_OPTIONS = [
     { value: 'terjadwal',    label: 'Terjadwal' },
@@ -34,18 +35,46 @@ const PENUGASAN_STATUS_CLASS: Record<string, string> = {
     batal:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
-type ArmadaStatus = 'aktif' | 'servis' | 'nonaktif'
+type ArmadaStatus = 'tersedia' | 'digunakan' | 'perawatan' | 'tidak_aktif'
 
 const STATUS_OPTIONS = [
-    { value: 'aktif',    label: 'Aktif' },
-    { value: 'servis',   label: 'Servis' },
-    { value: 'nonaktif', label: 'Nonaktif' },
+    { value: 'tersedia',    label: 'Tersedia' },
+    { value: 'digunakan',   label: 'Digunakan' },
+    { value: 'perawatan',   label: 'Perawatan' },
+    { value: 'tidak_aktif', label: 'Tidak Aktif' },
 ]
 
+const STATUS_LABEL: Record<string, string> = {
+    tersedia:    'Tersedia',
+    digunakan:   'Digunakan',
+    perawatan:   'Perawatan',
+    tidak_aktif: 'Tidak Aktif',
+}
+
+const BAHAN_BAKAR_OPTIONS = [
+    { value: 'solar',   label: 'Solar' },
+    { value: 'bensin',  label: 'Bensin' },
+    { value: 'gas',     label: 'Gas' },
+    { value: 'listrik', label: 'Listrik' },
+    { value: 'hybrid',  label: 'Hybrid' },
+]
+
+const BAHAN_BAKAR_LABEL: Record<string, string> = {
+    solar: 'Solar', bensin: 'Bensin', gas: 'Gas', listrik: 'Listrik', hybrid: 'Hybrid',
+}
+
+const KONDISI_BELI_OPTIONS = [
+    { value: 'baru',  label: 'Baru' },
+    { value: 'bekas', label: 'Bekas' },
+]
+
+const KONDISI_BELI_LABEL: Record<string, string> = { baru: 'Baru', bekas: 'Bekas' }
+
 const statusClass: Record<string, string> = {
-    aktif:    'bg-emerald-100 text-emerald-600',
-    servis:   'bg-yellow-100 text-yellow-700',
-    nonaktif: 'bg-red-100 text-red-500',
+    tersedia:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    digunakan:   'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    perawatan:   'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
+    tidak_aktif: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
 const JENIS_DOKUMEN_OPTIONS = [
@@ -95,6 +124,9 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Armada>>({})
     const [saving, setSaving]   = useState(false)
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
+    const [editFoto, setEditFoto] = useState<File | null>(null)
+    const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
 
     // dokumen
     const [dokumen, setDokumen]         = useState<DokumenArmada[]>([])
@@ -134,6 +166,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             .finally(() => setLoading(false))
     }, [id])
 
+    useEffect(() => {
+        jenisKendaraanService.list(1, 100)
+            .then(res => setJenisOptions(res.data.map(j => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
+            .catch(() => setJenisOptions([]))
+    }, [])
+
     const fetchDokumen = useCallback(async () => {
         setDocLoading(true)
         try { setDokumen(await dokumenArmadaService.list(id)) }
@@ -170,11 +208,37 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
 
     // --- handlers armada ---
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.nopol?.trim()) e.nopol = 'Nopol wajib diisi'
+        if (!form.merk?.trim())  e.merk  = 'Merk wajib diisi'
+        if (!form.tahun)         e.tahun = 'Tahun wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
-            const updated = await armadaService.update(id, { ...form, tahun: form.tahun ? Number(form.tahun) : undefined })
-            setArmada(updated); setEditing(false)
+            const updated = await armadaService.update(id, {
+                nopol:               form.nopol,
+                merk:                form.merk,
+                model:               form.model ?? '',
+                tahun:               form.tahun ? Number(form.tahun) : undefined,
+                status:              form.status,
+                id_jenis_kendaraan:  form.id_jenis_kendaraan ?? '',
+                nomor_rangka:        form.nomor_rangka ?? '',
+                nomor_mesin:         form.nomor_mesin ?? '',
+                warna:               form.warna ?? '',
+                jenis_bahan_bakar:   form.jenis_bahan_bakar ?? '',
+                kapasitas_muatan_kg: form.kapasitas_muatan_kg ?? null,
+                tanggal_beli:        form.tanggal_beli ?? '',
+                harga_beli:          form.harga_beli ?? null,
+                kondisi_beli:        form.kondisi_beli ?? '',
+                keterangan:          form.keterangan ?? '',
+            }, editFoto)
+            setArmada(updated); setEditing(false); setErrors({}); setEditFoto(null)
             toast.push(<Notification type="success" title="Data armada berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -330,7 +394,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass[armada.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                                    {armada.status}
+                                    {STATUS_LABEL[armada.status] ?? armada.status}
                                 </span>
                                 <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
                             </div>
@@ -338,10 +402,19 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Nopol', value: <span className="font-mono">{armada.nopol}</span> },
-                                { label: 'Merk',  value: armada.merk },
-                                { label: 'Model', value: armada.model ?? <span className="text-gray-400">—</span> },
-                                { label: 'Tahun', value: armada.tahun ? String(armada.tahun) : <span className="text-gray-400">—</span> },
+                                { label: 'Nopol',            value: <span className="font-mono">{armada.nopol}</span> },
+                                { label: 'Merk',             value: armada.merk },
+                                { label: 'Model',            value: armada.model ?? <span className="text-gray-400">—</span> },
+                                { label: 'Tahun',            value: armada.tahun ? String(armada.tahun) : <span className="text-gray-400">—</span> },
+                                { label: 'Jenis Kendaraan',  value: armada.id_jenis_kendaraan ? (jenisOptions.find(o => o.value === armada.id_jenis_kendaraan)?.label ?? <span className="text-gray-400">—</span>) : <span className="text-gray-400">—</span> },
+                                { label: 'Warna',            value: armada.warna ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nomor Rangka',     value: armada.nomor_rangka ? <span className="font-mono">{armada.nomor_rangka}</span> : <span className="text-gray-400">—</span> },
+                                { label: 'Nomor Mesin',      value: armada.nomor_mesin ? <span className="font-mono">{armada.nomor_mesin}</span> : <span className="text-gray-400">—</span> },
+                                { label: 'Bahan Bakar',      value: armada.jenis_bahan_bakar ? (BAHAN_BAKAR_LABEL[armada.jenis_bahan_bakar] ?? armada.jenis_bahan_bakar) : <span className="text-gray-400">—</span> },
+                                { label: 'Kapasitas Muatan', value: armada.kapasitas_muatan_kg != null ? `${formatNum(armada.kapasitas_muatan_kg)} kg` : <span className="text-gray-400">—</span> },
+                                { label: 'Tanggal Beli',     value: armada.tanggal_beli ? dayjs(armada.tanggal_beli).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
+                                { label: 'Harga Beli',       value: armada.harga_beli != null ? formatRupiah(armada.harga_beli) : <span className="text-gray-400">—</span> },
+                                { label: 'Kondisi Saat Beli', value: armada.kondisi_beli ? (KONDISI_BELI_LABEL[armada.kondisi_beli] ?? armada.kondisi_beli) : <span className="text-gray-400">—</span> },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -349,6 +422,19 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 </div>
                             ))}
                         </div>
+                        {armada.keterangan && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Keterangan</p>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{armada.keterangan}</p>
+                            </div>
+                        )}
+                        {armada.url_foto && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Foto Armada</p>
+                                <img src={armada.url_foto} alt={`Foto ${armada.nopol}`}
+                                    className="max-h-56 rounded-xl border border-gray-100 dark:border-gray-700 object-cover" />
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>
@@ -364,17 +450,19 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Nopol">
-                                    <Input value={form.nopol ?? ''} onChange={e => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))} />
+                                <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
+                                    <Input value={form.nopol ?? ''} invalid={!!errors.nopol}
+                                        onChange={e => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))} />
                                 </FormItem>
-                                <FormItem label="Merk">
-                                    <Input value={form.merk ?? ''} onChange={e => setForm(p => ({ ...p, merk: e.target.value }))} />
+                                <FormItem label="Merk" asterisk invalid={!!errors.merk} errorMessage={errors.merk}>
+                                    <Input value={form.merk ?? ''} invalid={!!errors.merk}
+                                        onChange={e => setForm(p => ({ ...p, merk: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Model">
                                     <Input value={form.model ?? ''} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="Tahun">
-                                    <Input type="number" value={form.tahun ?? ''} min={1990} max={2100}
+                                <FormItem label="Tahun" asterisk invalid={!!errors.tahun} errorMessage={errors.tahun}>
+                                    <Input type="number" value={form.tahun ?? ''} min={1990} max={2100} invalid={!!errors.tahun}
                                         onChange={e => setForm(p => ({ ...p, tahun: Number(e.target.value) }))} />
                                 </FormItem>
                                 <FormItem label="Status">
@@ -383,9 +471,71 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                         options={STATUS_OPTIONS}
                                         onChange={opt => opt && setForm(p => ({ ...p, status: opt.value as ArmadaStatus }))} />
                                 </FormItem>
+                                <FormItem label="Jenis Kendaraan">
+                                    <Select placeholder="Pilih jenis kendaraan..."
+                                        value={jenisOptions.find(o => o.value === form.id_jenis_kendaraan) ?? null}
+                                        options={jenisOptions}
+                                        onChange={opt => setForm(p => ({ ...p, id_jenis_kendaraan: opt?.value ?? '' }))} />
+                                </FormItem>
+                                <FormItem label="Warna">
+                                    <Input value={form.warna ?? ''} onChange={e => setForm(p => ({ ...p, warna: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="Nomor Rangka">
+                                    <Input value={form.nomor_rangka ?? ''}
+                                        onChange={e => setForm(p => ({ ...p, nomor_rangka: e.target.value.toUpperCase() }))} />
+                                </FormItem>
+                                <FormItem label="Nomor Mesin">
+                                    <Input value={form.nomor_mesin ?? ''}
+                                        onChange={e => setForm(p => ({ ...p, nomor_mesin: e.target.value.toUpperCase() }))} />
+                                </FormItem>
+                                <FormItem label="Jenis Bahan Bakar">
+                                    <Select isSearchable={false} placeholder="Pilih bahan bakar..."
+                                        value={BAHAN_BAKAR_OPTIONS.find(o => o.value === form.jenis_bahan_bakar) ?? null}
+                                        options={BAHAN_BAKAR_OPTIONS}
+                                        onChange={opt => setForm(p => ({ ...p, jenis_bahan_bakar: opt?.value ?? '' }))} />
+                                </FormItem>
+                                <FormItem label="Kapasitas Muatan">
+                                    <Input suffix="kg" placeholder="0"
+                                        value={form.kapasitas_muatan_kg != null ? String(form.kapasitas_muatan_kg) : ''}
+                                        onChange={e => { const digits = e.target.value.replace(/\D/g, ''); setForm(p => ({ ...p, kapasitas_muatan_kg: digits ? Number(digits) : null })) }} />
+                                </FormItem>
+                                <FormItem label="Tanggal Beli">
+                                    <DatePicker
+                                        value={form.tanggal_beli ? new Date(form.tanggal_beli) : null}
+                                        onChange={date => setForm(p => ({ ...p, tanggal_beli: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                                </FormItem>
+                                <FormItem label="Harga Beli">
+                                    <Input prefix="Rp" placeholder="0"
+                                        value={form.harga_beli != null ? formatNum(Number(form.harga_beli)) : ''}
+                                        onChange={e => setForm(p => ({ ...p, harga_beli: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
+                                </FormItem>
+                                <FormItem label="Kondisi Saat Beli">
+                                    <Select isSearchable={false} placeholder="Pilih kondisi..."
+                                        value={KONDISI_BELI_OPTIONS.find(o => o.value === form.kondisi_beli) ?? null}
+                                        options={KONDISI_BELI_OPTIONS}
+                                        onChange={opt => setForm(p => ({ ...p, kondisi_beli: opt?.value ?? '' }))} />
+                                </FormItem>
+                                <FormItem label="Ganti Foto (opsional)">
+                                    <Upload accept=".jpg,.jpeg,.png,.webp" showList={false} uploadLimit={1}
+                                        onChange={files => setEditFoto(files[0] ?? null)}>
+                                        <Button type="button" variant="default" size="sm" icon={<HiOutlinePhotograph />}>
+                                            {editFoto ? editFoto.name : 'Pilih foto baru...'}
+                                        </Button>
+                                    </Upload>
+                                    {editFoto && (
+                                        <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
+                                            onClick={() => setEditFoto(null)}>Hapus pilihan</button>
+                                    )}
+                                </FormItem>
+                                <div className="sm:col-span-2">
+                                    <FormItem label="Keterangan">
+                                        <Input textArea placeholder="Catatan tambahan..." value={form.keterangan ?? ''}
+                                            onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))} />
+                                    </FormItem>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
-                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(armada) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(armada); setErrors({}); setEditFoto(null) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>

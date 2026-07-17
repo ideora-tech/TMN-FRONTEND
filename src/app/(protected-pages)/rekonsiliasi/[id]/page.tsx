@@ -92,21 +92,23 @@ export default function RekonsiliasiDetailPage({ params }: { params: Promise<{ i
             {rekonsiliasi.status === 'pending' && (
                 <Card>
                     <h5 className="mb-3">Catatan Keuangan</h5>
-                    <textarea
-                        value={catatan}
-                        onChange={(e) => setCatatan(e.target.value)}
-                        rows={3}
-                        placeholder="Tambahkan catatan keuangan..."
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 mb-4"
-                    />
-                    <div className="flex gap-2">
-                        <Button variant="plain" loading={updating} onClick={() => handleUpdate(false)}>
-                            Simpan Catatan
-                        </Button>
-                        <Button variant="solid" loading={updating} onClick={() => handleUpdate(true)}>
-                            Tandai Selesai
-                        </Button>
-                    </div>
+                    <form onSubmit={e => { e.preventDefault(); handleUpdate(false) }}>
+                        <textarea
+                            value={catatan}
+                            onChange={(e) => setCatatan(e.target.value)}
+                            rows={3}
+                            placeholder="Tambahkan catatan keuangan..."
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 mb-4"
+                        />
+                        <div className="flex gap-2">
+                            <Button type="submit" variant="plain" loading={updating}>
+                                Simpan Catatan
+                            </Button>
+                            <Button type="button" variant="solid" loading={updating} onClick={() => handleUpdate(true)}>
+                                Tandai Selesai
+                            </Button>
+                        </div>
+                    </form>
                 </Card>
             )}
 

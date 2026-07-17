@@ -45,6 +45,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [form, setForm]         = useState<Partial<Project>>({})
     const [saving, setSaving]     = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [errors, setErrors]     = useState<Partial<Record<keyof Project, string>>>({})
 
     // penugasan
     const [penugasanList, setPenugasanList]   = useState<Penugasan[]>([])
@@ -84,7 +85,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
 
+    const validate = () => {
+        const e: Partial<Record<keyof Project, string>> = {}
+        if (!form.kode_proyek?.trim()) e.kode_proyek = 'Kode proyek wajib diisi'
+        if (!form.nama_proyek?.trim()) e.nama_proyek = 'Nama proyek wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await projectService.update(id, {
@@ -95,7 +105,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 status:          form.status,
                 keterangan:      form.keterangan || undefined,
             })
-            setProject(updated); setForm(updated); setEditing(false)
+            setProject(updated); setForm(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Proyek berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -249,12 +259,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Nama Proyek">
-                                    <Input value={form.nama_proyek ?? ''}
+                                <FormItem label="Nama Proyek" asterisk invalid={!!errors.nama_proyek} errorMessage={errors.nama_proyek}>
+                                    <Input value={form.nama_proyek ?? ''} invalid={!!errors.nama_proyek}
                                         onChange={e => setForm(p => ({ ...p, nama_proyek: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="Kode Proyek">
-                                    <Input value={form.kode_proyek ?? ''}
+                                <FormItem label="Kode Proyek" asterisk invalid={!!errors.kode_proyek} errorMessage={errors.kode_proyek}>
+                                    <Input value={form.kode_proyek ?? ''} invalid={!!errors.kode_proyek}
                                         onChange={e => setForm(p => ({ ...p, kode_proyek: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Tanggal Mulai">
@@ -279,7 +289,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
-                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(project) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(project); setErrors({}) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>

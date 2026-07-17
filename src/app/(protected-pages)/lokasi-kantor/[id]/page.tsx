@@ -17,6 +17,7 @@ export default function LokasiKantorDetailPage({ params }: { params: Promise<{ i
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<LokasiKantor>>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
 
     useEffect(() => {
@@ -26,7 +27,16 @@ export default function LokasiKantorDetailPage({ params }: { params: Promise<{ i
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.kode_lokasi?.trim()) e.kode_lokasi = 'Kode wajib diisi'
+        if (!form.nama_lokasi?.trim()) e.nama_lokasi = 'Nama wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await lokasiKantorService.update(id, {
@@ -39,7 +49,7 @@ export default function LokasiKantorDetailPage({ params }: { params: Promise<{ i
                 radius:       form.radius ?? 100,
                 aktif:        form.aktif,
             })
-            setData(updated); setEditing(false)
+            setData(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Lokasi berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -124,11 +134,11 @@ export default function LokasiKantorDetailPage({ params }: { params: Promise<{ i
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Lokasi">
-                                <Input value={form.kode_lokasi ?? ''} onChange={e => setForm(p => ({ ...p, kode_lokasi: e.target.value }))} />
+                            <FormItem label="Kode Lokasi" asterisk invalid={!!errors.kode_lokasi} errorMessage={errors.kode_lokasi}>
+                                <Input value={form.kode_lokasi ?? ''} invalid={!!errors.kode_lokasi} onChange={e => setForm(p => ({ ...p, kode_lokasi: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Nama Lokasi">
-                                <Input value={form.nama_lokasi ?? ''} onChange={e => setForm(p => ({ ...p, nama_lokasi: e.target.value }))} />
+                            <FormItem label="Nama Lokasi" asterisk invalid={!!errors.nama_lokasi} errorMessage={errors.nama_lokasi}>
+                                <Input value={form.nama_lokasi ?? ''} invalid={!!errors.nama_lokasi} onChange={e => setForm(p => ({ ...p, nama_lokasi: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Kota">
                                 <Input value={form.kota ?? ''} onChange={e => setForm(p => ({ ...p, kota: e.target.value || null }))} />
@@ -159,7 +169,7 @@ export default function LokasiKantorDetailPage({ params }: { params: Promise<{ i
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

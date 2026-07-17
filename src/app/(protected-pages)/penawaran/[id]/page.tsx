@@ -52,6 +52,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [form, setForm]       = useState<EditForm>({
         judul: '', nilai_str: '', tanggal_penawaran: '', tanggal_berlaku: '', catatan: '',
     })
+    const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({})
+
+    const validate = () => {
+        const e: Partial<Record<keyof EditForm, string>> = {}
+        if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
 
     const [pendingStatus, setPendingStatus] = useState<PenawaranStatus | null>(null)
     const [statusLoading, setStatusLoading] = useState(false)
@@ -74,6 +82,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     }, [id])
 
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await penawaranService.update(id, {
@@ -85,6 +94,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             })
             setData(updated)
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Penawaran berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -305,9 +315,10 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Judul Penawaran" className="sm:col-span-2">
+                                <FormItem label="Judul Penawaran" asterisk invalid={!!errors.judul} errorMessage={errors.judul} className="sm:col-span-2">
                                     <Input
                                         value={form.judul}
+                                        invalid={!!errors.judul}
                                         onChange={e => setForm(p => ({ ...p, judul: e.target.value }))}
                                     />
                                 </FormItem>
@@ -353,7 +364,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 <Button
                                     type="button"
                                     variant="plain"
-                                    onClick={() => setEditing(false)}
+                                    onClick={() => { setEditing(false); setErrors({}) }}
                                 >
                                     Batal
                                 </Button>

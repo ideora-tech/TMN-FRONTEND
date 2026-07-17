@@ -159,6 +159,7 @@ export default function JadwalPage() {
             </div>
             <Card
                 header={{
+                    content: <span />,
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button

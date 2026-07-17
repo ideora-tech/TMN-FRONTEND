@@ -38,6 +38,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
     const [loading, setLoading]   = useState(true)
     const [editing, setEditing]   = useState(false)
     const [form, setForm]         = useState<Partial<Karyawan>>({})
+    const [errors, setErrors]     = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]     = useState(false)
 
     const [exitOpen, setExitOpen] = useState(false)
@@ -56,7 +57,16 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.nik?.trim()) e.nik = 'NIK wajib diisi'
+        if (!form.nama_karyawan?.trim()) e.nama_karyawan = 'Nama wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await karyawanService.update(id, {
@@ -72,6 +82,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             })
             setKaryawan(updated)
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Data karyawan berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -190,11 +201,13 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="NIK">
-                                <Input value={form.nik ?? ''} onChange={e => setForm(p => ({ ...p, nik: e.target.value }))} />
+                            <FormItem label="NIK" asterisk invalid={!!errors.nik} errorMessage={errors.nik}>
+                                <Input value={form.nik ?? ''} invalid={!!errors.nik}
+                                    onChange={e => setForm(p => ({ ...p, nik: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Nama Karyawan">
-                                <Input value={form.nama_karyawan ?? ''} onChange={e => setForm(p => ({ ...p, nama_karyawan: e.target.value }))} />
+                            <FormItem label="Nama Karyawan" asterisk invalid={!!errors.nama_karyawan} errorMessage={errors.nama_karyawan}>
+                                <Input value={form.nama_karyawan ?? ''} invalid={!!errors.nama_karyawan}
+                                    onChange={e => setForm(p => ({ ...p, nama_karyawan: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Email">
                                 <Input type="email" value={form.email ?? ''} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
@@ -222,7 +235,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(karyawan) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(karyawan); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

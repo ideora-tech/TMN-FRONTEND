@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Jadwal {
     id_jadwal: string
     id_penugasan: string
+    id_rute: string | null
     waktu_berangkat: string | null
     tgl_keberangkatan: string | null
     rute: string | null
@@ -38,7 +39,7 @@ export const jadwalService = {
     async create(payload: {
         id_penugasan: string
         waktu_berangkat?: string | null
-        rute?: string | null
+        id_rute?: string | null
         estimasi_tiba?: string | null
     }) {
         const { data } = await axios.post(API_ENDPOINTS.JADWAL, payload)

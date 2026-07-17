@@ -13,6 +13,16 @@ export const ROUTES = {
     ARMADA:        '/armada',
     ARMADA_BARU:   '/armada/baru',
     ARMADA_DETAIL: (id: string) => `/armada/${id}`,
+    PERAWATAN_ARMADA: '/perawatan-armada',
+    DOKUMEN_ARMADA:   '/dokumen-armada',
+    PERAWATAN_ARMADA_BARU:   '/perawatan-armada/baru',
+    PERAWATAN_ARMADA_DETAIL: (id: string) => `/perawatan-armada/${id}`,
+    JENIS_PERAWATAN:        '/jenis-perawatan',
+    JENIS_PERAWATAN_BARU:   '/jenis-perawatan/baru',
+    JENIS_PERAWATAN_DETAIL: (id: string) => `/jenis-perawatan/${id}`,
+    SPAREPART:              '/sparepart',
+    SPAREPART_BARU:         '/sparepart/baru',
+    SPAREPART_DETAIL:       (id: string) => `/sparepart/${id}`,
 
     SUPIR:        '/supir',
     SUPIR_BARU:   '/supir/baru',
@@ -106,6 +116,10 @@ export const ROUTES = {
     LOKASI:        '/lokasi',
     LOKASI_BARU:   '/lokasi/baru',
     LOKASI_DETAIL: (id: string) => `/lokasi/${id}`,
+
+    JENIS_BBM:        '/jenis-bbm',
+    JENIS_BBM_BARU:   '/jenis-bbm/baru',
+    JENIS_BBM_DETAIL: (id: string) => `/jenis-bbm/${id}`,
 
     PENUGASAN_VENDOR:      '/penugasan-vendor',
     PENUGASAN_VENDOR_BARU: '/penugasan-vendor/baru',

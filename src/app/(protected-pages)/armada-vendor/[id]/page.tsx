@@ -20,6 +20,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<ArmadaVendor> & { tahun_str?: string }>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
 
     useEffect(() => {
@@ -29,7 +30,15 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.nopol?.trim()) e.nopol = 'Nopol wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await armadaVendorService.update(id, {
@@ -42,6 +51,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
             setData(updated)
             setForm({ ...updated, tahun_str: updated.tahun ? String(updated.tahun) : '' })
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Armada vendor berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -117,8 +127,8 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Nopol">
-                                <Input value={form.nopol ?? ''} onChange={e => setForm(p => ({ ...p, nopol: e.target.value }))} />
+                            <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
+                                <Input value={form.nopol ?? ''} invalid={!!errors.nopol} onChange={e => setForm(p => ({ ...p, nopol: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Merk">
                                 <Input value={form.merk ?? ''} onChange={e => setForm(p => ({ ...p, merk: e.target.value }))} />
@@ -140,6 +150,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                             <Button type="button" variant="plain" onClick={() => {
                                 setEditing(false)
                                 setForm({ ...data, tahun_str: data.tahun ? String(data.tahun) : '' })
+                                setErrors({})
                             }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>

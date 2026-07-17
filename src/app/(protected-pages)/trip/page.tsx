@@ -59,7 +59,11 @@ export default function TripPage() {
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const filteredList = list.filter(t => {
-        const matchSearch = !search || t.id_trip.toLowerCase().includes(search.toLowerCase())
+        const search_ = search.toLowerCase()
+        const matchSearch = !search
+            || (t.rute ?? '').toLowerCase().includes(search_)
+            || (t.supir_nama ?? '').toLowerCase().includes(search_)
+            || (t.armada_nopol ?? '').toLowerCase().includes(search_)
         const matchStatus = !statusFilter || t.status === statusFilter
         return matchSearch && matchStatus
     })
@@ -71,9 +75,29 @@ export default function TripPage() {
                 (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'ID Trip', accessorKey: 'id_trip', size: 200,
+            header: 'Rute', accessorKey: 'rute', size: 200,
             cell: ({ row }: CellContext<Trip, unknown>) => (
-                <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{row.original.id_trip}</span>
+                row.original.rute ? (
+                    <div>
+                        <p className="font-semibold">{row.original.rute}</p>
+                        {row.original.waktu_berangkat && (
+                            <p className="text-xs text-gray-400">
+                                {dayjs(row.original.waktu_berangkat).format('DD/MM/YY HH:mm')}
+                            </p>
+                        )}
+                    </div>
+                ) : <span className="text-gray-400">—</span>
+            ),
+        },
+        {
+            header: 'Supir / Armada', accessorKey: 'supir_nama', size: 180,
+            cell: ({ row }: CellContext<Trip, unknown>) => (
+                row.original.supir_nama || row.original.armada_nopol ? (
+                    <div>
+                        <p className="font-medium">{row.original.supir_nama ?? '—'}</p>
+                        <p className="text-xs text-gray-400">{row.original.armada_nopol ?? '—'}</p>
+                    </div>
+                ) : <span className="text-gray-400">—</span>
             ),
         },
         {
@@ -123,7 +147,7 @@ export default function TripPage() {
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"
-                        placeholder="Cari ID trip... (tekan Enter)"
+                        placeholder="Cari rute, supir, atau armada... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />

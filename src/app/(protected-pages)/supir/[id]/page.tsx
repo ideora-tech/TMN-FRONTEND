@@ -41,6 +41,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Supir>>({})
     const [saving, setSaving]   = useState(false)
+    const [errors, setErrors]   = useState<Partial<Record<keyof Supir, string>>>({})
 
     // jadwal history
     const [jadwalList, setJadwalList]       = useState<Jadwal[]>([])
@@ -52,12 +53,32 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const [penugasanLoading, setPenugasanLoading] = useState(false)
     const [armadaMap, setArmadaMap]               = useState<Record<string, Armada>>({})
 
+    // armada default options
+    const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
+    const [armadaDefaultList, setArmadaDefaultList] = useState<Armada[]>([])
+
     useEffect(() => {
         supirService.get(id)
             .then(s => { setSupir(s); setForm(s) })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [id])
+
+    useEffect(() => {
+        armadaService.list(1, 100)
+            .then(async res => {
+                let list = res.data.filter((a: Armada) => a.aktif !== false)
+                if (supir?.id_armada_default && !list.some(a => a.id_armada === supir.id_armada_default)) {
+                    try {
+                        const a = await armadaService.get(supir.id_armada_default)
+                        list = [a, ...list]
+                    } catch { /* armada default sudah dihapus */ }
+                }
+                setArmadaDefaultList(list)
+                setArmadaOptions(list.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk ?? ''}`.trim() })))
+            })
+            .catch(() => {})
+    }, [supir?.id_armada_default])
 
     const fetchJadwal = useCallback(async () => {
         setJadwalLoading(true)
@@ -94,11 +115,20 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
 
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
 
+    const validate = () => {
+        const e: Partial<Record<keyof Supir, string>> = {}
+        if (!form.nama?.trim())   e.nama   = 'Nama wajib diisi'
+        if (!form.no_sim?.trim()) e.no_sim = 'No SIM wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await supirService.update(id, form)
-            setSupir(updated); setEditing(false)
+            setSupir(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Data supir berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -192,6 +222,12 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         : <span className="text-gray-400">—</span>,
                                 },
                                 { label: 'Telepon', value: supir.telepon ?? <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Armada Default',
+                                    value: supir.id_armada_default
+                                        ? (armadaDefaultList.find(a => a.id_armada === supir.id_armada_default)?.nopol ?? <span className="text-gray-400">—</span>)
+                                        : <span className="text-gray-400">—</span>,
+                                },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -214,14 +250,14 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Nama">
-                                    <Input value={form.nama ?? ''} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
+                                <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
+                                    <Input value={form.nama ?? ''} invalid={!!errors.nama} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Telepon">
                                     <Input value={form.telepon ?? ''} onChange={e => setForm(p => ({ ...p, telepon: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="No SIM">
-                                    <Input value={form.no_sim ?? ''} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
+                                <FormItem label="No SIM" asterisk invalid={!!errors.no_sim} errorMessage={errors.no_sim}>
+                                    <Input value={form.no_sim ?? ''} invalid={!!errors.no_sim} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Jenis SIM">
                                     <Select isSearchable={false}
@@ -240,9 +276,16 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         options={STATUS_OPTIONS}
                                         onChange={opt => opt && setForm(p => ({ ...p, status: opt.value as 'aktif' | 'nonaktif' }))} />
                                 </FormItem>
+                                <FormItem label="Armada Default">
+                                    <Select isClearable
+                                        placeholder="Pilih armada default..."
+                                        options={armadaOptions}
+                                        value={armadaOptions.find(o => o.value === form.id_armada_default) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_armada_default: opt?.value ?? null }))} />
+                                </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
-                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(supir) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(supir); setErrors({}) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>

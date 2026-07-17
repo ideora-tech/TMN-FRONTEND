@@ -21,6 +21,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<SupirVendor>>({})
     const [saving, setSaving]   = useState(false)
+    const [errors, setErrors]   = useState<Partial<Record<keyof SupirVendor, string>>>({})
 
     useEffect(() => {
         supirVendorService.get(id)
@@ -29,7 +30,15 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof SupirVendor, string>> = {}
+        if (!form.nama?.trim()) e.nama = 'Nama wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await supirVendorService.update(id, {
@@ -41,6 +50,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
             setData(updated)
             setForm(updated)
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Supir vendor berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -115,8 +125,8 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Nama">
-                                <Input value={form.nama ?? ''} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
+                            <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
+                                <Input value={form.nama ?? ''} invalid={!!errors.nama} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Telepon">
                                 <Input value={form.telepon ?? ''} onChange={e => setForm(p => ({ ...p, telepon: e.target.value }))} />
@@ -131,7 +141,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

@@ -13,6 +13,7 @@ import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jadwalService, Jadwal } from '@/services/jadwal.service'
+import { ruteService, Rute } from '@/services/rute.service'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
@@ -65,6 +66,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
+    const [supirList, setSupirList]              = useState<Supir[]>([])
 
     // info sumber vendor (read-only, ditampilkan hanya bila sumber === 'vendor')
     const [kontrakVendorInfo, setKontrakVendorInfo] = useState<KontrakVendor | null>(null)
@@ -75,8 +77,11 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [jadwalList, setJadwalList]     = useState<Jadwal[]>([])
     const [jadwalLoading, setJadwalLoading] = useState(false)
     const [showJadwalForm, setShowJadwalForm] = useState(false)
-    const [jadwalForm, setJadwalForm] = useState({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
-    const [jadwalErrors, setJadwalErrors] = useState<Partial<Record<keyof typeof jadwalForm, string>>>({})
+    const [jadwalForm, setJadwalForm] = useState<{ waktu_berangkat: string; id_rute: string | null; estimasi_tiba: string }>(
+        { waktu_berangkat: '', id_rute: null, estimasi_tiba: '' }
+    )
+    const [jadwalErrors, setJadwalErrors] = useState<Partial<Record<'waktu_berangkat' | 'estimasi_tiba', string>>>({})
+    const [ruteOptions, setRuteOptions] = useState<{ value: string; label: string }[]>([])
     const [addingJadwal, setAddingJadwal] = useState(false)
     const [deleteJadwalTarget, setDeleteJadwalTarget] = useState<Jadwal | null>(null)
     const [deletingJadwal, setDeletingJadwal] = useState(false)
@@ -87,12 +92,15 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             karyawanService.list(1),
             armadaService.list(1),
             supirService.list(1),
-        ]).then(async ([p, karyawan, armada, supir]) => {
+            ruteService.list({ limit: 100 }),
+        ]).then(async ([p, karyawan, armada, supir, rute]) => {
             setPenugasan(p)
             setForm(p)
             const karyawanOpts = karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))
             const armadaOpts   = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
             const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` }))
+            const ruteOpts     = rute.data.map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))
+            let supirData: Supir[] = supir.data
 
             if (p.id_karyawan && !karyawanOpts.some(o => o.value === p.id_karyawan)) {
                 try {
@@ -110,12 +118,15 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 try {
                     const s = await supirService.get(p.id_supir)
                     supirOpts.unshift({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })
+                    supirData = [s, ...supirData]
                 } catch { /* supir sudah dihapus */ }
             }
 
             setKaryawanOptions(karyawanOpts)
             setArmadaOptions(armadaOpts)
             setSupirOptions(supirOpts)
+            setSupirList(supirData)
+            setRuteOptions(ruteOpts)
 
             if (p.sumber === 'vendor') {
                 if (p.id_kontrak_vendor) kontrakVendorService.get(p.id_kontrak_vendor).then(setKontrakVendorInfo).catch(() => {})
@@ -180,13 +191,13 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 waktu_berangkat: jadwalForm.waktu_berangkat
                     ? dayjs(jadwalForm.waktu_berangkat).format('YYYY-MM-DD HH:mm:ss')
                     : null,
-                rute:           jadwalForm.rute || null,
+                id_rute:        jadwalForm.id_rute || null,
                 estimasi_tiba:  jadwalForm.estimasi_tiba
                     ? dayjs(jadwalForm.estimasi_tiba).format('YYYY-MM-DD HH:mm:ss')
                     : null,
             })
             toast.push(<Notification type="success" title="Jadwal berhasil ditambahkan" />)
-            setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' })
+            setJadwalForm({ waktu_berangkat: '', id_rute: null, estimasi_tiba: '' })
             setJadwalErrors({})
             setShowJadwalForm(false)
             fetchJadwal()
@@ -350,7 +361,15 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             <Select isClearable placeholder="Pilih supir..."
                                                 options={supirOptions}
                                                 value={supirOptions.find(o => o.value === form.id_supir) ?? null}
-                                                onChange={opt => setForm(p => ({ ...p, id_supir: opt?.value ?? null }))} />
+                                                onChange={opt => {
+                                                    const selectedId = opt?.value ?? null
+                                                    const selected = supirList.find(s => s.id_supir === selectedId)
+                                                    setForm(p => ({
+                                                        ...p,
+                                                        id_supir: selectedId,
+                                                        ...(selected?.id_armada_default ? { id_armada: selected.id_armada_default } : {}),
+                                                    }))
+                                                }} />
                                         </FormItem>
                                         <FormItem label="Armada">
                                             <Select isClearable placeholder="Pilih armada..."
@@ -421,15 +440,16 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                             </FormItem>
                             <div className="sm:col-span-2">
                                 <FormItem label="Rute">
-                                    <Input placeholder="Contoh: Jakarta → Surabaya via Tol Trans Jawa"
-                                        value={jadwalForm.rute}
-                                        onChange={e => setJadwalForm(p => ({ ...p, rute: e.target.value }))} />
+                                    <Select isClearable placeholder="Pilih rute..."
+                                        options={ruteOptions}
+                                        value={ruteOptions.find(o => o.value === jadwalForm.id_rute) ?? null}
+                                        onChange={opt => setJadwalForm(p => ({ ...p, id_rute: opt?.value ?? null }))} />
                                 </FormItem>
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
-                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', rute: '', estimasi_tiba: '' }); setJadwalErrors({}) }}>
+                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', id_rute: null, estimasi_tiba: '' }); setJadwalErrors({}) }}>
                                 Batal
                             </Button>
                             <Button size="sm" variant="solid" loading={addingJadwal} onClick={handleAddJadwal}>

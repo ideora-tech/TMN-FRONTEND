@@ -19,6 +19,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<MenuItem>>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
     const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
 
@@ -33,7 +34,15 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.nama_menu?.trim()) e.nama_menu = 'Nama menu wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await menuService.update(id, {
@@ -46,6 +55,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
             })
             setMenu(updated)
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Menu berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -122,8 +132,8 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Nama Menu">
-                                <Input value={form.nama_menu ?? ''}
+                            <FormItem label="Nama Menu" asterisk invalid={!!errors.nama_menu} errorMessage={errors.nama_menu}>
+                                <Input value={form.nama_menu ?? ''} invalid={!!errors.nama_menu}
                                     onChange={(e) => setForm(p => ({ ...p, nama_menu: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Path (URL)">
@@ -151,7 +161,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(menu) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(menu); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

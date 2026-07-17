@@ -35,11 +35,11 @@ type SignInFormSchema = {
 
 const validationSchema: ZodType<SignInFormSchema> = z.object({
     email: z
-        .string({ required_error: 'Please enter your email' })
-        .min(1, { message: 'Please enter your email' }),
+        .string({ required_error: 'Masukkan username atau email' })
+        .min(1, { message: 'Masukkan username atau email' }),
     password: z
-        .string({ required_error: 'Please enter your password' })
-        .min(1, { message: 'Please enter your password' }),
+        .string({ required_error: 'Masukkan password' })
+        .min(1, { message: 'Masukkan password' }),
 })
 
 const SignInForm = (props: SignInFormProps) => {
@@ -69,7 +69,7 @@ const SignInForm = (props: SignInFormProps) => {
         <div className={className}>
             <Form onSubmit={handleSubmit(handleSignIn)}>
                 <FormItem
-                    label="Email"
+                    label="Username atau Email"
                     invalid={Boolean(errors.email)}
                     errorMessage={errors.email?.message}
                 >
@@ -78,9 +78,9 @@ const SignInForm = (props: SignInFormProps) => {
                         control={control}
                         render={({ field }) => (
                             <Input
-                                type="email"
-                                placeholder="Email"
-                                autoComplete="off"
+                                type="text"
+                                placeholder="Username atau email"
+                                autoComplete="username"
                                 {...field}
                             />
                         )}

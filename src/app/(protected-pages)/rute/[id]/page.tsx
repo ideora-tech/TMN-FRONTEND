@@ -21,6 +21,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
     const [form, setForm]       = useState<Partial<RutePayload> & { estimasi_jarak_km_str?: string; estimasi_durasi_menit_str?: string }>({})
     const [saving, setSaving]   = useState(false)
     const [lokasiOptions, setLokasiOptions] = useState<LokasiOption[]>([])
+    const [errors, setErrors]   = useState<Partial<Record<keyof RutePayload, string>>>({})
 
     useEffect(() => {
         lokasiService.list(1, 100)
@@ -47,7 +48,16 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
             .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof RutePayload, string>> = {}
+        if (!form.kode_rute?.trim()) e.kode_rute = 'Kode rute wajib diisi'
+        if (!form.nama_rute?.trim()) e.nama_rute = 'Nama rute wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await ruteService.update(id, {
@@ -69,6 +79,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                 estimasi_durasi_menit_str: updated.estimasi_durasi_menit != null ? String(updated.estimasi_durasi_menit) : '',
             })
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Rute berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -157,11 +168,11 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Kode Rute">
-                                    <Input value={form.kode_rute ?? ''} onChange={e => setForm(p => ({ ...p, kode_rute: e.target.value }))} />
+                                <FormItem label="Kode Rute" asterisk invalid={!!errors.kode_rute} errorMessage={errors.kode_rute}>
+                                    <Input value={form.kode_rute ?? ''} invalid={!!errors.kode_rute} onChange={e => setForm(p => ({ ...p, kode_rute: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="Nama Rute">
-                                    <Input value={form.nama_rute ?? ''} onChange={e => setForm(p => ({ ...p, nama_rute: e.target.value }))} />
+                                <FormItem label="Nama Rute" asterisk invalid={!!errors.nama_rute} errorMessage={errors.nama_rute}>
+                                    <Input value={form.nama_rute ?? ''} invalid={!!errors.nama_rute} onChange={e => setForm(p => ({ ...p, nama_rute: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Asal">
                                     <Select<LokasiOption> isClearable isSearchable placeholder="Pilih lokasi asal..."
@@ -206,6 +217,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                         estimasi_jarak_km_str: data.estimasi_jarak_km != null ? String(data.estimasi_jarak_km) : '',
                                         estimasi_durasi_menit_str: data.estimasi_durasi_menit != null ? String(data.estimasi_durasi_menit) : '',
                                     })
+                                    setErrors({})
                                 }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>

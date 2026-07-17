@@ -146,66 +146,68 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
 
             {/* Permission Matrix */}
             <Card>
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h5 className="font-semibold">Izin Akses</h5>
-                        <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu</p>
+                <form onSubmit={e => { e.preventDefault(); handleSave() }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h5 className="font-semibold">Izin Akses</h5>
+                            <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button type="button" size="sm" variant="plain" icon={<HiOutlineRefresh />} onClick={loadData}>Reset</Button>
+                            <Button type="submit" size="sm" variant="solid" icon={<HiOutlineSave />} loading={saving}>
+                                Simpan
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button size="sm" variant="plain" icon={<HiOutlineRefresh />} onClick={loadData}>Reset</Button>
-                        <Button size="sm" variant="solid" icon={<HiOutlineSave />} loading={saving} onClick={handleSave}>
-                            Simpan
-                        </Button>
-                    </div>
-                </div>
 
-                {menus.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-4 text-center">Belum ada menu terdaftar</p>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                <tr className="border-b text-gray-500 text-xs">
-                                    <th className="text-left py-2 pr-4 font-medium w-48">Menu</th>
-                                    <th className="py-2 px-3 text-center font-medium w-20">Semua</th>
-                                    {AKSI.map(a => (
-                                        <th key={a} className="py-2 px-3 text-center font-medium capitalize w-20">{a}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {menus.map(m => {
-                                    const allOn = AKSI.every(a => perms[permKey(m.id_menu, a)])
-                                    const someOn = AKSI.some(a => perms[permKey(m.id_menu, a)])
-                                    return (
-                                        <tr key={m.id_menu} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                            <td className="py-2.5 pr-4 font-medium">{m.nama_menu}</td>
-                                            <td className="py-2.5 px-3 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={allOn}
-                                                    ref={el => { if (el) el.indeterminate = someOn && !allOn }}
-                                                    onChange={() => toggleAll(m.id_menu)}
-                                                    className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
-                                                />
-                                            </td>
-                                            {AKSI.map(a => (
-                                                <td key={a} className="py-2.5 px-3 text-center">
+                    {menus.length === 0 ? (
+                        <p className="text-gray-400 text-sm py-4 text-center">Belum ada menu terdaftar</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b text-gray-500 text-xs">
+                                        <th className="text-left py-2 pr-4 font-medium w-48">Menu</th>
+                                        <th className="py-2 px-3 text-center font-medium w-20">Semua</th>
+                                        {AKSI.map(a => (
+                                            <th key={a} className="py-2 px-3 text-center font-medium capitalize w-20">{a}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {menus.map(m => {
+                                        const allOn = AKSI.every(a => perms[permKey(m.id_menu, a)])
+                                        const someOn = AKSI.some(a => perms[permKey(m.id_menu, a)])
+                                        return (
+                                            <tr key={m.id_menu} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td className="py-2.5 pr-4 font-medium">{m.nama_menu}</td>
+                                                <td className="py-2.5 px-3 text-center">
                                                     <input
                                                         type="checkbox"
-                                                        checked={perms[permKey(m.id_menu, a)] ?? false}
-                                                        onChange={() => toggle(m.id_menu, a)}
+                                                        checked={allOn}
+                                                        ref={el => { if (el) el.indeterminate = someOn && !allOn }}
+                                                        onChange={() => toggleAll(m.id_menu)}
                                                         className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
                                                     />
                                                 </td>
-                                            ))}
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                                {AKSI.map(a => (
+                                                    <td key={a} className="py-2.5 px-3 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={perms[permKey(m.id_menu, a)] ?? false}
+                                                            onChange={() => toggle(m.id_menu, a)}
+                                                            className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </form>
             </Card>
         </div>
     )

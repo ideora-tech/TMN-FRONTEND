@@ -21,6 +21,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Jabatan>>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
     const [deptOptions, setDeptOptions] = useState<{ value: string; label: string }[]>([])
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
@@ -38,7 +39,16 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
           .finally(() => setLoading(false))
     }, [id])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.kode_jabatan?.trim()) e.kode_jabatan = 'Kode wajib diisi'
+        if (!form.nama_jabatan?.trim()) e.nama_jabatan = 'Nama wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await jabatanService.update(id, {
@@ -49,7 +59,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                 level:         form.level,
                 aktif:         form.aktif,
             })
-            setData(updated); setEditing(false)
+            setData(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Jabatan berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -125,11 +135,11 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Jabatan">
-                                <Input value={form.kode_jabatan ?? ''} onChange={e => setForm(p => ({ ...p, kode_jabatan: e.target.value }))} />
+                            <FormItem label="Kode Jabatan" asterisk invalid={!!errors.kode_jabatan} errorMessage={errors.kode_jabatan}>
+                                <Input value={form.kode_jabatan ?? ''} invalid={!!errors.kode_jabatan} onChange={e => setForm(p => ({ ...p, kode_jabatan: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Nama Jabatan">
-                                <Input value={form.nama_jabatan ?? ''} onChange={e => setForm(p => ({ ...p, nama_jabatan: e.target.value }))} />
+                            <FormItem label="Nama Jabatan" asterisk invalid={!!errors.nama_jabatan} errorMessage={errors.nama_jabatan}>
+                                <Input value={form.nama_jabatan ?? ''} invalid={!!errors.nama_jabatan} onChange={e => setForm(p => ({ ...p, nama_jabatan: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Departemen">
                                 <Select isClearable isSearchable placeholder="Pilih departemen..."
@@ -154,7 +164,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

@@ -2,6 +2,7 @@
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import {
     HiArrowLeft,
@@ -21,6 +22,7 @@ import {
     LaporanPerjalanan,
     FotoLaporan,
 } from '@/services/laporanPerjalanan.service'
+import { jenisBbmService, JenisBbm } from '@/services/jenisBbm.service'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import axios from 'axios'
 import dayjs from 'dayjs'
@@ -57,6 +59,8 @@ const emptyLaporanForm = () => ({
     uang_jalan:       '',
     jarak_tempuh_km:  '',
     catatan_insiden:  '',
+    id_jenis_bbm:     '',
+    jumlah_liter:     '',
     biaya_lain:       [] as BiayaLainRow[],
 })
 
@@ -82,6 +86,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     const [uploadingFoto, setUploadingFoto]   = useState(false)
     const [deleteFotoTarget, setDeleteFotoTarget] = useState<FotoLaporan | null>(null)
     const [deletingFoto, setDeletingFoto]         = useState(false)
+
+    // jenis BBM (untuk auto-hitung biaya BBM)
+    const [jenisBbmList, setJenisBbmList] = useState<JenisBbm[]>([])
 
     useEffect(() => {
         tripService.get(id)
@@ -124,7 +131,30 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     useEffect(() => { fetchLaporan() }, [fetchLaporan])
 
+    useEffect(() => {
+        jenisBbmService.list(1, 100)
+            .then(res => setJenisBbmList(res.data))
+            .catch(() => {})
+    }, [])
+
+    const jenisBbmOptions = jenisBbmList
+        .filter(j => j.aktif)
+        .map(j => ({
+            value: j.id_jenis_bbm,
+            label: j.harga_per_liter != null ? `${j.nama_bbm} — ${formatRupiah(j.harga_per_liter)}/L` : j.nama_bbm,
+        }))
+
     // --- handlers laporan perjalanan ---
+    const recalcBiayaBbm = (idJenisBbm: string, jumlahLiter: string) => {
+        const jenis = jenisBbmList.find(j => j.id_jenis_bbm === idJenisBbm)
+        if (jenis?.harga_per_liter != null && jumlahLiter) {
+            const liter = Number(jumlahLiter)
+            if (!Number.isNaN(liter)) {
+                setLaporanForm(p => ({ ...p, biaya_bbm: String(Math.round(liter * jenis.harga_per_liter!)) }))
+            }
+        }
+    }
+
     const handleOpenCreateLaporan = () => {
         setLaporanForm(emptyLaporanForm())
         setShowLaporanForm(true)
@@ -137,6 +167,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             uang_jalan:      String(laporan.uang_jalan ?? ''),
             jarak_tempuh_km: String(laporan.jarak_tempuh_km ?? ''),
             catatan_insiden: laporan.catatan_insiden ?? '',
+            id_jenis_bbm:    laporan.id_jenis_bbm ?? '',
+            jumlah_liter:    laporan.jumlah_liter != null ? String(laporan.jumlah_liter) : '',
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
         })
         setShowLaporanForm(true)
@@ -166,6 +198,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 uang_jalan:      Number(laporanForm.uang_jalan) || 0,
                 jarak_tempuh_km: Number(laporanForm.jarak_tempuh_km) || 0,
                 catatan_insiden: laporanForm.catatan_insiden || null,
+                id_jenis_bbm:    laporanForm.id_jenis_bbm || null,
+                jumlah_liter:    Number(laporanForm.jumlah_liter) || null,
                 biaya_lain: laporanForm.biaya_lain
                     .filter(b => b.nama_biaya.trim())
                     .map(b => ({ nama_biaya: b.nama_biaya, nominal: Number(b.nominal) || 0 })),
@@ -247,9 +281,13 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                         <div>
                             <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">
-                                {trip.waktu_checkin ? dayjs(trip.waktu_checkin).format('DD MMM YYYY HH:mm') : 'Belum Check-in'}
+                                {trip.rute ?? (trip.waktu_checkin ? dayjs(trip.waktu_checkin).format('DD MMM YYYY HH:mm') : 'Belum Check-in')}
                             </p>
-                            <p className="text-sm text-gray-500 mt-0.5 font-mono">#{trip.id_trip.slice(0, 8)}</p>
+                            <p className="text-sm text-gray-500 mt-0.5">
+                                {trip.supir_nama || trip.armada_nopol
+                                    ? [trip.supir_nama, trip.armada_nopol].filter(Boolean).join(' • ')
+                                    : <span className="font-mono text-xs">#{trip.id_trip.slice(0, 8)}</span>}
+                            </p>
                         </div>
                     </div>
                     <Tag className={`${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-700'} border-0 flex-shrink-0`}>
@@ -262,6 +300,18 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                     {(
                         [
+                            ...(trip.rute
+                                ? [{ label: 'Rute', value: trip.rute as React.ReactNode }]
+                                : []),
+                            ...(trip.supir_nama
+                                ? [{ label: 'Supir', value: trip.supir_nama as React.ReactNode }]
+                                : []),
+                            ...(trip.armada_nopol
+                                ? [{ label: 'Armada', value: trip.armada_nopol as React.ReactNode }]
+                                : []),
+                            ...(trip.waktu_berangkat
+                                ? [{ label: 'Waktu Berangkat', value: dayjs(trip.waktu_berangkat).format('DD MMM YYYY HH:mm') as React.ReactNode }]
+                                : []),
                             { label: 'ID Trip',   value: <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{trip.id_trip}</span> },
                             { label: 'ID Jadwal', value: <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{trip.id_jadwal}</span> },
                             {
@@ -333,6 +383,34 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 {showLaporanForm && (
                     <form onSubmit={e => { e.preventDefault(); handleSubmitLaporan() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="Jenis BBM">
+                                <Select
+                                    placeholder="Pilih jenis BBM..."
+                                    options={jenisBbmOptions}
+                                    value={jenisBbmOptions.find(o => o.value === laporanForm.id_jenis_bbm) ?? null}
+                                    onChange={(opt) => {
+                                        const idJenisBbm = opt?.value ?? ''
+                                        setLaporanForm(p => ({ ...p, id_jenis_bbm: idJenisBbm }))
+                                        recalcBiayaBbm(idJenisBbm, laporanForm.jumlah_liter)
+                                    }}
+                                    isClearable
+                                />
+                            </FormItem>
+                            <FormItem label="Jumlah Liter">
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    suffix="L"
+                                    placeholder="0"
+                                    value={laporanForm.jumlah_liter}
+                                    onChange={e => {
+                                        const jumlahLiter = e.target.value
+                                        setLaporanForm(p => ({ ...p, jumlah_liter: jumlahLiter }))
+                                        recalcBiayaBbm(laporanForm.id_jenis_bbm, jumlahLiter)
+                                    }}
+                                />
+                            </FormItem>
                             <FormItem label="Biaya BBM (Rp)">
                                 <Input
                                     prefix="Rp"
@@ -424,6 +502,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     <>
                         <div className="flex flex-col gap-0">
                             {[
+                                ...(laporan.id_jenis_bbm
+                                    ? [{ label: 'Jenis BBM', value: jenisBbmList.find(j => j.id_jenis_bbm === laporan.id_jenis_bbm)?.nama_bbm ?? '-' }]
+                                    : []),
+                                ...(laporan.jumlah_liter != null
+                                    ? [{ label: 'Jumlah Liter', value: `${formatNum(laporan.jumlah_liter, 2)} L` }]
+                                    : []),
                                 { label: 'Biaya BBM',      value: formatRupiah(laporan.biaya_bbm) },
                                 { label: 'Uang Jalan',     value: formatRupiah(laporan.uang_jalan) },
                                 { label: 'Jarak Tempuh',   value: `${formatNum(laporan.jarak_tempuh_km)} km` },

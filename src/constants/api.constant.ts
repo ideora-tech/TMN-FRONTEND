@@ -20,14 +20,30 @@ export const API_ENDPOINTS = {
     ARMADA:        '/api/proxy/armada',
     ARMADA_DETAIL: (id: string) => `/api/proxy/armada/${id}`,
 
+    // Import Armada
+    ARMADA_IMPORT_TEMPLATE: '/api/proxy/armada/import/template',
+    ARMADA_IMPORT:          '/api/proxy/armada/import',
+
     // Dokumen Armada (nested)
     ARMADA_DOKUMEN:        (idArmada: string) => `/api/proxy/armada/${idArmada}/dokumen`,
     ARMADA_DOKUMEN_UPDATE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     ARMADA_DOKUMEN_DELETE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
+    DOKUMEN_ARMADA:        '/api/proxy/dokumen-armada',
 
     // Perawatan Armada (nested)
     ARMADA_PERAWATAN:       (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan`,
     ARMADA_PERAWATAN_DETAIL:(idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}`,
+    PERAWATAN_ARMADA:       '/api/proxy/perawatan-armada',
+
+    // Jenis Perawatan
+    JENIS_PERAWATAN:        '/api/proxy/jenis-perawatan',
+    JENIS_PERAWATAN_DETAIL: (id: string) => `/api/proxy/jenis-perawatan/${id}`,
+
+    // Sparepart
+    SPAREPART:              '/api/proxy/sparepart',
+    SPAREPART_DETAIL:       (id: string) => `/api/proxy/sparepart/${id}`,
+    SPAREPART_STOK:         (id: string) => `/api/proxy/sparepart/${id}/stok`,
+    SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
 
     // Karyawan Exit
     KARYAWAN_EXIT: '/api/proxy/karyawan-exit',
@@ -41,6 +57,10 @@ export const API_ENDPOINTS = {
     SUPIR:        '/api/proxy/supir',
     SUPIR_ME:     '/api/proxy/supir/me',
     SUPIR_DETAIL: (id: string) => `/api/proxy/supir/${id}`,
+
+    // Import Supir
+    SUPIR_IMPORT_TEMPLATE: '/api/proxy/supir/import/template',
+    SUPIR_IMPORT:          '/api/proxy/supir/import',
 
     // Vendor
     VENDOR:        '/api/proxy/vendor',
@@ -182,4 +202,9 @@ export const API_ENDPOINTS = {
     // Lokasi
     LOKASI:        '/api/proxy/lokasi',
     LOKASI_DETAIL: (id: string) => `/api/proxy/lokasi/${id}`,
+
+    // Jenis BBM
+    JENIS_BBM:        '/api/proxy/jenis-bbm',
+    JENIS_BBM_DETAIL: (id: string) => `/api/proxy/jenis-bbm/${id}`,
+    JENIS_BBM_HARGA:  (id: string) => `/api/proxy/jenis-bbm/${id}/harga`,
 } as const

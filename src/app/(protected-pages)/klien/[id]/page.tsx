@@ -38,6 +38,7 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Klien>>({})
+    const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
 
     const [proyekSummary, setProyekSummary]     = useState<KlienProyek[]>([])
@@ -99,11 +100,20 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
     useEffect(() => { fetchProyekTable(1) }, [fetchProyekTable])
     useEffect(() => { fetchFaktur() }, [fetchFaktur])
 
+    const validate = () => {
+        const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.kode_klien?.trim()) e.kode_klien = 'Kode klien wajib diisi'
+        if (!form.nama_klien?.trim()) e.nama_klien = 'Nama klien wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await klienService.update(id, form)
-            setKlien(updated); setEditing(false)
+            setKlien(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Data klien berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -218,11 +228,13 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Kode Klien">
-                                    <Input value={form.kode_klien ?? ''} onChange={e => setForm(p => ({ ...p, kode_klien: e.target.value }))} />
+                                <FormItem label="Kode Klien" asterisk invalid={!!errors.kode_klien} errorMessage={errors.kode_klien}>
+                                    <Input value={form.kode_klien ?? ''} invalid={!!errors.kode_klien}
+                                        onChange={e => setForm(p => ({ ...p, kode_klien: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="Nama Klien">
-                                    <Input value={form.nama_klien ?? ''} onChange={e => setForm(p => ({ ...p, nama_klien: e.target.value }))} />
+                                <FormItem label="Nama Klien" asterisk invalid={!!errors.nama_klien} errorMessage={errors.nama_klien}>
+                                    <Input value={form.nama_klien ?? ''} invalid={!!errors.nama_klien}
+                                        onChange={e => setForm(p => ({ ...p, nama_klien: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Email">
                                     <Input type="email" value={form.email ?? ''} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
@@ -246,7 +258,7 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2 mt-6">
-                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(klien) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(klien); setErrors({}) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>

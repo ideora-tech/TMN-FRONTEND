@@ -73,6 +73,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<Vendor>>({})
     const [saving, setSaving]   = useState(false)
+    const [errors, setErrors]   = useState<Partial<Record<keyof Vendor, string>>>({})
     const [showKontrakForm, setShowKontrakForm] = useState(false)
     const [kontrakForm, setKontrakForm] = useState({ mekanisme: 'unit_only' as Mekanisme, nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
     const [addingKontrak, setAddingKontrak] = useState(false)
@@ -149,12 +150,22 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
     useEffect(() => { fetchSupirVendor() }, [fetchSupirVendor])
 
+    const validate = () => {
+        const e: Partial<Record<keyof Vendor, string>> = {}
+        if (!form.kode_vendor?.trim()) e.kode_vendor = 'Kode vendor wajib diisi'
+        if (!form.nama_vendor?.trim()) e.nama_vendor = 'Nama vendor wajib diisi'
+        setErrors(e)
+        return Object.keys(e).length === 0
+    }
+
     const handleSave = async () => {
+        if (!validate()) return
         setSaving(true)
         try {
             const updated = await vendorService.update(id, form)
             setVendor(updated)
             setEditing(false)
+            setErrors({})
             toast.push(<Notification type="success" title="Data vendor berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -319,11 +330,11 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Vendor">
-                                <Input value={form.kode_vendor ?? ''} onChange={(e) => setForm(p => ({ ...p, kode_vendor: e.target.value }))} />
+                            <FormItem label="Kode Vendor" asterisk invalid={!!errors.kode_vendor} errorMessage={errors.kode_vendor}>
+                                <Input value={form.kode_vendor ?? ''} invalid={!!errors.kode_vendor} onChange={(e) => setForm(p => ({ ...p, kode_vendor: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Nama Vendor">
-                                <Input value={form.nama_vendor ?? ''} onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />
+                            <FormItem label="Nama Vendor" asterisk invalid={!!errors.nama_vendor} errorMessage={errors.nama_vendor}>
+                                <Input value={form.nama_vendor ?? ''} invalid={!!errors.nama_vendor} onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Telepon">
                                 <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
@@ -351,7 +362,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-6">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

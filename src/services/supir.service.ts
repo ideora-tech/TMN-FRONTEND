@@ -9,6 +9,7 @@ export interface Supir {
     tgl_kadaluarsa_sim?: string
     telepon?: string
     status: 'aktif' | 'nonaktif'
+    id_armada_default?: string | null
 }
 
 export const supirService = {

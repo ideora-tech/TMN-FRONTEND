@@ -133,6 +133,7 @@ export default function LaporanPage() {
             </div>
             <Card
                 header={{
+                    content: <span />,
                     extra: (
                         <div className="flex items-center gap-2">
                             <Button

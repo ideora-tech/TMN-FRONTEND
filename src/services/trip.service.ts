@@ -4,6 +4,10 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Trip {
     id_trip: string
     id_jadwal: string
+    rute?: string
+    waktu_berangkat?: string
+    supir_nama?: string
+    armada_nopol?: string
     waktu_checkin?: string
     waktu_checkout?: string
     status: 'belum_mulai' | 'berjalan' | 'selesai' | 'dibatalkan'
