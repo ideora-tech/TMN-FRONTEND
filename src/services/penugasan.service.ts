@@ -22,8 +22,8 @@ export interface Penugasan {
 }
 
 export const penugasanService = {
-    async list(idProyek: string, page = 1, sumber?: SumberPenugasan) {
-        const params: Record<string, string | number> = { id_proyek: idProyek, page, limit: 15 }
+    async list(idProyek: string, page = 1, sumber?: SumberPenugasan, limit = 15) {
+        const params: Record<string, string | number> = { id_proyek: idProyek, page, limit }
         if (sumber) params.sumber = sumber
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params })
         return data as { data: Penugasan[]; meta: { page: number; total: number; totalPages: number; limit: number } }

@@ -46,6 +46,15 @@ export const jadwalService = {
         return data.data as Jadwal
     },
 
+    async update(id: string, payload: {
+        waktu_berangkat?: string | null
+        id_rute?: string | null
+        estimasi_tiba?: string | null
+    }) {
+        const { data } = await axios.put(API_ENDPOINTS.JADWAL_DETAIL(id), payload)
+        return data.data as Jadwal
+    },
+
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.JADWAL_DETAIL(id))
     },

@@ -6,10 +6,12 @@ import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Inpu
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import PapanShift from './PapanShift'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
 import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
+import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
 import { ROUTES } from '@/constants/route.constant'
 import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
@@ -80,6 +82,7 @@ export default function PenugasanPage() {
     const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [supirList, setSupirList]         = useState<Supir[]>([])
     const [selectedProyek, setSelectedProyek] = useState<string>('')
+    const [viewMode, setViewMode]             = useState<'tabel' | 'papan'>('tabel')
     const [list, setList]             = useState<Penugasan[]>([])
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -101,6 +104,19 @@ export default function PenugasanPage() {
     const [pairSearch, setPairSearch]                   = useState('')
     const [createFormErrors, setCreateFormErrors]       = useState<Partial<Record<'pasangan' | 'tanggal_tugas', string>>>({})
     const [createSubmitting, setCreateSubmitting]       = useState(false)
+    const [estimasiManual, setEstimasiManual]           = useState(false)
+    const {
+        itemOptions: ruteOptions,
+        selectedItemId: ruteItemId,
+        setSelectedItemId: setRuteItemId,
+        estimasi: estimasiOtomatis,
+        namaRute: namaRuteEstimasi,
+    } = useEstimasiPenugasan(selectedProyek || null)
+
+    useEffect(() => {
+        if (estimasiManual || estimasiOtomatis == null) return
+        setCreateForm(p => ({ ...p, estimasi_biaya: String(estimasiOtomatis) }))
+    }, [estimasiOtomatis, estimasiManual])
 
     const [editDialogOpen, setEditDialogOpen]     = useState(false)
     const [editTarget, setEditTarget]             = useState<Penugasan | null>(null)
@@ -331,7 +347,8 @@ export default function PenugasanPage() {
 
     const openCreateDialog = () => {
         if (!selectedProyek) return
-        setCreateForm(EMPTY_CREATE_FORM)
+        setCreateForm({ ...EMPTY_CREATE_FORM, estimasi_biaya: estimasiOtomatis != null ? String(estimasiOtomatis) : '' })
+        setEstimasiManual(false)
         setCheckedIds([])
         setPairSearch('')
         setCreateFormErrors({})
@@ -582,7 +599,7 @@ export default function PenugasanPage() {
                 </Link>
             </p>
             <Card bodyClass="p-0">
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3">
                     <Select
                         className="w-96"
                         placeholder="Pilih proyek untuk melihat penugasan..."
@@ -594,6 +611,16 @@ export default function PenugasanPage() {
                             clearBulkSelection()
                         }}
                     />
+                    <div className="flex items-center gap-2 sm:ml-auto">
+                        <Button size="sm" variant={viewMode === 'tabel' ? 'solid' : 'default'}
+                            onClick={() => setViewMode('tabel')}>
+                            Tabel
+                        </Button>
+                        <Button size="sm" variant={viewMode === 'papan' ? 'solid' : 'default'}
+                            onClick={() => setViewMode('papan')}>
+                            Papan Jadwal
+                        </Button>
+                    </div>
                 </div>
 
                 {selectedProyek && selectedIds.length > 0 && (
@@ -635,6 +662,8 @@ export default function PenugasanPage() {
                     <div className="py-12 text-center text-gray-400 text-sm">
                         Pilih proyek di atas untuk melihat daftar penugasan
                     </div>
+                ) : viewMode === 'papan' ? (
+                    <PapanShift idProyek={selectedProyek} />
                 ) : (
                     <DataTable
                         ref={(instance: DataTableResetHandle | HTMLTableElement | null) => { tableRef.current = instance }}
@@ -792,13 +821,25 @@ export default function PenugasanPage() {
                                         }}
                                     />
                                 </FormItem>
+                                {ruteOptions.length > 1 && (
+                                    <FormItem label="Rute (untuk estimasi)">
+                                        <Select isSearchable={false}
+                                            options={ruteOptions}
+                                            value={ruteOptions.find(o => o.value === ruteItemId) ?? null}
+                                            onChange={opt => { if (opt) { setRuteItemId(opt.value); setEstimasiManual(false) } }}
+                                        />
+                                    </FormItem>
+                                )}
                                 <FormItem label="Estimasi Biaya">
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
                                         value={createForm.estimasi_biaya ? formatNum(Number(createForm.estimasi_biaya)) : ''}
-                                        onChange={e => setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
+                                        onChange={e => { setEstimasiManual(true); setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') })) }}
                                     />
+                                    {!estimasiManual && estimasiOtomatis != null && namaRuteEstimasi && (
+                                        <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
+                                    )}
                                 </FormItem>
                             </div>
                         </>

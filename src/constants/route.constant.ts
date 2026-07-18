@@ -24,6 +24,10 @@ export const ROUTES = {
     SPAREPART_BARU:         '/sparepart/baru',
     SPAREPART_DETAIL:       (id: string) => `/sparepart/${id}`,
 
+    SHIFT:        '/shift',
+    SHIFT_BARU:   '/shift/baru',
+    SHIFT_DETAIL: (id: string) => `/shift/${id}`,
+
     SUPIR:        '/supir',
     SUPIR_BARU:   '/supir/baru',
     SUPIR_DETAIL: (id: string) => `/supir/${id}`,

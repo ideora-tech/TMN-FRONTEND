@@ -45,6 +45,14 @@ export const API_ENDPOINTS = {
     SPAREPART_STOK:         (id: string) => `/api/proxy/sparepart/${id}/stok`,
     SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
 
+    // Shift
+    SHIFT:        '/api/proxy/shift',
+    SHIFT_DETAIL: (id: string) => `/api/proxy/shift/${id}`,
+
+    // Jadwal Shift
+    JADWAL_SHIFT:        '/api/proxy/jadwal-shift',
+    JADWAL_SHIFT_DETAIL: (id: string) => `/api/proxy/jadwal-shift/${id}`,
+
     // Karyawan Exit
     KARYAWAN_EXIT: '/api/proxy/karyawan-exit',
 

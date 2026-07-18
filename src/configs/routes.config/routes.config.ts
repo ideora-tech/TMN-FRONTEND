@@ -26,6 +26,7 @@ export const protectedRoutes: Routes = {
     '/dokumen-armada':   { key: 'dokumen-armada', authority: [] },
     ...listRoute('jenis-perawatan', 'jenis-perawatan'),
     ...listRoute('sparepart', 'sparepart'),
+    ...listRoute('shift', 'shift'),
     ...listRoute('supir', 'supir'),
     ...listRoute('vendor', 'vendor'),
     ...listRoute('kontrak-vendor', 'kontrak-vendor'),
