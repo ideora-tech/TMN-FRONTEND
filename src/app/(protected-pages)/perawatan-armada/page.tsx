@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Tag, Tooltip, toast, Notification, Switcher } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX, HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -47,6 +47,7 @@ export default function PerawatanArmadaPage() {
     const [search, setSearch]             = useState('')
     const [armadaFilter, setArmadaFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState<StatusPerawatan | ''>('')
+    const [jatuhTempoOnly, setJatuhTempoOnly] = useState(false)
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
@@ -61,6 +62,7 @@ export default function PerawatanArmadaPage() {
                 page: currentPage, limit: pageSize,
                 id_armada: armadaFilter || undefined,
                 status: statusFilter || undefined,
+                jatuh_tempo: jatuhTempoOnly ? '1' : undefined,
             })
             setList(res.data)
             setTotal(res.meta.total)
@@ -69,7 +71,7 @@ export default function PerawatanArmadaPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, armadaFilter, statusFilter])
+    }, [currentPage, pageSize, armadaFilter, statusFilter, jatuhTempoOnly])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -184,7 +186,7 @@ export default function PerawatanArmadaPage() {
                     <h3 className="font-bold">Perawatan Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Riwayat perawatan seluruh armada</p>
                 </div>
-                <Button variant="solid" icon={<HiOutlinePlus />} onClick={() => router.push(ROUTES.PERAWATAN_ARMADA_BARU)}>Catat Perawatan</Button>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.PERAWATAN_ARMADA_BARU)}>Catat Perawatan</Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
@@ -216,6 +218,10 @@ export default function PerawatanArmadaPage() {
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={(opt) => { setStatusFilter((opt as { value: StatusPerawatan | '' }).value); setCurrentPage(1) }}
                         />
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Switcher checked={jatuhTempoOnly} onChange={checked => { setJatuhTempoOnly(checked); setCurrentPage(1) }} />
+                        <span className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">Akan Jatuh Tempo</span>
                     </div>
                 </div>
                 <DataTable

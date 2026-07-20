@@ -12,7 +12,6 @@ const SEGMENT_LABELS: Record<string, string> = {
     supir:            'Supir',
     vendor:           'Vendor',
     'kontrak-vendor': 'Kontrak Vendor',
-    jadwal:           'Jadwal',
     trip:             'Trip',
     penugasan:        'Penugasan',
     laporan:          'Laporan',

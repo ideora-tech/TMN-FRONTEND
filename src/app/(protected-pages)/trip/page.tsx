@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { Card, Input, Select, Tag, Tooltip, toast, Notification, Button } from '@/components/ui'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiPlusCircle } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { tripService, Trip } from '@/services/trip.service'
+import MulaiTripDialog from './MulaiTripDialog'
 import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
@@ -39,11 +40,12 @@ export default function TripPage() {
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
+    const [showMulai, setShowMulai]       = useState(false)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await tripService.list(currentPage)
+            const res = await tripService.list({ page: currentPage })
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -142,6 +144,9 @@ export default function TripPage() {
                     <h3 className="font-bold">Trip</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Monitor seluruh trip</p>
                 </div>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => setShowMulai(true)}>
+                    Mulai Trip
+                </Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -175,6 +180,7 @@ export default function TripPage() {
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
+            <MulaiTripDialog isOpen={showMulai} onClose={() => setShowMulai(false)} onSukses={fetchData} />
         </div>
     )
 }

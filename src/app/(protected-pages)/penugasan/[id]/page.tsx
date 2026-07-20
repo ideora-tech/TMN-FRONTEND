@@ -3,8 +3,7 @@ import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineExternalLink } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -12,13 +11,14 @@ import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugas
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
-import { jadwalService, Jadwal } from '@/services/jadwal.service'
 import { ruteService, Rute } from '@/services/rute.service'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import MulaiTripDialog from '../../trip/MulaiTripDialog'
+import { tripService, Trip } from '@/services/trip.service'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -34,11 +34,11 @@ const STATUS_CLASS: Record<string, string> = {
     batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
-const JADWAL_STATUS_CLASS: Record<string, string> = {
-    terjadwal:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    berjalan:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    selesai:    'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-    dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+const TRIP_STATUS_CLASS: Record<string, string> = {
+    belum_mulai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    berjalan:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:     'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+    dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 const MEKANISME_CLASS: Record<string, string> = {
@@ -79,18 +79,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [armadaVendorInfo, setArmadaVendorInfo]   = useState<ArmadaVendor | null>(null)
     const [supirVendorInfo, setSupirVendorInfo]     = useState<SupirVendor | null>(null)
 
-    // jadwal
-    const [jadwalList, setJadwalList]     = useState<Jadwal[]>([])
-    const [jadwalLoading, setJadwalLoading] = useState(false)
-    const [showJadwalForm, setShowJadwalForm] = useState(false)
-    const [jadwalForm, setJadwalForm] = useState<{ waktu_berangkat: string; id_rute: string | null; estimasi_tiba: string }>(
-        { waktu_berangkat: '', id_rute: null, estimasi_tiba: '' }
-    )
-    const [jadwalErrors, setJadwalErrors] = useState<Partial<Record<'waktu_berangkat' | 'estimasi_tiba', string>>>({})
     const [ruteOptions, setRuteOptions] = useState<{ value: string; label: string }[]>([])
-    const [addingJadwal, setAddingJadwal] = useState(false)
-    const [deleteJadwalTarget, setDeleteJadwalTarget] = useState<Jadwal | null>(null)
-    const [deletingJadwal, setDeletingJadwal] = useState(false)
+
+    // trip
+    const [tripList, setTripList]       = useState<Trip[]>([])
+    const [tripLoading, setTripLoading] = useState(false)
+    const [showMulaiTrip, setShowMulaiTrip] = useState(false)
 
     useEffect(() => {
         Promise.all([
@@ -146,21 +140,19 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             .finally(() => setLoading(false))
     }, [id])
 
-    const fetchJadwal = useCallback(async () => {
-        setJadwalLoading(true)
+    const fetchTrip = useCallback(async () => {
+        setTripLoading(true)
         try {
-            const res = await jadwalService.listByPenugasan(id)
-            setJadwalList(res.data)
-            // default rute estimasi dari jadwal pertama bila ada — tidak menimpa pilihan manual user
-            setIdRuteEstimasi(prev => prev || (res.data[0]?.id_rute ?? ''))
+            const res = await tripService.list({ id_penugasan: id, limit: 50 })
+            setTripList(res.data)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setJadwalLoading(false)
+            setTripLoading(false)
         }
     }, [id])
 
-    useEffect(() => { fetchJadwal() }, [fetchJadwal])
+    useEffect(() => { fetchTrip() }, [fetchTrip])
 
     // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
     // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
@@ -199,54 +191,6 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setSaving(false)
-        }
-    }
-
-    const validateJadwal = () => {
-        const e: Partial<Record<keyof typeof jadwalForm, string>> = {}
-        if (!jadwalForm.waktu_berangkat) e.waktu_berangkat = 'Waktu berangkat wajib diisi'
-        setJadwalErrors(e)
-        return Object.keys(e).length === 0
-    }
-
-    const handleAddJadwal = async () => {
-        if (!validateJadwal()) return
-        setAddingJadwal(true)
-        try {
-            await jadwalService.create({
-                id_penugasan:   id,
-                waktu_berangkat: jadwalForm.waktu_berangkat
-                    ? dayjs(jadwalForm.waktu_berangkat).format('YYYY-MM-DD HH:mm:ss')
-                    : null,
-                id_rute:        jadwalForm.id_rute || null,
-                estimasi_tiba:  jadwalForm.estimasi_tiba
-                    ? dayjs(jadwalForm.estimasi_tiba).format('YYYY-MM-DD HH:mm:ss')
-                    : null,
-            })
-            toast.push(<Notification type="success" title="Jadwal berhasil ditambahkan" />)
-            setJadwalForm({ waktu_berangkat: '', id_rute: null, estimasi_tiba: '' })
-            setJadwalErrors({})
-            setShowJadwalForm(false)
-            fetchJadwal()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setAddingJadwal(false)
-        }
-    }
-
-    const handleDeleteJadwal = async () => {
-        if (!deleteJadwalTarget) return
-        setDeletingJadwal(true)
-        try {
-            await jadwalService.delete(deleteJadwalTarget.id_jadwal)
-            toast.push(<Notification type="success" title="Jadwal berhasil dihapus" />)
-            setDeleteJadwalTarget(null)
-            fetchJadwal()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setDeletingJadwal(false)
         }
     }
 
@@ -440,7 +384,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                         onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
                                 </FormItem>
                             </div>
-                            <div className="flex justify-end gap-2 mt-6">
+                            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <Button type="button" variant="plain" onClick={() => { bolehAutoFill.current = false; setEditing(false); setForm(penugasan) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
@@ -449,98 +393,58 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 )}
             </Card>
 
-            {/* Jadwal Keberangkatan */}
+            {/* Trip */}
             <Card>
                 <div className="flex items-center justify-between mb-1">
                     <div>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Jadwal Keberangkatan</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                            {jadwalList.length} jadwal terdaftar
-                        </p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Trip</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{tripList.length} trip tercatat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowJadwalForm(v => !v)}>
-                        Tambah Jadwal
+                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowMulaiTrip(true)}>
+                        Mulai Trip
                     </Button>
                 </div>
 
-                {/* Form tambah jadwal */}
-                {showJadwalForm && (
-                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Waktu Berangkat" asterisk invalid={!!jadwalErrors.waktu_berangkat} errorMessage={jadwalErrors.waktu_berangkat}>
-                                <DatePicker.DateTimepicker
-                                    value={jadwalForm.waktu_berangkat ? new Date(jadwalForm.waktu_berangkat) : null}
-                                    onChange={date => setJadwalForm(p => ({ ...p, waktu_berangkat: date ? date.toISOString() : '' }))} />
-                            </FormItem>
-                            <FormItem label="Estimasi Tiba">
-                                <DatePicker.DateTimepicker
-                                    value={jadwalForm.estimasi_tiba ? new Date(jadwalForm.estimasi_tiba) : null}
-                                    onChange={date => setJadwalForm(p => ({ ...p, estimasi_tiba: date ? date.toISOString() : '' }))} />
-                            </FormItem>
-                            <div className="sm:col-span-2">
-                                <FormItem label="Rute">
-                                    <Select isClearable placeholder="Pilih rute..."
-                                        options={ruteOptions}
-                                        value={ruteOptions.find(o => o.value === jadwalForm.id_rute) ?? null}
-                                        onChange={opt => setJadwalForm(p => ({ ...p, id_rute: opt?.value ?? null }))} />
-                                </FormItem>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button size="sm" variant="plain" icon={<HiOutlineX />}
-                                onClick={() => { setShowJadwalForm(false); setJadwalForm({ waktu_berangkat: '', id_rute: null, estimasi_tiba: '' }); setJadwalErrors({}) }}>
-                                Batal
-                            </Button>
-                            <Button size="sm" variant="solid" loading={addingJadwal} onClick={handleAddJadwal}>
-                                Simpan
-                            </Button>
-                        </div>
-                        <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
-                    </div>
-                )}
-
-                {jadwalLoading ? (
+                {tripLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
-                ) : jadwalList.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada jadwal untuk penugasan ini</p>
+                ) : tripList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada trip untuk penugasan ini</p>
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Tiba</th>
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-in</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-out</th>
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {jadwalList.map(j => (
-                                    <tr key={j.id_jadwal}>
+                                {tripList.map(t => (
+                                    <tr key={t.id_trip}>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                            {j.tgl_keberangkatan
-                                                ? dayjs(j.tgl_keberangkatan).format('DD MMM YYYY HH:mm')
-                                                : <span className="text-gray-400">—</span>}
-                                        </td>
-                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
-                                            {j.estimasi_tiba
-                                                ? dayjs(j.estimasi_tiba).format('DD MMM YYYY HH:mm')
-                                                : <span className="text-gray-400">—</span>}
+                                            {t.waktu_berangkat ? dayjs(t.waktu_berangkat).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
-                                            {j.rute ?? <span className="text-gray-400">—</span>}
+                                            {t.rute ?? <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+                                            {t.waktu_checkin ? dayjs(t.waktu_checkin).format('DD MMM HH:mm') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+                                            {t.waktu_checkout ? dayjs(t.waktu_checkout).format('DD MMM HH:mm') : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4">
-                                            <Tag className={`text-xs font-semibold ${JADWAL_STATUS_CLASS[j.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {j.status}
+                                            <Tag className={`text-xs font-semibold ${TRIP_STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {t.status.replace('_', ' ')}
                                             </Tag>
                                         </td>
-                                        <td className="py-3 text-right whitespace-nowrap">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />} className="mr-1"
-                                                onClick={() => router.push(ROUTES.JADWAL_DETAIL(j.id_jadwal))} />
-                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                onClick={() => setDeleteJadwalTarget(j)} />
+                                        <td className="py-3 text-right">
+                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
+                                                onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))} />
                                         </td>
                                     </tr>
                                 ))}
@@ -550,19 +454,11 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 )}
             </Card>
 
-            {/* Confirm Hapus Jadwal */}
-            <ConfirmDialog isOpen={!!deleteJadwalTarget} type="danger" title="Hapus Jadwal?"
-                confirmText="Ya, Hapus" cancelText="Batal"
-                onClose={() => setDeleteJadwalTarget(null)}
-                onCancel={() => setDeleteJadwalTarget(null)}
-                onConfirm={handleDeleteJadwal}
-                confirmButtonProps={{ loading: deletingJadwal }}>
-                <p>Jadwal tanggal <strong>
-                    {deleteJadwalTarget?.tgl_keberangkatan
-                        ? dayjs(deleteJadwalTarget.tgl_keberangkatan).format('DD MMM YYYY HH:mm')
-                        : '—'}
-                </strong> akan dihapus.</p>
-            </ConfirmDialog>
+            <MulaiTripDialog isOpen={showMulaiTrip}
+                onClose={() => setShowMulaiTrip(false)}
+                onSukses={fetchTrip}
+                idPenugasanTerkunci={id}
+                idProyekTerkunci={penugasan?.id_proyek} />
         </div>
     )
 }

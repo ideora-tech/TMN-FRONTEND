@@ -93,6 +93,20 @@ const emptyLaporanForm = () => ({
     biaya_lain:       [] as BiayaLainRow[],
 })
 
+type AksiTrip = 'mulai' | 'selesai' | 'batalkan'
+
+const AKSI_TITLE: Record<AksiTrip, string> = {
+    mulai:    'Mulai Trip',
+    selesai:  'Selesaikan Trip',
+    batalkan: 'Batalkan Trip',
+}
+
+const AKSI_MESSAGE: Record<AksiTrip, string> = {
+    mulai:    'Mulai trip ini? Status akan berubah menjadi berjalan.',
+    selesai:  'Selesaikan trip ini? Status akan berubah menjadi selesai.',
+    batalkan: 'Batalkan trip ini? Tindakan ini tidak dapat dibatalkan.',
+}
+
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
@@ -118,6 +132,29 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     // jenis BBM (untuk auto-hitung biaya BBM)
     const [jenisBbmList, setJenisBbmList] = useState<JenisBbm[]>([])
+
+    // aksi lifecycle trip
+    const [aksiTrip, setAksiTrip]         = useState<AksiTrip | null>(null)
+    const [aksiLoading, setAksiLoading]   = useState(false)
+
+    const handleAksiTrip = async () => {
+        if (!aksiTrip) return
+        setAksiLoading(true)
+        try {
+            if (aksiTrip === 'mulai') await tripService.checkin(id)
+            else if (aksiTrip === 'selesai') await tripService.checkout(id)
+            else await tripService.batalkan(id)
+            toast.push(<Notification type="success" title={`${AKSI_TITLE[aksiTrip]} berhasil`} />)
+            setAksiTrip(null)
+            const t = await tripService.get(id)
+            setTrip(t)
+            tripService.getStatus(id).then(setStatuses).catch(() => {})
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setAksiLoading(false)
+        }
+    }
 
     useEffect(() => {
         tripService.get(id)
@@ -365,6 +402,36 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
             </Card>
 
+            {(trip.status === 'belum_mulai' || trip.status === 'berjalan') && (
+                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Aksi Trip</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[trip.status]}</span>
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {trip.status === 'belum_mulai' && (
+                                <Button size="sm" variant="solid" onClick={() => setAksiTrip('mulai')} disabled={aksiLoading}>
+                                    Mulai Trip
+                                </Button>
+                            )}
+                            {trip.status === 'berjalan' && (
+                                <Button size="sm" variant="solid" onClick={() => setAksiTrip('selesai')} disabled={aksiLoading}>
+                                    Selesaikan
+                                </Button>
+                            )}
+                            <Button size="sm" variant="default"
+                                className={`${STATUS_TAG['dibatalkan']} border border-current`}
+                                onClick={() => setAksiTrip('batalkan')} disabled={aksiLoading}>
+                                Batalkan
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h5>Riwayat Status</h5>
@@ -514,7 +581,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </div>
                         )}
 
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => setShowLaporanForm(false)}>
                                 Batal
                             </Button>
@@ -730,6 +797,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 confirmButtonProps={{ loading: deletingFoto }}
             >
                 <p>Hapus foto ini dari laporan perjalanan?</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog isOpen={!!aksiTrip}
+                type={aksiTrip === 'batalkan' ? 'danger' : 'info'}
+                title={aksiTrip ? AKSI_TITLE[aksiTrip] : ''}
+                confirmText="Ya, Lanjutkan" cancelText="Batal"
+                onClose={() => setAksiTrip(null)}
+                onCancel={() => setAksiTrip(null)}
+                onConfirm={handleAksiTrip}
+                confirmButtonProps={{ loading: aksiLoading }}>
+                <p>{aksiTrip ? AKSI_MESSAGE[aksiTrip] : ''}</p>
             </ConfirmDialog>
         </div>
     )

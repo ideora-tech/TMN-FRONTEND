@@ -159,7 +159,11 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await vendorService.update(id, form)
@@ -361,7 +365,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                 </FormItem>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2 mt-6">
+                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
@@ -414,7 +418,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                 )}
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
                                 onClick={() => { setShowDocForm(false); setDocFile(null); setDocForm({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' }) }}>
                                 Batal
@@ -729,7 +733,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         )}
                     </FormItem>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={() => { setEditDocTarget(null); setEditDocFile(null) }}>Batal</Button>
                     <Button variant="solid" loading={updatingDoc} onClick={handleEditDokumen}>Simpan</Button>
                 </div>

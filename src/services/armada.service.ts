@@ -22,6 +22,13 @@ export interface Armada {
     keterangan?: string | null
 }
 
+export interface ArmadaServisJatuhTempo {
+    id_armada: string
+    nopol: string
+    jenis_perawatan: string
+    jadwal_servis_berikutnya: string
+}
+
 export type ArmadaPayload = Partial<Omit<Armada, 'id_armada' | 'url_foto'>>
 
 function buildFormData(payload: ArmadaPayload, foto: File): FormData {
@@ -64,5 +71,9 @@ export const armadaService = {
     },
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.ARMADA_DETAIL(id))
+    },
+    async servisJatuhTempo(days = 30) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_SERVIS_JATUH_TEMPO, { params: { days } })
+        return data.data as ArmadaServisJatuhTempo[]
     },
 }

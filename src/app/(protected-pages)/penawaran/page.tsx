@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -164,8 +164,8 @@ export default function PenawaranPage() {
                     <h3 className="font-bold">Penawaran</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Daftar penawaran ke klien</p>
                 </div>
-                <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.PENAWARAN_BARU)}>
-                    + Buat Penawaran
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.PENAWARAN_BARU)}>
+                    Buat Penawaran
                 </Button>
             </div>
             <Card bodyClass="p-0">

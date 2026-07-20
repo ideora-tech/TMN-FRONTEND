@@ -15,6 +15,8 @@ export const API_ENDPOINTS = {
     PROYEK:        '/api/proxy/proyek',
     PROYEK_DETAIL: (id: string) => `/api/proxy/proyek/${id}`,
     PROYEK_STATUS: (id: string) => `/api/proxy/proyek/${id}/status`,
+    PROYEK_RUTE:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/rute`,
+    PROYEK_RUTE_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/rute/${id}`,
 
     // Armada
     ARMADA:        '/api/proxy/armada',
@@ -39,11 +41,28 @@ export const API_ENDPOINTS = {
     JENIS_PERAWATAN:        '/api/proxy/jenis-perawatan',
     JENIS_PERAWATAN_DETAIL: (id: string) => `/api/proxy/jenis-perawatan/${id}`,
 
+    // Interval Perawatan
+    INTERVAL_PERAWATAN:          '/api/proxy/interval-perawatan',
+    INTERVAL_PERAWATAN_DETAIL:   (id: string) => `/api/proxy/interval-perawatan/${id}`,
+    INTERVAL_PERAWATAN_RESOLUSI: '/api/proxy/interval-perawatan/resolusi',
+
+    // Badge servis jatuh tempo (armada)
+    ARMADA_SERVIS_JATUH_TEMPO: '/api/proxy/armada/servis-jatuh-tempo',
+
     // Sparepart
     SPAREPART:              '/api/proxy/sparepart',
     SPAREPART_DETAIL:       (id: string) => `/api/proxy/sparepart/${id}`,
     SPAREPART_STOK:         (id: string) => `/api/proxy/sparepart/${id}/stok`,
     SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
+
+    // Kategori Sparepart
+    KATEGORI_SPAREPART:        '/api/proxy/kategori-sparepart',
+    KATEGORI_SPAREPART_DETAIL: (id: string) => `/api/proxy/kategori-sparepart/${id}`,
+
+    // Paket Perawatan Sparepart
+    PAKET_PERAWATAN_SPAREPART:          '/api/proxy/paket-perawatan-sparepart',
+    PAKET_PERAWATAN_SPAREPART_DETAIL:   (id: string) => `/api/proxy/paket-perawatan-sparepart/${id}`,
+    PAKET_PERAWATAN_SPAREPART_RESOLUSI: '/api/proxy/paket-perawatan-sparepart/resolusi',
 
     // Shift
     SHIFT:        '/api/proxy/shift',
@@ -78,12 +97,9 @@ export const API_ENDPOINTS = {
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
 
-    // Jadwal
-    JADWAL:        '/api/proxy/jadwal',
-    JADWAL_DETAIL: (id: string) => `/api/proxy/jadwal/${id}`,
-
     // Trip
     TRIP:          '/api/proxy/trip',
+    TRIP_MULAI:    '/api/proxy/trip/mulai',
     TRIP_DETAIL:   (id: string) => `/api/proxy/trip/${id}`,
     TRIP_CHECKIN:  (id: string) => `/api/proxy/trip/${id}/checkin`,
     TRIP_CHECKOUT: (id: string) => `/api/proxy/trip/${id}/checkout`,

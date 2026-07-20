@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Checkbox, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineExternalLink, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineExternalLink, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -14,7 +14,12 @@ import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
+import { proyekRuteService, ProyekRute, ProyekRutePayload } from '@/services/proyekRute.service'
+import { ruteService, Rute } from '@/services/rute.service'
+import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption } from '@/components/shared/RuteTarifFields'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -108,6 +113,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [pasanganLoading, setPasanganLoading] = useState(false)
     const [pasanganError, setPasanganError]     = useState(false)
 
+    // Rute Proyek
+    const [ruteProyekList, setRuteProyekList]   = useState<ProyekRute[]>([])
+    const [ruteProyekLoading, setRuteProyekLoading] = useState(false)
+    const [showRuteForm, setShowRuteForm]       = useState(false)
+    const [ruteTarif, setRuteTarif]             = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
+    const [ruteKeterangan, setRuteKeterangan]   = useState('')
+    const [ruteOptionsMaster, setRuteOptionsMaster] = useState<RuteOption[]>([])
+    const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
+    const [addingRute, setAddingRute]           = useState(false)
+    const [editRuteTarget, setEditRuteTarget]   = useState<ProyekRute | null>(null)
+    const [editRuteTarif, setEditRuteTarif]     = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
+    const [editRuteKeterangan, setEditRuteKeterangan] = useState('')
+    const [updatingRute, setUpdatingRute]       = useState(false)
+    const [deleteRuteTarget, setDeleteRuteTarget] = useState<ProyekRute | null>(null)
+    const [deletingRute, setDeletingRute]       = useState(false)
+
     // Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan)
     const [createDialogOpen, setCreateDialogOpen]   = useState(false)
     const [createForm, setCreateForm]               = useState<CreateFormState>(EMPTY_CREATE_FORM)
@@ -116,6 +137,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [createFormErrors, setCreateFormErrors]   = useState<Partial<Record<'pasangan' | 'tanggal_tugas', string>>>({})
     const [createSubmitting, setCreateSubmitting]   = useState(false)
     const [hasilPenugasan, setHasilPenugasan]       = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
+    const [estimasiManual, setEstimasiManual]       = useState(false)
+    const {
+        itemOptions: ruteOptions,
+        selectedItemId: ruteItemId,
+        setSelectedItemId: setRuteItemId,
+        estimasi: estimasiOtomatis,
+        namaRute: namaRuteEstimasi,
+        dataTidakLengkap: estimasiDataTidakLengkap,
+    } = useEstimasiPenugasan(id)
+
+    useEffect(() => {
+        if (estimasiManual || estimasiOtomatis == null) return
+        setCreateForm(p => ({ ...p, estimasi_biaya: String(estimasiOtomatis) }))
+    }, [estimasiOtomatis, estimasiManual])
 
     // Refetch armada & supir — dipanggil saat mount dan setiap kali dialog dibuka,
     // supaya status unit (tersedia/digunakan/dst) tidak basi.
@@ -200,6 +235,114 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
 
+    const fetchRuteProyek = useCallback(async () => {
+        setRuteProyekLoading(true)
+        try {
+            setRuteProyekList(await proyekRuteService.list(id))
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setRuteProyekLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => { fetchRuteProyek() }, [fetchRuteProyek])
+
+    useEffect(() => {
+        ruteService.list({ limit: 100 })
+            .then(res => setRuteOptionsMaster((res.data ?? []).map((r: Rute) => ({
+                value: r.id_rute,
+                label: r.nama_rute,
+                asal: r.asal,
+                tujuan: r.tujuan,
+                estimasi_jarak_km: r.estimasi_jarak_km,
+                estimasi_durasi_menit: r.estimasi_durasi_menit,
+            }))))
+            .catch(() => {})
+        jenisKendaraanService.list(1, 100)
+            .then(res => setJenisOptionsMaster(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
+            .catch(() => {})
+    }, [])
+
+    const openAddRute = () => {
+        setRuteTarif(EMPTY_RUTE_TARIF_STATE)
+        setRuteKeterangan('')
+        setShowRuteForm(true)
+    }
+
+    const handleAddRute = async () => {
+        if (!ruteTarif.id_rute || !ruteTarif.id_jenis_kendaraan) return
+        setAddingRute(true)
+        try {
+            const idTarifRute = await resolveTarifId(ruteTarif, project?.id_klien ?? '')
+            const payload: ProyekRutePayload = {
+                id_rute: ruteTarif.id_rute,
+                id_jenis_kendaraan: ruteTarif.id_jenis_kendaraan,
+                id_tarif_rute: idTarifRute ?? undefined,
+                harga_penawaran: hargaPenawaranEfektif(ruteTarif) ? Number(hargaPenawaranEfektif(ruteTarif)) : undefined,
+                keterangan: ruteKeterangan || undefined,
+            }
+            await proyekRuteService.create(id, payload)
+            toast.push(<Notification type="success" title="Rute proyek berhasil ditambahkan" />)
+            setShowRuteForm(false)
+            fetchRuteProyek()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setAddingRute(false)
+        }
+    }
+
+    const openEditRute = (r: ProyekRute) => {
+        setEditRuteTarget(r)
+        setEditRuteTarif({
+            id_rute: r.id_rute,
+            id_jenis_kendaraan: r.id_jenis_kendaraan,
+            id_tarif_rute: r.id_tarif_rute,
+            harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
+            estimasiBiaya: r.estimasi_biaya,
+            tarifBaru: null,
+        })
+        setEditRuteKeterangan(r.keterangan ?? '')
+    }
+
+    const handleEditRute = async () => {
+        if (!editRuteTarget) return
+        setUpdatingRute(true)
+        try {
+            const idTarifRute = await resolveTarifId(editRuteTarif, project?.id_klien ?? '')
+            await proyekRuteService.update(id, editRuteTarget.id_proyek_rute, {
+                id_rute: editRuteTarif.id_rute,
+                id_jenis_kendaraan: editRuteTarif.id_jenis_kendaraan,
+                id_tarif_rute: idTarifRute ?? undefined,
+                harga_penawaran: hargaPenawaranEfektif(editRuteTarif) ? Number(hargaPenawaranEfektif(editRuteTarif)) : undefined,
+                keterangan: editRuteKeterangan || undefined,
+            })
+            toast.push(<Notification type="success" title="Rute proyek berhasil diperbarui" />)
+            setEditRuteTarget(null)
+            fetchRuteProyek()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setUpdatingRute(false)
+        }
+    }
+
+    const handleDeleteRute = async () => {
+        if (!deleteRuteTarget) return
+        setDeletingRute(true)
+        try {
+            await proyekRuteService.delete(id, deleteRuteTarget.id_proyek_rute)
+            toast.push(<Notification type="success" title="Rute proyek berhasil dihapus" />)
+            setDeleteRuteTarget(null)
+            fetchRuteProyek()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDeletingRute(false)
+        }
+    }
+
     const validate = () => {
         const e: Partial<Record<keyof Project, string>> = {}
         if (!form.kode_proyek?.trim()) e.kode_proyek = 'Kode proyek wajib diisi'
@@ -209,7 +352,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await projectService.update(id, {
@@ -242,7 +389,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
 
     const openCreateDialog = () => {
-        setCreateForm(EMPTY_CREATE_FORM)
+        setCreateForm({ ...EMPTY_CREATE_FORM, estimasi_biaya: estimasiOtomatis != null ? String(estimasiOtomatis) : '' })
+        setEstimasiManual(false)
         setCheckedIds([])
         setPairSearch('')
         setCreateFormErrors({})
@@ -261,7 +409,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
 
     const handleSubmitCreate = async () => {
-        if (!validateCreateForm()) return
+        if (!validateCreateForm()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setCreateSubmitting(true)
         try {
             const estimasi = createForm.estimasi_biaya ? Number(createForm.estimasi_biaya) : null
@@ -512,7 +664,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     </FormItem>
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-2 mt-6">
+                            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(project); setErrors({}) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
@@ -521,6 +673,113 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 )}
             </Card>
 
+            {/* Rute Proyek */}
+            <Card>
+                <div className="flex items-center justify-between mb-1">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
+                    </div>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
+                        Tambah Rute
+                    </Button>
+                </div>
+
+                {showRuteForm && (
+                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                        <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
+                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
+                        <div className="mt-3">
+                            <FormItem label="Keterangan">
+                                <Input textArea placeholder="Keterangan tambahan..." value={ruteKeterangan}
+                                    onChange={e => setRuteKeterangan(e.target.value)} />
+                            </FormItem>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button size="sm" variant="plain" onClick={() => setShowRuteForm(false)}>Batal</Button>
+                            <Button size="sm" variant="solid" loading={addingRute}
+                                disabled={!ruteTarif.id_rute || !ruteTarif.id_jenis_kendaraan}
+                                onClick={handleAddRute}>Simpan</Button>
+                        </div>
+                        <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
+                    </div>
+                )}
+
+                {ruteProyekLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : ruteProyekList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada rute untuk proyek ini</p>
+                ) : (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Biaya</th>
+                                    <th className="py-2.5" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {ruteProyekList.map(r => (
+                                    <tr key={r.id_proyek_rute}>
+                                        <td className="py-3 pr-4">
+                                            <p className="font-medium text-gray-800 dark:text-gray-200">{r.nama_rute ?? '—'}</p>
+                                            {r.asal && r.tujuan && <p className="text-xs text-gray-400">{r.asal} → {r.tujuan}</p>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{r.nama_jenis ?? '—'}</td>
+                                        <td className="py-3 pr-4">
+                                            {r.harga_penawaran != null
+                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.harga_penawaran)}</span>
+                                                : <Tag className="text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Belum diisi</Tag>}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            {r.estimasi_biaya != null
+                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.estimasi_biaya)}</span>
+                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Data belum lengkap</Tag>}
+                                        </td>
+                                        <td className="py-3 text-right whitespace-nowrap">
+                                            <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
+                                                onClick={() => openEditRute(r)} />
+                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
+                                                onClick={() => setDeleteRuteTarget(r)} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            {/* Dialog Edit Rute Proyek */}
+            <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} width={520}>
+                <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
+                <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
+                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
+                <div className="mt-3">
+                    <FormItem label="Keterangan">
+                        <Input textArea value={editRuteKeterangan}
+                            onChange={e => setEditRuteKeterangan(e.target.value)} />
+                    </FormItem>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                    <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Batal</Button>
+                    <Button variant="solid" loading={updatingRute} onClick={handleEditRute}>Simpan</Button>
+                </div>
+            </Dialog>
+
+            {/* Confirm Hapus Rute Proyek */}
+            <ConfirmDialog isOpen={!!deleteRuteTarget} type="danger" title="Hapus Rute Proyek"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                onClose={() => setDeleteRuteTarget(null)}
+                onCancel={() => setDeleteRuteTarget(null)}
+                onConfirm={handleDeleteRute}
+                confirmButtonProps={{ loading: deletingRute }}>
+                <p>Hapus rute <strong>{deleteRuteTarget?.nama_rute}</strong> dari proyek ini?</p>
+            </ConfirmDialog>
+
             {/* Daftar Penugasan */}
             <Card>
                 <div className="flex items-center justify-between mb-1">
@@ -528,7 +787,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Penugasan</p>
                         <p className="text-xs text-gray-400 mt-0.5">{penugasanList.length} penugasan terdaftar</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={openCreateDialog}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openCreateDialog}>
                         Tambah Penugasan
                     </Button>
                 </div>
@@ -624,8 +883,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     value={pairSearch}
                                     onChange={e => setPairSearch(e.target.value)}
                                 />
-                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                <span className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
                                     {checkedIds.length} pasangan dipilih
+                                    {checkedIds.length > 0 && (
+                                        <button type="button"
+                                            className="text-blue-600 hover:underline dark:text-blue-400"
+                                            onClick={() => setCheckedIds([])}>
+                                            Batalkan
+                                        </button>
+                                    )}
                                 </span>
                             </div>
                             <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -678,18 +944,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         }}
                                     />
                                 </FormItem>
+                                {ruteOptions.length > 1 && (
+                                    <FormItem label="Rute (untuk estimasi)">
+                                        <Select isSearchable={false}
+                                            options={ruteOptions}
+                                            value={ruteOptions.find(o => o.value === ruteItemId) ?? null}
+                                            onChange={opt => { if (opt) { setRuteItemId(opt.value); setEstimasiManual(false) } }}
+                                        />
+                                    </FormItem>
+                                )}
                                 <FormItem label="Estimasi Biaya">
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
                                         value={createForm.estimasi_biaya ? formatNum(Number(createForm.estimasi_biaya)) : ''}
-                                        onChange={e => setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
+                                        onChange={e => { setEstimasiManual(true); setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') })) }}
                                     />
+                                    {!estimasiManual && estimasiOtomatis != null && namaRuteEstimasi && (
+                                        <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
+                                    )}
+                                    {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
+                                        <p className="text-xs text-amber-500 mt-1">Data tarif rute belum lengkap — isi estimasi manual</p>
+                                    )}
                                 </FormItem>
                             </div>
                         </>
                     )}
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeCreateDialog}>Batal</Button>
                         <Button type="submit" variant="solid" loading={createSubmitting}
                             disabled={pasanganLoading || pasanganError || pasanganList.length === 0}>

@@ -24,9 +24,13 @@ export interface StatusTrip {
 }
 
 export const tripService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.TRIP, { params: { page, limit: 15 } })
+    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string } = {}) {
+        const { data } = await axios.get(API_ENDPOINTS.TRIP, { params: { page: 1, limit: 15, ...params } })
         return data as { data: Trip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+    async mulai(payload: { id_penugasan: string; id_rute?: string | null; catatan?: string | null }) {
+        const { data } = await axios.post(API_ENDPOINTS.TRIP_MULAI, payload)
+        return data.data as Trip
     },
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.TRIP_DETAIL(id))

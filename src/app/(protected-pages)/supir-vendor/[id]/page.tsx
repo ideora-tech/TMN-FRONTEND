@@ -38,7 +38,11 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await supirVendorService.update(id, {
@@ -140,7 +144,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-6">
+                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>

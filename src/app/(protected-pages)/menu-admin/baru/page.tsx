@@ -37,7 +37,11 @@ export default function MenuAdminBaruPage() {
     }
 
     const handleSubmit = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setLoading(true)
         try {
             await menuService.create({
@@ -100,7 +104,7 @@ export default function MenuAdminBaruPage() {
                             onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
                     </FormItem>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>

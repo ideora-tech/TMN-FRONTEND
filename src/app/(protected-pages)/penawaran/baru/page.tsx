@@ -5,7 +5,7 @@ import { Card, Button, FormItem, Input, toast, Notification } from '@/components
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
 import { penawaranService } from '@/services/penawaran.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { ruteService, Rute } from '@/services/rute.service'
@@ -16,32 +16,32 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 interface FormState {
-    id_klien:           string
-    nomor_penawaran:    string
-    judul:              string
+    id_klien: string
+    nomor_penawaran: string
+    judul: string
     nilai_penawaran_str: string
-    tanggal_penawaran:  string
-    tanggal_berlaku:    string
-    catatan:            string
+    tanggal_penawaran: string
+    tanggal_berlaku: string
+    catatan: string
 }
 
 const INIT: FormState = {
-    id_klien:           '',
-    nomor_penawaran:    '',
-    judul:              '',
+    id_klien: '',
+    nomor_penawaran: '',
+    judul: '',
     nilai_penawaran_str: '',
-    tanggal_penawaran:  '',
-    tanggal_berlaku:    '',
-    catatan:            '',
+    tanggal_penawaran: '',
+    tanggal_berlaku: '',
+    catatan: '',
 }
 
 interface ItemForm {
-    id_rute:              string
-    id_jenis_kendaraan:   string
-    id_tarif_rute:        string | null
-    harga_satuan_str:     string
-    estimasi_ritase_str:  string
-    keterangan:           string
+    id_rute: string
+    id_jenis_kendaraan: string
+    id_tarif_rute: string | null
+    harga_satuan_str: string
+    estimasi_ritase_str: string
+    keterangan: string
 }
 
 type Option = { value: string; label: string }
@@ -53,7 +53,7 @@ const ITEM_KOSONG: ItemForm = {
 
 export default function PenawaranBaruPage() {
     const router = useRouter()
-    const [form, setForm]     = useState<FormState>(INIT)
+    const [form, setForm] = useState<FormState>(INIT)
     const [saving, setSaving] = useState(false)
     const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
@@ -66,13 +66,13 @@ export default function PenawaranBaruPage() {
     useEffect(() => {
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
-            .catch(() => {})
+            .catch(() => { })
         jenisKendaraanService.list(1)
             .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
-            .catch(() => {})
+            .catch(() => { })
         klienService.list(1, 100)
             .then(res => setKlienOptions(res.data.map((k: Klien) => ({ value: k.id_klien, label: k.nama_klien }))))
-            .catch(() => {})
+            .catch(() => { })
     }, [])
 
     const set = (field: keyof FormState, value: string) =>
@@ -138,28 +138,32 @@ export default function PenawaranBaruPage() {
     const validate = () => {
         const e: Partial<Record<keyof FormState, string>> = {}
         if (!form.nomor_penawaran.trim()) e.nomor_penawaran = 'Nomor penawaran wajib diisi'
-        if (!form.judul.trim())           e.judul           = 'Judul penawaran wajib diisi'
+        if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!validate() || !validateItems()) return
+        if (!validate() || !validateItems()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             await penawaranService.create({
-                nomor_penawaran:   form.nomor_penawaran.trim(),
-                judul:             form.judul.trim(),
-                id_klien:          form.id_klien || null,
-                nilai_penawaran:   items.length > 0
+                nomor_penawaran: form.nomor_penawaran.trim(),
+                judul: form.judul.trim(),
+                id_klien: form.id_klien || null,
+                nilai_penawaran: items.length > 0
                     ? undefined
                     : (form.nilai_penawaran_str
                         ? Number(form.nilai_penawaran_str.replace(/\D/g, ''))
                         : null),
                 tanggal_penawaran: form.tanggal_penawaran || null,
-                tanggal_berlaku:   form.tanggal_berlaku || null,
-                catatan:           form.catatan.trim() || null,
+                tanggal_berlaku: form.tanggal_berlaku || null,
+                catatan: form.catatan.trim() || null,
                 items: items.length > 0
                     ? items.map(it => ({
                         id_rute: it.id_rute,
@@ -265,7 +269,7 @@ export default function PenawaranBaruPage() {
                                 <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
                                 <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
                             </div>
-                            <Button type="button" size="sm" variant="solid" icon={<HiOutlinePlus />}
+                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
                                 onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
                                 Tambah Item
                             </Button>
@@ -337,7 +341,7 @@ export default function PenawaranBaruPage() {
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PENAWARAN)}>
                             Batal
                         </Button>

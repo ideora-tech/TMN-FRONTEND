@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -150,7 +150,7 @@ export default function RutePage() {
                     <h3 className="font-bold">Rute</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master rute perjalanan</p>
                 </div>
-                <Button variant="solid" size="sm" onClick={() => router.push(ROUTES.RUTE_BARU)}>+ Tambah Rute</Button>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.RUTE_BARU)}>Tambah Rute</Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">

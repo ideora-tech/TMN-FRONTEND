@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
@@ -10,6 +11,7 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
+import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
 
 export default function SparepartPage() {
     const router = useRouter()
@@ -22,11 +24,13 @@ export default function SparepartPage() {
     const [pageSize, setPageSize]       = useState(15)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Sparepart | null>(null)
+    const [kategoriOptions, setKategoriOptions] = useState<{ value: string; label: string }[]>([])
+    const [kategoriFilter, setKategoriFilter] = useState('')
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await sparepartService.list({ page: currentPage, limit: pageSize, search: search || undefined })
+            const res = await sparepartService.list({ page: currentPage, limit: pageSize, search: search || undefined, id_kategori_sparepart: kategoriFilter || undefined })
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -34,7 +38,13 @@ export default function SparepartPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search])
+    }, [currentPage, pageSize, search, kategoriFilter])
+
+    useEffect(() => {
+        kategoriSparepartService.list(1, 100)
+            .then(res => setKategoriOptions(res.data.map((k: KategoriSparepart) => ({ value: k.id_kategori_sparepart, label: k.nama }))))
+            .catch(() => {})
+    }, [])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -68,6 +78,11 @@ export default function SparepartPage() {
             cell: ({ row }: CellContext<Sparepart, unknown>) => (
                 <span className="font-semibold">{row.original.nama}</span>
             ),
+        },
+        { header: 'Kategori', accessorKey: 'nama_kategori_sparepart', size: 160,
+            cell: ({ row }: CellContext<Sparepart, unknown>) => row.original.nama_kategori_sparepart
+                ? <span>{row.original.nama_kategori_sparepart}</span>
+                : <span className="text-gray-400">—</span>,
         },
         { header: 'Satuan', accessorKey: 'satuan', size: 100,
             cell: ({ row }: CellContext<Sparepart, unknown>) => row.original.satuan,
@@ -132,7 +147,7 @@ export default function SparepartPage() {
                 </Button>
             </div>
             <Card bodyClass="p-0">
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari kode atau nama spare part... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -140,6 +155,12 @@ export default function SparepartPage() {
                         value={searchInput}
                         onChange={e => setSearchInput(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }} />
+                    <div className="w-full sm:w-56">
+                        <Select isClearable placeholder="Semua kategori"
+                            options={kategoriOptions}
+                            value={kategoriOptions.find(o => o.value === kategoriFilter) ?? null}
+                            onChange={opt => { setKategoriFilter((opt as { value: string } | null)?.value ?? ''); setCurrentPage(1) }} />
+                    </div>
                 </div>
                 <DataTable columns={columns} data={list as unknown[]} loading={loading}
                     noData={!loading && list.length === 0}

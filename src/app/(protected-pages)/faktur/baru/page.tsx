@@ -84,7 +84,11 @@ export default function FakturBaruPage() {
     const total = items.reduce((sum, i) => sum + i.subtotal, 0)
 
     const handleSubmit = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setLoading(true)
         try {
             await fakturService.create({

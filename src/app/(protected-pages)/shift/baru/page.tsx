@@ -23,7 +23,11 @@ export default function ShiftBaruPage() {
     }
 
     const handleSubmit = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setLoading(true)
         try {
             await shiftService.create({
@@ -73,7 +77,7 @@ export default function ShiftBaruPage() {
                         <p className="text-xs text-gray-400 -mt-1">Jam selesai lebih kecil dari jam mulai = shift berakhir keesokan hari</p>
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>

@@ -64,7 +64,11 @@ export default function JenisBbmDetailPage({ params }: { params: Promise<{ id: s
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await jenisBbmService.update(id, {
@@ -90,7 +94,11 @@ export default function JenisBbmDetailPage({ params }: { params: Promise<{ id: s
     }
 
     const handleAddHarga = async () => {
-        if (!validateHarga()) return
+        if (!validateHarga()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setAddingHarga(true)
         try {
             await jenisBbmService.createHarga(id, {
@@ -186,7 +194,7 @@ export default function JenisBbmDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-6">
+                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setErrors({}) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
@@ -222,7 +230,7 @@ export default function JenisBbmDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={date => setHargaForm(p => ({ ...p, berlaku_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
                                 onClick={() => { setShowHargaForm(false); setHargaForm(emptyHargaForm()); setHargaErrors({}) }}>
                                 Batal

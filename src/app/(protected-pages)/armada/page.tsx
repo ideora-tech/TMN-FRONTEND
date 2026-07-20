@@ -9,7 +9,7 @@ import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { armadaService, Armada } from '@/services/armada.service'
+import { armadaService, Armada, ArmadaServisJatuhTempo } from '@/services/armada.service'
 import axios from 'axios'
 
 type StatusOption = { value: string; label: string }
@@ -45,6 +45,7 @@ export default function ArmadaPage() {
     const [list, setList]             = useState<Armada[]>([])
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const [servisJatuhTempo, setServisJatuhTempo] = useState<ArmadaServisJatuhTempo[]>([])
 
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
@@ -73,6 +74,10 @@ export default function ArmadaPage() {
     }, [currentPage])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    useEffect(() => {
+        armadaService.servisJatuhTempo().then(setServisJatuhTempo).catch(() => {})
+    }, [])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
@@ -179,6 +184,26 @@ export default function ArmadaPage() {
                     {STATUS_LABEL[row.original.status] ?? row.original.status}
                 </Tag>
             ),
+        },
+        {
+            header: 'Servis',
+            id: 'servis',
+            size: 130,
+            cell: ({ row }: CellContext<Armada, unknown>) => {
+                const servis = servisJatuhTempo.find(s => s.id_armada === row.original.id_armada)
+                if (!servis) return <span className="text-gray-300 text-xs">—</span>
+                const days = Math.ceil((new Date(servis.jadwal_servis_berikutnya).getTime() - Date.now()) / 86400000)
+                const className = days < 0
+                    ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                    : days <= 7
+                        ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                return (
+                    <Tag className={`text-xs font-semibold ${className}`}>
+                        {days < 0 ? 'Lewat jadwal' : `${days} hari lagi`}
+                    </Tag>
+                )
+            },
         },
         {
             header: '', id: 'action', size: 100,

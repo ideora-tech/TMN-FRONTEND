@@ -15,6 +15,8 @@ import { perawatanArmadaService, PerawatanArmada } from '@/services/perawatanArm
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
+import { jenisPerawatanService, JenisPerawatan } from '@/services/jenisPerawatan.service'
+import { intervalPerawatanService } from '@/services/intervalPerawatan.service'
 
 const RAWAT_STATUS_OPTIONS = [
     { value: 'terjadwal',    label: 'Terjadwal' },
@@ -103,6 +105,12 @@ function getExpiryInfo(berlakuSampai: string | null): {
     return { label: `${days} hari lagi`, className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400', daysLeft: days, urgent: false }
 }
 
+function getServisUrgent(jadwal: string | null): boolean {
+    if (!jadwal) return false
+    const days = Math.ceil((new Date(jadwal).getTime() - Date.now()) / 86400000)
+    return days <= 30
+}
+
 function sortDokumen(list: DokumenArmada[]): DokumenArmada[] {
     return [...list].sort((a, b) => {
         if (!a.berlaku_sampai && !b.berlaku_sampai) return 0
@@ -127,6 +135,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [editFoto, setEditFoto] = useState<File | null>(null)
     const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
+    const [jenisPerawatanOptions, setJenisPerawatanOptions] = useState<{ value: string; label: string }[]>([])
 
     // dokumen
     const [dokumen, setDokumen]         = useState<DokumenArmada[]>([])
@@ -151,10 +160,10 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [perawatan, setPerawatan]         = useState<PerawatanArmada[]>([])
     const [rawatLoading, setRawatLoading]   = useState(false)
     const [showRawatForm, setShowRawatForm] = useState(false)
-    const [rawatForm, setRawatForm]         = useState({ tanggal: '', jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+    const [rawatForm, setRawatForm]         = useState({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
     const [addingRawat, setAddingRawat]     = useState(false)
     const [editRawatTarget, setEditRawatTarget] = useState<PerawatanArmada | null>(null)
-    const [editRawatForm, setEditRawatForm]     = useState({ tanggal: '', jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+    const [editRawatForm, setEditRawatForm]     = useState({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
     const [updatingRawat, setUpdatingRawat]     = useState(false)
     const [deleteRawatTarget, setDeleteRawatTarget] = useState<PerawatanArmada | null>(null)
     const [deletingRawat, setDeletingRawat]         = useState(false)
@@ -170,6 +179,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisOptions(res.data.map(j => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => setJenisOptions([]))
+    }, [])
+
+    useEffect(() => {
+        jenisPerawatanService.list(1, 100)
+            .then(res => setJenisPerawatanOptions(res.data.filter((j: JenisPerawatan) => j.aktif).map((j: JenisPerawatan) => ({ value: j.id_jenis_perawatan, label: j.nama }))))
+            .catch(() => setJenisPerawatanOptions([]))
     }, [])
 
     const fetchDokumen = useCallback(async () => {
@@ -218,7 +233,11 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await armadaService.update(id, {
@@ -295,12 +314,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
 
     // --- handlers perawatan ---
     const handleAddPerawatan = async () => {
-        if (!rawatForm.tanggal || !rawatForm.jenis_perawatan) return
+        if (!rawatForm.tanggal || !rawatForm.id_jenis_perawatan) return
         setAddingRawat(true)
         try {
             await perawatanArmadaService.create(id, {
                 tanggal:                  rawatForm.tanggal,
-                jenis_perawatan:          rawatForm.jenis_perawatan,
+                id_jenis_perawatan:       rawatForm.id_jenis_perawatan,
                 biaya:                    Number(rawatForm.biaya) || 0,
                 km_odometer:              rawatForm.km_odometer ? Number(rawatForm.km_odometer) : null,
                 status:                   rawatForm.status as 'terjadwal' | 'dalam_proses' | 'selesai',
@@ -308,7 +327,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 keterangan:               rawatForm.keterangan || null,
             })
             toast.push(<Notification type="success" title="Perawatan berhasil dicatat" />)
-            setRawatForm({ tanggal: '', jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+            setRawatForm({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
             setShowRawatForm(false); fetchPerawatan()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -316,12 +335,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const handleEditPerawatan = async () => {
-        if (!editRawatTarget) return
+        if (!editRawatTarget || !editRawatForm.tanggal || !editRawatForm.id_jenis_perawatan) return
         setUpdatingRawat(true)
         try {
             await perawatanArmadaService.update(id, editRawatTarget.id_perawatan, {
                 tanggal:                  editRawatForm.tanggal,
-                jenis_perawatan:          editRawatForm.jenis_perawatan,
+                id_jenis_perawatan:       editRawatForm.id_jenis_perawatan,
                 biaya:                    Number(editRawatForm.biaya) || 0,
                 km_odometer:              editRawatForm.km_odometer ? Number(editRawatForm.km_odometer) : null,
                 status:                   editRawatForm.status as 'terjadwal' | 'dalam_proses' | 'selesai',
@@ -347,12 +366,33 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         } finally { setDeletingRawat(false) }
     }
 
+    // Auto-fill Jadwal Servis Berikutnya dari interval — hanya saat form TAMBAH (bukan edit),
+    // sama seperti pola di PerawatanForm.tsx.
+    useEffect(() => {
+        if (!armada?.id_jenis_kendaraan || !rawatForm.id_jenis_perawatan || !rawatForm.tanggal) return
+
+        let aktif = true
+        intervalPerawatanService.resolusi({
+            id_jenis_perawatan: rawatForm.id_jenis_perawatan,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+        })
+            .then(res => {
+                if (aktif && res) {
+                    const jadwal = dayjs(rawatForm.tanggal).add(res.interval_hari, 'day').format('YYYY-MM-DD')
+                    setRawatForm(p => ({ ...p, jadwal_servis_berikutnya: jadwal }))
+                }
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [armada?.id_jenis_kendaraan, rawatForm.id_jenis_perawatan, rawatForm.tanggal])
+
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!armada) return <div className="p-6 text-red-500">Armada tidak ditemukan.</div>
 
     const initial       = armada.nopol?.charAt(0).toUpperCase() ?? 'A'
     const sortedDokumen = sortDokumen(dokumen)
     const urgentCount   = sortedDokumen.filter(d => getExpiryInfo(d.berlaku_sampai).urgent).length
+    const servisUrgentCount = perawatan.filter(p => getServisUrgent(p.jadwal_servis_berikutnya)).length
 
     return (
         <div className="flex flex-col gap-4">
@@ -373,6 +413,13 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
                     <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
                     <span><strong>{urgentCount} dokumen</strong> kadaluarsa atau hampir kadaluarsa — segera perbarui.</span>
+                </div>
+            )}
+
+            {servisUrgentCount > 0 && (
+                <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
+                    <span><strong>{servisUrgentCount} servis</strong> jatuh tempo dalam 30 hari — segera jadwalkan.</span>
                 </div>
             )}
 
@@ -534,7 +581,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                     </FormItem>
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-2 mt-6">
+                            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(armada); setErrors({}); setEditFoto(null) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
@@ -587,7 +634,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 )}
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
                                 onClick={() => { setShowDocForm(false); setDocFile(null); setDocForm({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' }) }}>
                                 Batal
@@ -680,8 +727,10 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                     onChange={date => setRawatForm(p => ({ ...p, tanggal: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
                             <FormItem label="Jenis Perawatan" asterisk>
-                                <Input placeholder="Contoh: Ganti Oli, Tune Up..." value={rawatForm.jenis_perawatan}
-                                    onChange={e => setRawatForm(p => ({ ...p, jenis_perawatan: e.target.value }))} />
+                                <Select isSearchable placeholder="Pilih jenis perawatan..."
+                                    options={jenisPerawatanOptions}
+                                    value={jenisPerawatanOptions.find(o => o.value === rawatForm.id_jenis_perawatan) ?? null}
+                                    onChange={opt => setRawatForm(p => ({ ...p, id_jenis_perawatan: opt?.value ?? '' }))} />
                             </FormItem>
                             <FormItem label="Biaya (Rp)">
                                 <Input prefix="Rp" placeholder="0"
@@ -711,10 +760,10 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 </FormItem>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => setShowRawatForm(false)}>Batal</Button>
                             <Button size="sm" variant="solid" loading={addingRawat}
-                                disabled={!rawatForm.tanggal || !rawatForm.jenis_perawatan}
+                                disabled={!rawatForm.tanggal || !rawatForm.id_jenis_perawatan}
                                 onClick={handleAddPerawatan}>Simpan</Button>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
@@ -766,7 +815,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                     setEditRawatTarget(p)
                                                     setEditRawatForm({
                                                         tanggal:                  p.tanggal,
-                                                        jenis_perawatan:          p.jenis_perawatan,
+                                                        id_jenis_perawatan:       p.id_jenis_perawatan ?? '',
                                                         biaya:                    String(p.biaya),
                                                         km_odometer:              p.km_odometer != null ? String(p.km_odometer) : '',
                                                         status:                   p.status,
@@ -881,7 +930,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         )}
                     </FormItem>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={() => { setEditDocTarget(null); setEditDocFile(null) }}>Batal</Button>
                     <Button variant="solid" loading={updatingDoc} onClick={handleEditDokumen}>Simpan</Button>
                 </div>
@@ -897,8 +946,10 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                             onChange={date => setEditRawatForm(p => ({ ...p, tanggal: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="Jenis Perawatan" asterisk>
-                        <Input value={editRawatForm.jenis_perawatan}
-                            onChange={e => setEditRawatForm(p => ({ ...p, jenis_perawatan: e.target.value }))} />
+                        <Select isSearchable placeholder="Pilih jenis perawatan..."
+                            options={jenisPerawatanOptions}
+                            value={jenisPerawatanOptions.find(o => o.value === editRawatForm.id_jenis_perawatan) ?? null}
+                            onChange={opt => setEditRawatForm(p => ({ ...p, id_jenis_perawatan: opt?.value ?? '' }))} />
                     </FormItem>
                     <FormItem label="Biaya (Rp)">
                         <Input prefix="Rp" placeholder="0"
@@ -928,9 +979,11 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         </FormItem>
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={() => setEditRawatTarget(null)}>Batal</Button>
-                    <Button variant="solid" loading={updatingRawat} onClick={handleEditPerawatan}>Simpan</Button>
+                    <Button variant="solid" loading={updatingRawat}
+                        disabled={!editRawatForm.tanggal || !editRawatForm.id_jenis_perawatan}
+                        onClick={handleEditPerawatan}>Simpan</Button>
                 </div>
             </Dialog>
 

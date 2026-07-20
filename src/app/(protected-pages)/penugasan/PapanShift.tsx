@@ -24,7 +24,7 @@ const jam = (t: string) => t.slice(0, 5) // "08:00:00" -> "08:00"
 
 type BarisSupir = { idSupir: string; nama: string; nopol: string | null }
 
-type PilihanSel = { supir: BarisSupir; tanggal: string }
+type PilihanSel = { supir: BarisSupir; tanggal: string; jadwal?: JadwalShift }
 
 export default function PapanShift({ idProyek }: { idProyek: string }) {
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
@@ -51,13 +51,17 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
     const [shiftFormErrors, setShiftFormErrors] = useState<Record<string, string>>({})
     const [shiftSaving, setShiftSaving]         = useState(false)
 
-    // Multi-select sel kosong papan (klik kotak) — key `${idSupir}|${tanggal}`
+    // Multi-select sel papan, kosong maupun terisi (klik kartu/kotak) — key `${idSupir}|${tanggal}`
     const [selCells, setSelCells]       = useState<Record<string, PilihanSel>>({})
     const [bulkMode, setBulkMode]       = useState(false)
+    const [bulkAksi, setBulkAksi]       = useState<'assign' | 'ganti'>('assign')
     const [downloading, setDownloading] = useState(false)
 
     const [deleteTarget, setDeleteTarget] = useState<JadwalShift | null>(null)
     const [deleting, setDeleting]         = useState(false)
+
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const [bulkDeleting, setBulkDeleting]     = useState(false)
 
     const fetchShiftList = useCallback(() => {
         shiftService.list(1, 100)
@@ -136,29 +140,43 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
     const countShift = (idSupir: string) => Object.keys(jadwalMap[idSupir] ?? {}).length
 
-    const selList = useMemo(() => Object.values(selCells), [selCells])
+    const selList   = useMemo(() => Object.values(selCells), [selCells])
+    const selKosong = useMemo(() => selList.filter(c => !c.jadwal), [selList])
+    const selTerisi = useMemo(() => selList.filter(c => !!c.jadwal), [selList])
 
-    const toggleSel = (supir: BarisSupir, tanggal: string) => {
+    const toggleSel = (supir: BarisSupir, tanggal: string, jadwal?: JadwalShift) => {
         const key = `${supir.idSupir}|${tanggal}`
         setSelCells(prev => {
             const next = { ...prev }
             if (next[key]) delete next[key]
-            else next[key] = { supir, tanggal }
+            else next[key] = { supir, tanggal, jadwal }
             return next
         })
     }
 
     const bukaBulkAssign = () => {
         setEditJadwal(null)
-        if (selList.length === 1) {
-            // satu sel → mode single: rentang tanggal masih bisa dipakai
+        setBulkAksi('assign')
+        if (selKosong.length === 1) {
+            // satu sel kosong → mode single: rentang tanggal masih bisa dipakai
             setBulkMode(false)
-            setPilihSupirId(selList[0].supir.idSupir)
-            setTanggalMulai(selList[0].tanggal)
-            setSampaiTanggal(selList[0].tanggal)
+            setPilihSupirId(selKosong[0].supir.idSupir)
+            setTanggalMulai(selKosong[0].tanggal)
+            setSampaiTanggal(selKosong[0].tanggal)
         } else {
             setBulkMode(true)
         }
+        setPilihShift(null)
+        setDialogOpen(true)
+    }
+
+    const bukaBulkGanti = () => {
+        setEditJadwal(null)
+        setBulkMode(true)
+        setBulkAksi('ganti')
+        setPilihSupirId('')
+        setTanggalMulai('')
+        setSampaiTanggal('')
         setPilihShift(null)
         setDialogOpen(true)
     }
@@ -210,10 +228,26 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             if (editJadwal) {
                 await jadwalShiftService.update(editJadwal.id_jadwal_shift, { id_shift: pilihShift })
                 toast.push(<Notification type="success" title="Shift berhasil diganti" />)
+            } else if (bulkMode && bulkAksi === 'ganti') {
+                let sukses = 0
+                const gagal: { tanggal?: string; alasan: string }[] = []
+                for (const c of selTerisi) {
+                    try {
+                        await jadwalShiftService.update(c.jadwal!.id_jadwal_shift, { id_shift: pilihShift })
+                        sukses++
+                    } catch (err) {
+                        gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
+                    }
+                }
+                if (gagal.length > 0) {
+                    setHasilGagal({ sukses, gagal })
+                } else {
+                    toast.push(<Notification type="success" title={`${sukses} shift berhasil diganti`} />)
+                }
             } else if (bulkMode) {
                 let sukses = 0
                 const gagal: { tanggal?: string; alasan: string }[] = []
-                for (const c of selList) {
+                for (const c of selKosong) {
                     try {
                         const hasil = await jadwalShiftService.create({
                             id_proyek: idProyek,
@@ -277,6 +311,25 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
         } finally {
             setDeleting(false)
         }
+    }
+
+    const handleBulkDelete = async () => {
+        setBulkDeleting(true)
+        let sukses = 0
+        const gagal: { tanggal?: string; alasan: string }[] = []
+        for (const c of selTerisi) {
+            try {
+                await jadwalShiftService.delete(c.jadwal!.id_jadwal_shift)
+                sukses++
+            } catch (err) {
+                gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
+            }
+        }
+        setBulkDeleting(false)
+        setBulkDeleteOpen(false)
+        if (gagal.length > 0) setHasilGagal({ sukses, gagal })
+        else toast.push(<Notification type="success" title={`${sukses} jadwal shift berhasil dihapus`} />)
+        fetchBoard()
     }
 
     // Ekspor papan sebagai .xlsx asli (tanpa library) — lihat utils/xlsx.util.ts
@@ -346,12 +399,26 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
             {selList.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
-                    <span className="text-sm font-semibold">{selList.length} tanggal terpilih</span>
+                    <span className="text-sm font-semibold">{selList.length} sel terpilih</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{selKosong.length} kosong · {selTerisi.length} terisi</span>
                     <div className="ml-auto flex items-center gap-2">
                         <Button size="xs" variant="plain" onClick={() => setSelCells({})}>Batal</Button>
-                        <Button size="xs" variant="solid" onClick={bukaBulkAssign}>
-                            Assign Shift
-                        </Button>
+                        {selTerisi.length > 0 && (
+                            <>
+                                <Button size="xs" variant="solid" className="bg-red-600 hover:bg-red-700"
+                                    onClick={() => setBulkDeleteOpen(true)}>
+                                    Hapus {selTerisi.length}
+                                </Button>
+                                <Button size="xs" variant="solid" onClick={bukaBulkGanti}>
+                                    Ganti Shift
+                                </Button>
+                            </>
+                        )}
+                        {selKosong.length > 0 && (
+                            <Button size="xs" variant="solid" onClick={bukaBulkAssign}>
+                                Assign Shift
+                            </Button>
+                        )}
                     </div>
                 </div>
             )}
@@ -415,16 +482,21 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                                             return (
                                                 <td key={key} className="px-1.5 py-2 border-b border-r border-gray-200 dark:border-gray-600 align-middle">
                                                     {j ? (
-                                                        <div className="rounded-lg border border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10 px-2 py-1.5">
+                                                        <div className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${
+                                                            terpilih
+                                                                ? 'border-blue-500 ring-2 ring-blue-400 dark:ring-blue-500 bg-blue-100 dark:bg-blue-500/20'
+                                                                : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
+                                                        }`}
+                                                            onClick={() => toggleSel(b, key, j)}>
                                                             <div className="flex items-center justify-between gap-1">
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
                                                                 <span className="flex items-center shrink-0">
                                                                     <button type="button" className="p-0.5 text-blue-500 hover:text-blue-700"
-                                                                        onClick={() => bukaGanti(b, j)}>
+                                                                        onClick={e => { e.stopPropagation(); bukaGanti(b, j) }}>
                                                                         <HiOutlinePencilAlt className="w-3.5 h-3.5" />
                                                                     </button>
                                                                     <button type="button" className="p-0.5 text-red-400 hover:text-red-600"
-                                                                        onClick={() => setDeleteTarget(j)}>
+                                                                        onClick={e => { e.stopPropagation(); setDeleteTarget(j) }}>
                                                                         <HiOutlineTrash className="w-3.5 h-3.5" />
                                                                     </button>
                                                                 </span>
@@ -457,10 +529,14 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
             {/* Dialog assign / ganti shift — dibuka dari sel papan */}
             <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} width={440}>
-                <h5 className="text-base font-semibold mb-1">{editJadwal ? 'Ganti Shift' : 'Assign Shift'}</h5>
+                <h5 className="text-base font-semibold mb-1">
+                    {editJadwal || (bulkMode && bulkAksi === 'ganti') ? 'Ganti Shift' : 'Assign Shift'}
+                </h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    {bulkMode
-                        ? `${selList.length} tanggal terpilih — shift yang sama diterapkan ke semuanya`
+                    {bulkMode && bulkAksi === 'ganti'
+                        ? `${selTerisi.length} shift terpilih akan diganti ke shift yang sama`
+                        : bulkMode
+                        ? `${selKosong.length} tanggal terpilih — shift yang sama diterapkan ke semuanya`
                         : <>
                             {barisSupir.find(x => x.idSupir === pilihSupirId)?.nama ?? ''}
                             {editJadwal && tanggalMulai && ` — ${dayjs(tanggalMulai).format('dddd, DD MMMM YYYY')}`}
@@ -494,7 +570,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                             Belum ada master Shift — klik tombol <strong>Tambah Shift</strong> di kanan atas papan.
                         </p>
                     )}
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={saving}
                             disabled={!pilihShift || (!editJadwal && !bulkMode && !tanggalMulai)}>
@@ -524,7 +600,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                         </FormItem>
                     </div>
                     <p className="text-xs text-gray-400 -mt-1">Jam selesai lebih kecil dari jam mulai = shift berakhir keesokan hari</p>
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setShiftFormOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={shiftSaving}>Simpan</Button>
                     </div>
@@ -573,6 +649,15 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                 onConfirm={handleDelete}
                 confirmButtonProps={{ loading: deleting }}>
                 <p>Hapus shift <strong>{deleteTarget?.shift_nama}</strong> tanggal <strong>{deleteTarget ? dayjs(deleteTarget.tanggal).format('DD MMM YYYY') : ''}</strong>?</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog isOpen={bulkDeleteOpen} type="danger" title="Hapus Jadwal Shift Terpilih"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                onClose={() => setBulkDeleteOpen(false)}
+                onCancel={() => setBulkDeleteOpen(false)}
+                onConfirm={handleBulkDelete}
+                confirmButtonProps={{ loading: bulkDeleting }}>
+                <p>Hapus <strong>{selTerisi.length}</strong> jadwal shift yang terpilih?</p>
             </ConfirmDialog>
         </div>
     )

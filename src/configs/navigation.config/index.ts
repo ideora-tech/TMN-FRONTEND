@@ -32,13 +32,6 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'tarifRute', path: '/tarif-rute', title: 'Tarif Rute',
-        translateKey: 'nav.tarifRute', icon: 'fileText',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['sales', 'manager', 'admin', 'superadmin'],
-        subMenu: [],
-    },
-    {
         key: 'penawaran', path: '/penawaran', title: 'Penawaran',
         translateKey: 'nav.penawaran', icon: 'notepad',
         type: NAV_ITEM_TYPE_ITEM,
@@ -99,13 +92,6 @@ const navigationConfig: NavigationTree[] = [
     {
         key: 'penugasan', path: '/penugasan', title: 'Penugasan',
         translateKey: 'nav.penugasan', icon: 'userCheck',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
-        key: 'jadwal', path: '/jadwal', title: 'Jadwal',
-        translateKey: 'nav.jadwal', icon: 'calendar',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
         subMenu: [],
@@ -242,6 +228,13 @@ const navigationConfig: NavigationTree[] = [
         translateKey: 'nav.jenisKendaraan', icon: 'carProfile',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ADMIN_UP,
+        subMenu: [],
+    },
+    {
+        key: 'interval-perawatan', path: '/interval-perawatan', title: 'Interval Perawatan',
+        translateKey: 'nav.intervalPerawatan', icon: 'repeat',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
     {

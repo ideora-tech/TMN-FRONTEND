@@ -36,6 +36,10 @@ interface DashboardStats {
             total: number
             items: { id_trip: string; nama_proyek: string; jam_berjalan: number }[]
         }
+        servisJatuhTempo: {
+            total: number
+            items: { id_armada: string; nopol: string; jenis_perawatan: string; jadwal_servis_berikutnya: string }[]
+        }
     }
 }
 
@@ -63,6 +67,7 @@ export default function HomePage() {
 
     const dokumenExpiring = stats.alerts?.dokumenExpiring
     const tripTerlambat   = stats.alerts?.tripTerlambat
+    const servisJatuhTempo = stats.alerts?.servisJatuhTempo
 
     const cards = [
         { label: 'Trip Berjalan',        value: stats.tripBerjalan,                        icon: <PiMapPinDuotone className="text-3xl text-blue-500" />,    bg: 'bg-blue-50 dark:bg-blue-500/10',    text: 'text-blue-600 dark:text-blue-400' },
@@ -119,6 +124,25 @@ export default function HomePage() {
                                     {item.nama_proyek}
                                 </Link>
                                 {' '}— berjalan {item.jam_berjalan} jam
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {!loading && servisJatuhTempo && servisJatuhTempo.total > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                    <div className="flex items-center gap-3">
+                        <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
+                        <span><strong>{servisJatuhTempo.total} armada</strong> perlu servis ≤30 hari</span>
+                    </div>
+                    <ul className="mt-2 ml-8 list-disc space-y-1">
+                        {servisJatuhTempo.items.map((item) => (
+                            <li key={item.id_armada}>
+                                <Link href={ROUTES.ARMADA_DETAIL(item.id_armada)} className="font-medium hover:underline">
+                                    {item.nopol}
+                                </Link>
+                                {' '}— {item.jenis_perawatan}, {dayjs(item.jadwal_servis_berikutnya).format('DD MMM YYYY')}
                             </li>
                         ))}
                     </ul>

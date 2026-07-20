@@ -7,7 +7,7 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { ruteService, Rute } from '@/services/rute.service'
@@ -19,11 +19,11 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 
 const STATUS_CLASS: Record<string, string> = {
-    draft:     'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
-    terkirim:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
+    terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
     negosiasi: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
     disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    ditolak:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+    ditolak: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,29 +31,29 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
-    draft:     ['terkirim'],
-    terkirim:  ['negosiasi', 'disetujui', 'ditolak'],
+    draft: ['terkirim'],
+    terkirim: ['negosiasi', 'disetujui', 'ditolak'],
     negosiasi: ['disetujui', 'ditolak'],
     disetujui: [],
-    ditolak:   [],
+    ditolak: [],
 }
 
 interface EditForm {
-    id_klien:          string
-    judul:             string
-    nilai_str:         string
+    id_klien: string
+    judul: string
+    nilai_str: string
     tanggal_penawaran: string
-    tanggal_berlaku:   string
-    catatan:           string
+    tanggal_berlaku: string
+    catatan: string
 }
 
 interface ItemForm {
-    id_rute:              string
-    id_jenis_kendaraan:   string
-    id_tarif_rute:        string | null
-    harga_satuan_str:     string
-    estimasi_ritase_str:  string
-    keterangan:           string
+    id_rute: string
+    id_jenis_kendaraan: string
+    id_tarif_rute: string | null
+    harga_satuan_str: string
+    estimasi_ritase_str: string
+    keterangan: string
 }
 
 type Option = { value: string; label: string }
@@ -65,13 +65,13 @@ const ITEM_KOSONG: ItemForm = {
 
 export default function PenawaranDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
-    const router  = useRouter()
+    const router = useRouter()
 
-    const [data, setData]       = useState<Penawaran | null>(null)
+    const [data, setData] = useState<Penawaran | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
-    const [saving, setSaving]   = useState(false)
-    const [form, setForm]       = useState<EditForm>({
+    const [saving, setSaving] = useState(false)
+    const [form, setForm] = useState<EditForm>({
         id_klien: '', judul: '', nilai_str: '', tanggal_penawaran: '', tanggal_berlaku: '', catatan: '',
     })
     const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({})
@@ -85,13 +85,13 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     useEffect(() => {
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
-            .catch(() => {})
+            .catch(() => { })
         jenisKendaraanService.list(1)
             .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
-            .catch(() => {})
+            .catch(() => { })
         klienService.list(1, 100)
             .then(res => setKlienOptions(res.data.map((k: Klien) => ({ value: k.id_klien, label: k.nama_klien }))))
-            .catch(() => {})
+            .catch(() => { })
     }, [])
 
     const totalItems = items.reduce(
@@ -167,20 +167,20 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             .then(d => {
                 setData(d)
                 setForm({
-                    id_klien:          d.id_klien ?? '',
-                    judul:             d.judul,
-                    nilai_str:         d.nilai_penawaran != null ? String(d.nilai_penawaran) : '',
+                    id_klien: d.id_klien ?? '',
+                    judul: d.judul,
+                    nilai_str: d.nilai_penawaran != null ? String(d.nilai_penawaran) : '',
                     tanggal_penawaran: d.tanggal_penawaran ?? '',
-                    tanggal_berlaku:   d.tanggal_berlaku ?? '',
-                    catatan:           d.catatan ?? '',
+                    tanggal_berlaku: d.tanggal_berlaku ?? '',
+                    catatan: d.catatan ?? '',
                 })
                 setItems((d.items ?? []).map(it => ({
-                    id_rute:             it.id_rute,
-                    id_jenis_kendaraan:  it.id_jenis_kendaraan,
-                    id_tarif_rute:       it.id_tarif_rute,
-                    harga_satuan_str:    String(Math.round(it.harga_satuan)),
+                    id_rute: it.id_rute,
+                    id_jenis_kendaraan: it.id_jenis_kendaraan,
+                    id_tarif_rute: it.id_tarif_rute,
+                    harga_satuan_str: String(Math.round(it.harga_satuan)),
                     estimasi_ritase_str: String(it.estimasi_ritase),
-                    keterangan:          it.keterangan ?? '',
+                    keterangan: it.keterangan ?? '',
                 })))
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
@@ -188,18 +188,22 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     }, [id])
 
     const handleSave = async () => {
-        if (!validate() || !validateItems()) return
+        if (!validate() || !validateItems()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await penawaranService.update(id, {
-                id_klien:          form.id_klien || null,
-                judul:             form.judul,
-                nilai_penawaran:   items.length > 0
+                id_klien: form.id_klien || null,
+                judul: form.judul,
+                nilai_penawaran: items.length > 0
                     ? undefined
                     : (form.nilai_str ? Number(form.nilai_str) : null),
                 tanggal_penawaran: form.tanggal_penawaran || null,
-                tanggal_berlaku:   form.tanggal_berlaku || null,
-                catatan:           form.catatan || null,
+                tanggal_berlaku: form.tanggal_berlaku || null,
+                catatan: form.catatan || null,
                 items: items.map(it => ({
                     id_rute: it.id_rute,
                     id_jenis_kendaraan: it.id_jenis_kendaraan,
@@ -211,12 +215,12 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             })
             setData(updated)
             setItems((updated.items ?? []).map(it => ({
-                id_rute:             it.id_rute,
-                id_jenis_kendaraan:  it.id_jenis_kendaraan,
-                id_tarif_rute:       it.id_tarif_rute,
-                harga_satuan_str:    String(Math.round(it.harga_satuan)),
+                id_rute: it.id_rute,
+                id_jenis_kendaraan: it.id_jenis_kendaraan,
+                id_tarif_rute: it.id_tarif_rute,
+                harga_satuan_str: String(Math.round(it.harga_satuan)),
                 estimasi_ritase_str: String(it.estimasi_ritase),
-                keterangan:          it.keterangan ?? '',
+                keterangan: it.keterangan ?? '',
             })))
             setEditing(false)
             setErrors({})
@@ -264,9 +268,9 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     }
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
-    if (!data)   return <div className="p-6 text-red-500">Penawaran tidak ditemukan.</div>
+    if (!data) return <div className="p-6 text-red-500">Penawaran tidak ditemukan.</div>
 
-    const initial      = data.nomor_penawaran.charAt(0).toUpperCase()
+    const initial = data.nomor_penawaran.charAt(0).toUpperCase()
     const nextStatuses = NEXT_STATUS[data.status] ?? []
 
     return (
@@ -390,8 +394,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {(
                                 [
-                                    { label: 'Nomor Penawaran',   value: data.nomor_penawaran },
-                                    { label: 'Judul',             value: data.judul },
+                                    { label: 'Nomor Penawaran', value: data.nomor_penawaran },
+                                    { label: 'Judul', value: data.judul },
                                     {
                                         label: 'Nilai Penawaran',
                                         value: data.nilai_penawaran != null
@@ -532,7 +536,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
                                         <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
                                     </div>
-                                    <Button type="button" size="sm" variant="solid" icon={<HiOutlinePlus />}
+                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
                                         onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
                                         Tambah Item
                                     </Button>
@@ -604,7 +608,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 )}
                             </div>
 
-                            <div className="flex justify-end gap-2 mt-6">
+                            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <Button
                                     type="button"
                                     variant="plain"

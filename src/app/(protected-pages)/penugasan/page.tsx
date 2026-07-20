@@ -111,6 +111,7 @@ export default function PenugasanPage() {
         setSelectedItemId: setRuteItemId,
         estimasi: estimasiOtomatis,
         namaRute: namaRuteEstimasi,
+        dataTidakLengkap: estimasiDataTidakLengkap,
     } = useEstimasiPenugasan(selectedProyek || null)
 
     useEffect(() => {
@@ -393,7 +394,11 @@ export default function PenugasanPage() {
 
     const handleSubmitCreate = async () => {
         if (!selectedProyek) return
-        if (!validateCreateForm()) return
+        if (!validateCreateForm()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setCreateSubmitting(true)
         try {
             const estimasi = createForm.estimasi_biaya ? Number(createForm.estimasi_biaya) : null
@@ -435,7 +440,11 @@ export default function PenugasanPage() {
 
     const handleSubmitEdit = async () => {
         if (!editTarget) return
-        if (!validateEditForm()) return
+        if (!validateEditForm()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setEditSubmitting(true)
         try {
             const estimasi = editForm.estimasi_biaya ? Number(editForm.estimasi_biaya) : null
@@ -767,8 +776,15 @@ export default function PenugasanPage() {
                                     value={pairSearch}
                                     onChange={e => setPairSearch(e.target.value)}
                                 />
-                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                <span className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
                                     {checkedIds.length} pasangan dipilih
+                                    {checkedIds.length > 0 && (
+                                        <button type="button"
+                                            className="text-blue-600 hover:underline dark:text-blue-400"
+                                            onClick={() => setCheckedIds([])}>
+                                            Batalkan
+                                        </button>
+                                    )}
                                 </span>
                             </div>
                             <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -840,11 +856,14 @@ export default function PenugasanPage() {
                                     {!estimasiManual && estimasiOtomatis != null && namaRuteEstimasi && (
                                         <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
                                     )}
+                                    {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
+                                        <p className="text-xs text-amber-500 mt-1">Data tarif rute belum lengkap — isi estimasi manual</p>
+                                    )}
                                 </FormItem>
                             </div>
                         </>
                     )}
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeCreateDialog}>Batal</Button>
                         <Button type="submit" variant="solid" loading={createSubmitting}
                             disabled={pasanganLoading || pasanganError || pasanganList.length === 0}>
@@ -921,7 +940,7 @@ export default function PenugasanPage() {
                             </FormItem>
                         </div>
                     )}
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeEditDialog}>Batal</Button>
                         <Button type="submit" variant="solid" loading={editSubmitting}
                             disabled={pasanganLoading || pasanganError}>

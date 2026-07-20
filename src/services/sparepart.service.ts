@@ -6,6 +6,8 @@ export interface Sparepart {
     id_perusahaan: string
     kode: string
     nama: string
+    id_kategori_sparepart: string | null
+    nama_kategori_sparepart: string | null
     satuan: string
     harga_standar: number
     stok: number
@@ -29,6 +31,7 @@ export interface SparepartMutasi {
 export type SparepartPayload = {
     kode: string
     nama: string
+    id_kategori_sparepart?: string | null
     satuan?: string
     harga_standar?: number
     aktif?: boolean
@@ -42,7 +45,7 @@ export type StokPayload = {
 }
 
 export const sparepartService = {
-    async list(params?: { page?: number; limit?: number; search?: string }) {
+    async list(params?: { page?: number; limit?: number; search?: string; id_kategori_sparepart?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.SPAREPART, { params })
         return data as { data: Sparepart[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

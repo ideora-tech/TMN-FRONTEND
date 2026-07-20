@@ -8,7 +8,7 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { supirService, Supir } from '@/services/supir.service'
-import { jadwalService, Jadwal } from '@/services/jadwal.service'
+import { tripService, Trip } from '@/services/trip.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 
@@ -24,11 +24,11 @@ const statusClass: Record<string, string> = {
     nonaktif: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
-const JADWAL_STATUS_CLASS: Record<string, string> = {
-    terjadwal:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    berjalan:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    selesai:    'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-    dibatalkan: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+const TRIP_STATUS_CLASS: Record<string, string> = {
+    belum_mulai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    berjalan:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:     'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+    dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 export default function SupirDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,10 +43,10 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const [saving, setSaving]   = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof Supir, string>>>({})
 
-    // jadwal history
-    const [jadwalList, setJadwalList]       = useState<Jadwal[]>([])
-    const [jadwalLoading, setJadwalLoading] = useState(false)
-    const [jadwalTotal, setJadwalTotal]     = useState(0)
+    // riwayat trip
+    const [tripList, setTripList]       = useState<Trip[]>([])
+    const [tripLoading, setTripLoading] = useState(false)
+    const [tripTotal, setTripTotal]     = useState(0)
 
     // penugasan (armada) history
     const [penugasanList, setPenugasanList]       = useState<Penugasan[]>([])
@@ -80,20 +80,20 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             .catch(() => {})
     }, [supir?.id_armada_default])
 
-    const fetchJadwal = useCallback(async () => {
-        setJadwalLoading(true)
+    const fetchTrip = useCallback(async () => {
+        setTripLoading(true)
         try {
-            const res = await jadwalService.listBySupir(id)
-            setJadwalList(res.data)
-            setJadwalTotal(res.meta.total)
+            const res = await tripService.list({ id_supir: id, limit: 50 })
+            setTripList(res.data)
+            setTripTotal(res.meta.total)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setJadwalLoading(false)
+            setTripLoading(false)
         }
     }, [id])
 
-    useEffect(() => { fetchJadwal() }, [fetchJadwal])
+    useEffect(() => { fetchTrip() }, [fetchTrip])
 
     const fetchPenugasan = useCallback(async () => {
         setPenugasanLoading(true)
@@ -124,7 +124,11 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     }
 
     const handleSave = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setSaving(true)
         try {
             const updated = await supirService.update(id, form)
@@ -144,8 +148,8 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const simWarning = daysLeft !== null && daysLeft < 30
     const initial    = supir.nama?.charAt(0).toUpperCase() ?? '?'
 
-    const aktif   = jadwalList.filter(j => j.status === 'berjalan').length
-    const selesai = jadwalList.filter(j => j.status === 'selesai').length
+    const aktif   = tripList.filter(t => t.status === 'berjalan').length
+    const selesai = tripList.filter(t => t.status === 'selesai').length
 
     return (
         <div className="flex flex-col gap-4">
@@ -172,10 +176,10 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             )}
 
             {/* Ringkasan statistik */}
-            {!jadwalLoading && jadwalTotal > 0 && (
+            {!tripLoading && tripTotal > 0 && (
                 <div className="grid grid-cols-3 gap-3">
                     {[
-                        { label: 'Total Jadwal', value: jadwalTotal, color: 'text-gray-700 dark:text-gray-200' },
+                        { label: 'Total Trip', value: tripTotal, color: 'text-gray-700 dark:text-gray-200' },
                         { label: 'Sedang Berjalan', value: aktif, color: 'text-emerald-600 dark:text-emerald-400' },
                         { label: 'Selesai', value: selesai, color: 'text-blue-600 dark:text-blue-400' },
                     ].map(({ label, value, color }) => (
@@ -284,7 +288,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         onChange={opt => setForm(p => ({ ...p, id_armada_default: opt?.value ?? null }))} />
                                 </FormItem>
                             </div>
-                            <div className="flex justify-end gap-2 mt-6">
+                            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(supir); setErrors({}) }}>Batal</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
@@ -354,16 +358,16 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                 )}
             </Card>
 
-            {/* Riwayat Jadwal */}
+            {/* Riwayat Trip */}
             <Card>
                 <div className="mb-1">
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Jadwal Perjalanan</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Semua jadwal yang pernah ditugaskan ke supir ini</p>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Trip</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Semua trip yang pernah ditugaskan ke supir ini</p>
                 </div>
 
-                {jadwalLoading ? (
+                {tripLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
-                ) : jadwalList.length === 0 ? (
+                ) : tripList.length === 0 ? (
                     <p className="text-gray-400 text-sm py-6 text-center">Belum ada riwayat perjalanan</p>
                 ) : (
                     <div className="overflow-x-auto mt-4">
@@ -371,36 +375,36 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Tiba</th>
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-in</th>
+                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-out</th>
                                     <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {jadwalList.map(j => (
-                                    <tr key={j.id_jadwal}>
+                                {tripList.map(t => (
+                                    <tr key={t.id_trip}>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                            {j.tgl_keberangkatan
-                                                ? dayjs(j.tgl_keberangkatan).format('DD MMM YYYY HH:mm')
-                                                : <span className="text-gray-400">—</span>}
-                                        </td>
-                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
-                                            {j.estimasi_tiba
-                                                ? dayjs(j.estimasi_tiba).format('DD MMM YYYY HH:mm')
-                                                : <span className="text-gray-400">—</span>}
+                                            {t.waktu_berangkat ? dayjs(t.waktu_berangkat).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
-                                            {j.rute ?? <span className="text-gray-400">—</span>}
+                                            {t.rute ?? <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+                                            {t.waktu_checkin ? dayjs(t.waktu_checkin).format('DD MMM HH:mm') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+                                            {t.waktu_checkout ? dayjs(t.waktu_checkout).format('DD MMM HH:mm') : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4">
-                                            <Tag className={`text-xs font-semibold ${JADWAL_STATUS_CLASS[j.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {j.status}
+                                            <Tag className={`text-xs font-semibold ${TRIP_STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {t.status.replace('_', ' ')}
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
                                             <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.JADWAL_DETAIL(j.id_jadwal))} />
+                                                onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))} />
                                         </td>
                                     </tr>
                                 ))}

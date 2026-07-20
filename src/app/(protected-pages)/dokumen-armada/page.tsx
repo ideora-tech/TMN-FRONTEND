@@ -5,7 +5,7 @@ import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX, HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { dokumenArmadaService, DokumenArmadaWithArmada } from '@/services/dokumenArmada.service'
@@ -225,7 +225,7 @@ export default function DokumenArmadaPage() {
                     <h3 className="font-bold">Dokumen Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola dokumen seluruh armada — STNK, KIR, Asuransi, dll</p>
                 </div>
-                <Button variant="solid" icon={<HiOutlinePlus />} onClick={openAdd}>Tambah Dokumen</Button>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={openAdd}>Tambah Dokumen</Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
@@ -330,7 +330,7 @@ export default function DokumenArmadaPage() {
                         )}
                     </FormItem>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={closeForm}>Batal</Button>
                     <Button variant="solid" loading={saving}
                         disabled={!form.id_armada || !form.jenis_dokumen || (!editTarget && !file)}

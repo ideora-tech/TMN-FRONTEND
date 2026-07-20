@@ -22,7 +22,11 @@ export default function VendorBaruPage() {
     }
 
     const handleSubmit = async () => {
-        if (!validate()) return
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
         setLoading(true)
         try {
             await vendorService.create({
@@ -82,7 +86,7 @@ export default function VendorBaruPage() {
                         </FormItem>
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>

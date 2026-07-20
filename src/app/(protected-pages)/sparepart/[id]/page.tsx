@@ -10,6 +10,7 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, Sparepart, SparepartMutasi } from '@/services/sparepart.service'
+import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
 
 type Option = { value: 'masuk' | 'penyesuaian'; label: string }
 
@@ -31,7 +32,8 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
     const [sparepart, setSparepart] = useState<Sparepart | null>(null)
     const [loading, setLoading]     = useState(true)
     const [editing, setEditing]     = useState(false)
-    const [form, setForm]           = useState({ kode: '', nama: '', satuan: '', harga_standar: '', aktif: true })
+    const [form, setForm]           = useState({ kode: '', nama: '', id_kategori_sparepart: '', satuan: '', harga_standar: '', aktif: true })
+    const [kategoriOptions, setKategoriOptions] = useState<{ value: string; label: string }[]>([])
     const [saving, setSaving]       = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [deleting, setDeleting]     = useState(false)
@@ -47,7 +49,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
         try {
             const sp = await sparepartService.get(id)
             setSparepart(sp)
-            setForm({ kode: sp.kode, nama: sp.nama, satuan: sp.satuan, harga_standar: String(sp.harga_standar), aktif: sp.aktif })
+            setForm({ kode: sp.kode, nama: sp.nama, id_kategori_sparepart: sp.id_kategori_sparepart ?? '', satuan: sp.satuan, harga_standar: String(sp.harga_standar), aktif: sp.aktif })
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -67,6 +69,12 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
         }
     }, [id])
 
+    useEffect(() => {
+        kategoriSparepartService.list(1, 100)
+            .then(res => setKategoriOptions(res.data.filter(k => k.aktif).map((k: KategoriSparepart) => ({ value: k.id_kategori_sparepart, label: k.nama }))))
+            .catch(() => {})
+    }, [])
+
     useEffect(() => { fetchSparepart() }, [fetchSparepart])
     useEffect(() => { fetchMutasi() }, [fetchMutasi])
 
@@ -77,6 +85,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
             const updated = await sparepartService.update(id, {
                 kode: form.kode,
                 nama: form.nama,
+                id_kategori_sparepart: form.id_kategori_sparepart || null,
                 satuan: form.satuan || 'pcs',
                 harga_standar: Number(form.harga_standar) || 0,
                 aktif: form.aktif,
@@ -163,6 +172,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                         {([
                             { label: 'Kode',          value: <span className="font-mono">{sparepart.kode}</span> },
                             { label: 'Nama',          value: sparepart.nama },
+                            { label: 'Kategori', value: sparepart.nama_kategori_sparepart ?? <span className="text-gray-400">—</span> },
                             { label: 'Satuan',        value: sparepart.satuan },
                             { label: 'Harga Standar', value: formatRupiah(sparepart.harga_standar) },
                             {
@@ -203,6 +213,12 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                             <FormItem label="Nama" asterisk>
                                 <Input value={form.nama} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
                             </FormItem>
+                            <FormItem label="Kategori">
+                                <Select isSearchable isClearable placeholder="Pilih kategori (opsional)..."
+                                    options={kategoriOptions}
+                                    value={kategoriOptions.find(o => o.value === form.id_kategori_sparepart) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_kategori_sparepart: (opt as { value: string } | null)?.value ?? '' }))} />
+                            </FormItem>
                             <FormItem label="Satuan">
                                 <Input placeholder="pcs" value={form.satuan} onChange={e => setForm(p => ({ ...p, satuan: e.target.value }))} />
                             </FormItem>
@@ -218,7 +234,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                     onChange={opt => opt && setForm(p => ({ ...p, aktif: (opt as { value: boolean }).value }))} />
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => setEditing(false)}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
@@ -295,7 +311,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                     <Input textArea placeholder="Contoh: Pembelian rutin / stok opname" value={stokForm.keterangan}
                         onChange={e => setStokForm(p => ({ ...p, keterangan: e.target.value }))} />
                 </FormItem>
-                <div className="flex justify-end gap-2 mt-4">
+                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={() => setStokOpen(false)}>Batal</Button>
                     <Button variant="solid" loading={stokSaving} disabled={!Number(stokForm.qty)} onClick={handleTambahStok}>Simpan</Button>
                 </div>

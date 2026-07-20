@@ -157,7 +157,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     onChange={date => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
                             </FormItem>
                         </div>
-                        <div className="flex justify-end gap-2 mt-6">
+                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => {
                                 setEditing(false)
                                 setForm({ ...data, nilai_kontrak_str: data.nilai_kontrak ? String(data.nilai_kontrak) : '' })

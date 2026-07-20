@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { ProyekRutePayload } from '@/services/proyekRute.service'
 
 export interface Project {
     id_proyek: string
@@ -13,8 +14,8 @@ export interface Project {
 }
 
 export const projectService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15) {
+        const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { page, limit } })
         return data as { data: Project[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async listByKlien(idKlien: string, page = 1, limit = 50) {
@@ -25,7 +26,7 @@ export const projectService = {
         const { data } = await axios.get(API_ENDPOINTS.PROYEK_DETAIL(id))
         return data.data as Project
     },
-    async create(payload: Omit<Project, 'id_proyek' | 'status'> & { status?: string }) {
+    async create(payload: Omit<Project, 'id_proyek' | 'status'> & { status?: string; id_penawaran?: string; rute?: ProyekRutePayload[] }) {
         const { data } = await axios.post(API_ENDPOINTS.PROYEK, payload)
         return data.data as Project
     },

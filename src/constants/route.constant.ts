@@ -20,9 +20,20 @@ export const ROUTES = {
     JENIS_PERAWATAN:        '/jenis-perawatan',
     JENIS_PERAWATAN_BARU:   '/jenis-perawatan/baru',
     JENIS_PERAWATAN_DETAIL: (id: string) => `/jenis-perawatan/${id}`,
+    INTERVAL_PERAWATAN:        '/interval-perawatan',
+    INTERVAL_PERAWATAN_BARU:   '/interval-perawatan/baru',
+    INTERVAL_PERAWATAN_DETAIL: (id: string) => `/interval-perawatan/${id}`,
     SPAREPART:              '/sparepart',
     SPAREPART_BARU:         '/sparepart/baru',
     SPAREPART_DETAIL:       (id: string) => `/sparepart/${id}`,
+
+    KATEGORI_SPAREPART:        '/kategori-sparepart',
+    KATEGORI_SPAREPART_BARU:   '/kategori-sparepart/baru',
+    KATEGORI_SPAREPART_DETAIL: (id: string) => `/kategori-sparepart/${id}`,
+
+    PAKET_PERAWATAN_SPAREPART:        '/paket-perawatan-sparepart',
+    PAKET_PERAWATAN_SPAREPART_BARU:   '/paket-perawatan-sparepart/baru',
+    PAKET_PERAWATAN_SPAREPART_DETAIL: (id: string) => `/paket-perawatan-sparepart/${id}`,
 
     SHIFT:        '/shift',
     SHIFT_BARU:   '/shift/baru',
@@ -35,9 +46,6 @@ export const ROUTES = {
     VENDOR:        '/vendor',
     VENDOR_BARU:   '/vendor/baru',
     VENDOR_DETAIL: (id: string) => `/vendor/${id}`,
-
-    JADWAL:        '/jadwal',
-    JADWAL_DETAIL: (id: string) => `/jadwal/${id}`,
 
     TRIP:        '/trip',
     TRIP_DETAIL: (id: string) => `/trip/${id}`,
@@ -127,10 +135,6 @@ export const ROUTES = {
 
     PENUGASAN_VENDOR:      '/penugasan-vendor',
     PENUGASAN_VENDOR_BARU: '/penugasan-vendor/baru',
-
-    TARIF_RUTE:        '/tarif-rute',
-    TARIF_RUTE_BARU:   '/tarif-rute/baru',
-    TARIF_RUTE_DETAIL: (id: string) => `/tarif-rute/${id}`,
 
     PARAMETER_BOK:        '/parameter-bok',
     PARAMETER_BOK_BARU:   '/parameter-bok/baru',

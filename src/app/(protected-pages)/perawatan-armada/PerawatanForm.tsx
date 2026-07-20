@@ -12,6 +12,8 @@ import { perawatanArmadaService, PerawatanArmada, StatusPerawatan, PerawatanSpar
 import { jenisPerawatanService } from '@/services/jenisPerawatan.service'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { intervalPerawatanService } from '@/services/intervalPerawatan.service'
+import { paketPerawatanSparepartService } from '@/services/paketPerawatanSparepart.service'
 
 type Option = { value: string; label: string }
 
@@ -49,6 +51,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
     const [saving, setSaving]   = useState(false)
 
     const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
+    const [armadaList, setArmadaList] = useState<Armada[]>([])
     const [jenisOptions, setJenisOptions]   = useState<Option[]>([])
     const [sparepartList, setSparepartList] = useState<Sparepart[]>([])
 
@@ -59,6 +62,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             sparepartService.list({ page: 1, limit: 100 }),
         ]).then(([armada, jenis, sp]) => {
             setArmadaOptions(armada.data.map((a: Armada) => ({ value: a.id_armada, label: a.nopol })))
+            setArmadaList(armada.data)
             setJenisOptions(jenis.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_perawatan, label: j.nama })))
             setSparepartList(sp.data.filter(s => s.aktif))
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
@@ -87,6 +91,53 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [isEdit, editId, editArmadaId])
+
+    // Auto-fill Jadwal Servis Berikutnya dari interval — hanya saat CREATE (isEdit=false),
+    // supaya tidak menimpa jadwal yang sudah tersimpan saat user membuka form edit.
+    useEffect(() => {
+        if (isEdit) return
+        const armada = armadaList.find(a => a.id_armada === form.id_armada)
+        if (!armada?.id_jenis_kendaraan || !form.id_jenis_perawatan || !form.tanggal) return
+
+        let aktif = true
+        intervalPerawatanService.resolusi({
+            id_jenis_perawatan: form.id_jenis_perawatan,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+        })
+            .then(res => {
+                if (aktif && res) {
+                    const jadwal = dayjs(form.tanggal).add(res.interval_hari, 'day').format('YYYY-MM-DD')
+                    setForm(p => ({ ...p, jadwal_servis_berikutnya: jadwal }))
+                }
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [isEdit, form.id_armada, form.id_jenis_perawatan, form.tanggal, armadaList])
+
+    // Auto-fill daftar sparepart dari paket standar — hanya saat CREATE dan list masih kosong,
+    // supaya tidak menimpa part yang sudah ditambah manual.
+    useEffect(() => {
+        if (isEdit || items.length > 0) return
+        const armada = armadaList.find(a => a.id_armada === form.id_armada)
+        if (!armada?.id_jenis_kendaraan || !form.id_jenis_perawatan) return
+
+        let aktif = true
+        paketPerawatanSparepartService.resolusi({
+            id_jenis_perawatan: form.id_jenis_perawatan,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+        })
+            .then(res => {
+                if (aktif && res.length > 0) {
+                    setItems(res.map(r => ({
+                        id_sparepart: r.id_sparepart,
+                        qty: String(r.qty_standar),
+                        harga: String(r.harga_standar),
+                    })))
+                }
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [isEdit, form.id_armada, form.id_jenis_perawatan, armadaList, items.length])
 
     const sparepartOptions: Option[] = sparepartList.map(s => ({
         value: s.id_sparepart,
@@ -257,7 +308,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PERAWATAN_ARMADA)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={saving} disabled={!canSubmit}>Simpan</Button>
                     </div>

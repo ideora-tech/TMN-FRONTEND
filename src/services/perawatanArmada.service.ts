@@ -52,7 +52,7 @@ export interface PerawatanArmadaWithArmada extends PerawatanArmada {
 }
 
 export const perawatanArmadaService = {
-    async listAll(params?: { page?: number; limit?: number; id_armada?: string; status?: StatusPerawatan | '' }) {
+    async listAll(params?: { page?: number; limit?: number; id_armada?: string; status?: StatusPerawatan | ''; jatuh_tempo?: '1' }) {
         const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_ARMADA, { params })
         return data as { data: PerawatanArmadaWithArmada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
