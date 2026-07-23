@@ -11,7 +11,7 @@ import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { armadaService, Armada } from '@/services/armada.service'
 import { dokumenArmadaService, DokumenArmada } from '@/services/dokumenArmada.service'
-import { perawatanArmadaService, PerawatanArmada } from '@/services/perawatanArmada.service'
+import { perawatanArmadaService, PerawatanArmada, PrediksiPerawatanItem } from '@/services/perawatanArmada.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
@@ -111,6 +111,13 @@ function getServisUrgent(jadwal: string | null): boolean {
     return days <= 30
 }
 
+const PREDIKSI_STATUS_META: Record<string, { label: string; className: string }> = {
+    lewat_jatuh_tempo: { label: 'Lewat Jatuh Tempo', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' },
+    segera:            { label: 'Segera',            className: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' },
+    aman:               { label: 'Aman',              className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' },
+    belum_pernah:       { label: 'Belum Pernah',      className: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' },
+}
+
 function sortDokumen(list: DokumenArmada[]): DokumenArmada[] {
     return [...list].sort((a, b) => {
         if (!a.berlaku_sampai && !b.berlaku_sampai) return 0
@@ -155,6 +162,10 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [penugasanList, setPenugasanList]       = useState<Penugasan[]>([])
     const [penugasanLoading, setPenugasanLoading] = useState(false)
     const [supirMap, setSupirMap]                 = useState<Record<string, Supir>>({})
+
+    // prediksi perawatan
+    const [prediksi, setPrediksi]                 = useState<PrediksiPerawatanItem[]>([])
+    const [prediksiLoading, setPrediksiLoading]   = useState(false)
 
     // perawatan
     const [perawatan, setPerawatan]         = useState<PerawatanArmada[]>([])
@@ -201,6 +212,13 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         finally { setRawatLoading(false) }
     }, [id])
 
+    const fetchPrediksi = useCallback(async () => {
+        setPrediksiLoading(true)
+        try { setPrediksi(await perawatanArmadaService.prediksiPerawatan(id)) }
+        catch (err) { toast.push(<Notification type="danger" title={parseApiError(err)} />) }
+        finally { setPrediksiLoading(false) }
+    }, [id])
+
     const fetchPenugasan = useCallback(async () => {
         setPenugasanLoading(true)
         try {
@@ -220,6 +238,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
 
     useEffect(() => { fetchDokumen() }, [fetchDokumen])
     useEffect(() => { fetchPerawatan() }, [fetchPerawatan])
+    useEffect(() => { fetchPrediksi() }, [fetchPrediksi])
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
 
     // --- handlers armada ---
@@ -328,7 +347,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             })
             toast.push(<Notification type="success" title="Perawatan berhasil dicatat" />)
             setRawatForm({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
-            setShowRawatForm(false); fetchPerawatan()
+            setShowRawatForm(false); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setAddingRawat(false) }
@@ -348,7 +367,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 keterangan:               editRawatForm.keterangan || null,
             })
             toast.push(<Notification type="success" title="Perawatan berhasil diperbarui" />)
-            setEditRawatTarget(null); fetchPerawatan()
+            setEditRawatTarget(null); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setUpdatingRawat(false) }
@@ -360,7 +379,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         try {
             await perawatanArmadaService.delete(id, deleteRawatTarget.id_perawatan)
             toast.push(<Notification type="success" title="Data perawatan berhasil dihapus" />)
-            setDeleteRawatTarget(null); fetchPerawatan()
+            setDeleteRawatTarget(null); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setDeletingRawat(false) }
@@ -699,6 +718,56 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                     }} />
                                                 <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
                                                     onClick={() => setDeleteDocTarget(d)} />
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            {/* Prediksi Perawatan */}
+            <Card>
+                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Prediksi Perawatan</p>
+                <p className="text-xs text-gray-400 mb-4">Perkiraan servis berikutnya berdasarkan interval perawatan &amp; riwayat servis armada ini</p>
+
+                {prediksiLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : prediksi.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada aturan interval perawatan untuk jenis kendaraan armada ini</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Jenis Perawatan</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Servis Terakhir</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Perkiraan Berikutnya</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Status</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Sparepart Standar</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {prediksi.map(item => {
+                                    const meta = PREDIKSI_STATUS_META[item.status]
+                                    return (
+                                        <tr key={item.id_jenis_perawatan}>
+                                            <td className="py-3 px-3 font-medium text-gray-800 dark:text-gray-200">{item.nama_jenis_perawatan}</td>
+                                            <td className="py-3 px-3 text-xs text-gray-500 whitespace-nowrap">
+                                                {item.tanggal_servis_terakhir ? dayjs(item.tanggal_servis_terakhir).format('DD MMM YYYY') : <span className="text-gray-300">—</span>}
+                                            </td>
+                                            <td className="py-3 px-3 text-xs text-gray-500 whitespace-nowrap">
+                                                {item.jadwal_servis_berikutnya ? dayjs(item.jadwal_servis_berikutnya).format('DD MMM YYYY') : <span className="text-gray-300">—</span>}
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${meta.className}`}>{meta.label}</span>
+                                            </td>
+                                            <td className="py-3 px-3 text-xs text-gray-500">
+                                                {item.sparepart_standar.length === 0
+                                                    ? <span className="text-gray-300">—</span>
+                                                    : item.sparepart_standar.map(sp => sp.nama_sparepart).join(', ')}
                                             </td>
                                         </tr>
                                     )

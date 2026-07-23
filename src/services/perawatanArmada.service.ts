@@ -51,6 +51,27 @@ export interface PerawatanArmadaWithArmada extends PerawatanArmada {
     armada_merk: string | null
 }
 
+export type StatusPrediksi = 'lewat_jatuh_tempo' | 'segera' | 'aman' | 'belum_pernah'
+
+export interface PrediksiSparepartStandar {
+    id_sparepart: string
+    nama_sparepart: string
+    satuan_sparepart: string
+    qty_standar: number
+    harga_standar: number
+}
+
+export interface PrediksiPerawatanItem {
+    id_jenis_perawatan: string
+    nama_jenis_perawatan: string
+    interval_hari: number
+    tanggal_servis_terakhir: string | null
+    jadwal_servis_berikutnya: string | null
+    status: StatusPrediksi
+    sisa_hari: number | null
+    sparepart_standar: PrediksiSparepartStandar[]
+}
+
 export const perawatanArmadaService = {
     async listAll(params?: { page?: number; limit?: number; id_armada?: string; status?: StatusPerawatan | ''; jatuh_tempo?: '1' }) {
         const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_ARMADA, { params })
@@ -74,5 +95,9 @@ export const perawatanArmadaService = {
     },
     async delete(idArmada: string, id: string) {
         await axios.delete(API_ENDPOINTS.ARMADA_PERAWATAN_DETAIL(idArmada, id))
+    },
+    async prediksiPerawatan(idArmada: string, days = 30) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_PREDIKSI_PERAWATAN(idArmada), { params: { days } })
+        return data.data as PrediksiPerawatanItem[]
     },
 }

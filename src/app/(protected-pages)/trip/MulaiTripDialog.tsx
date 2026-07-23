@@ -6,7 +6,7 @@ import { parseApiError } from '@/utils/error.util'
 import { tripService } from '@/services/trip.service'
 import { projectService } from '@/services/project.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
-import { ruteService, Rute } from '@/services/rute.service'
+import { proyekRuteService } from '@/services/proyekRute.service'
 import { supirService } from '@/services/supir.service'
 import { armadaService } from '@/services/armada.service'
 import { supirVendorService } from '@/services/supirVendor.service'
@@ -39,15 +39,26 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setPilihProyek(idProyekTerkunci ?? '')
         setPilihPenugasan(idPenugasanTerkunci ?? '')
         setPilihRute(null)
-        ruteService.list({ limit: 100 })
-            .then(res => setRuteOptions((res.data as Rute[]).map(r => ({ value: r.id_rute, label: r.nama_rute }))))
-            .catch(() => {})
         if (!terkunci) {
             projectService.list(1, 100)
                 .then(res => setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: p.nama_proyek }))))
                 .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
         }
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
+
+    const idProyekEfektif = idProyekTerkunci ?? pilihProyek
+
+    useEffect(() => {
+        if (!isOpen || !idProyekEfektif) {
+            setRuteOptions([])
+            setPilihRute(null)
+            return
+        }
+        setPilihRute(null)
+        proyekRuteService.list(idProyekEfektif)
+            .then(rows => setRuteOptions(rows.map(r => ({ value: r.id_rute, label: r.nama_rute ?? r.kode_rute ?? r.id_rute }))))
+            .catch(() => setRuteOptions([]))
+    }, [isOpen, idProyekEfektif])
 
     const muatPenugasan = useCallback(async (idProyek: string) => {
         setMemuat(true)
@@ -132,7 +143,9 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                     </>
                 )}
                 <FormItem label="Rute (opsional)">
-                    <Select isClearable placeholder="Pilih rute..."
+                    <Select isClearable
+                        isDisabled={!idProyekEfektif}
+                        placeholder={!idProyekEfektif ? 'Pilih proyek dahulu...' : ruteOptions.length === 0 ? 'Belum ada rute terdaftar untuk proyek ini' : 'Pilih rute...'}
                         options={ruteOptions}
                         value={ruteOptions.find(o => o.value === pilihRute) ?? null}
                         onChange={opt => setPilihRute((opt as Option | null)?.value ?? null)} />
