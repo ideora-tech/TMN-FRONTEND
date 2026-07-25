@@ -21,7 +21,6 @@ export const onSignInWithCredentials = async (
     } catch (error) {
         if (error instanceof AuthError) {
             /** Customize error message based on AuthError */
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             switch (error.type) {
                 case 'CredentialsSignin':
                     return { error: 'Username atau password salah' }

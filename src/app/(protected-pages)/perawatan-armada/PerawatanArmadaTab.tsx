@@ -109,7 +109,12 @@ export default function PerawatanArmadaTab() {
         {
             header: 'Armada', accessorKey: 'armada_nopol', size: 130,
             cell: ({ row }: CellContext<PerawatanArmadaWithArmada, unknown>) => (
-                <span className="font-mono text-xs font-semibold">{row.original.armada_nopol ?? '—'}</span>
+                <span
+                    className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    onClick={() => router.push(ROUTES.ARMADA_DETAIL(row.original.id_armada))}
+                >
+                    {row.original.armada_nopol ?? '—'}
+                </span>
             ),
         },
         {

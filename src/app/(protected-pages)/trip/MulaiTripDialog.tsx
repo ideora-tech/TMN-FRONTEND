@@ -17,7 +17,7 @@ type Option = { value: string; label: string }
 type Props = {
     isOpen: boolean
     onClose: () => void
-    onSukses: () => void
+    onSukses: (idProyek: string) => void
     idPenugasanTerkunci?: string
     idProyekTerkunci?: string
 }
@@ -46,7 +46,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         }
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
 
-    const idProyekEfektif = idProyekTerkunci ?? pilihProyek
+    const idProyekEfektif = pilihProyek || idProyekTerkunci || ''
 
     useEffect(() => {
         if (!isOpen || !idProyekEfektif) {
@@ -109,7 +109,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         try {
             await tripService.mulai({ id_penugasan: pilihPenugasan, id_rute: pilihRute })
             toast.push(<Notification type="success" title="Trip berhasil dimulai" />)
-            onSukses()
+            onSukses(idProyekEfektif)
             onClose()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)

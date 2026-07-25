@@ -1,5 +1,5 @@
 ﻿'use client'
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification, Tag, Dialog, Spinner, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -89,15 +89,15 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
             .finally(() => setLoading(false))
     }, [id])
 
-    const fetchTarif = () => {
+    const fetchTarif = useCallback(() => {
         setTarifLoading(true)
         tarifRuteService.list({ id_rute: id, limit: 100 })
             .then(res => setTarifList(res.data ?? []))
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setTarifLoading(false))
-    }
+    }, [id])
 
-    useEffect(() => { fetchTarif() }, [id])
+    useEffect(() => { fetchTarif() }, [fetchTarif])
 
     const openAddTarif = () => {
         setAddTarifForm(EMPTY_TARIF_FIELDS_STATE)

@@ -42,6 +42,14 @@ const PENUGASAN_STATUS_CLASS: Record<string, string> = {
     batal:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
+function getServisBadge(tanggal: string | null): { label: string; className: string } | null {
+    if (!tanggal) return null
+    const days = Math.ceil((new Date(tanggal).getTime() - Date.now()) / 86400000)
+    if (days < 0)  return { label: 'Lewat jadwal', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
+    if (days <= 30) return { label: `${days} hari lagi`, className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' }
+    return null
+}
+
 type ArmadaStatus = 'tersedia' | 'digunakan' | 'perawatan' | 'tidak_aktif'
 
 const STATUS_OPTIONS = [
@@ -1023,9 +1031,17 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                             </Tag>
                                         </td>
                                         <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
-                                            {p.jadwal_servis_berikutnya
-                                                ? dayjs(p.jadwal_servis_berikutnya).format('DD MMM YYYY')
-                                                : <span className="text-gray-300">—</span>}
+                                            {p.jadwal_servis_berikutnya ? (
+                                                <div>
+                                                    <p className="text-xs">{dayjs(p.jadwal_servis_berikutnya).format('DD MMM YYYY')}</p>
+                                                    {(() => {
+                                                        const badge = getServisBadge(p.jadwal_servis_berikutnya)
+                                                        return badge && <Tag className={`text-xs font-semibold mt-1 ${badge.className}`}>{badge.label}</Tag>
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-300">—</span>
+                                            )}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-1">

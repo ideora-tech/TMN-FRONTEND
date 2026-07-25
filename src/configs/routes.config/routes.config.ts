@@ -36,7 +36,6 @@ export const protectedRoutes: Routes = {
     ...listRoute('rute', 'rute'),
     '/trip': { key: 'trip', authority: [] },
     '/trip/[id]': { key: 'trip', authority: [], dynamicRoute: true },
-    '/trip/proyek/[id]': { key: 'trip', authority: [], dynamicRoute: true },
     ...listRoute('penugasan', 'penugasan'),
     '/penugasan-vendor': { key: 'penugasan-vendor', authority: [] },
     '/penugasan-vendor/baru': { key: 'penugasan-vendor', authority: [] },
