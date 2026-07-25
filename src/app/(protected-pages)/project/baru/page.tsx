@@ -85,6 +85,10 @@ export default function ProjectBaruPage() {
             .catch(() => {})
     }, [fromPenawaran])
 
+    useEffect(() => {
+        if (form.id_klien && manualRuteList.length === 0) setShowManualRuteForm(true)
+    }, [form.id_klien, manualRuteList.length])
+
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
         if (!form.id_klien)           e.id_klien    = 'Klien wajib dipilih'

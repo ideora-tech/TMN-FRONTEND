@@ -99,7 +99,8 @@ export const API_ENDPOINTS = {
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
 
     // Trip
-    TRIP:          '/api/proxy/trip',
+    TRIP:                 '/api/proxy/trip',
+    TRIP_RINGKASAN_PROYEK: '/api/proxy/trip/ringkasan-proyek',
     TRIP_MULAI:    '/api/proxy/trip/mulai',
     TRIP_DETAIL:   (id: string) => `/api/proxy/trip/${id}`,
     TRIP_CHECKIN:  (id: string) => `/api/proxy/trip/${id}/checkin`,

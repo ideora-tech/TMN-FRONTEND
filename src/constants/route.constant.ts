@@ -47,8 +47,9 @@ export const ROUTES = {
     VENDOR_BARU:   '/vendor/baru',
     VENDOR_DETAIL: (id: string) => `/vendor/${id}`,
 
-    TRIP:        '/trip',
-    TRIP_DETAIL: (id: string) => `/trip/${id}`,
+    TRIP:               '/trip',
+    TRIP_DETAIL:        (id: string) => `/trip/${id}`,
+    TRIP_PROYEK_DETAIL: (idProyek: string) => `/trip/proyek/${idProyek}`,
 
     LAPORAN:        '/laporan',
     LAPORAN_BARU:   '/laporan/baru',

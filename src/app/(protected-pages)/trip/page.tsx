@@ -1,15 +1,14 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Select, Tag, Tooltip, toast, Notification, Button } from '@/components/ui'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiPlusCircle } from 'react-icons/hi'
+import { Card, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePlus } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { tripService, Trip } from '@/services/trip.service'
+import { tripService, RingkasanProyekTrip } from '@/services/trip.service'
 import MulaiTripDialog from './MulaiTripDialog'
-import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
 
@@ -21,17 +20,10 @@ const STATUS_OPTIONS: StatusOption[] = [
     { value: 'dibatalkan', label: 'Dibatalkan' },
 ]
 
-const STATUS_TAG: Record<string, string> = {
-    belum_mulai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    berjalan:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    selesai:     'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-    dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-}
-
 export default function TripPage() {
     const router = useRouter()
 
-    const [list, setList]       = useState<Trip[]>([])
+    const [list, setList]       = useState<RingkasanProyekTrip[]>([])
     const [loading, setLoading] = useState(false)
 
     const [searchInput, setSearchInput]   = useState('')
@@ -40,12 +32,14 @@ export default function TripPage() {
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
-    const [showMulai, setShowMulai]       = useState(false)
+
+    const [showMulai, setShowMulai]               = useState(false)
+    const [proyekUntukMulai, setProyekUntukMulai]  = useState<string | undefined>(undefined)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await tripService.list({
+            const res = await tripService.ringkasanProyek({
                 page: currentPage,
                 limit: pageSize,
                 search: search || undefined,
@@ -65,64 +59,54 @@ export default function TripPage() {
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
-    const columns: ColumnDef<Trip>[] = [
+    const handleTambah = (idProyek: string) => {
+        setProyekUntukMulai(idProyek)
+        setShowMulai(true)
+    }
+
+    const columns: ColumnDef<RingkasanProyekTrip>[] = [
         {
             header: 'No', id: 'no', size: 60,
-            cell: ({ row }: CellContext<Trip, unknown>) =>
-                (currentPage - 1) * pageSize + row.index + 1,
+            cell: ({ row }: CellContext<RingkasanProyekTrip, unknown>) => (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'Rute', accessorKey: 'rute', size: 200,
-            cell: ({ row }: CellContext<Trip, unknown>) => (
-                row.original.rute ? (
-                    <div>
-                        <p className="font-semibold">{row.original.rute}</p>
-                        {row.original.waktu_berangkat && (
-                            <p className="text-xs text-gray-400">
-                                {dayjs(row.original.waktu_berangkat).format('DD/MM/YY HH:mm')}
-                            </p>
-                        )}
-                    </div>
-                ) : <span className="text-gray-400">—</span>
+            header: 'Proyek', accessorKey: 'nama_proyek', size: 260,
+            cell: ({ row }: CellContext<RingkasanProyekTrip, unknown>) => (
+                <p className="font-semibold">
+                    {row.original.nama_proyek}
+                    {row.original.kode_proyek && <span className="text-gray-400 font-normal"> ({row.original.kode_proyek})</span>}
+                </p>
             ),
         },
         {
-            header: 'Supir / Armada', accessorKey: 'supir_nama', size: 180,
-            cell: ({ row }: CellContext<Trip, unknown>) => (
-                row.original.supir_nama || row.original.armada_nopol ? (
-                    <div>
-                        <p className="font-medium">{row.original.supir_nama ?? '—'}</p>
-                        <p className="text-xs text-gray-400">{row.original.armada_nopol ?? '—'}</p>
-                    </div>
-                ) : <span className="text-gray-400">—</span>
-            ),
+            header: 'Klien', accessorKey: 'nama_klien', size: 200,
+            cell: ({ row }: CellContext<RingkasanProyekTrip, unknown>) =>
+                row.original.nama_klien ?? <span className="text-gray-400">—</span>,
         },
         {
-            header: 'Check-in', accessorKey: 'waktu_checkin', size: 160,
-            cell: ({ row }: CellContext<Trip, unknown>) =>
-                row.original.waktu_checkin ? dayjs(row.original.waktu_checkin).format('DD/MM/YY HH:mm') : '-',
-        },
-        {
-            header: 'Check-out', accessorKey: 'waktu_checkout', size: 160,
-            cell: ({ row }: CellContext<Trip, unknown>) =>
-                row.original.waktu_checkout ? dayjs(row.original.waktu_checkout).format('DD/MM/YY HH:mm') : '-',
-        },
-        {
-            header: 'Status', accessorKey: 'status', size: 130,
-            cell: ({ row }: CellContext<Trip, unknown>) => (
-                <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {row.original.status}
+            header: 'Jumlah Trip', accessorKey: 'jumlah_trip', size: 130,
+            cell: ({ row }: CellContext<RingkasanProyekTrip, unknown>) => (
+                <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    {row.original.jumlah_trip} trip
                 </Tag>
             ),
         },
         {
-            header: '', id: 'action', size: 80,
-            cell: ({ row }: CellContext<Trip, unknown>) => (
-                <div className="flex items-center justify-end">
-                    <Tooltip title="Detail">
+            header: '', id: 'action', size: 90,
+            cell: ({ row }: CellContext<RingkasanProyekTrip, unknown>) => (
+                <div className="flex items-center justify-end gap-1">
+                    <Tooltip title="Tambah">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 transition-colors"
+                            onClick={() => handleTambah(row.original.id_proyek)}
+                        >
+                            <HiOutlinePlus className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Lihat">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                            onClick={() => router.push(ROUTES.TRIP_DETAIL(row.original.id_trip))}
+                            onClick={() => router.push(ROUTES.TRIP_PROYEK_DETAIL(row.original.id_proyek))}
                         >
                             <HiOutlineEye className="text-lg" />
                         </span>
@@ -134,20 +118,16 @@ export default function TripPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="font-bold">Trip</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Monitor seluruh trip</p>
-                </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => setShowMulai(true)}>
-                    Mulai Trip
-                </Button>
+            <div>
+                <h3 className="font-bold">Trip</h3>
+                <p className="text-gray-500 text-sm mt-0.5">Monitor seluruh trip, dikelompokkan per proyek</p>
             </div>
+
             <Card bodyClass="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1"
-                        placeholder="Cari rute, supir, atau armada... (tekan Enter)"
+                        placeholder="Cari nama proyek, kode, atau klien... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -175,7 +155,13 @@ export default function TripPage() {
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
-            <MulaiTripDialog isOpen={showMulai} onClose={() => setShowMulai(false)} onSukses={fetchData} />
+
+            <MulaiTripDialog
+                isOpen={showMulai}
+                onClose={() => setShowMulai(false)}
+                onSukses={fetchData}
+                idProyekTerkunci={proyekUntukMulai}
+            />
         </div>
     )
 }

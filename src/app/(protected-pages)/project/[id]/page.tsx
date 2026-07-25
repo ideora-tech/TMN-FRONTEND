@@ -18,6 +18,7 @@ import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
 import { proyekRuteService, ProyekRute, ProyekRutePayload } from '@/services/proyekRute.service'
 import { ruteService, Rute } from '@/services/rute.service'
+import { tarifRuteService } from '@/services/tarifRute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption } from '@/components/shared/RuteTarifFields'
 
@@ -293,7 +294,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
     }
 
-    const openEditRute = (r: ProyekRute) => {
+    const openEditRute = async (r: ProyekRute) => {
         setEditRuteTarget(r)
         setEditRuteTarif({
             id_rute: r.id_rute,
@@ -302,8 +303,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
             estimasiBiaya: r.estimasi_biaya,
             tarifBaru: null,
+            detailBiaya: null,
         })
         setEditRuteKeterangan(r.keterangan ?? '')
+
+        if (r.id_tarif_rute) {
+            try {
+                const tarif = await tarifRuteService.get(r.id_tarif_rute)
+                setEditRuteTarif(p => ({
+                    ...p,
+                    detailBiaya: {
+                        estimasi_tol: tarif.estimasi_tol != null ? String(tarif.estimasi_tol) : '',
+                        estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
+                        estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
+                        estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
+                        tanggal_berakhir: tarif.tanggal_berakhir ?? '',
+                        keterangan: tarif.keterangan ?? '',
+                    },
+                }))
+            } catch { /* tarif mungkin sudah dihapus — biarkan tanpa detail biaya */ }
+        }
     }
 
     const handleEditRute = async () => {
@@ -770,13 +789,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             {/* Dialog Edit Rute Proyek */}
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={520}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
-                <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
-                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
-                <div className="mt-3">
-                    <FormItem label="Keterangan">
-                        <Input textArea value={editRuteKeterangan}
-                            onChange={e => setEditRuteKeterangan(e.target.value)} />
-                    </FormItem>
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                    <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
+                        ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
+                    <div className="mt-3">
+                        <FormItem label="Keterangan">
+                            <Input textArea value={editRuteKeterangan}
+                                onChange={e => setEditRuteKeterangan(e.target.value)} />
+                        </FormItem>
+                    </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Batal</Button>

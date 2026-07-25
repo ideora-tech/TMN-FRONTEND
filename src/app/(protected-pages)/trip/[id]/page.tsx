@@ -1,6 +1,6 @@
 'use client'
-import { use, useEffect, useMemo, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { use, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
@@ -146,6 +146,7 @@ const AKSI_MESSAGE: Record<AksiTrip, string> = {
 export default function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [trip, setTrip]                 = useState<Trip | null>(null)
     const [statuses, setStatuses]         = useState<StatusTrip[]>([])
     const [loading, setLoading]           = useState(true)
@@ -279,6 +280,23 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         setLaporanFotoFiles([])
         setShowLaporanForm(true)
     }
+
+    // Auto-buka form laporan kalau datang dari tombol "Isi Laporan" di list Trip Monitor
+    // (?laporan=1) — hanya sekali per kunjungan halaman, dan cuma kalau statusnya memang
+    // boleh diisi laporan (sama seperti guard canIsiLaporan di bawah).
+    const autoOpenLaporanRef = useRef(false)
+    useEffect(() => {
+        if (autoOpenLaporanRef.current) return
+        if (!trip || laporanLoading) return
+        if (searchParams.get('laporan') !== '1') return
+        if (trip.status !== 'berjalan' && trip.status !== 'selesai') return
+
+        autoOpenLaporanRef.current = true
+        if (laporan) handleOpenEditLaporan()
+        else handleOpenCreateLaporan()
+        document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [trip, laporan, laporanLoading, searchParams])
 
     const addBiayaLainRow = () => {
         setLaporanForm(p => ({ ...p, biaya_lain: [...p.biaya_lain, { nama_biaya: '', nominal: '' }] }))
@@ -515,7 +533,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 )}
             </Card>
 
-            <Card>
+            <Card id="laporan-perjalanan-card">
                 <div className="flex justify-between items-center mb-4">
                     <h5>Laporan Perjalanan</h5>
                     {laporanLoading && <span className="text-xs text-gray-400">Memuat...</span>}

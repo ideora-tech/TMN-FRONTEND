@@ -27,10 +27,23 @@ export interface StatusTrip {
     dibuat_pada: string
 }
 
+export interface RingkasanProyekTrip {
+    id_proyek: string
+    kode_proyek: string | null
+    nama_proyek: string
+    nama_klien: string | null
+    jumlah_trip: number
+    aktivitas_terakhir: string | null
+}
+
 export const tripService = {
-    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string; search?: string; status?: string } = {}) {
+    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string; id_proyek?: string; search?: string; status?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.TRIP, { params: { page: 1, limit: 15, ...params } })
         return data as { data: Trip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+    async ringkasanProyek(params: { page?: number; limit?: number; search?: string; status?: string } = {}) {
+        const { data } = await axios.get(API_ENDPOINTS.TRIP_RINGKASAN_PROYEK, { params: { page: 1, limit: 10, ...params } })
+        return data as { data: RingkasanProyekTrip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async mulai(payload: { id_penugasan: string; id_rute?: string | null; catatan?: string | null }) {
         const { data } = await axios.post(API_ENDPOINTS.TRIP_MULAI, payload)

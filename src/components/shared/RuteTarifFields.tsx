@@ -20,6 +20,15 @@ export type TarifBaruForm = {
     keterangan: string
 }
 
+export type DetailBiayaForm = {
+    estimasi_tol: string
+    estimasi_bbm: string
+    estimasi_uang_jalan: string
+    estimasi_biaya_lain: string
+    tanggal_berakhir: string
+    keterangan: string
+}
+
 export type RuteTarifState = {
     id_rute: string
     id_jenis_kendaraan: string
@@ -27,6 +36,7 @@ export type RuteTarifState = {
     harga_penawaran: string
     estimasiBiaya: number | null
     tarifBaru: TarifBaruForm | null
+    detailBiaya: DetailBiayaForm | null
 }
 
 export const EMPTY_TARIF_BARU_FORM: TarifBaruForm = {
@@ -47,6 +57,7 @@ export const EMPTY_RUTE_TARIF_STATE: RuteTarifState = {
     harga_penawaran: '',
     estimasiBiaya: null,
     tarifBaru: null,
+    detailBiaya: null,
 }
 
 type Option = { value: string; label: string }
@@ -100,6 +111,14 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                     harga_penawaran: String(tarif.harga),
                     estimasiBiaya: estimasi,
                     tarifBaru: null,
+                    detailBiaya: {
+                        estimasi_tol: tarif.estimasi_tol != null ? String(tarif.estimasi_tol) : '',
+                        estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
+                        estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
+                        estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
+                        tanggal_berakhir: tarif.tanggal_berakhir ?? '',
+                        keterangan: tarif.keterangan ?? '',
+                    },
                 })
             } else {
                 onChange({
@@ -109,6 +128,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                     harga_penawaran: '',
                     estimasiBiaya: null,
                     tarifBaru: EMPTY_TARIF_BARU_FORM,
+                    detailBiaya: null,
                 })
             }
         } catch (err) {
@@ -120,6 +140,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 harga_penawaran: '',
                 estimasiBiaya: null,
                 tarifBaru: null,
+                detailBiaya: null,
             })
         }
     }
@@ -127,6 +148,11 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
     const setTarifBaru = (patch: Partial<TarifBaruForm>) => {
         if (!value.tarifBaru) return
         onChange({ ...value, tarifBaru: { ...value.tarifBaru, ...patch } })
+    }
+
+    const setDetailBiaya = (patch: Partial<DetailBiayaForm>) => {
+        if (!value.detailBiaya) return
+        onChange({ ...value, detailBiaya: { ...value.detailBiaya, ...patch } })
     }
 
     return (
@@ -158,6 +184,55 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                             value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
                             onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
+
+                    {value.detailBiaya && (
+                        <>
+                            <button type="button"
+                                className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
+                                onClick={() => setShowDetailBiaya(s => !s)}>
+                                {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
+                                Biaya Operasional (opsional)
+                            </button>
+                            {showDetailBiaya && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                    <p className="text-xs text-gray-400 sm:col-span-2 -mt-1 mb-1">
+                                        Mengubah biaya operasional di sini akan memperbarui tarif ini untuk semua proyek/penawaran lain yang memakainya.
+                                    </p>
+                                    <FormItem label="Estimasi Tol">
+                                        <Input prefix="Rp" placeholder="0"
+                                            value={value.detailBiaya.estimasi_tol ? formatNum(Number(value.detailBiaya.estimasi_tol)) : ''}
+                                            onChange={e => setDetailBiaya({ estimasi_tol: e.target.value.replace(/\D/g, '') })} />
+                                    </FormItem>
+                                    <FormItem label="Estimasi BBM">
+                                        <Input prefix="Rp" placeholder="0"
+                                            value={value.detailBiaya.estimasi_bbm ? formatNum(Number(value.detailBiaya.estimasi_bbm)) : ''}
+                                            onChange={e => setDetailBiaya({ estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
+                                    </FormItem>
+                                    <FormItem label="Estimasi Uang Jalan">
+                                        <Input prefix="Rp" placeholder="0"
+                                            value={value.detailBiaya.estimasi_uang_jalan ? formatNum(Number(value.detailBiaya.estimasi_uang_jalan)) : ''}
+                                            onChange={e => setDetailBiaya({ estimasi_uang_jalan: e.target.value.replace(/\D/g, '') })} />
+                                    </FormItem>
+                                    <FormItem label="Estimasi Biaya Lain">
+                                        <Input prefix="Rp" placeholder="0"
+                                            value={value.detailBiaya.estimasi_biaya_lain ? formatNum(Number(value.detailBiaya.estimasi_biaya_lain)) : ''}
+                                            onChange={e => setDetailBiaya({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
+                                    </FormItem>
+                                    <FormItem label="Tanggal Berakhir">
+                                        <DatePicker inputFormat="DD/MM/YYYY"
+                                            value={value.detailBiaya.tanggal_berakhir ? dayjs(value.detailBiaya.tanggal_berakhir).toDate() : null}
+                                            onChange={date => setDetailBiaya({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
+                                    </FormItem>
+                                    <div className="sm:col-span-2">
+                                        <FormItem label="Keterangan Tarif">
+                                            <Input textArea value={value.detailBiaya.keterangan}
+                                                onChange={e => setDetailBiaya({ keterangan: e.target.value })} />
+                                        </FormItem>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             )}
 
@@ -181,7 +256,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                         onClick={() => setShowDetailBiaya(s => !s)}>
                         {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                        Detail biaya (opsional)
+                        Biaya Operasional (opsional)
                     </button>
                     {showDetailBiaya && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
@@ -225,7 +300,19 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
 }
 
 export async function resolveTarifId(state: RuteTarifState, idKlien: string): Promise<string | null> {
-    if (state.id_tarif_rute) return state.id_tarif_rute
+    if (state.id_tarif_rute) {
+        if (state.detailBiaya) {
+            await tarifRuteService.update(state.id_tarif_rute, {
+                estimasi_tol: state.detailBiaya.estimasi_tol === '' ? null : Number(state.detailBiaya.estimasi_tol),
+                estimasi_bbm: state.detailBiaya.estimasi_bbm === '' ? null : Number(state.detailBiaya.estimasi_bbm),
+                estimasi_uang_jalan: state.detailBiaya.estimasi_uang_jalan === '' ? null : Number(state.detailBiaya.estimasi_uang_jalan),
+                estimasi_biaya_lain: state.detailBiaya.estimasi_biaya_lain === '' ? null : Number(state.detailBiaya.estimasi_biaya_lain),
+                tanggal_berakhir: state.detailBiaya.tanggal_berakhir || null,
+                keterangan: state.detailBiaya.keterangan || null,
+            })
+        }
+        return state.id_tarif_rute
+    }
     if (!state.tarifBaru) return null
 
     const payload: TarifRutePayload = {

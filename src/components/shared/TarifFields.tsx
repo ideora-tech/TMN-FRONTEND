@@ -107,7 +107,7 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                 onClick={() => setShowRincian(v => !v)}>
                 {showRincian ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                Detail biaya (opsional)
+                Biaya Operasional (opsional)
             </button>
             {showRincian && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
