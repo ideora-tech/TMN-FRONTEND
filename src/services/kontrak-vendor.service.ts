@@ -15,8 +15,8 @@ export interface KontrakVendor {
 }
 
 export const kontrakVendorService = {
-    async list(page = 1, params?: Record<string, string>) {
-        const { data } = await axios.get(API_ENDPOINTS.KONTRAK_VENDOR, { params: { page, limit: 15, ...params } })
+    async list(page = 1, params?: Record<string, string>, search?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.KONTRAK_VENDOR, { params: { page, limit: 15, ...params, search: search || undefined } })
         return data as { data: KontrakVendor[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

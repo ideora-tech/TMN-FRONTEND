@@ -33,7 +33,7 @@ export default function KontrakVendorPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await kontrakVendorService.list(currentPage)
+            const res = await kontrakVendorService.list(currentPage, { limit: String(pageSize) }, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -41,7 +41,7 @@ export default function KontrakVendorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -62,12 +62,6 @@ export default function KontrakVendorPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(k =>
-        !search ||
-        (k.vendor?.nama_vendor ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (k.mekanisme ?? '').toLowerCase().includes(search.toLowerCase())
-    )
 
     const columns: ColumnDef<KontrakVendor>[] = [
         {
@@ -180,9 +174,9 @@ export default function KontrakVendorPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
                     onPaginationChange={setCurrentPage}
                 />

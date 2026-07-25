@@ -46,7 +46,7 @@ export default function FakturPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await fakturService.list(currentPage)
+            const res = await fakturService.list(currentPage, pageSize, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -54,7 +54,7 @@ export default function FakturPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -82,12 +82,6 @@ export default function FakturPage() {
 
     const handleExcelDownload = () => downloadFile(API_ENDPOINTS.FAKTUR_EXPORT_EXCEL, `faktur-${new Date().toISOString().slice(0,10)}.xlsx`, 'excel')
     const handlePdfDownload   = () => downloadFile(API_ENDPOINTS.FAKTUR_EXPORT_PDF,   `faktur-${new Date().toISOString().slice(0,10)}.pdf`,  'pdf')
-
-    const filteredList = list.filter(f => {
-        const matchSearch = !search || f.nomor_faktur.toLowerCase().includes(search.toLowerCase())
-        const matchStatus = !statusFilter || f.status === statusFilter
-        return matchSearch && matchStatus
-    })
 
     const columns: ColumnDef<Faktur>[] = [
         {
@@ -197,9 +191,9 @@ export default function FakturPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

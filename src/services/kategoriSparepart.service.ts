@@ -18,8 +18,8 @@ export type KategoriSparepartPayload = {
 }
 
 export const kategoriSparepartService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.KATEGORI_SPAREPART, { params: { page, limit } })
+    async list(page = 1, limit = 15, search = '') {
+        const { data } = await axios.get(API_ENDPOINTS.KATEGORI_SPAREPART, { params: { page, limit, search: search || undefined } })
         return data as { data: KategoriSparepart[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -39,7 +39,7 @@ export default function SupirVendorPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await supirVendorService.list(currentPage, pageSize, idVendorFilter || undefined)
+            const res = await supirVendorService.list(currentPage, pageSize, idVendorFilter || undefined, search || undefined)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -47,18 +47,12 @@ export default function SupirVendorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, idVendorFilter])
+    }, [currentPage, pageSize, idVendorFilter, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
-
-    const filteredList = list.filter(s =>
-        !search ||
-        s.nama.toLowerCase().includes(search.toLowerCase()) ||
-        (s.no_sim ?? '').toLowerCase().includes(search.toLowerCase())
-    )
 
     const columns: ColumnDef<SupirVendor>[] = [
         {
@@ -148,9 +142,9 @@ export default function SupirVendorPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                 />

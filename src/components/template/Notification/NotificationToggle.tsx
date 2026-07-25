@@ -4,15 +4,19 @@ import { PiBellDuotone } from 'react-icons/pi'
 
 const NotificationToggle = ({
     className,
-    dot,
+    count = 0,
 }: {
     className?: string
-    dot: boolean
+    count?: number
 }) => {
     return (
         <div className={classNames('text-2xl', className)}>
-            {dot ? (
-                <Badge badgeStyle={{ top: '3px', right: '6px' }}>
+            {count > 0 ? (
+                <Badge
+                    badgeStyle={{ top: '3px', right: '6px' }}
+                    content={count}
+                    maxCount={99}
+                >
                     <PiBellDuotone />
                 </Badge>
             ) : (

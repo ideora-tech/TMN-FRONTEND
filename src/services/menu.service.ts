@@ -15,8 +15,8 @@ export interface MenuItem {
 }
 
 export const menuService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.MENU, { params: { page, limit: 50 } })
+    async list(page = 1, limit = 50, search = '') {
+        const { data } = await axios.get(API_ENDPOINTS.MENU, { params: { page, limit, search: search || undefined } })
         return data as { data: MenuItem[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async tree() {

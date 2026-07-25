@@ -528,7 +528,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             )}
 
             {/* Dialog assign / ganti shift — dibuka dari sel papan */}
-            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} width={440}>
+            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={440}>
                 <h5 className="text-base font-semibold mb-1">
                     {editJadwal || (bulkMode && bulkAksi === 'ganti') ? 'Ganti Shift' : 'Assign Shift'}
                 </h5>
@@ -581,7 +581,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             </Dialog>
 
             {/* Dialog tambah master shift cepat */}
-            <Dialog isOpen={shiftFormOpen} onRequestClose={() => setShiftFormOpen(false)} width={440}>
+            <Dialog isOpen={shiftFormOpen} onRequestClose={() => setShiftFormOpen(false)} onClose={() => setShiftFormOpen(false)} width={440}>
                 <h5 className="text-base font-semibold mb-1">Tambah Shift</h5>
                 <p className="text-xs text-gray-400 mb-4">Daftarkan shift baru — langsung bisa dipakai di papan ini.</p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitShift() }}>
@@ -608,7 +608,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             </Dialog>
 
             {/* Dialog hasil rentang — tampil bila ada hari yang gagal */}
-            <Dialog isOpen={!!hasilGagal} onRequestClose={() => setHasilGagal(null)} width={520}>
+            <Dialog isOpen={!!hasilGagal} onRequestClose={() => setHasilGagal(null)} onClose={() => setHasilGagal(null)} width={520}>
                 <h5 className="text-base font-semibold mb-1">Hasil Penjadwalan</h5>
                 {hasilGagal && (
                     <>
@@ -619,8 +619,8 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2 pl-3 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Tanggal</th>
-                                        <th className="py-2 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Alasan</th>
+                                        <th className="py-2 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Tanggal</th>
+                                        <th className="py-2 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

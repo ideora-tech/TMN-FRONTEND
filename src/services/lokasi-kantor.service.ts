@@ -15,8 +15,8 @@ export interface LokasiKantor {
 }
 
 export const lokasiKantorService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.LOKASI_KANTOR, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15, search?: string, aktif?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.LOKASI_KANTOR, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
         return data as { data: LokasiKantor[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -11,8 +11,8 @@ export interface Departemen {
 }
 
 export const departemenService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.DEPARTEMEN, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15, search?: string, aktif?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.DEPARTEMEN, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
         return data as { data: Departemen[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -33,7 +33,7 @@ export default function LokasiKantorPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await lokasiKantorService.list(currentPage)
+            const res = await lokasiKantorService.list(currentPage, pageSize, search, aktifFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -41,7 +41,7 @@ export default function LokasiKantorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, aktifFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -62,14 +62,6 @@ export default function LokasiKantorPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(l => {
-        const matchSearch = !search ||
-            l.nama_lokasi.toLowerCase().includes(search.toLowerCase()) ||
-            (l.kota ?? '').toLowerCase().includes(search.toLowerCase())
-        const matchAktif = aktifFilter === '' || String(l.aktif ? 1 : 0) === aktifFilter
-        return matchSearch && matchAktif
-    })
 
     const columns: ColumnDef<LokasiKantor>[] = [
         { header: 'No', id: 'no', size: 60,
@@ -153,8 +145,8 @@ export default function LokasiKantorPage() {
                             onChange={opt => { setAktifFilter((opt as AktifOption).value); setCurrentPage(1) }} />
                     </div>
                 </div>
-                <DataTable columns={columns} data={filteredList as unknown[]} loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                <DataTable columns={columns} data={list as unknown[]} loading={loading}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />

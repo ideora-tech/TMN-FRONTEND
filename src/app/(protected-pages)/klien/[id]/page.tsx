@@ -3,7 +3,7 @@ import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineEye } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
@@ -290,10 +290,10 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Kode Proyek</th>
-                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nama Proyek</th>
-                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Mulai</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Kode Proyek</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nama Proyek</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal Mulai</th>
                                         <th className="py-2.5" />
                                     </tr>
                                 </thead>
@@ -354,11 +354,11 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">No. Faktur</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jatuh Tempo</th>
-                                    <th className="py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Total</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">No. Faktur</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jatuh Tempo</th>
+                                    <th className="py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Total</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -381,8 +381,14 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.FAKTUR_DETAIL(f.id_faktur))} />
+                                            <Tooltip title="Detail">
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                    onClick={() => router.push(ROUTES.FAKTUR_DETAIL(f.id_faktur))}
+                                                >
+                                                    <HiOutlineEye className="text-lg" />
+                                                </span>
+                                            </Tooltip>
                                         </td>
                                     </tr>
                                 ))}

@@ -14,8 +14,8 @@ export interface Project {
 }
 
 export const projectService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { page, limit } })
+    async list(page = 1, limit = 15, search?: string, status?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.PROYEK, { params: { page, limit, search: search || undefined, status: status || undefined } })
         return data as { data: Project[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async listByKlien(idKlien: string, page = 1, limit = 50) {

@@ -5,6 +5,7 @@ import {
     HiOutlineCalendar,
     HiOutlineClipboardCheck,
     HiOutlineBan,
+    HiOutlineCog,
 } from 'react-icons/hi'
 
 const imagePath = '/img/avatars/'
@@ -56,6 +57,18 @@ const NotificationAvatar = (props: {
                             <HiOutlineBan />
                         )
                     }
+                />
+            )
+        case 3:
+            return (
+                <Avatar
+                    shape="circle"
+                    className={
+                        status === 'succeed'
+                            ? 'bg-amber-200 text-gray-900'
+                            : 'bg-red-200 text-gray-900'
+                    }
+                    icon={<HiOutlineCog />}
                 />
             )
         default:

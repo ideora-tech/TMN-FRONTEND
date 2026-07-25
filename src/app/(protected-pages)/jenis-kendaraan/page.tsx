@@ -34,7 +34,7 @@ export default function JenisKendaraanPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await jenisKendaraanService.list(currentPage)
+            const res = await jenisKendaraanService.list(currentPage, pageSize, search, aktifFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -42,7 +42,7 @@ export default function JenisKendaraanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, aktifFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -63,14 +63,6 @@ export default function JenisKendaraanPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(j => {
-        const matchSearch = !search ||
-            j.kode_jenis.toLowerCase().includes(search.toLowerCase()) ||
-            j.nama_jenis.toLowerCase().includes(search.toLowerCase())
-        const matchAktif = aktifFilter === '' || String(j.aktif ? 1 : 0) === aktifFilter
-        return matchSearch && matchAktif
-    })
 
     const columns: ColumnDef<JenisKendaraan>[] = [
         { header: 'No', id: 'no', size: 60,
@@ -154,8 +146,8 @@ export default function JenisKendaraanPage() {
                             onChange={opt => { setAktifFilter((opt as AktifOption).value); setCurrentPage(1) }} />
                     </div>
                 </div>
-                <DataTable columns={columns} data={filteredList as unknown[]} loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                <DataTable columns={columns} data={list as unknown[]} loading={loading}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />

@@ -47,7 +47,7 @@ export default function KaryawanPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await karyawanService.list(currentPage)
+            const res = await karyawanService.list(currentPage, 15, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
             setTotalPages(res.meta.totalPages)
@@ -56,7 +56,7 @@ export default function KaryawanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -77,14 +77,6 @@ export default function KaryawanPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(k => {
-        const matchSearch = !search ||
-            k.nama_karyawan.toLowerCase().includes(search.toLowerCase()) ||
-            k.nik.toLowerCase().includes(search.toLowerCase())
-        const matchStatus = !statusFilter || k.status_kepegawaian === statusFilter
-        return matchSearch && matchStatus
-    })
 
     return (
         <div className="flex flex-col gap-4">
@@ -121,7 +113,7 @@ export default function KaryawanPage() {
                     <div className="flex justify-center py-16">
                         <Spinner size={40} />
                     </div>
-                ) : filteredList.length === 0 ? (
+                ) : list.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                         <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
                             <HiOutlineUserGroup className="text-3xl text-gray-400 dark:text-gray-500" />
@@ -133,7 +125,7 @@ export default function KaryawanPage() {
                     <>
                         {/* Card Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {filteredList.map((k, idx) => {
+                            {list.map((k, idx) => {
                                 const initials = k.nama_karyawan
                                     .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
                                 const grad = GRAD_COLORS[idx % GRAD_COLORS.length]

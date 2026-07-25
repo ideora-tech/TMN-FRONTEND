@@ -37,7 +37,7 @@ export default function KlienPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await klienService.list(currentPage)
+            const res = await klienService.list(currentPage, pageSize, search, aktifFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -45,7 +45,7 @@ export default function KlienPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, aktifFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -66,14 +66,6 @@ export default function KlienPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(k => {
-        const matchSearch = !search ||
-            k.nama_klien.toLowerCase().includes(search.toLowerCase()) ||
-            k.kode_klien.toLowerCase().includes(search.toLowerCase())
-        const matchAktif = aktifFilter === '' || String(k.aktif ? 1 : 0) === aktifFilter
-        return matchSearch && matchAktif
-    })
 
     const columns: ColumnDef<Klien>[] = [
         {
@@ -195,9 +187,9 @@ export default function KlienPage() {
 
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

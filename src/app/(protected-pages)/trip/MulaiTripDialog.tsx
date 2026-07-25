@@ -119,7 +119,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     }
 
     return (
-        <Dialog isOpen={isOpen} onRequestClose={onClose} width={460}>
+        <Dialog isOpen={isOpen} onRequestClose={onClose} onClose={onClose} width={460}>
             <h5 className="text-base font-semibold mb-1">Mulai Trip</h5>
             <p className="text-xs text-gray-400 mb-4">
                 Trip langsung berjalan (check-in otomatis) — pastikan supir & armada siap berangkat.

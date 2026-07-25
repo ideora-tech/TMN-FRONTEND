@@ -13,8 +13,8 @@ export interface Jabatan {
 }
 
 export const jabatanService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.JABATAN, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15, search?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.JABATAN, { params: { page, limit, search: search || undefined } })
         return data as { data: Jabatan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -43,7 +43,7 @@ export default function MenuAdminPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await menuService.list(currentPage)
+            const res = await menuService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -51,20 +51,17 @@ export default function MenuAdminPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const handleSearchSubmit = () => setSearch(searchInput)
-    const handleSearchClear  = () => { setSearchInput(''); setSearch('') }
+    const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const filteredList = list.filter(m => {
-        const matchSearch = !search ||
-            m.nama_menu.toLowerCase().includes(search.toLowerCase()) ||
-            (m.path ?? '').toLowerCase().includes(search.toLowerCase())
         const matchStatus = !statusFilter || (statusFilter === 'aktif' ? m.aktif : !m.aktif)
         const matchInduk = !indukFilter || (indukFilter === 'root' ? !m.id_menu_induk : !!m.id_menu_induk)
-        return matchSearch && matchStatus && matchInduk
+        return matchStatus && matchInduk
     })
 
     const siblingsOf = (menu: MenuItem) =>

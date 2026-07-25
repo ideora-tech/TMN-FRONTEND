@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Checkbox, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineExternalLink, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -714,10 +714,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Harga Penawaran</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Estimasi Biaya</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Estimasi Biaya</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -740,10 +740,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                 : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Data belum lengkap</Tag>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
-                                            <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
-                                                onClick={() => openEditRute(r)} />
-                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                onClick={() => setDeleteRuteTarget(r)} />
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Tooltip title="Edit">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                        onClick={() => openEditRute(r)}
+                                                    >
+                                                        <HiOutlinePencilAlt className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                                <Tooltip title="Hapus">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                        onClick={() => setDeleteRuteTarget(r)}
+                                                    >
+                                                        <HiOutlineTrash className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -754,7 +768,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </Card>
 
             {/* Dialog Edit Rute Proyek */}
-            <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} width={520}>
+            <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={520}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
                     ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
@@ -803,10 +817,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Tugas</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Supir</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Armada</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal Tugas</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Armada</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -832,10 +846,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />} className="mr-1"
-                                                onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))} />
-                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                onClick={() => setDeletePenugasanTarget(p)} />
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Tooltip title="Detail">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                        onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))}
+                                                    >
+                                                        <HiOutlineEye className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                                <Tooltip title="Hapus">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                        onClick={() => setDeletePenugasanTarget(p)}
+                                                    >
+                                                        <HiOutlineTrash className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -846,7 +874,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </Card>
 
             {/* Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan) */}
-            <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} width={920}>
+            <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     Centang satu atau lebih pasangan supir–armada, lalu tentukan tanggal tugas.
@@ -910,9 +938,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                         </span>
                                                     </Tooltip>
                                                 </th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Supir</th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Armada</th>
-                                                <th className="py-2.5 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Status Unit</th>
+                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                                <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Status Unit</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -981,7 +1009,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </Dialog>
 
             {/* Dialog hasil pembuatan massal — tampil bila sebagian/semua gagal */}
-            <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} width={640}>
+            <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} onClose={() => setHasilPenugasan(null)} width={640}>
                 <h5 className="text-base font-semibold mb-1">Hasil Tambah Penugasan</h5>
                 {hasilPenugasan && (
                     <>
@@ -992,9 +1020,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Supir</th>
-                                        <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Armada</th>
-                                        <th className="py-2.5 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Alasan</th>
+                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                        <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                        <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

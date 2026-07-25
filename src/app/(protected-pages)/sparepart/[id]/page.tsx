@@ -262,11 +262,11 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Qty</th>
-                                    <th className="py-2.5 text-right text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Harga</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Keterangan</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis</th>
+                                    <th className="py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Qty</th>
+                                    <th className="py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Keterangan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -289,7 +289,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                 )}
             </Card>
 
-            <Dialog isOpen={stokOpen} onRequestClose={() => setStokOpen(false)} width={480}>
+            <Dialog isOpen={stokOpen} onRequestClose={() => setStokOpen(false)} onClose={() => setStokOpen(false)} width={480}>
                 <h5 className="text-base font-semibold mb-5">Tambah / Sesuaikan Stok</h5>
                 <FormItem label="Jenis" asterisk>
                     <Select isSearchable={false}

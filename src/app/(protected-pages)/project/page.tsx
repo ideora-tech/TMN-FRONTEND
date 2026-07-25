@@ -46,7 +46,7 @@ export default function ProjectPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await projectService.list(currentPage)
+            const res = await projectService.list(currentPage, pageSize, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -54,7 +54,7 @@ export default function ProjectPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -75,14 +75,6 @@ export default function ProjectPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(p => {
-        const matchSearch = !search ||
-            p.nama_proyek.toLowerCase().includes(search.toLowerCase()) ||
-            p.kode_proyek.toLowerCase().includes(search.toLowerCase())
-        const matchStatus = !statusFilter || p.status === statusFilter
-        return matchSearch && matchStatus
-    })
 
     const columns: ColumnDef<Project>[] = [
         {
@@ -195,9 +187,9 @@ export default function ProjectPage() {
 
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

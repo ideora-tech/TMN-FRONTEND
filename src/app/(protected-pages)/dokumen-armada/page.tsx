@@ -69,6 +69,7 @@ export default function DokumenArmadaPage() {
                 page: currentPage, limit: pageSize,
                 id_armada: armadaFilter || undefined,
                 jenis_dokumen: jenisFilter || undefined,
+                search: search || undefined,
             })
             setList(res.data)
             setTotal(res.meta.total)
@@ -77,7 +78,7 @@ export default function DokumenArmadaPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, armadaFilter, jenisFilter])
+    }, [currentPage, pageSize, armadaFilter, jenisFilter, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -87,16 +88,8 @@ export default function DokumenArmadaPage() {
         }).catch(() => {})
     }, [])
 
-    const handleSearchSubmit = () => setSearch(searchInput)
-    const handleSearchClear  = () => { setSearchInput(''); setSearch('') }
-
-    const filteredList = list.filter(d => {
-        if (!search) return true
-        const q = search.toLowerCase()
-        return d.jenis_dokumen.toLowerCase().includes(q)
-            || (d.nomor ?? '').toLowerCase().includes(q)
-            || (d.armada_nopol ?? '').toLowerCase().includes(q)
-    })
+    const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const openAdd = () => { setForm(emptyForm()); setFile(null); setShowForm(true) }
 
@@ -261,16 +254,16 @@ export default function DokumenArmadaPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
 
-            <Dialog isOpen={isFormOpen} onRequestClose={closeForm} width={600}>
+            <Dialog isOpen={isFormOpen} onRequestClose={closeForm} onClose={closeForm} width={600}>
                 <h5 className="text-base font-semibold mb-5">{editTarget ? 'Edit Dokumen' : 'Tambah Dokumen'}</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <div className="sm:col-span-2">

@@ -1,9 +1,9 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -313,9 +313,9 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                         <table className="min-w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Armada</th>
-                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Tanggal</th>
-                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Tanggal</th>
+                                    <th className="py-2.5 px-5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Status</th>
                                     <th className="py-2.5 px-5" />
                                 </tr>
                             </thead>
@@ -346,8 +346,14 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                                 }`}>{p.status}</span>
                                             </td>
                                             <td className="py-3 px-5 text-right">
-                                                <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                    onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))} />
+                                                <Tooltip title="Detail">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                        onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))}
+                                                    >
+                                                        <HiOutlineEye className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
                                             </td>
                                         </tr>
                                     )
@@ -374,11 +380,11 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-in</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-out</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Waktu Berangkat</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-in</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-out</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -403,8 +409,14 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))} />
+                                            <Tooltip title="Detail">
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                    onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))}
+                                                >
+                                                    <HiOutlineEye className="text-lg" />
+                                                </span>
+                                            </Tooltip>
                                         </td>
                                     </tr>
                                 ))}

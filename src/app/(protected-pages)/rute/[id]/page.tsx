@@ -1,7 +1,7 @@
 ﻿'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification, Tag, Dialog, Spinner } from '@/components/ui'
+import { Card, Button, FormItem, Input, toast, Notification, Tag, Dialog, Spinner, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
@@ -381,11 +381,11 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Klien</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Harga</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Periode</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Klien</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Periode</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -404,10 +404,24 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                             <td className="py-3 pr-4 text-sm">{t.tanggal_mulai} — {t.tanggal_berakhir ?? '∞'}</td>
                                             <td className="py-3 pr-4"><Tag className={s.className}>{s.label}</Tag></td>
                                             <td className="py-3 text-right whitespace-nowrap">
-                                                <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
-                                                    onClick={() => openEditTarif(t)} />
-                                                <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                    onClick={() => setDeleteTarifTarget(t)} />
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Tooltip title="Edit">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                            onClick={() => openEditTarif(t)}
+                                                        >
+                                                            <HiOutlinePencilAlt className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                    <Tooltip title="Hapus">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => setDeleteTarifTarget(t)}
+                                                        >
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                </div>
                                             </td>
                                         </tr>
                                     )
@@ -418,10 +432,12 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                 )}
             </Card>
 
-            <Dialog isOpen={!!editTarifTarget} onRequestClose={() => setEditTarifTarget(null)} width={560}>
+            <Dialog isOpen={!!editTarifTarget} onRequestClose={() => setEditTarifTarget(null)} onClose={() => setEditTarifTarget(null)} width={560}>
                 <h5 className="text-base font-semibold mb-5">Edit Tarif</h5>
-                <TarifFields value={editTarifForm} onChange={setEditTarifForm}
-                    jenisOptions={jenisOptions} klienOptions={klienOptions} idRute={id} />
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                    <TarifFields value={editTarifForm} onChange={setEditTarifForm}
+                        jenisOptions={jenisOptions} klienOptions={klienOptions} idRute={id} />
+                </div>
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditTarifTarget(null)}>Batal</Button>
                     <Button variant="solid" loading={updatingTarif} onClick={handleEditTarif}>Simpan</Button>

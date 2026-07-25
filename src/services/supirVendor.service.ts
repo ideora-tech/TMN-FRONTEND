@@ -14,9 +14,10 @@ export interface SupirVendor {
 }
 
 export const supirVendorService = {
-    async list(page = 1, limit = 15, idVendor?: string) {
+    async list(page = 1, limit = 15, idVendor?: string, search?: string) {
         const params: Record<string, string | number> = { page, limit }
         if (idVendor) params.id_vendor = idVendor
+        if (search) params.search = search
         const { data } = await axios.get(API_ENDPOINTS.SUPIR_VENDOR, { params })
         return data as { data: SupirVendor[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

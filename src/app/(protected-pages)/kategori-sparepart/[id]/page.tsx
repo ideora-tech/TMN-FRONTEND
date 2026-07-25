@@ -65,7 +65,7 @@ export default function KategoriSparepartDetailPage({ params }: { params: Promis
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(ROUTES.KATEGORI_SPAREPART)}
+                <button type="button" onClick={() => router.push(ROUTES.SPAREPART_TAB_KATEGORI)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>

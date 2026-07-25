@@ -86,7 +86,7 @@ export default function PaketPerawatanSparepartDetailPage({ params }: { params: 
                 qty_standar: parseInt(form.qty_standar),
             })
             toast.push(<Notification type="success" title="Paket sparepart berhasil diperbarui" />)
-            router.push(ROUTES.PAKET_PERAWATAN_SPAREPART)
+            router.push(ROUTES.SPAREPART_TAB_PAKET)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -100,7 +100,7 @@ export default function PaketPerawatanSparepartDetailPage({ params }: { params: 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(ROUTES.PAKET_PERAWATAN_SPAREPART)}
+                <button type="button" onClick={() => router.push(ROUTES.SPAREPART_TAB_PAKET)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
@@ -138,7 +138,7 @@ export default function PaketPerawatanSparepartDetailPage({ params }: { params: 
                         </FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PAKET_PERAWATAN_SPAREPART)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.SPAREPART_TAB_PAKET)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan Perubahan</Button>
                     </div>
                 </form>

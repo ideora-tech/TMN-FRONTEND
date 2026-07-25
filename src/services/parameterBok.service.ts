@@ -34,8 +34,8 @@ export interface ParameterBokPayload {
 }
 
 export const parameterBokService = {
-    async list(page = 1, limit = 10) {
-        const { data } = await axios.get(API_ENDPOINTS.PARAMETER_BOK, { params: { page, limit } })
+    async list(page = 1, limit = 10, search?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.PARAMETER_BOK, { params: { page, limit, search: search || undefined } })
         return data as { data: ParameterBok[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

@@ -33,7 +33,7 @@ export default function KategoriSparepartBaruPage() {
                 keterangan: form.keterangan.trim() ? form.keterangan.trim() : null,
             })
             toast.push(<Notification type="success" title="Kategori sparepart berhasil ditambahkan" />)
-            router.push(ROUTES.KATEGORI_SPAREPART)
+            router.push(ROUTES.SPAREPART_TAB_KATEGORI)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {

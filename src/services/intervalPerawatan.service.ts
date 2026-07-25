@@ -22,7 +22,7 @@ export type IntervalPerawatanPayload = {
 }
 
 export const intervalPerawatanService = {
-    async list(params?: { page?: number; limit?: number; id_jenis_perawatan?: string; id_jenis_kendaraan?: string }) {
+    async list(params?: { page?: number; limit?: number; id_jenis_perawatan?: string; id_jenis_kendaraan?: string; search?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.INTERVAL_PERAWATAN, { params })
         return data as { data: IntervalPerawatan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

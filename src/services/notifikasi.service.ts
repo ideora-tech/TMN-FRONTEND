@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type NotifikasiTipe = 'alert_dokumen' | 'reminder_trip' | 'info'
+export type NotifikasiTipe = 'alert_dokumen' | 'reminder_trip' | 'alert_servis' | 'info'
 
 export interface Notifikasi {
     id_notifikasi: string
@@ -12,6 +12,7 @@ export interface Notifikasi {
     tipe: NotifikasiTipe
     referensi_id: string | null
     referensi_tipe: string | null
+    link: string | null
     dibaca: boolean
     dibaca_pada: string | null
     dibuat_pada: string

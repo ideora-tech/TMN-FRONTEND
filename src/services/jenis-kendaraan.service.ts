@@ -11,8 +11,8 @@ export interface JenisKendaraan {
 }
 
 export const jenisKendaraanService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.JENIS_KENDARAAN, { params: { page, limit } })
+    async list(page = 1, limit = 15, search?: string, aktif?: '' | '1' | '0') {
+        const { data } = await axios.get(API_ENDPOINTS.JENIS_KENDARAAN, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
         return data as { data: JenisKendaraan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

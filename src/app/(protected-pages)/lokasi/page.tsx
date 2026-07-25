@@ -25,7 +25,7 @@ export default function LokasiPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await lokasiService.list(currentPage)
+            const res = await lokasiService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -33,7 +33,7 @@ export default function LokasiPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -54,12 +54,6 @@ export default function LokasiPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(l => {
-        if (!search) return true
-        const q = search.toLowerCase()
-        return l.nama_lokasi.toLowerCase().includes(q) || (l.kota ?? '').toLowerCase().includes(q)
-    })
 
     const columns: ColumnDef<Lokasi>[] = [
         { header: 'No', id: 'no', size: 60,
@@ -138,8 +132,8 @@ export default function LokasiPage() {
                         onChange={e => setSearchInput(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }} />
                 </div>
-                <DataTable columns={columns} data={filteredList as unknown[]} loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                <DataTable columns={columns} data={list as unknown[]} loading={loading}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />

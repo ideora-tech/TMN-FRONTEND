@@ -4,6 +4,10 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Trip {
     id_trip: string
     id_jadwal: string
+    id_proyek?: string
+    kode_proyek?: string
+    nama_proyek?: string
+    nama_klien?: string
     rute?: string
     waktu_berangkat?: string
     supir_nama?: string
@@ -24,7 +28,7 @@ export interface StatusTrip {
 }
 
 export const tripService = {
-    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string } = {}) {
+    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string; search?: string; status?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.TRIP, { params: { page: 1, limit: 15, ...params } })
         return data as { data: Trip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

@@ -10,6 +10,7 @@ export interface Armada {
     status: string
     aktif?: boolean
     id_jenis_kendaraan?: string
+    nama_jenis?: string
     nomor_rangka?: string | null
     nomor_mesin?: string | null
     warna?: string | null
@@ -29,7 +30,7 @@ export interface ArmadaServisJatuhTempo {
     jadwal_servis_berikutnya: string
 }
 
-export type ArmadaPayload = Partial<Omit<Armada, 'id_armada' | 'url_foto'>>
+export type ArmadaPayload = Partial<Omit<Armada, 'id_armada' | 'url_foto' | 'nama_jenis'>>
 
 function buildFormData(payload: ArmadaPayload, foto: File): FormData {
     const fd = new FormData()
@@ -46,8 +47,8 @@ function buildFormData(payload: ArmadaPayload, foto: File): FormData {
 }
 
 export const armadaService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.ARMADA, { params: { page, limit } })
+    async list(page = 1, limit = 15, search?: string, status?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA, { params: { page, limit, search: search || undefined, status: status || undefined } })
         return data as { data: Armada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

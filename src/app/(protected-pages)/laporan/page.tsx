@@ -31,7 +31,7 @@ export default function LaporanPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await laporanService.list(currentPage)
+            const res = await laporanService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -39,7 +39,7 @@ export default function LaporanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -67,10 +67,6 @@ export default function LaporanPage() {
 
     const handleExcelDownload = () => downloadFile(API_ENDPOINTS.LAPORAN_EXPORT_EXCEL, `laporan-${new Date().toISOString().slice(0,10)}.xlsx`, 'excel')
     const handlePdfDownload   = () => downloadFile(API_ENDPOINTS.LAPORAN_EXPORT_PDF,   `laporan-${new Date().toISOString().slice(0,10)}.pdf`,  'pdf')
-
-    const filteredList = list.filter(l =>
-        !search || l.id_proyek.toLowerCase().includes(search.toLowerCase())
-    )
 
     const columns: ColumnDef<Laporan>[] = [
         {
@@ -190,9 +186,9 @@ export default function LaporanPage() {
                         </div>
                         <DataTable
                             columns={columns}
-                            data={filteredList as unknown[]}
+                            data={list as unknown[]}
                             loading={loading}
-                            noData={!loading && filteredList.length === 0}
+                            noData={!loading && list.length === 0}
                             pagingData={{ total, pageIndex: currentPage, pageSize }}
                             onPaginationChange={setCurrentPage}
                             onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

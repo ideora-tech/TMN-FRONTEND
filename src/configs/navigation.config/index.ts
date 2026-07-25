@@ -231,13 +231,6 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'interval-perawatan', path: '/interval-perawatan', title: 'Interval Perawatan',
-        translateKey: 'nav.intervalPerawatan', icon: 'repeat',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
         key: 'lokasi-kantor', path: '/lokasi-kantor', title: 'Lokasi Kantor',
         translateKey: 'nav.lokasiKantor', icon: 'map',
         type: NAV_ITEM_TYPE_ITEM,

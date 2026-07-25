@@ -28,7 +28,7 @@ export default function VendorPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await vendorService.list(currentPage)
+            const res = await vendorService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -36,7 +36,7 @@ export default function VendorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -57,12 +57,6 @@ export default function VendorPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(v =>
-        !search ||
-        v.nama_vendor.toLowerCase().includes(search.toLowerCase()) ||
-        (v.telepon ?? '').toLowerCase().includes(search.toLowerCase())
-    )
 
     const columns: ColumnDef<Vendor>[] = [
         {
@@ -151,9 +145,9 @@ export default function VendorPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

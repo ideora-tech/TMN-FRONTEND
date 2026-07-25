@@ -63,7 +63,7 @@ export default function ArmadaPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await armadaService.list(currentPage)
+            const res = await armadaService.list(currentPage, pageSize, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -71,7 +71,7 @@ export default function ArmadaPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -142,14 +142,6 @@ export default function ArmadaPage() {
         if (berhasil > 0) fetchData()
     }
 
-    const filteredList = list.filter(a => {
-        const matchSearch = !search ||
-            a.nopol.toLowerCase().includes(search.toLowerCase()) ||
-            (a.merk ?? '').toLowerCase().includes(search.toLowerCase())
-        const matchStatus = !statusFilter || a.status === statusFilter
-        return matchSearch && matchStatus
-    })
-
     const columns: ColumnDef<Armada>[] = [
         {
             header: 'No', id: 'no', size: 60,
@@ -175,6 +167,11 @@ export default function ArmadaPage() {
                     </div>
                 )
             },
+        },
+        {
+            header: 'Tipe Kendaraan', accessorKey: 'nama_jenis', size: 150,
+            cell: ({ row }: CellContext<Armada, unknown>) =>
+                row.original.nama_jenis ?? <span className="text-gray-300">—</span>,
         },
         { header: 'Tahun', accessorKey: 'tahun', size: 90 },
         {
@@ -288,9 +285,9 @@ export default function ArmadaPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
@@ -313,7 +310,7 @@ export default function ArmadaPage() {
                 </p>
             </ConfirmDialog>
 
-            <Dialog isOpen={!!importResult} onRequestClose={handleCloseImportResult} width={560}>
+            <Dialog isOpen={!!importResult} onRequestClose={handleCloseImportResult} onClose={handleCloseImportResult} width={560}>
                 <h5 className="text-base font-semibold mb-4">Hasil Import Armada</h5>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                     {importResult?.berhasil ?? 0} armada berhasil diimport
@@ -323,9 +320,9 @@ export default function ArmadaPage() {
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Baris</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Nopol</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Alasan</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Baris</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Nopol</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

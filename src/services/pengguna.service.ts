@@ -14,8 +14,8 @@ export interface Pengguna {
 }
 
 export const penggunaService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.PENGGUNA, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 15, search?: string, aktif?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.PENGGUNA, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
         return data as { data: Pengguna[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

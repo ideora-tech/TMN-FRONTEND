@@ -33,7 +33,7 @@ export default function JabatanPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await jabatanService.list(currentPage)
+            const res = await jabatanService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -41,7 +41,7 @@ export default function JabatanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -64,11 +64,8 @@ export default function JabatanPage() {
     }
 
     const filteredList = list.filter(j => {
-        const matchSearch = !search ||
-            j.kode_jabatan.toLowerCase().includes(search.toLowerCase()) ||
-            j.nama_jabatan.toLowerCase().includes(search.toLowerCase())
         const matchAktif = aktifFilter === '' || String(j.aktif ? 1 : 0) === aktifFilter
-        return matchSearch && matchAktif
+        return matchAktif
     })
 
     const columns: ColumnDef<Jabatan>[] = [

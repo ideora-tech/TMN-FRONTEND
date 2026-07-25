@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Input, DatePicker, Checkbox, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -77,11 +77,12 @@ type HasilGagal = { supir: string; armada: string; alasan: string }
 
 export default function PenugasanPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaMap, setArmadaMap]         = useState<Record<string, Armada>>({})
     const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [supirList, setSupirList]         = useState<Supir[]>([])
-    const [selectedProyek, setSelectedProyek] = useState<string>('')
+    const [selectedProyek, setSelectedProyek] = useState<string>(searchParams.get('proyek') ?? '')
     const [viewMode, setViewMode]             = useState<'tabel' | 'papan'>('tabel')
     const [list, setList]             = useState<Penugasan[]>([])
     const [loading, setLoading]       = useState(false)
@@ -704,7 +705,7 @@ export default function PenugasanPage() {
                 <p>Ubah status {bulkTargetCount} penugasan menjadi {bulkStatusLabel}?</p>
             </ConfirmDialog>
 
-            <Dialog isOpen={!!hasilUbahStatus} onRequestClose={() => setHasilUbahStatus(null)} width={520}>
+            <Dialog isOpen={!!hasilUbahStatus} onRequestClose={() => setHasilUbahStatus(null)} onClose={() => setHasilUbahStatus(null)} width={520}>
                 <h5 className="text-base font-semibold mb-1">Hasil Ubah Status</h5>
                 {hasilUbahStatus && (
                     <>
@@ -716,9 +717,9 @@ export default function PenugasanPage() {
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Armada</th>
-                                        <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Supir</th>
-                                        <th className="py-2.5 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Alasan</th>
+                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                        <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                        <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -739,7 +740,7 @@ export default function PenugasanPage() {
                 </div>
             </Dialog>
 
-            <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} width={920}>
+            <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     Centang satu atau lebih pasangan supir–armada, lalu tentukan tanggal tugas.
@@ -803,9 +804,9 @@ export default function PenugasanPage() {
                                                         </span>
                                                     </Tooltip>
                                                 </th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Supir</th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Armada</th>
-                                                <th className="py-2.5 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Status Unit</th>
+                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                                <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Status Unit</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -873,7 +874,7 @@ export default function PenugasanPage() {
                 </form>
             </Dialog>
 
-            <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} width={520}>
+            <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} onClose={closeEditDialog} width={520}>
                 <h5 className="text-base font-semibold mb-1">Edit Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     Ubah armada, supir, tanggal tugas, estimasi biaya, atau status penugasan ini.
@@ -950,7 +951,7 @@ export default function PenugasanPage() {
                 </form>
             </Dialog>
 
-            <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} width={520}>
+            <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} onClose={() => setHasilPenugasan(null)} width={520}>
                 <h5 className="text-base font-semibold mb-1">Hasil Penugasan</h5>
                 {hasilPenugasan && (
                     <>
@@ -962,9 +963,9 @@ export default function PenugasanPage() {
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Supir</th>
-                                        <th className="py-2.5 pr-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Armada</th>
-                                        <th className="py-2.5 pr-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Alasan</th>
+                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                        <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
+                                        <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

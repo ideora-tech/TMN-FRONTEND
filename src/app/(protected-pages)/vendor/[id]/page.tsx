@@ -1,7 +1,7 @@
 ﻿'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle } from 'react-icons/hi'
@@ -442,11 +442,11 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nomor</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Berlaku s/d</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">File</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nomor</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Berlaku s/d</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">File</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -471,18 +471,32 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                                     : <span className="text-gray-400 text-xs">—</span>}
                                             </td>
                                             <td className="py-3 text-right whitespace-nowrap">
-                                                <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
-                                                    onClick={() => {
-                                                        setEditDocTarget(d)
-                                                        setEditDocForm({
-                                                            jenis_dokumen:  d.jenis_dokumen,
-                                                            nomor:          d.nomor ?? '',
-                                                            berlaku_sampai: d.berlaku_sampai ?? '',
-                                                        })
-                                                        setEditDocFile(null)
-                                                    }} />
-                                                <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                    onClick={() => setDeleteDocTarget(d)} />
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Tooltip title="Edit">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                            onClick={() => {
+                                                                setEditDocTarget(d)
+                                                                setEditDocForm({
+                                                                    jenis_dokumen:  d.jenis_dokumen,
+                                                                    nomor:          d.nomor ?? '',
+                                                                    berlaku_sampai: d.berlaku_sampai ?? '',
+                                                                })
+                                                                setEditDocFile(null)
+                                                            }}
+                                                        >
+                                                            <HiOutlinePencilAlt className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                    <Tooltip title="Hapus">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => setDeleteDocTarget(d)}
+                                                        >
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                </div>
                                             </td>
                                         </tr>
                                     )
@@ -698,7 +712,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
             </Card>
 
             {/* Dialog Edit Dokumen */}
-            <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} width={520}>
+            <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} onClose={() => setEditDocTarget(null)} width={520}>
                 <h5 className="text-base font-semibold mb-5">Edit Dokumen</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Jenis Dokumen" asterisk>

@@ -1,9 +1,9 @@
 'use client'
 import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -16,6 +16,7 @@ import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.s
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
+import { projectService, Project } from '@/services/project.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import MulaiTripDialog from '../../trip/MulaiTripDialog'
 import { tripService, Trip } from '@/services/trip.service'
@@ -80,6 +81,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [supirVendorInfo, setSupirVendorInfo]     = useState<SupirVendor | null>(null)
 
     const [ruteOptions, setRuteOptions] = useState<{ value: string; label: string }[]>([])
+    const [proyek, setProyek] = useState<Project | null>(null)
 
     // trip
     const [tripList, setTripList]       = useState<Trip[]>([])
@@ -96,6 +98,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         ]).then(async ([p, karyawan, armada, supir, rute]) => {
             setPenugasan(p)
             setForm(p)
+            projectService.get(p.id_proyek).then(setProyek).catch(() => {})
             const karyawanOpts = karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))
             const armadaOpts   = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
             const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` }))
@@ -205,7 +208,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex flex-col gap-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(ROUTES.PENUGASAN)}
+                <button type="button" onClick={() => router.push(penugasan ? `${ROUTES.PENUGASAN}?proyek=${penugasan.id_proyek}` : ROUTES.PENUGASAN)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
@@ -243,6 +246,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
+                                { label: 'Proyek', value: proyek ? `${proyek.kode_proyek} — ${proyek.nama_proyek}` : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Tugas', value: penugasan.tanggal_tugas ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Armada',        value: armadaLabel },
                                 { label: 'Supir',         value: supirLabel },
@@ -414,11 +418,11 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Waktu Berangkat</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-in</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Check-out</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Waktu Berangkat</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-in</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-out</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -443,8 +447,14 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))} />
+                                            <Tooltip title="Detail">
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                    onClick={() => router.push(ROUTES.TRIP_DETAIL(t.id_trip))}
+                                                >
+                                                    <HiOutlineEye className="text-lg" />
+                                                </span>
+                                            </Tooltip>
                                         </td>
                                     </tr>
                                 ))}

@@ -14,7 +14,7 @@ ARG BACKEND_INTERNAL_URL=http://backend:4019
 ENV BACKEND_URL=$BACKEND_INTERNAL_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS=--max-old-space-size=1536
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

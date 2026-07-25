@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import classNames from 'classnames'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import Dropdown from '@/components/ui/Dropdown'
@@ -39,14 +40,17 @@ const tipeToAvatarType = (tipe: Notifikasi['tipe']): number => {
             return 1
         case 'alert_dokumen':
             return 2
+        case 'alert_servis':
+            return 3
         default:
             return 0
     }
 }
 
 const _Notification = ({ className }: { className?: string }) => {
+    const router = useRouter()
     const [notificationList, setNotificationList] = useState<LocalNotifikasi[]>([])
-    const [unreadNotification, setUnreadNotification] = useState(false)
+    const [unreadCount, setUnreadCount] = useState(0)
     const [noResult, setNoResult] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -55,12 +59,8 @@ const _Notification = ({ className }: { className?: string }) => {
     const getNotificationCount = async () => {
         try {
             const count = await notifikasiService.unreadCount()
-            if (count > 0) {
-                setNoResult(false)
-                setUnreadNotification(true)
-            } else {
-                setNoResult(true)
-            }
+            setUnreadCount(count)
+            if (count === 0) setNoResult(true)
         } catch {
             // silent – badge stays off
         }
@@ -97,7 +97,7 @@ const _Notification = ({ className }: { className?: string }) => {
         setNotificationList((prev) =>
             prev.map((item) => ({ ...item, _dibacaLocal: true })),
         )
-        setUnreadNotification(false)
+        setUnreadCount(0)
     }
 
     const onMarkAsRead = async (id: string) => {
@@ -107,15 +107,24 @@ const _Notification = ({ className }: { className?: string }) => {
             // optimistic
         }
         setNotificationList((prev) => {
-            const updated = prev.map((item) =>
+            const target = prev.find((item) => item.id_notifikasi === id)
+            if (target && !target._dibacaLocal) {
+                setUnreadCount((c) => Math.max(0, c - 1))
+            }
+            return prev.map((item) =>
                 item.id_notifikasi === id
                     ? { ...item, _dibacaLocal: true }
                     : item,
             )
-            const hasUnread = updated.some((item) => !item._dibacaLocal)
-            if (!hasUnread) setUnreadNotification(false)
-            return updated
         })
+    }
+
+    const onNotificationClick = (item: LocalNotifikasi) => {
+        onMarkAsRead(item.id_notifikasi)
+        if (item.link) {
+            notificationDropdownRef.current?.handleDropdownClose()
+            router.push(item.link)
+        }
     }
 
     const notificationDropdownRef = useRef<DropdownRef>(null)
@@ -125,7 +134,7 @@ const _Notification = ({ className }: { className?: string }) => {
             ref={notificationDropdownRef}
             renderTitle={
                 <NotificationToggle
-                    dot={unreadNotification}
+                    count={unreadCount}
                     className={className}
                 />
             }
@@ -155,14 +164,14 @@ const _Notification = ({ className }: { className?: string }) => {
                         <div key={item.id_notifikasi}>
                             <div
                                 className="relative rounded-xl flex px-4 py-3 cursor-pointer hover:bg-gray-100 active:bg-gray-100 dark:hover:bg-gray-700"
-                                onClick={() => onMarkAsRead(item.id_notifikasi)}
+                                onClick={() => onNotificationClick(item)}
                             >
                                 <div>
                                     <NotificationAvatar
                                         type={tipeToAvatarType(item.tipe)}
                                         target={item.judul}
                                         image=""
-                                        status="succeed"
+                                        status={item.judul.startsWith('[SEGERA]') ? 'urgent' : 'succeed'}
                                     />
                                 </div>
                                 <div className="mx-3">

@@ -34,7 +34,7 @@ export interface PaketResolusiItem {
 }
 
 export const paketPerawatanSparepartService = {
-    async list(params?: { page?: number; limit?: number; id_jenis_perawatan?: string; id_jenis_kendaraan?: string }) {
+    async list(params?: { page?: number; limit?: number; id_jenis_perawatan?: string; id_jenis_kendaraan?: string; search?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.PAKET_PERAWATAN_SPAREPART, { params })
         return data as { data: PaketPerawatanSparepart[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

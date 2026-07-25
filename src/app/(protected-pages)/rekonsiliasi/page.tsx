@@ -39,7 +39,7 @@ export default function RekonsiliasiPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await rekonsiliasiService.list(currentPage)
+            const res = await rekonsiliasiService.list(currentPage, pageSize, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -47,18 +47,12 @@ export default function RekonsiliasiPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
-
-    const filteredList = list.filter(r => {
-        const matchSearch = !search || r.id_faktur.toLowerCase().includes(search.toLowerCase())
-        const matchStatus = !statusFilter || r.status === statusFilter
-        return matchSearch && matchStatus
-    })
 
     const columns: ColumnDef<Rekonsiliasi>[] = [
         {
@@ -143,9 +137,9 @@ export default function RekonsiliasiPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

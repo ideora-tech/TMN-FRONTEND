@@ -5,7 +5,7 @@ import { Card, Button, Input, Tooltip, Tag, toast, Notification } from '@/compon
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { parameterBokService, ParameterBok } from '@/services/parameterBok.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -15,10 +15,11 @@ export default function ParameterBokPage() {
     const router = useRouter()
     const [list, setList] = useState<ParameterBok[]>([])
     const [loading, setLoading] = useState(true)
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
     const [total, setTotal] = useState(0)
-    const pageSize = 10
 
     const [deleteTarget, setDeleteTarget] = useState<ParameterBok | null>(null)
     const [submitting, setSubmitting] = useState(false)
@@ -26,7 +27,7 @@ export default function ParameterBokPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await parameterBokService.list(currentPage, pageSize)
+            const res = await parameterBokService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -34,15 +35,12 @@ export default function ParameterBokPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const filteredList = list.filter(l => {
-        if (!search) return true
-        const q = search.toLowerCase()
-        return (l.nama_jenis ?? '').toLowerCase().includes(q) || (l.nama_bbm ?? '').toLowerCase().includes(q)
-    })
+    const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
+    const handleSearchClear = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const handleDelete = async () => {
         if (!deleteTarget) return
@@ -152,22 +150,27 @@ export default function ParameterBokPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
-                            placeholder="Cari jenis kendaraan atau BBM..."
-                            suffix={<HiOutlineSearch className="text-gray-400" />}
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Cari jenis kendaraan atau BBM... (tekan Enter)"
+                            suffix={
+                                searchInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                            }
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
                         />
                     </div>
                 </div>
                 <DataTable
                     columns={columns as ColumnDef<unknown>[]}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSort={() => {}}
-                    onSelectChange={() => {}}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                     selectable={false}
                 />
             </Card>

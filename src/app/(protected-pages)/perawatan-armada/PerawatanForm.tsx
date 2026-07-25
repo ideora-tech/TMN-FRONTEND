@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -54,6 +54,8 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
     const [armadaList, setArmadaList] = useState<Armada[]>([])
     const [jenisOptions, setJenisOptions]   = useState<Option[]>([])
     const [sparepartList, setSparepartList] = useState<Sparepart[]>([])
+    // true setelah user mengedit sparepart manual — auto-fill paket berhenti mengikuti dropdown
+    const sparepartLocked = useRef(false)
 
     useEffect(() => {
         Promise.all([
@@ -61,7 +63,10 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             jenisPerawatanService.list(1, 100),
             sparepartService.list({ page: 1, limit: 100 }),
         ]).then(([armada, jenis, sp]) => {
-            setArmadaOptions(armada.data.map((a: Armada) => ({ value: a.id_armada, label: a.nopol })))
+            setArmadaOptions(armada.data.map((a: Armada) => ({
+                value: a.id_armada,
+                label: a.nama_jenis ? `${a.nopol} — ${a.nama_jenis}` : a.nopol,
+            })))
             setArmadaList(armada.data)
             setJenisOptions(jenis.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_perawatan, label: j.nama })))
             setSparepartList(sp.data.filter(s => s.aktif))
@@ -114,10 +119,12 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
         return () => { aktif = false }
     }, [isEdit, form.id_armada, form.id_jenis_perawatan, form.tanggal, armadaList])
 
-    // Auto-fill daftar sparepart dari paket standar — hanya saat CREATE dan list masih kosong,
-    // supaya tidak menimpa part yang sudah ditambah manual.
+    // Auto-fill daftar sparepart dari paket standar — hanya saat CREATE dan selama user belum
+    // mengedit sparepart manual (sparepartLocked). Sengaja TERUS mengikuti tiap kali dropdown
+    // Jenis Perawatan berganti (bukan cuma sekali saat kosong), supaya ganti jenis perawatan
+    // beberapa kali tetap menampilkan paket yang sesuai — bukan sisa paket jenis sebelumnya.
     useEffect(() => {
-        if (isEdit || items.length > 0) return
+        if (isEdit || sparepartLocked.current) return
         const armada = armadaList.find(a => a.id_armada === form.id_armada)
         if (!armada?.id_jenis_kendaraan || !form.id_jenis_perawatan) return
 
@@ -127,7 +134,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             id_jenis_kendaraan: armada.id_jenis_kendaraan,
         })
             .then(res => {
-                if (aktif && res.length > 0) {
+                if (aktif) {
                     setItems(res.map(r => ({
                         id_sparepart: r.id_sparepart,
                         qty: String(r.qty_standar),
@@ -137,16 +144,17 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             })
             .catch(() => {})
         return () => { aktif = false }
-    }, [isEdit, form.id_armada, form.id_jenis_perawatan, armadaList, items.length])
+    }, [isEdit, form.id_armada, form.id_jenis_perawatan, armadaList])
 
     const sparepartOptions: Option[] = sparepartList.map(s => ({
         value: s.id_sparepart,
         label: `${s.nama} (stok: ${formatNum(s.stok)} ${s.satuan})`,
     }))
 
-    const addItem = () => setItems(p => [...p, { id_sparepart: '', qty: '1', harga: '' }])
-    const removeItem = (idx: number) => setItems(p => p.filter((_, i) => i !== idx))
+    const addItem = () => { sparepartLocked.current = true; setItems(p => [...p, { id_sparepart: '', qty: '1', harga: '' }]) }
+    const removeItem = (idx: number) => { sparepartLocked.current = true; setItems(p => p.filter((_, i) => i !== idx)) }
     const updateItem = (idx: number, field: keyof ItemRow, value: string) => {
+        sparepartLocked.current = true
         setItems(p => {
             const next = [...p]
             next[idx] = { ...next[idx], [field]: value }
@@ -154,6 +162,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
         })
     }
     const pilihSparepart = (idx: number, idSparepart: string) => {
+        sparepartLocked.current = true
         const sp = sparepartList.find(s => s.id_sparepart === idSparepart)
         setItems(p => {
             const next = [...p]
@@ -167,6 +176,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
     }
 
     const totalSparepart = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.harga) || 0), 0)
+    const selectedArmada = armadaList.find(a => a.id_armada === form.id_armada)
 
     const canSubmit = !!form.id_armada && !!form.tanggal && !!form.id_jenis_perawatan
         && items.every(it => it.id_sparepart && Number(it.qty) > 0)
@@ -228,6 +238,9 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                                 options={armadaOptions}
                                 value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
                                 onChange={opt => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))} />
+                        </FormItem>
+                        <FormItem label="Tipe Kendaraan">
+                            <Input disabled placeholder="—" value={selectedArmada?.nama_jenis ?? ''} />
                         </FormItem>
                         <FormItem label="Jenis Perawatan" asterisk>
                             <Select placeholder="Pilih jenis perawatan..."

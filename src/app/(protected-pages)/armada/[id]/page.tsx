@@ -1,22 +1,27 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { use, useEffect, useState, useCallback, useRef } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineExternalLink, HiOutlinePhotograph } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineEye, HiOutlinePhotograph } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { armadaService, Armada } from '@/services/armada.service'
 import { dokumenArmadaService, DokumenArmada } from '@/services/dokumenArmada.service'
-import { perawatanArmadaService, PerawatanArmada, PrediksiPerawatanItem } from '@/services/perawatanArmada.service'
+import { perawatanArmadaService, PerawatanArmada, PrediksiPerawatanItem, PerawatanSparepartInput } from '@/services/perawatanArmada.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { sparepartService, Sparepart } from '@/services/sparepart.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
 import { jenisPerawatanService, JenisPerawatan } from '@/services/jenisPerawatan.service'
 import { intervalPerawatanService } from '@/services/intervalPerawatan.service'
+import { paketPerawatanSparepartService } from '@/services/paketPerawatanSparepart.service'
+
+type ItemRow = { id_sparepart: string; qty: string; harga: string }
 
 const RAWAT_STATUS_OPTIONS = [
     { value: 'terjadwal',    label: 'Terjadwal' },
@@ -172,12 +177,18 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [rawatLoading, setRawatLoading]   = useState(false)
     const [showRawatForm, setShowRawatForm] = useState(false)
     const [rawatForm, setRawatForm]         = useState({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+    const [rawatItems, setRawatItems]       = useState<ItemRow[]>([])
+    // true setelah user mengedit sparepart manual — auto-fill paket berhenti mengikuti dropdown
+    const rawatSparepartLocked = useRef(false)
     const [addingRawat, setAddingRawat]     = useState(false)
     const [editRawatTarget, setEditRawatTarget] = useState<PerawatanArmada | null>(null)
     const [editRawatForm, setEditRawatForm]     = useState({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+    const [editRawatItems, setEditRawatItems]   = useState<ItemRow[]>([])
+    const [editRawatLoading, setEditRawatLoading] = useState(false)
     const [updatingRawat, setUpdatingRawat]     = useState(false)
     const [deleteRawatTarget, setDeleteRawatTarget] = useState<PerawatanArmada | null>(null)
     const [deletingRawat, setDeletingRawat]         = useState(false)
+    const [sparepartList, setSparepartList] = useState<Sparepart[]>([])
 
     useEffect(() => {
         armadaService.get(id)
@@ -197,6 +208,53 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             .then(res => setJenisPerawatanOptions(res.data.filter((j: JenisPerawatan) => j.aktif).map((j: JenisPerawatan) => ({ value: j.id_jenis_perawatan, label: j.nama }))))
             .catch(() => setJenisPerawatanOptions([]))
     }, [])
+
+    useEffect(() => {
+        sparepartService.list({ page: 1, limit: 100 })
+            .then(res => setSparepartList(res.data.filter(s => s.aktif)))
+            .catch(() => setSparepartList([]))
+    }, [])
+
+    const sparepartOptions = sparepartList.map(s => ({
+        value: s.id_sparepart,
+        label: `${s.nama} (stok: ${formatNum(s.stok)} ${s.satuan})`,
+    }))
+
+    const addItem = (setItems: Dispatch<SetStateAction<ItemRow[]>>) =>
+        setItems(prev => [...prev, { id_sparepart: '', qty: '1', harga: '' }])
+
+    const removeItem = (setItems: Dispatch<SetStateAction<ItemRow[]>>, idx: number) =>
+        setItems(prev => prev.filter((_, i) => i !== idx))
+
+    const updateItem = (setItems: Dispatch<SetStateAction<ItemRow[]>>, idx: number, field: keyof ItemRow, value: string) =>
+        setItems(prev => {
+            const next = [...prev]
+            next[idx] = { ...next[idx], [field]: value }
+            return next
+        })
+
+    const pilihSparepart = (setItems: Dispatch<SetStateAction<ItemRow[]>>, idx: number, idSparepart: string) => {
+        const sp = sparepartList.find(s => s.id_sparepart === idSparepart)
+        setItems(prev => {
+            const next = [...prev]
+            next[idx] = {
+                ...next[idx],
+                id_sparepart: idSparepart,
+                harga: next[idx].harga || (sp ? String(sp.harga_standar) : ''),
+            }
+            return next
+        })
+    }
+
+    const totalSparepart = (items: ItemRow[]) =>
+        items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.harga) || 0), 0)
+
+    // Wrapper khusus form TAMBAH — menandai rawatSparepartLocked supaya auto-fill paket
+    // (lihat useEffect di bawah) berhenti menimpa begitu user mengedit sparepart manual.
+    const addRawatItem = () => { rawatSparepartLocked.current = true; addItem(setRawatItems) }
+    const removeRawatItem = (idx: number) => { rawatSparepartLocked.current = true; removeItem(setRawatItems, idx) }
+    const updateRawatItem = (idx: number, field: keyof ItemRow, value: string) => { rawatSparepartLocked.current = true; updateItem(setRawatItems, idx, field, value) }
+    const pilihRawatSparepart = (idx: number, idSparepart: string) => { rawatSparepartLocked.current = true; pilihSparepart(setRawatItems, idx, idSparepart) }
 
     const fetchDokumen = useCallback(async () => {
         setDocLoading(true)
@@ -344,9 +402,16 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 status:                   rawatForm.status as 'terjadwal' | 'dalam_proses' | 'selesai',
                 jadwal_servis_berikutnya: rawatForm.jadwal_servis_berikutnya || null,
                 keterangan:               rawatForm.keterangan || null,
+                sparepart: rawatItems.map((it): PerawatanSparepartInput => ({
+                    id_sparepart: it.id_sparepart,
+                    qty: Number(it.qty),
+                    harga: Number(it.harga) || 0,
+                })),
             })
             toast.push(<Notification type="success" title="Perawatan berhasil dicatat" />)
             setRawatForm({ tanggal: '', id_jenis_perawatan: '', biaya: '', km_odometer: '', status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '' })
+            setRawatItems([])
+            rawatSparepartLocked.current = false
             setShowRawatForm(false); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -365,9 +430,14 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 status:                   editRawatForm.status as 'terjadwal' | 'dalam_proses' | 'selesai',
                 jadwal_servis_berikutnya: editRawatForm.jadwal_servis_berikutnya || null,
                 keterangan:               editRawatForm.keterangan || null,
+                sparepart: editRawatItems.map((it): PerawatanSparepartInput => ({
+                    id_sparepart: it.id_sparepart,
+                    qty: Number(it.qty),
+                    harga: Number(it.harga) || 0,
+                })),
             })
             toast.push(<Notification type="success" title="Perawatan berhasil diperbarui" />)
-            setEditRawatTarget(null); fetchPerawatan(); fetchPrediksi()
+            setEditRawatTarget(null); setEditRawatItems([]); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setUpdatingRawat(false) }
@@ -404,6 +474,32 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             .catch(() => {})
         return () => { aktif = false }
     }, [armada?.id_jenis_kendaraan, rawatForm.id_jenis_perawatan, rawatForm.tanggal])
+
+    // Auto-fill daftar sparepart dari paket standar — sengaja TERUS mengikuti tiap kali dropdown
+    // Jenis Perawatan berganti (bukan cuma sekali saat kosong), sampai user mengedit sparepart
+    // manual (rawatSparepartLocked) — supaya ganti jenis perawatan beberapa kali tidak
+    // menyisakan paket jenis sebelumnya (sama seperti PerawatanForm.tsx).
+    useEffect(() => {
+        if (rawatSparepartLocked.current) return
+        if (!armada?.id_jenis_kendaraan || !rawatForm.id_jenis_perawatan) return
+
+        let aktif = true
+        paketPerawatanSparepartService.resolusi({
+            id_jenis_perawatan: rawatForm.id_jenis_perawatan,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+        })
+            .then(res => {
+                if (aktif) {
+                    setRawatItems(res.map(r => ({
+                        id_sparepart: r.id_sparepart,
+                        qty: String(r.qty_standar),
+                        harga: String(r.harga_standar),
+                    })))
+                }
+            })
+            .catch(() => {})
+        return () => { aktif = false }
+    }, [armada?.id_jenis_kendaraan, rawatForm.id_jenis_perawatan])
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!armada) return <div className="p-6 text-red-500">Armada tidak ditemukan.</div>
@@ -677,11 +773,11 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Nomor</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Berlaku s/d</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">File</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nomor</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Berlaku s/d</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">File</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -706,18 +802,30 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                     : <span className="text-gray-400 text-xs">—</span>}
                                             </td>
                                             <td className="py-3 text-right whitespace-nowrap">
-                                                <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
-                                                    onClick={() => {
-                                                        setEditDocTarget(d)
-                                                        setEditDocForm({
-                                                            jenis_dokumen:  d.jenis_dokumen,
-                                                            nomor:          d.nomor ?? '',
-                                                            berlaku_sampai: d.berlaku_sampai ?? '',
-                                                        })
-                                                        setEditDocFile(null)
-                                                    }} />
-                                                <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                    onClick={() => setDeleteDocTarget(d)} />
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Tooltip title="Edit">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                            onClick={() => {
+                                                                setEditDocTarget(d)
+                                                                setEditDocForm({
+                                                                    jenis_dokumen:  d.jenis_dokumen,
+                                                                    nomor:          d.nomor ?? '',
+                                                                    berlaku_sampai: d.berlaku_sampai ?? '',
+                                                                })
+                                                                setEditDocFile(null)
+                                                            }}>
+                                                            <HiOutlinePencilAlt className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                    <Tooltip title="Hapus">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                                                            onClick={() => setDeleteDocTarget(d)}>
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                </div>
                                             </td>
                                         </tr>
                                     )
@@ -742,11 +850,11 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Jenis Perawatan</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Servis Terakhir</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Perkiraan Berikutnya</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Status</th>
-                                    <th className="py-2.5 px-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Sparepart Standar</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Jenis Perawatan</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Servis Terakhir</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Perkiraan Berikutnya</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Status</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Sparepart Standar</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -829,10 +937,51 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 </FormItem>
                             </div>
                         </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
+                                <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addRawatItem}>Tambah Part</Button>
+                            </div>
+                            {rawatItems.length === 0 ? (
+                                <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>
+                            ) : (
+                                <div className="flex flex-col gap-2">
+                                    {rawatItems.map((it, idx) => (
+                                        <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <Select placeholder="Pilih spare part..."
+                                                    options={sparepartOptions}
+                                                    value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
+                                                    onChange={opt => pilihRawatSparepart(idx, opt?.value ?? '')} />
+                                            </div>
+                                            <Input className="w-full sm:w-24" type="number" min={1} placeholder="Qty"
+                                                value={it.qty}
+                                                onChange={e => updateRawatItem(idx, 'qty', e.target.value.replace(/\D/g, ''))} />
+                                            <Input className="w-full sm:w-40" prefix="Rp" placeholder="Harga/unit"
+                                                value={it.harga ? formatNum(Number(it.harga)) : ''}
+                                                onChange={e => updateRawatItem(idx, 'harga', e.target.value.replace(/\D/g, ''))} />
+                                            <div className="w-full sm:w-32 text-right text-sm font-medium whitespace-nowrap self-center">
+                                                {formatRupiah((Number(it.qty) || 0) * (Number(it.harga) || 0))}
+                                            </div>
+                                            <span
+                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0 self-center"
+                                                onClick={() => removeRawatItem(idx)}>
+                                                <HiOutlineTrash className="text-base" />
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+                                        <p className="text-sm">Total Spare Part: <span className="font-bold">{formatRupiah(totalSparepart(rawatItems))}</span></p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => setShowRawatForm(false)}>Batal</Button>
+                            <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => { setShowRawatForm(false); setRawatItems([]); rawatSparepartLocked.current = false }}>Batal</Button>
                             <Button size="sm" variant="solid" loading={addingRawat}
-                                disabled={!rawatForm.tanggal || !rawatForm.id_jenis_perawatan}
+                                disabled={!rawatForm.tanggal || !rawatForm.id_jenis_perawatan || !rawatItems.every(it => it.id_sparepart && Number(it.qty) > 0)}
                                 onClick={handleAddPerawatan}>Simpan</Button>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
@@ -848,12 +997,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">KM</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Biaya</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Servis Berikutnya</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">KM</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Biaya</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Servis Berikutnya</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -879,21 +1028,47 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                 : <span className="text-gray-300">—</span>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
-                                            <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} className="mr-1"
-                                                onClick={() => {
-                                                    setEditRawatTarget(p)
-                                                    setEditRawatForm({
-                                                        tanggal:                  p.tanggal,
-                                                        id_jenis_perawatan:       p.id_jenis_perawatan ?? '',
-                                                        biaya:                    String(p.biaya),
-                                                        km_odometer:              p.km_odometer != null ? String(p.km_odometer) : '',
-                                                        status:                   p.status,
-                                                        jadwal_servis_berikutnya: p.jadwal_servis_berikutnya ?? '',
-                                                        keterangan:               p.keterangan ?? '',
-                                                    })
-                                                }} />
-                                            <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                onClick={() => setDeleteRawatTarget(p)} />
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Tooltip title="Edit">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                        onClick={() => {
+                                                            setEditRawatTarget(p)
+                                                            setEditRawatForm({
+                                                                tanggal:                  p.tanggal,
+                                                                id_jenis_perawatan:       p.id_jenis_perawatan ?? '',
+                                                                biaya:                    String(p.biaya),
+                                                                km_odometer:              p.km_odometer != null ? String(p.km_odometer) : '',
+                                                                status:                   p.status,
+                                                                jadwal_servis_berikutnya: p.jadwal_servis_berikutnya ?? '',
+                                                                keterangan:               p.keterangan ?? '',
+                                                            })
+                                                            // list armada tidak menyertakan sparepart per baris — ambil record lengkap
+                                                            // supaya item lama tidak diam-diam hilang saat disimpan ulang.
+                                                            setEditRawatItems([])
+                                                            setEditRawatLoading(true)
+                                                            perawatanArmadaService.get(id, p.id_perawatan)
+                                                                .then(full => {
+                                                                    setEditRawatItems((full.sparepart ?? []).map(it => ({
+                                                                        id_sparepart: it.id_sparepart,
+                                                                        qty: String(it.qty),
+                                                                        harga: String(it.harga),
+                                                                    })))
+                                                                })
+                                                                .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+                                                                .finally(() => setEditRawatLoading(false))
+                                                        }}>
+                                                        <HiOutlinePencilAlt className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                                <Tooltip title="Hapus">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                                                        onClick={() => setDeleteRawatTarget(p)}>
+                                                        <HiOutlineTrash className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -919,9 +1094,9 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Tanggal Tugas</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Supir</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal Tugas</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -951,8 +1126,14 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
-                                            <Button size="xs" variant="plain" icon={<HiOutlineExternalLink />}
-                                                onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))} />
+                                            <Tooltip title="Detail">
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                    onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))}
+                                                >
+                                                    <HiOutlineEye className="text-lg" />
+                                                </span>
+                                            </Tooltip>
                                         </td>
                                     </tr>
                                     )
@@ -964,7 +1145,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             </Card>
 
             {/* Dialog Edit Dokumen */}
-            <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} width={520}>
+            <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} onClose={() => setEditDocTarget(null)} width={520}>
                 <h5 className="text-base font-semibold mb-5">Edit Dokumen</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Jenis Dokumen" asterisk>
@@ -1006,7 +1187,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             </Dialog>
 
             {/* Dialog Edit Perawatan */}
-            <Dialog isOpen={!!editRawatTarget} onRequestClose={() => setEditRawatTarget(null)} width={600}>
+            <Dialog isOpen={!!editRawatTarget} onRequestClose={() => setEditRawatTarget(null)} onClose={() => setEditRawatTarget(null)} width={600}>
                 <h5 className="text-base font-semibold mb-5">Edit Perawatan</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Tanggal" asterisk>
@@ -1048,10 +1229,53 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         </FormItem>
                     </div>
                 </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
+                        <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={() => addItem(setEditRawatItems)}>Tambah Part</Button>
+                    </div>
+                    {editRawatLoading ? (
+                        <div className="flex justify-center py-4"><Spinner /></div>
+                    ) : editRawatItems.length === 0 ? (
+                        <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {editRawatItems.map((it, idx) => (
+                                <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <Select placeholder="Pilih spare part..."
+                                            options={sparepartOptions}
+                                            value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
+                                            onChange={opt => pilihSparepart(setEditRawatItems, idx, opt?.value ?? '')} />
+                                    </div>
+                                    <Input className="w-full sm:w-24" type="number" min={1} placeholder="Qty"
+                                        value={it.qty}
+                                        onChange={e => updateItem(setEditRawatItems, idx, 'qty', e.target.value.replace(/\D/g, ''))} />
+                                    <Input className="w-full sm:w-40" prefix="Rp" placeholder="Harga/unit"
+                                        value={it.harga ? formatNum(Number(it.harga)) : ''}
+                                        onChange={e => updateItem(setEditRawatItems, idx, 'harga', e.target.value.replace(/\D/g, ''))} />
+                                    <div className="w-full sm:w-32 text-right text-sm font-medium whitespace-nowrap self-center">
+                                        {formatRupiah((Number(it.qty) || 0) * (Number(it.harga) || 0))}
+                                    </div>
+                                    <span
+                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0 self-center"
+                                        onClick={() => removeItem(setEditRawatItems, idx)}>
+                                        <HiOutlineTrash className="text-base" />
+                                    </span>
+                                </div>
+                            ))}
+                            <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <p className="text-sm">Total Spare Part: <span className="font-bold">{formatRupiah(totalSparepart(editRawatItems))}</span></p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => setEditRawatTarget(null)}>Batal</Button>
+                    <Button variant="plain" onClick={() => { setEditRawatTarget(null); setEditRawatItems([]) }}>Batal</Button>
                     <Button variant="solid" loading={updatingRawat}
-                        disabled={!editRawatForm.tanggal || !editRawatForm.id_jenis_perawatan}
+                        disabled={!editRawatForm.tanggal || !editRawatForm.id_jenis_perawatan || editRawatLoading || !editRawatItems.every(it => it.id_sparepart && Number(it.qty) > 0)}
                         onClick={handleEditPerawatan}>Simpan</Button>
                 </div>
             </Dialog>

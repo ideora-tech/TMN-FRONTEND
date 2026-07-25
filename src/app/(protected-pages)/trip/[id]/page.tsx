@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { use, useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -42,6 +42,15 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const EKSTENSI_GAMBAR = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+const MAX_UKURAN_FOTO = 10 * 1024 * 1024 // 10MB
+
+const validasiUkuranFoto = (fileList: FileList | null): boolean | string => {
+    if (!fileList) return true
+    for (const f of fileList) {
+        if (f.size > MAX_UKURAN_FOTO) return `Ukuran file "${f.name}" melebihi 10MB`
+    }
+    return true
+}
 
 const ekstensiFile = (url: string): string =>
     (url.split('?')[0].split('.').pop() ?? '').toLowerCase()
@@ -70,9 +79,35 @@ function FotoPreview({ url, alt }: { url: string; alt: string }) {
     )
 }
 
+/** Preview file yang baru dipilih (belum diupload) — gambar tampil dari object URL lokal, file lain tampil placeholder. */
+function LocalFotoPreview({ file }: { file: File }) {
+    const isGambar = file.type.startsWith('image/')
+    const url = useMemo(() => (isGambar ? URL.createObjectURL(file) : null), [file, isGambar])
+    useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
+
+    if (!url) {
+        const ekstensi = (file.name.split('.').pop() ?? '').toLowerCase()
+        return (
+            <div className="w-full h-32 flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400">
+                <HiOutlineDocumentText className="text-3xl" />
+                <span className="text-xs font-semibold uppercase">{ekstensi || 'File'}</span>
+            </div>
+        )
+    }
+
+    return (
+        <img
+            src={url}
+            alt={file.name}
+            className="w-full max-h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+        />
+    )
+}
+
 type RekapBiaya = {
     total_bbm: number
     total_uang_jalan: number
+    total_uang_tol: number
     total_biaya_lain: number
     total_keseluruhan: number
     estimasi_biaya: number | null
@@ -86,6 +121,7 @@ type BiayaLainRow = { nama_biaya: string; nominal: string }
 const emptyLaporanForm = () => ({
     biaya_bbm:        '',
     uang_jalan:       '',
+    uang_tol:         '',
     jarak_tempuh_km:  '',
     catatan_insiden:  '',
     id_jenis_bbm:     '',
@@ -121,10 +157,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     const [laporanLoading, setLaporanLoading] = useState(true)
     const [showLaporanForm, setShowLaporanForm] = useState(false)
     const [laporanForm, setLaporanForm]       = useState(emptyLaporanForm())
+    const [laporanFotoFiles, setLaporanFotoFiles] = useState<File[]>([])
     const [savingLaporan, setSavingLaporan]   = useState(false)
 
-    // foto laporan
-    const [fotoFile, setFotoFile]             = useState<File | null>(null)
+    // foto laporan (tambah foto susulan setelah laporan tersimpan)
+    const [fotoFiles, setFotoFiles]           = useState<File[]>([])
     const [fotoKeterangan, setFotoKeterangan] = useState('')
     const [uploadingFoto, setUploadingFoto]   = useState(false)
     const [deleteFotoTarget, setDeleteFotoTarget] = useState<FotoLaporan | null>(null)
@@ -223,6 +260,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     const handleOpenCreateLaporan = () => {
         setLaporanForm(emptyLaporanForm())
+        setLaporanFotoFiles([])
         setShowLaporanForm(true)
     }
 
@@ -231,12 +269,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         setLaporanForm({
             biaya_bbm:       String(laporan.biaya_bbm ?? ''),
             uang_jalan:      String(laporan.uang_jalan ?? ''),
+            uang_tol:        String(laporan.uang_tol ?? ''),
             jarak_tempuh_km: String(laporan.jarak_tempuh_km ?? ''),
             catatan_insiden: laporan.catatan_insiden ?? '',
             id_jenis_bbm:    laporan.id_jenis_bbm ?? '',
             jumlah_liter:    laporan.jumlah_liter != null ? String(laporan.jumlah_liter) : '',
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
         })
+        setLaporanFotoFiles([])
         setShowLaporanForm(true)
     }
 
@@ -262,6 +302,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             const payload = {
                 biaya_bbm:       Number(laporanForm.biaya_bbm) || 0,
                 uang_jalan:      Number(laporanForm.uang_jalan) || 0,
+                uang_tol:        Number(laporanForm.uang_tol) || 0,
                 jarak_tempuh_km: Number(laporanForm.jarak_tempuh_km) || 0,
                 catatan_insiden: laporanForm.catatan_insiden || null,
                 id_jenis_bbm:    laporanForm.id_jenis_bbm || null,
@@ -271,13 +312,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     .map(b => ({ nama_biaya: b.nama_biaya, nominal: Number(b.nominal) || 0 })),
             }
             if (laporan) {
-                await laporanPerjalananService.update(laporan.id_laporan, payload)
+                await laporanPerjalananService.update(laporan.id_laporan, payload, laporanFotoFiles)
                 toast.push(<Notification type="success" title="Laporan perjalanan berhasil diperbarui" />)
             } else {
-                await laporanPerjalananService.create(id, payload)
+                await laporanPerjalananService.create(id, payload, laporanFotoFiles)
                 toast.push(<Notification type="success" title="Laporan perjalanan berhasil disimpan" />)
             }
             setShowLaporanForm(false)
+            setLaporanFotoFiles([])
             await Promise.all([fetchLaporan(), fetchRekap()])
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -288,12 +330,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     // --- handlers foto ---
     const handleUploadFoto = async () => {
-        if (!laporan || !fotoFile) return
+        if (!laporan || fotoFiles.length === 0) return
         setUploadingFoto(true)
         try {
-            await laporanPerjalananService.uploadFoto(laporan.id_laporan, fotoFile, fotoKeterangan || undefined)
+            await laporanPerjalananService.uploadFoto(laporan.id_laporan, fotoFiles, fotoKeterangan || undefined)
             toast.push(<Notification type="success" title="Foto berhasil diunggah" />)
-            setFotoFile(null)
+            setFotoFiles([])
             setFotoKeterangan('')
             await fetchLaporan()
         } catch (err) {
@@ -366,6 +408,24 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                     {(
                         [
+                            ...(trip.nama_proyek
+                                ? [{
+                                    label: 'Proyek',
+                                    value: (
+                                        trip.id_proyek ? (
+                                            <span
+                                                className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                onClick={() => router.push(ROUTES.PROYEK_DETAIL(trip.id_proyek as string))}
+                                            >
+                                                {trip.nama_proyek}{trip.kode_proyek ? ` (${trip.kode_proyek})` : ''}
+                                            </span>
+                                        ) : trip.nama_proyek
+                                    ) as React.ReactNode,
+                                }]
+                                : []),
+                            ...(trip.nama_klien
+                                ? [{ label: 'Klien', value: trip.nama_klien as React.ReactNode }]
+                                : []),
                             ...(trip.rute
                                 ? [{ label: 'Rute', value: trip.rute as React.ReactNode }]
                                 : []),
@@ -522,6 +582,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     onChange={e => setLaporanForm(p => ({ ...p, uang_jalan: e.target.value.replace(/\D/g, '') }))}
                                 />
                             </FormItem>
+                            <FormItem label="Uang Tol (Rp)">
+                                <Input
+                                    prefix="Rp"
+                                    placeholder="0"
+                                    value={laporanForm.uang_tol ? formatNum(Number(laporanForm.uang_tol)) : ''}
+                                    onChange={e => setLaporanForm(p => ({ ...p, uang_tol: e.target.value.replace(/\D/g, '') }))}
+                                />
+                            </FormItem>
                             <FormItem label="Jarak Tempuh (km)">
                                 <Input
                                     type="number"
@@ -543,7 +611,40 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-2 mb-1">
+                        <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Dokumentasi Foto</p>
+                            <Upload
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                multiple
+                                showList={false}
+                                fileList={laporanFotoFiles}
+                                beforeUpload={validasiUkuranFoto}
+                                onChange={files => setLaporanFotoFiles(files)}
+                            >
+                                <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
+                                    Pilih file (bisa lebih dari satu, maks. 10MB/file)
+                                </Button>
+                            </Upload>
+                            {laporanFotoFiles.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                                    {laporanFotoFiles.map((file, idx) => (
+                                        <div key={`${file.name}-${idx}`} className="relative group">
+                                            <LocalFotoPreview file={file} />
+                                            <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
+                                            <button
+                                                type="button"
+                                                className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
+                                                onClick={() => setLaporanFotoFiles(prev => prev.filter((_, i) => i !== idx))}
+                                            >
+                                                <HiOutlineTrash className="text-xs" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Lain</p>
                             <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addBiayaLainRow}>
                                 Tambah Biaya
@@ -582,7 +683,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         )}
 
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => setShowLaporanForm(false)}>
+                            <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>
                                 Batal
                             </Button>
                             <Button type="submit" size="sm" variant="solid" loading={savingLaporan}>
@@ -605,6 +706,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     : []),
                                 { label: 'Biaya BBM',      value: formatRupiah(laporan.biaya_bbm) },
                                 { label: 'Uang Jalan',     value: formatRupiah(laporan.uang_jalan) },
+                                { label: 'Uang Tol',       value: formatRupiah(laporan.uang_tol) },
                                 { label: 'Jarak Tempuh',   value: `${formatNum(laporan.jarak_tempuh_km)} km` },
                                 { label: 'Catatan Insiden', value: laporan.catatan_insiden || '-' },
                             ].map(({ label, value }) => (
@@ -621,14 +723,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             <div className="overflow-x-auto mt-4">
                                 <table className="w-full text-sm">
                                     <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                        <tr className="border-b">
+                                        <tr className="border-b border-gray-100 dark:border-gray-700">
                                             <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
                                             <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {laporan.biaya_lain.map(b => (
-                                            <tr key={b.id_biaya_lain} className="border-b last:border-b-0">
+                                            <tr key={b.id_biaya_lain}>
                                                 <td className="py-2 pr-4">{b.nama_biaya}</td>
                                                 <td className="py-2 text-right">{formatRupiah(b.nominal)}</td>
                                             </tr>
@@ -675,10 +777,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     />
                                 </FormItem>
                                 <FormItem label="File" asterisk className="mb-0">
-                                    <Upload accept=".jpg,.jpeg,.png,.pdf" showList={false} uploadLimit={1}
-                                        onChange={files => setFotoFile(files[0] ?? null)}>
+                                    <Upload accept=".jpg,.jpeg,.png" showList={false} multiple
+                                        beforeUpload={validasiUkuranFoto}
+                                        onChange={files => setFotoFiles(files)}>
                                         <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                            {fotoFile ? fotoFile.name : 'Pilih file'}
+                                            {fotoFiles.length > 0 ? `${fotoFiles.length} file dipilih` : 'Pilih file (bisa lebih dari satu)'}
                                         </Button>
                                     </Upload>
                                 </FormItem>
@@ -687,7 +790,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     size="sm"
                                     variant="solid"
                                     loading={uploadingFoto}
-                                    disabled={!fotoFile}
+                                    disabled={fotoFiles.length === 0}
                                     onClick={handleUploadFoto}
                                 >
                                     Upload
@@ -708,10 +811,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="text-gray-400 text-sm">Belum ada data biaya untuk trip ini.</div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-5">
                             {[
                                 { label: 'Total BBM',         value: rekap?.total_bbm ?? 0 },
                                 { label: 'Total Uang Jalan',  value: rekap?.total_uang_jalan ?? 0 },
+                                { label: 'Total Uang Tol',    value: rekap?.total_uang_tol ?? 0 },
                                 { label: 'Total Biaya Lain',  value: rekap?.total_biaya_lain ?? 0 },
                                 { label: 'Total Keseluruhan', value: rekap?.total_keseluruhan ?? 0, highlight: true },
                             ].map(({ label, value, highlight }) => (
@@ -757,21 +861,21 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                        <tr className="border-b">
+                                        <tr className="border-b border-gray-100 dark:border-gray-700">
                                             <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
                                             <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {rekap.items.map(item => (
-                                            <tr key={item.id_biaya_lain} className="border-b last:border-b-0">
+                                            <tr key={item.id_biaya_lain}>
                                                 <td className="py-2 pr-4">{item.nama_biaya}</td>
                                                 <td className="py-2 text-right">{formatRupiah(item.nominal)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
-                                        <tr className="border-t-2">
+                                        <tr className="border-t border-gray-100 dark:border-gray-700">
                                             <td className="pt-2 pr-4 text-gray-500 font-medium">Total</td>
                                             <td className="pt-2 text-right font-bold text-blue-700 dark:text-blue-300">
                                                 {formatRupiah(rekap.total_keseluruhan)}

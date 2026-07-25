@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Select, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Select, Tooltip, toast, Notification } from '@/components/ui'
 import { HiArrowLeft, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -261,9 +261,9 @@ export default function ProjectBaruPage() {
                                 <table className="w-full text-sm">
                                     <thead className="bg-blue-50 dark:bg-blue-500/10">
                                         <tr className="border-b border-gray-100 dark:border-gray-700">
-                                            <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Rute</th>
-                                            <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                            <th className="py-2.5 text-left text-xs font-medium text-gray-400 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
                                             <th className="py-2.5" />
                                         </tr>
                                     </thead>
@@ -276,8 +276,14 @@ export default function ProjectBaruPage() {
                                                     {hargaPenawaranEfektif(staged.tarif) ? formatRupiah(Number(hargaPenawaranEfektif(staged.tarif))) : '—'}
                                                 </td>
                                                 <td className="py-3 text-right">
-                                                    <Button size="xs" variant="plain" icon={<HiOutlineTrash />}
-                                                        onClick={() => hapusDariDaftarRute(i)} />
+                                                    <Tooltip title="Hapus">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => hapusDariDaftarRute(i)}
+                                                        >
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
                                                 </td>
                                             </tr>
                                         ))}

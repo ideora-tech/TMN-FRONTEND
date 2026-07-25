@@ -1,20 +1,21 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Input, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { paketPerawatanSparepartService, PaketPerawatanSparepart } from '@/services/paketPerawatanSparepart.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 
-export default function PaketPerawatanSparepartPage() {
+export default function PaketTab() {
     const router = useRouter()
     const [list, setList] = useState<PaketPerawatanSparepart[]>([])
     const [loading, setLoading] = useState(true)
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [total, setTotal] = useState(0)
@@ -26,7 +27,7 @@ export default function PaketPerawatanSparepartPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await paketPerawatanSparepartService.list({ page: currentPage, limit: pageSize })
+            const res = await paketPerawatanSparepartService.list({ page: currentPage, limit: pageSize, search })
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -34,17 +35,12 @@ export default function PaketPerawatanSparepartPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const filteredList = list.filter(l => {
-        if (!search) return true
-        const q = search.toLowerCase()
-        return (l.nama_jenis_perawatan ?? '').toLowerCase().includes(q)
-            || (l.nama_jenis_kendaraan ?? '').toLowerCase().includes(q)
-            || (l.nama_sparepart ?? '').toLowerCase().includes(q)
-    })
+    const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const handleDelete = async () => {
         if (!deleteTarget) return
@@ -98,25 +94,21 @@ export default function PaketPerawatanSparepartPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="font-bold">Paket Sparepart</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Daftar part standar per jenis perawatan &amp; jenis kendaraan — dasar auto-fill form Catat Perawatan</p>
-                </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.PAKET_PERAWATAN_SPAREPART_BARU)}>
-                    Tambah Paket
-                </Button>
-            </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
-                        <Input placeholder="Cari jenis perawatan, jenis kendaraan, atau sparepart..."
-                            suffix={<HiOutlineSearch className="text-gray-400" />}
-                            value={search} onChange={e => setSearch(e.target.value)} />
+                        <Input placeholder="Cari jenis perawatan, jenis kendaraan, atau sparepart... (tekan Enter)"
+                            suffix={
+                                searchInput
+                                    ? <HiOutlineX className="text-gray-400 cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                    : <HiOutlineSearch className="text-gray-400 cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                            }
+                            value={searchInput} onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }} />
                     </div>
                 </div>
-                <DataTable columns={columns as ColumnDef<unknown>[]} data={filteredList as unknown[]} loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                <DataTable columns={columns as ColumnDef<unknown>[]} data={list as unknown[]} loading={loading}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSort={() => {}}

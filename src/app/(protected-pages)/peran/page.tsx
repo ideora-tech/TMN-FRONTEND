@@ -33,7 +33,7 @@ export default function PeranPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await peranService.list(currentPage)
+            const res = await peranService.list(currentPage, pageSize, search, aktifFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -41,7 +41,7 @@ export default function PeranPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, aktifFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -62,14 +62,6 @@ export default function PeranPage() {
             setSubmitting(false)
         }
     }
-
-    const filteredList = list.filter(p => {
-        const matchSearch = !search ||
-            p.kode_peran.toLowerCase().includes(search.toLowerCase()) ||
-            p.nama_peran.toLowerCase().includes(search.toLowerCase())
-        const matchAktif = aktifFilter === '' || String(p.aktif ? 1 : 0) === aktifFilter
-        return matchSearch && matchAktif
-    })
 
     const columns: ColumnDef<Peran>[] = [
         { header: 'No', id: 'no', size: 60,
@@ -158,8 +150,8 @@ export default function PeranPage() {
                             onChange={opt => { setAktifFilter((opt as AktifOption).value); setCurrentPage(1) }} />
                     </div>
                 </div>
-                <DataTable columns={columns} data={filteredList as unknown[]} loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                <DataTable columns={columns} data={list as unknown[]} loading={loading}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />

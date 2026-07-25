@@ -45,7 +45,12 @@ export default function TripPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await tripService.list({ page: currentPage })
+            const res = await tripService.list({
+                page: currentPage,
+                limit: pageSize,
+                search: search || undefined,
+                status: statusFilter || undefined,
+            })
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -53,22 +58,12 @@ export default function TripPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
-
-    const filteredList = list.filter(t => {
-        const search_ = search.toLowerCase()
-        const matchSearch = !search
-            || (t.rute ?? '').toLowerCase().includes(search_)
-            || (t.supir_nama ?? '').toLowerCase().includes(search_)
-            || (t.armada_nopol ?? '').toLowerCase().includes(search_)
-        const matchStatus = !statusFilter || t.status === statusFilter
-        return matchSearch && matchStatus
-    })
 
     const columns: ColumnDef<Trip>[] = [
         {
@@ -172,9 +167,9 @@ export default function TripPage() {
                 </div>
                 <DataTable
                     columns={columns}
-                    data={filteredList as unknown[]}
+                    data={list as unknown[]}
                     loading={loading}
-                    noData={!loading && filteredList.length === 0}
+                    noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}

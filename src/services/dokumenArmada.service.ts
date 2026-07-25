@@ -33,7 +33,7 @@ export interface DokumenArmadaWithArmada extends DokumenArmada {
 }
 
 export const dokumenArmadaService = {
-    async listAll(params?: { page?: number; limit?: number; id_armada?: string; jenis_dokumen?: string }) {
+    async listAll(params?: { page?: number; limit?: number; id_armada?: string; jenis_dokumen?: string; search?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA, { params })
         return data as { data: DokumenArmadaWithArmada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },

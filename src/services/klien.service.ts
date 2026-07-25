@@ -22,8 +22,8 @@ export interface KlienProyek {
 }
 
 export const klienService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.KLIEN, { params: { page, limit } })
+    async list(page = 1, limit = 15, search?: string, aktif?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.KLIEN, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
         return data as { data: Klien[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

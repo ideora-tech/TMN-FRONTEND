@@ -18,8 +18,8 @@ export type JenisPerawatanPayload = {
 }
 
 export const jenisPerawatanService = {
-    async list(page = 1, limit = 15) {
-        const { data } = await axios.get(API_ENDPOINTS.JENIS_PERAWATAN, { params: { page, limit } })
+    async list(page = 1, limit = 15, search?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.JENIS_PERAWATAN, { params: { page, limit, search: search || undefined } })
         return data as { data: JenisPerawatan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {
