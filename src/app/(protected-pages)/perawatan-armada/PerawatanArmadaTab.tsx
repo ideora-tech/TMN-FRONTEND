@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Tag, Tooltip, toast, Notification, Switcher } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
@@ -48,6 +48,8 @@ export default function PerawatanArmadaTab() {
     const [armadaFilter, setArmadaFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState<StatusPerawatan | ''>('')
     const [jatuhTempoOnly, setJatuhTempoOnly] = useState(false)
+    const [tanggalDari, setTanggalDari]     = useState<Date | null>(null)
+    const [tanggalSampai, setTanggalSampai] = useState<Date | null>(null)
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
@@ -64,6 +66,8 @@ export default function PerawatanArmadaTab() {
                 status: statusFilter || undefined,
                 jatuh_tempo: jatuhTempoOnly ? '1' : undefined,
                 search: search || undefined,
+                tanggal_dari: tanggalDari ? dayjs(tanggalDari).format('YYYY-MM-DD') : undefined,
+                tanggal_sampai: tanggalSampai ? dayjs(tanggalSampai).format('YYYY-MM-DD') : undefined,
             })
             setList(res.data)
             setTotal(res.meta.total)
@@ -72,7 +76,7 @@ export default function PerawatanArmadaTab() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, armadaFilter, statusFilter, jatuhTempoOnly, search])
+    }, [currentPage, pageSize, armadaFilter, statusFilter, jatuhTempoOnly, search, tanggalDari, tanggalSampai])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -182,9 +186,9 @@ export default function PerawatanArmadaTab() {
     return (
         <div className="flex flex-col gap-4">
             <Card bodyClass="p-0">
-                <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
-                        className="flex-1"
+                        className="flex-1 min-w-60"
                         placeholder="Cari jenis perawatan atau nopol... (tekan Enter)"
                         suffix={
                             searchInput
@@ -210,6 +214,20 @@ export default function PerawatanArmadaTab() {
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={(opt) => { setStatusFilter((opt as { value: StatusPerawatan | '' }).value); setCurrentPage(1) }}
+                        />
+                    </div>
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker
+                            placeholder="Dari tanggal"
+                            value={tanggalDari}
+                            onChange={(date) => { setTanggalDari(date); setCurrentPage(1) }}
+                        />
+                    </div>
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker
+                            placeholder="Sampai tanggal"
+                            value={tanggalSampai}
+                            onChange={(date) => { setTanggalSampai(date); setCurrentPage(1) }}
                         />
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
