@@ -96,6 +96,7 @@ export const ROUTES = {
     KARYAWAN_DETAIL: (id: string) => `/karyawan/${id}`,
 
     CUTI: '/cuti',
+    ABSENSI: '/absensi',
 
     PENUGASAN:        '/penugasan',
     PENUGASAN_BARU:   '/penugasan/baru',

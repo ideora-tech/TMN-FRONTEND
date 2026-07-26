@@ -145,6 +145,10 @@ export const API_ENDPOINTS = {
     SALDO_CUTI_REKAP:         '/api/proxy/saldo-cuti/rekap',
     SALDO_CUTI_PENYESUAIAN:   '/api/proxy/saldo-cuti/penyesuaian',
 
+    // Absensi
+    ABSENSI_HARIAN: '/api/proxy/absensi/harian',
+    ABSENSI_REKAP:  '/api/proxy/absensi/rekap',
+
     // Penugasan
     PENUGASAN:        '/api/proxy/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
