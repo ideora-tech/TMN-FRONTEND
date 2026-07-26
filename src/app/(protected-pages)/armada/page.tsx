@@ -17,14 +17,14 @@ type StatusOption = { value: string; label: string }
 const STATUS_OPTIONS: StatusOption[] = [
     { value: '',            label: 'Semua Status' },
     { value: 'tersedia',    label: 'Tersedia' },
-    { value: 'digunakan',   label: 'Digunakan' },
+    { value: 'digunakan',   label: 'Dalam Perjalanan' },
     { value: 'perawatan',   label: 'Perawatan' },
     { value: 'tidak_aktif', label: 'Tidak Aktif' },
 ]
 
 const STATUS_LABEL: Record<string, string> = {
     tersedia:    'Tersedia',
-    digunakan:   'Digunakan',
+    digunakan:   'Dalam Perjalanan',
     perawatan:   'Perawatan',
     tidak_aktif: 'Tidak Aktif',
 }
@@ -175,11 +175,16 @@ export default function ArmadaPage() {
         },
         { header: 'Tahun', accessorKey: 'tahun', size: 90 },
         {
-            header: 'Status', accessorKey: 'status', size: 120,
+            header: 'Status', accessorKey: 'status', size: 150,
             cell: ({ row }: CellContext<Armada, unknown>) => (
-                <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {STATUS_LABEL[row.original.status] ?? row.original.status}
-                </Tag>
+                <div>
+                    <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
+                        {STATUS_LABEL[row.original.status] ?? row.original.status}
+                    </Tag>
+                    {(row.original.jumlah_penugasan_aktif ?? 0) > 0 && (
+                        <p className="text-xs text-gray-400 mt-1">{row.original.jumlah_penugasan_aktif} penugasan aktif</p>
+                    )}
+                </div>
             ),
         },
         {

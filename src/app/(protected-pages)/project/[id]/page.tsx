@@ -68,7 +68,7 @@ const UNIT_STATUS_CLASS: Record<string, string> = {
 
 const UNIT_STATUS_LABEL: Record<string, string> = {
     tersedia:    'Tersedia',
-    digunakan:   'Digunakan',
+    digunakan:   'Dalam Perjalanan',
     perawatan:   'Perawatan',
     tidak_aktif: 'Tidak Aktif',
 }
@@ -200,7 +200,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             (p.armada?.nopol ?? '').toLowerCase().includes(q))
     }, [pasanganList, pairSearch])
 
-    const isPairSelectable = (p: Pasangan) => p.armada?.status === 'tersedia'
+    const isPairSelectable = (p: Pasangan) => p.armada?.status === 'tersedia' || p.armada?.status === 'digunakan'
 
     const filteredAvailable = useMemo(
         () => filteredPasangan.filter(isPairSelectable),

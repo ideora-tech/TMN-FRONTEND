@@ -5,17 +5,43 @@ export interface Karyawan {
     id_karyawan: string
     id_perusahaan: string
     nik: string
+    nik_ktp: string | null
     nama_karyawan: string
     email: string | null
     telepon: string | null
     jenis_kelamin: 'L' | 'P' | null
+    tempat_lahir: string | null
     tanggal_lahir: string | null
+    alamat_ktp: string | null
+    alamat_domisili: string | null
+    status_pernikahan: 'belum_menikah' | 'menikah' | 'cerai' | null
+    jumlah_tanggungan: number
+    status_ptkp: string | null
+    npwp: string | null
+    nama_bank: string | null
+    nomor_rekening: string | null
+    atas_nama_rekening: string | null
+    ikut_bpjs_kesehatan: boolean
+    no_bpjs_kesehatan: string | null
+    ikut_bpjs_ketenagakerjaan: boolean
+    no_bpjs_ketenagakerjaan: string | null
+    kontak_darurat_nama: string | null
+    kontak_darurat_telepon: string | null
+    kontak_darurat_hubungan: string | null
+    pendidikan_terakhir: string | null
     tanggal_masuk: string | null
     status_kepegawaian: 'tetap' | 'kontrak' | 'magang' | null
     gaji_pokok: number
     aktif: boolean
     jabatan?: { id_jabatan: string; nama_jabatan: string }
     lokasi?: { id_lokasi: string; nama_lokasi: string }
+}
+
+export type KaryawanPayload = Partial<
+    Omit<Karyawan, 'id_karyawan' | 'id_perusahaan' | 'jabatan' | 'lokasi'>
+> & {
+    id_jabatan?: string | null
+    id_lokasi?: string | null
 }
 
 export const karyawanService = {
@@ -27,11 +53,11 @@ export const karyawanService = {
         const { data } = await axios.get(API_ENDPOINTS.KARYAWAN_DETAIL(id))
         return data.data as Karyawan
     },
-    async create(payload: Omit<Karyawan, 'id_karyawan' | 'id_perusahaan' | 'jabatan' | 'lokasi'>) {
+    async create(payload: KaryawanPayload) {
         const { data } = await axios.post(API_ENDPOINTS.KARYAWAN, payload)
         return data.data as Karyawan
     },
-    async update(id: string, payload: Partial<Omit<Karyawan, 'id_karyawan' | 'jabatan' | 'lokasi'>>) {
+    async update(id: string, payload: KaryawanPayload) {
         const { data } = await axios.put(API_ENDPOINTS.KARYAWAN_DETAIL(id), payload)
         return data.data as Karyawan
     },

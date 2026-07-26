@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Button, FormItem, toast, Notification, Dialog } from '@/components/ui'
+import { Button, FormItem, Input, toast, Notification, Dialog } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { parseApiError } from '@/utils/error.util'
+import { formatNum } from '@/utils/formatNumber'
 import { tripService } from '@/services/trip.service'
 import { projectService } from '@/services/project.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
@@ -31,6 +32,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     const [pilihPenugasan, setPilihPenugasan]     = useState('')
     const [ruteOptions, setRuteOptions] = useState<Option[]>([])
     const [pilihRute, setPilihRute]     = useState<string | null>(null)
+    const [uangJalan, setUangJalan]     = useState('')
     const [memuat, setMemuat] = useState(false)
     const [saving, setSaving] = useState(false)
 
@@ -39,6 +41,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setPilihProyek(idProyekTerkunci ?? '')
         setPilihPenugasan(idPenugasanTerkunci ?? '')
         setPilihRute(null)
+        setUangJalan('')
         if (!terkunci) {
             projectService.list(1, 100)
                 .then(res => setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: p.nama_proyek }))))
@@ -78,16 +81,26 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             const namaSupir: Record<string, string> = {}
             supirs.forEach(s => { if (s) namaSupir[s.id_supir] = s.nama })
             supirVendors.forEach(s => { if (s) namaSupir[s.id_supir_vendor] = s.nama })
+            const simKadaluarsa = new Set<string>()
+            supirs.forEach(s => {
+                if (s?.tgl_kadaluarsa_sim && new Date(s.tgl_kadaluarsa_sim).getTime() < Date.now()) {
+                    simKadaluarsa.add(s.id_supir)
+                }
+            })
             const nopolArmada: Record<string, string> = {}
             armadas.forEach(a => { if (a) nopolArmada[a.id_armada] = a.nopol })
             armadaVendors.forEach(a => { if (a) nopolArmada[a.id_armada_vendor] = a.nopol })
+            const armadaSedangJalan = new Set<string>()
+            armadas.forEach(a => { if (a?.status === 'digunakan') armadaSedangJalan.add(a.id_armada) })
 
             setPenugasanOptions(rows.map((p: Penugasan) => {
                 const supir  = namaSupir[p.id_supir ?? p.id_supir_vendor ?? ''] ?? 'Tanpa supir'
                 const armada = nopolArmada[p.id_armada ?? p.id_armada_vendor ?? ''] ?? 'tanpa armada'
+                const warnSim = p.id_supir && simKadaluarsa.has(p.id_supir) ? ' ⚠ SIM kadaluarsa' : ''
+                const warnJalan = p.id_armada && armadaSedangJalan.has(p.id_armada) ? ' ⚠ armada sedang dalam perjalanan' : ''
                 return {
                     value: p.id_penugasan,
-                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}`,
+                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}${warnSim}${warnJalan}`,
                 }
             }))
         } catch (err) {
@@ -107,7 +120,11 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         if (!pilihPenugasan) return
         setSaving(true)
         try {
-            await tripService.mulai({ id_penugasan: pilihPenugasan, id_rute: pilihRute })
+            await tripService.mulai({
+                id_penugasan: pilihPenugasan,
+                id_rute: pilihRute,
+                uang_jalan_alokasi: uangJalan ? Number(uangJalan) : null,
+            })
             toast.push(<Notification type="success" title="Trip berhasil dimulai" />)
             onSukses(idProyekEfektif)
             onClose()
@@ -149,6 +166,11 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                         options={ruteOptions}
                         value={ruteOptions.find(o => o.value === pilihRute) ?? null}
                         onChange={opt => setPilihRute((opt as Option | null)?.value ?? null)} />
+                </FormItem>
+                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Uang yang dibawa supir — dasar settlement setelah trip selesai</span>}>
+                    <Input prefix="Rp" placeholder="0"
+                        value={uangJalan ? formatNum(Number(uangJalan)) : ''}
+                        onChange={e => setUangJalan(e.target.value.replace(/\D/g, ''))} />
                 </FormItem>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={onClose}>Batal</Button>

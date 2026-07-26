@@ -11,6 +11,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { supirService, Supir } from '@/services/supir.service'
 import axios from 'axios'
+import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
 
@@ -159,11 +160,19 @@ export default function SupirPage() {
                 const tgl = row.original.tgl_kadaluarsa_sim
                 if (!tgl) return '-'
                 const daysLeft = Math.ceil((new Date(tgl).getTime() - Date.now()) / 86400000)
-                const warn = daysLeft < 30
+                let badge: { label: string; className: string } | null = null
+                if (daysLeft < 0) {
+                    badge = { label: 'SIM kadaluarsa', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
+                } else if (daysLeft <= 7) {
+                    badge = { label: `${daysLeft} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
+                } else if (daysLeft <= 30) {
+                    badge = { label: `${daysLeft} hari lagi`, className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' }
+                }
                 return (
-                    <span className={warn ? 'text-red-500 font-medium' : ''}>
-                        {tgl}{warn ? ` (${daysLeft}h)` : ''}
-                    </span>
+                    <div>
+                        <p className="text-xs">{dayjs(tgl).format('DD MMM YYYY')}</p>
+                        {badge && <Tag className={`text-xs font-semibold mt-1 ${badge.className}`}>{badge.label}</Tag>}
+                    </div>
                 )
             },
         },

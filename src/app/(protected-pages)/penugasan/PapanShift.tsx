@@ -340,7 +340,11 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             const nKolom = tanggalList.length + 1
             const baris: SelXlsx[][] = []
             baris.push([
-                { teks: `JADWAL SHIFT SUPIR — ${bulan.format('MMMM YYYY').toUpperCase()}`, gaya: 'judul' },
+                { teks: 'JADWAL SHIFT SUPIR', gaya: 'judul' },
+                ...tanggalList.map(() => ({ teks: '', gaya: 'polos' as const })),
+            ])
+            baris.push([
+                { teks: `PERIODE ${bulan.format('MMMM YYYY').toUpperCase()}`, gaya: 'polos' },
                 ...tanggalList.map(() => ({ teks: '', gaya: 'polos' as const })),
             ])
             baris.push([
@@ -359,12 +363,15 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                 ])
             })
             const blob = buatXlsx('Jadwal Shift', baris, {
-                gabung: [`A1:${kolomXlsx(nKolom - 1)}1`],
+                gabung: [
+                    `A1:${kolomXlsx(nKolom - 1)}1`,
+                    `A2:${kolomXlsx(nKolom - 1)}2`,
+                ],
                 lebarKolom: [
                     { dari: 1, sampai: 1, lebar: 32 },
                     { dari: 2, sampai: nKolom, lebar: 14 },
                 ],
-                tinggiBaris: Object.fromEntries(barisSupir.map((_, i) => [i + 3, 30])),
+                tinggiBaris: Object.fromEntries(barisSupir.map((_, i) => [i + 4, 30])),
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')

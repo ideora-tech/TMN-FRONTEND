@@ -102,6 +102,10 @@ export const API_ENDPOINTS = {
     TRIP:                 '/api/proxy/trip',
     TRIP_RINGKASAN_PROYEK: '/api/proxy/trip/ringkasan-proyek',
     TRIP_MULAI:    '/api/proxy/trip/mulai',
+    TRIP_SETTLEMENT:       '/api/proxy/trip/settlement',
+    TRIP_SETTLEMENT_LUNAS: (id: string) => `/api/proxy/trip/${id}/settlement/lunas`,
+    TRIP_SETTLEMENT_BATAL: (id: string) => `/api/proxy/trip/${id}/settlement/batal`,
+    TRIP_UANG_JALAN:       (id: string) => `/api/proxy/trip/${id}/uang-jalan`,
     TRIP_DETAIL:   (id: string) => `/api/proxy/trip/${id}`,
     TRIP_CHECKIN:  (id: string) => `/api/proxy/trip/${id}/checkin`,
     TRIP_CHECKOUT: (id: string) => `/api/proxy/trip/${id}/checkout`,
@@ -123,6 +127,11 @@ export const API_ENDPOINTS = {
     // Karyawan
     KARYAWAN:        '/api/proxy/karyawan',
     KARYAWAN_DETAIL: (id: string) => `/api/proxy/karyawan/${id}`,
+    KARYAWAN_KONTRAK:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak`,
+    KARYAWAN_KONTRAK_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak/${id}`,
+    DOKUMEN_KARYAWAN:        '/api/proxy/dokumen-karyawan',
+    KARYAWAN_DOKUMEN:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen`,
+    KARYAWAN_DOKUMEN_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen/${id}`,
 
     // Penugasan
     PENUGASAN:        '/api/proxy/penugasan',

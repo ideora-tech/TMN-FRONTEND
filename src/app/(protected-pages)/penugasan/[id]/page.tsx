@@ -246,9 +246,19 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Proyek', value: proyek ? `${proyek.kode_proyek} — ${proyek.nama_proyek}` : <span className="text-gray-400">—</span> },
+                                { label: 'Proyek', value: proyek ? (
+                                    <a href={ROUTES.PROYEK_DETAIL(proyek.id_proyek)} target="_blank" rel="noopener noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline">
+                                        {proyek.kode_proyek} — {proyek.nama_proyek}
+                                    </a>
+                                ) : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Tugas', value: penugasan.tanggal_tugas ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
-                                { label: 'Armada',        value: armadaLabel },
+                                { label: 'Armada', value: penugasan.id_armada ? (
+                                    <a href={ROUTES.ARMADA_DETAIL(penugasan.id_armada)} target="_blank" rel="noopener noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline">
+                                        {armadaLabel}
+                                    </a>
+                                ) : armadaLabel },
                                 { label: 'Supir',         value: supirLabel },
                                 { label: 'Karyawan PIC',  value: karyawanLabel },
                                 { label: 'Estimasi Biaya', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },

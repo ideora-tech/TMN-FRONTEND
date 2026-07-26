@@ -21,6 +21,7 @@ export interface Armada {
     kondisi_beli?: string | null
     url_foto?: string | null
     keterangan?: string | null
+    jumlah_penugasan_aktif?: number | null
 }
 
 export interface ArmadaServisJatuhTempo {

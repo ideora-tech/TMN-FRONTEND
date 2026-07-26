@@ -299,8 +299,16 @@ export default function TripPage() {
                                                                                                     {trip.supir_nama ?? <span className="text-gray-400">Tanpa supir</span>}
                                                                                                     <span className="text-gray-400"> · {trip.armada_nopol ?? '—'}</span>
                                                                                                 </p>
-                                                                                                {trip.waktu_berangkat && (
-                                                                                                    <p className="text-xs text-gray-400">{dayjs(trip.waktu_berangkat).format('DD/MM/YY HH:mm')}</p>
+                                                                                                {(trip.waktu_berangkat || trip.waktu_checkout) && (
+                                                                                                    <p className="text-xs text-gray-400">
+                                                                                                        {trip.waktu_berangkat && `Berangkat ${dayjs(trip.waktu_berangkat).format('DD/MM/YY HH:mm')}`}
+                                                                                                        {trip.waktu_berangkat && trip.waktu_checkout && ' · '}
+                                                                                                        {trip.waktu_checkout && (
+                                                                                                            <span className="text-emerald-600 dark:text-emerald-400">
+                                                                                                                Selesai {dayjs(trip.waktu_checkout).format('DD/MM/YY HH:mm')}
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </p>
                                                                                                 )}
                                                                                             </div>
                                                                                             <Tag className={`shrink-0 ${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-600'}`}>

@@ -54,14 +54,14 @@ type ArmadaStatus = 'tersedia' | 'digunakan' | 'perawatan' | 'tidak_aktif'
 
 const STATUS_OPTIONS = [
     { value: 'tersedia',    label: 'Tersedia' },
-    { value: 'digunakan',   label: 'Digunakan' },
+    { value: 'digunakan',   label: 'Dalam Perjalanan' },
     { value: 'perawatan',   label: 'Perawatan' },
     { value: 'tidak_aktif', label: 'Tidak Aktif' },
 ]
 
 const STATUS_LABEL: Record<string, string> = {
     tersedia:    'Tersedia',
-    digunakan:   'Digunakan',
+    digunakan:   'Dalam Perjalanan',
     perawatan:   'Perawatan',
     tidak_aktif: 'Tidak Aktif',
 }
@@ -342,7 +342,8 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 kondisi_beli:        form.kondisi_beli ?? '',
                 keterangan:          form.keterangan ?? '',
             }, editFoto)
-            setArmada(updated); setEditing(false); setErrors({}); setEditFoto(null)
+            setArmada({ ...updated, jumlah_penugasan_aktif: updated.jumlah_penugasan_aktif ?? armada?.jumlah_penugasan_aktif })
+            setEditing(false); setErrors({}); setEditFoto(null)
             toast.push(<Notification type="success" title="Data armada berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -563,6 +564,11 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
+                                {(armada.jumlah_penugasan_aktif ?? 0) > 0 && (
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
+                                        {armada.jumlah_penugasan_aktif} penugasan aktif
+                                    </span>
+                                )}
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusClass[armada.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                     {STATUS_LABEL[armada.status] ?? armada.status}
                                 </span>
@@ -638,7 +644,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                 <FormItem label="Status">
                                     <Select isSearchable={false}
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
-                                        options={STATUS_OPTIONS}
+                                        options={STATUS_OPTIONS.filter(o => o.value !== 'digunakan' || form.status === 'digunakan')}
                                         onChange={opt => opt && setForm(p => ({ ...p, status: opt.value as ArmadaStatus }))} />
                                 </FormItem>
                                 <FormItem label="Jenis Kendaraan">

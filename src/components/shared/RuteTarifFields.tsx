@@ -79,20 +79,21 @@ type Props = {
     idKlien: string
 }
 
-function formatRuteDetail(opt: RuteOption | undefined): string | null {
-    if (!opt) return null
-    const parts: string[] = []
-    if (opt.asal && opt.tujuan) parts.push(`${opt.asal} → ${opt.tujuan}`)
-    const jarakDurasi: string[] = []
-    if (opt.estimasi_jarak_km != null) jarakDurasi.push(`${formatNum(opt.estimasi_jarak_km)} km`)
-    if (opt.estimasi_durasi_menit != null) jarakDurasi.push(`${opt.estimasi_durasi_menit} mnt`)
-    if (jarakDurasi.length) parts.push(jarakDurasi.join(' / '))
-    return parts.length ? parts.join(' · ') : null
+function formatDurasi(menit: number): string {
+    if (menit < 60) return `${menit} menit`
+    const jam = Math.floor(menit / 60)
+    const sisa = menit % 60
+    return sisa > 0 ? `${jam} jam ${sisa} menit` : `${jam} jam`
 }
 
 export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, idKlien }: Props) {
     const [showDetailBiaya, setShowDetailBiaya] = useState(false)
-    const ruteDetail = formatRuteDetail(ruteOptions.find(o => o.value === value.id_rute))
+    const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
+    const adaDetailRute = !!ruteTerpilih && (
+        (!!ruteTerpilih.asal && !!ruteTerpilih.tujuan)
+        || ruteTerpilih.estimasi_jarak_km != null
+        || ruteTerpilih.estimasi_durasi_menit != null
+    )
 
     const resolve = async (idRute: string, idJenis: string) => {
         if (!idRute || !idJenis) {
@@ -170,8 +171,29 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 </FormItem>
             </div>
 
-            {ruteDetail && (
-                <p className="text-xs text-gray-400 mt-1">{ruteDetail}</p>
+            {adaDetailRute && ruteTerpilih && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 px-4 py-3">
+                    {ruteTerpilih.asal && ruteTerpilih.tujuan && (
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Lokasi Asal → Tujuan</p>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">
+                                {ruteTerpilih.asal} <span className="text-blue-500 mx-1">→</span> {ruteTerpilih.tujuan}
+                            </p>
+                        </div>
+                    )}
+                    {ruteTerpilih.estimasi_jarak_km != null && (
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Jarak</p>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{formatNum(ruteTerpilih.estimasi_jarak_km)} km</p>
+                        </div>
+                    )}
+                    {ruteTerpilih.estimasi_durasi_menit != null && (
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Estimasi Waktu</p>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{formatDurasi(ruteTerpilih.estimasi_durasi_menit)}</p>
+                        </div>
+                    )}
+                </div>
             )}
 
             {value.id_rute && value.id_jenis_kendaraan && value.tarifBaru === null && (

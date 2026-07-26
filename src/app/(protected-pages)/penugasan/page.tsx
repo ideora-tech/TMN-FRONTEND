@@ -35,7 +35,7 @@ const UNIT_STATUS_CLASS: Record<string, string> = {
 
 const UNIT_STATUS_LABEL: Record<string, string> = {
     tersedia:    'Tersedia',
-    digunakan:   'Digunakan',
+    digunakan:   'Dalam Perjalanan',
     perawatan:   'Perawatan',
     tidak_aktif: 'Tidak Aktif',
 }
@@ -182,7 +182,7 @@ export default function PenugasanPage() {
             (p.armada?.nopol ?? '').toLowerCase().includes(q))
     }, [pasanganList, pairSearch])
 
-    const isPairSelectable = (p: Pasangan) => p.armada?.status === 'tersedia'
+    const isPairSelectable = (p: Pasangan) => p.armada?.status === 'tersedia' || p.armada?.status === 'digunakan'
 
     const filteredAvailable = useMemo(
         () => filteredPasangan.filter(isPairSelectable),
@@ -206,7 +206,7 @@ export default function PenugasanPage() {
 
     const armadaOptionsForEdit = useMemo(() => {
         const opts = Object.values(armadaMap)
-            .filter(a => a.status === 'tersedia' || a.id_armada === editTarget?.id_armada)
+            .filter(a => a.status === 'tersedia' || a.status === 'digunakan' || a.id_armada === editTarget?.id_armada)
             .map(a => ({
                 value: a.id_armada,
                 label: a.status === 'tersedia'

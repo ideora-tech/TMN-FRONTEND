@@ -54,7 +54,13 @@ export default function PenugasanBaruPage() {
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
             setArmadaList(armada.data)
             const supirAktif = supir.data.filter((s: Supir) => s.status === 'aktif')
-            setSupirOptions(supirAktif.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
+            setSupirOptions(supirAktif.map((s: Supir) => {
+                const simKadaluarsa = s.tgl_kadaluarsa_sim && new Date(s.tgl_kadaluarsa_sim).getTime() < Date.now()
+                return {
+                    value: s.id_supir,
+                    label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})${simKadaluarsa ? ' ⚠ SIM kadaluarsa' : ''}`,
+                }
+            }))
             setSupirList(supirAktif)
         }).catch(() => {})
 
@@ -156,6 +162,19 @@ export default function PenugasanBaruPage() {
                             }}
                             isClearable
                         />
+                        {(() => {
+                            const dipilih = supirList.find(s => s.id_supir === form.id_supir)
+                            if (!dipilih?.tgl_kadaluarsa_sim) return null
+                            const daysLeft = Math.ceil((new Date(dipilih.tgl_kadaluarsa_sim).getTime() - Date.now()) / 86400000)
+                            if (daysLeft >= 7) return null
+                            return (
+                                <p className={`text-xs mt-1 font-medium ${daysLeft < 0 ? 'text-red-500' : 'text-amber-600'}`}>
+                                    {daysLeft < 0
+                                        ? `⚠ SIM ${dipilih.jenis_sim} supir ini sudah kadaluarsa sejak ${dayjs(dipilih.tgl_kadaluarsa_sim).format('DD MMM YYYY')} — pastikan sudah diperpanjang sebelum jalan.`
+                                        : `⚠ SIM ${dipilih.jenis_sim} supir ini akan kadaluarsa dalam ${daysLeft} hari (${dayjs(dipilih.tgl_kadaluarsa_sim).format('DD MMM YYYY')}).`}
+                                </p>
+                            )
+                        })()}
                     </FormItem>
                     <FormItem label="Armada">
                         <Select

@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
+import { Card, Button, Checkbox, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import {
@@ -174,16 +174,18 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     // aksi lifecycle trip
     const [aksiTrip, setAksiTrip]         = useState<AksiTrip | null>(null)
     const [aksiLoading, setAksiLoading]   = useState(false)
+    const [selesaikanPenugasan, setSelesaikanPenugasan] = useState(false)
 
     const handleAksiTrip = async () => {
         if (!aksiTrip) return
         setAksiLoading(true)
         try {
             if (aksiTrip === 'mulai') await tripService.checkin(id)
-            else if (aksiTrip === 'selesai') await tripService.checkout(id)
+            else if (aksiTrip === 'selesai') await tripService.checkout(id, selesaikanPenugasan)
             else await tripService.batalkan(id)
             toast.push(<Notification type="success" title={`${AKSI_TITLE[aksiTrip]} berhasil`} />)
             setAksiTrip(null)
+            setSelesaikanPenugasan(false)
             const t = await tripService.get(id)
             setTrip(t)
             tripService.getStatus(id).then(setStatuses).catch(() => {})
@@ -388,7 +390,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <div className="flex items-center gap-3">
                 <button
                     type="button"
-                    onClick={() => router.push(ROUTES.TRIP)}
+                    onClick={() => {
+                        if (window.history.length > 1) router.back()
+                        else router.push(ROUTES.TRIP)
+                    }}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
                 >
                     <HiArrowLeft className="text-xl" />
@@ -632,7 +637,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         <div className="mt-2">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Dokumentasi Foto</p>
                             <Upload
-                                accept=".jpg,.jpeg,.png,.pdf"
+                                accept=".jpg,.jpeg,.png"
                                 multiple
                                 showList={false}
                                 fileList={laporanFotoFiles}
@@ -640,7 +645,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 onChange={files => setLaporanFotoFiles(files)}
                             >
                                 <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                    Pilih file (bisa lebih dari satu, maks. 10MB/file)
+                                    Pilih foto (bisa lebih dari satu, maks. 10MB/file)
                                 </Button>
                             </Upload>
                             {laporanFotoFiles.length > 0 && (
@@ -799,7 +804,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                         beforeUpload={validasiUkuranFoto}
                                         onChange={files => setFotoFiles(files)}>
                                         <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                            {fotoFiles.length > 0 ? `${fotoFiles.length} file dipilih` : 'Pilih file (bisa lebih dari satu)'}
+                                            {fotoFiles.length > 0 ? `${fotoFiles.length} foto dipilih` : 'Pilih foto (bisa lebih dari satu)'}
                                         </Button>
                                     </Upload>
                                 </FormItem>
@@ -905,6 +910,39 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         )}
                     </>
                 )}
+
+                {trip.uang_jalan_alokasi != null && (
+                    <div className="grid grid-cols-1 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 sm:grid-cols-3">
+                        <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                            <div className="text-xs mb-1 text-gray-500">Uang Jalan (Alokasi)</div>
+                            <div className="font-semibold text-sm">{formatRupiah(trip.uang_jalan_alokasi)}</div>
+                        </div>
+                        {(() => {
+                            const selisihAlokasi = trip.uang_jalan_alokasi - (rekap?.total_keseluruhan ?? 0)
+                            const positif = selisihAlokasi >= 0
+                            return (
+                                <div className={`rounded-lg p-3 border ${positif
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+                                    <div className={`text-xs mb-1 ${positif ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        Selisih vs Realisasi
+                                    </div>
+                                    <div className={`font-semibold text-sm ${positif ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {formatRupiah(Math.abs(selisihAlokasi))} {positif ? '(sisa — dikembalikan supir)' : '(kurang — diganti perusahaan)'}
+                                    </div>
+                                </div>
+                            )
+                        })()}
+                        <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                            <div className="text-xs mb-1 text-gray-500">Settlement</div>
+                            <Tag className={trip.status_settlement === 'lunas'
+                                ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100'}>
+                                {trip.status_settlement === 'lunas' ? 'Lunas' : 'Belum Settle'}
+                            </Tag>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             <ConfirmDialog
@@ -925,11 +963,21 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 type={aksiTrip === 'batalkan' ? 'danger' : 'info'}
                 title={aksiTrip ? AKSI_TITLE[aksiTrip] : ''}
                 confirmText="Ya, Lanjutkan" cancelText="Batal"
-                onClose={() => setAksiTrip(null)}
-                onCancel={() => setAksiTrip(null)}
+                onClose={() => { setAksiTrip(null); setSelesaikanPenugasan(false) }}
+                onCancel={() => { setAksiTrip(null); setSelesaikanPenugasan(false) }}
                 onConfirm={handleAksiTrip}
                 confirmButtonProps={{ loading: aksiLoading }}>
                 <p>{aksiTrip ? AKSI_MESSAGE[aksiTrip] : ''}</p>
+                {aksiTrip === 'selesai' && (
+                    <div className="mt-3">
+                        <Checkbox checked={selesaikanPenugasan} onChange={(checked: boolean) => setSelesaikanPenugasan(checked)}>
+                            Sekalian selesaikan penugasan
+                        </Checkbox>
+                        <p className="text-xs text-gray-400 mt-1 ml-7">
+                            Armada otomatis kembali tersedia setelah checkout. Centang bila ini rit terakhir — penugasan ikut ditutup. Biarkan kosong bila masih ada rit berikutnya.
+                        </p>
+                    </div>
+                )}
             </ConfirmDialog>
         </div>
     )

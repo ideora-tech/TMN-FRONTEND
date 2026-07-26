@@ -49,6 +49,7 @@ export const ROUTES = {
 
     TRIP:        '/trip',
     TRIP_DETAIL: (id: string) => `/trip/${id}`,
+    SETTLEMENT_SUPIR: '/settlement-supir',
 
     LAPORAN:        '/laporan',
     LAPORAN_BARU:   '/laporan/baru',

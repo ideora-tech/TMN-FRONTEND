@@ -15,7 +15,6 @@ type Status = 'tersedia' | 'digunakan' | 'perawatan' | 'tidak_aktif'
 
 const STATUS_OPTIONS = [
     { value: 'tersedia',    label: 'Tersedia' },
-    { value: 'digunakan',   label: 'Digunakan' },
     { value: 'perawatan',   label: 'Perawatan' },
     { value: 'tidak_aktif', label: 'Tidak Aktif' },
 ]
