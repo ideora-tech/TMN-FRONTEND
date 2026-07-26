@@ -14,6 +14,7 @@ import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { ruteService, Rute } from '@/services/rute.service'
+import { cutiService } from '@/services/cuti.service'
 import { formatNum } from '@/utils/formatNumber'
 
 const STATUS_OPTIONS = [
@@ -36,6 +37,7 @@ export default function PenugasanBaruPage() {
     const [supirList, setSupirList]              = useState<Supir[]>([])
     const [ruteEstimasiOptions, setRuteEstimasiOptions] = useState<{ value: string; label: string }[]>([])
     const [idRuteEstimasi, setIdRuteEstimasi]   = useState('')
+    const [supirCutiSet, setSupirCutiSet]       = useState<Set<string>>(new Set())
     const [estimasiBiayaStr, setEstimasiBiayaStr] = useState('')
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
@@ -68,6 +70,12 @@ export default function PenugasanBaruPage() {
             .then(res => setRuteEstimasiOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
             .catch(() => {})
     }, [])
+
+    useEffect(() => {
+        cutiService.cutiAktif(form.tanggal_tugas || undefined)
+            .then(rows => setSupirCutiSet(new Set(rows.map(c => c.id_supir).filter(Boolean) as string[])))
+            .catch(() => setSupirCutiSet(new Set()))
+    }, [form.tanggal_tugas])
 
     // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
     // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
@@ -175,6 +183,11 @@ export default function PenugasanBaruPage() {
                                 </p>
                             )
                         })()}
+                        {form.id_supir && supirCutiSet.has(form.id_supir) && (
+                            <p className="text-xs mt-1 font-medium text-red-500">
+                                ⛔ Supir ini sedang cuti (disetujui) pada tanggal {form.tanggal_tugas ? dayjs(form.tanggal_tugas).format('DD MMM YYYY') : 'hari ini'} — trip tidak akan bisa dimulai.
+                            </p>
+                        )}
                     </FormItem>
                     <FormItem label="Armada">
                         <Select

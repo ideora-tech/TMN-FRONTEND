@@ -9,21 +9,28 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { supirService } from '@/services/supir.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
 const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
 export default function SupirBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '', id_armada_default: '' })
+    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '', id_armada_default: '', id_karyawan: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
     const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
+    const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         armadaService.list(1, 100)
             .then(res => setArmadaOptions(res.data
                 .filter((a: Armada) => a.aktif !== false)
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk ?? ''}`.trim() }))))
+            .catch(() => {})
+        karyawanService.list(1, 500)
+            .then(res => setKaryawanOptions(res.data
+                .filter((k: Karyawan) => k.aktif)
+                .map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))))
             .catch(() => {})
     }, [])
 
@@ -50,6 +57,7 @@ export default function SupirBaruPage() {
                 tgl_kadaluarsa_sim: form.tgl_kadaluarsa_sim || undefined,
                 telepon: form.telepon || undefined,
                 id_armada_default: form.id_armada_default || undefined,
+                id_karyawan: form.id_karyawan || undefined,
             })
             toast.push(<Notification type="success" title="Supir berhasil ditambahkan" />)
             router.push(ROUTES.SUPIR)
@@ -104,6 +112,14 @@ export default function SupirBaruPage() {
                             options={armadaOptions}
                             value={armadaOptions.find(o => o.value === form.id_armada_default) ?? null}
                             onChange={(option) => setForm(p => ({ ...p, id_armada_default: option?.value ?? '' }))} />
+                    </FormItem>
+                    <FormItem label="Tautkan ke Karyawan (opsional)"
+                        extra={<span className="text-xs text-gray-400">Hubungkan profil supir dengan data karyawan (gaji, kontrak, BPJS)</span>}>
+                        <Select isClearable isSearchable
+                            placeholder="Pilih karyawan..."
+                            options={karyawanOptions}
+                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                            onChange={(option) => setForm(p => ({ ...p, id_karyawan: option?.value ?? '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

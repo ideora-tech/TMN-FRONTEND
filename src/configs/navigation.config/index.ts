@@ -206,14 +206,14 @@ const navigationConfig: NavigationTree[] = [
         key: 'pengguna', path: '/pengguna', title: 'Pengguna',
         translateKey: 'nav.pengguna', icon: 'usersThree',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: ADMIN_UP,
+        authority: SUPERADMIN_ONLY,
         subMenu: [],
     },
     {
         key: 'peran', path: '/peran', title: 'Peran & Akses',
         translateKey: 'nav.peran', icon: 'key',
         type: NAV_ITEM_TYPE_ITEM,
-        authority: ADMIN_UP,
+        authority: SUPERADMIN_ONLY,
         subMenu: [],
     },
     {

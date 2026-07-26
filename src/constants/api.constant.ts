@@ -133,6 +133,18 @@ export const API_ENDPOINTS = {
     KARYAWAN_DOKUMEN:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen`,
     KARYAWAN_DOKUMEN_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen/${id}`,
 
+    // Cuti & Izin
+    JENIS_CUTI:               '/api/proxy/jenis-cuti',
+    JENIS_CUTI_DETAIL:        (id: string) => `/api/proxy/jenis-cuti/${id}`,
+    PENGAJUAN_CUTI:           '/api/proxy/pengajuan-cuti',
+    PENGAJUAN_CUTI_AKTIF:     '/api/proxy/pengajuan-cuti/aktif',
+    PENGAJUAN_CUTI_SETUJUI:   (id: string) => `/api/proxy/pengajuan-cuti/${id}/setujui`,
+    PENGAJUAN_CUTI_TOLAK:     (id: string) => `/api/proxy/pengajuan-cuti/${id}/tolak`,
+    PENGAJUAN_CUTI_BATALKAN:  (id: string) => `/api/proxy/pengajuan-cuti/${id}/batalkan`,
+    SALDO_CUTI:               '/api/proxy/saldo-cuti',
+    SALDO_CUTI_REKAP:         '/api/proxy/saldo-cuti/rekap',
+    SALDO_CUTI_PENYESUAIAN:   '/api/proxy/saldo-cuti/penyesuaian',
+
     // Penugasan
     PENUGASAN:        '/api/proxy/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,

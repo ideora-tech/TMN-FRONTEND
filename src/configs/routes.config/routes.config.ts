@@ -53,6 +53,7 @@ export const protectedRoutes: Routes = {
     ...listRoute('departemen', 'departemen'),
     ...listRoute('jabatan', 'jabatan'),
     ...listRoute('karyawan', 'karyawan'),
+    '/cuti': { key: 'cuti', authority: [] },
     ...listRoute('perusahaan', 'perusahaan', ADMIN_ONLY),
     ...listRoute('menu-admin', 'menu-admin', ADMIN_ONLY),
     '/log-error': { key: 'log-error', authority: [] },

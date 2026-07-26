@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { Fragment, use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Tag, Spinner, toast, Notification } from '@/components/ui'
 import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh } from 'react-icons/hi'
@@ -15,13 +15,16 @@ function permKey(idMenu: string, aksi: string) {
     return `${idMenu}::${aksi}`
 }
 
+type GrupMenu = { root: MenuItem; items: MenuItem[] }
+
 export default function PeranDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
 
     const [peran, setPeran]     = useState<Peran | null>(null)
-    const [menus, setMenus]     = useState<MenuItem[]>([])
+    const [grup, setGrup]       = useState<GrupMenu[]>([])
     const [perms, setPerms]     = useState<Record<string, boolean>>({})
+    const [permsAwal, setPermsAwal] = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving]   = useState(false)
 
@@ -30,26 +33,41 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         try {
             const [p, menuRes] = await Promise.all([
                 peranService.get(id),
-                menuService.list(1),
+                menuService.list(1, 200),
             ])
             setPeran(p)
 
-            // only root menus for cleaner matrix
-            const rootMenus = menuRes.data.filter((m: MenuItem) => !m.id_menu_induk)
-            setMenus(rootMenus)
+            // Izin dipakai middleware per PATH menu — jadi baris matriks adalah
+            // menu ber-path (menu anak + root berpath seperti Dashboard),
+            // dikelompokkan di bawah nama grupnya. Grup tanpa path hanya jadi header.
+            const aktif = menuRes.data.filter((m: MenuItem) => m.aktif)
+            const roots = aktif
+                .filter((m: MenuItem) => !m.id_menu_induk)
+                .sort((a: MenuItem, b: MenuItem) => a.urutan - b.urutan)
+            const grupList: GrupMenu[] = roots
+                .map((root: MenuItem) => ({
+                    root,
+                    items: [
+                        ...(root.path ? [root] : []),
+                        ...aktif
+                            .filter((m: MenuItem) => m.id_menu_induk === root.id_menu && m.path)
+                            .sort((a: MenuItem, b: MenuItem) => a.urutan - b.urutan),
+                    ],
+                }))
+                .filter(g => g.items.length > 0)
+            setGrup(grupList)
 
             const izin: IzinPeran[] = await izinPeranService.listByPeran(p.kode_peran)
             const map: Record<string, boolean> = {}
-            // initialise all false
-            rootMenus.forEach((m: MenuItem) => {
+            grupList.forEach(g => g.items.forEach(m => {
                 AKSI.forEach(a => { map[permKey(m.id_menu, a)] = false })
-            })
-            // apply existing permissions
+            }))
             izin.forEach(i => {
                 const key = permKey(i.id_menu, i.aksi)
                 if (key in map) map[key] = i.diizinkan
             })
             setPerms(map)
+            setPermsAwal({ ...map })
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -77,14 +95,25 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         if (!peran) return
         setSaving(true)
         try {
-            const permissions = menus.flatMap(m =>
-                AKSI.map(a => ({
-                    id_menu:    m.id_menu,
-                    aksi:       a,
-                    diizinkan:  perms[permKey(m.id_menu, a)] ?? false,
-                }))
+            // Kirim HANYA sel yang berubah — menyimpan seluruh matriks akan
+            // menulis baris revoke per-perusahaan utk semua sel kosong dan
+            // mengalahkan baseline global (mis. izin mobile supir).
+            const permissions = grup.flatMap(g => g.items).flatMap(m =>
+                AKSI.map(a => permKey(m.id_menu, a))
+                    .filter(key => (perms[key] ?? false) !== (permsAwal[key] ?? false))
+                    .map(key => ({
+                        id_menu:    m.id_menu,
+                        aksi:       key.split('::')[1],
+                        diizinkan:  perms[key] ?? false,
+                    }))
             )
+            if (permissions.length === 0) {
+                toast.push(<Notification type="info" title="Tidak ada perubahan untuk disimpan" />)
+                setSaving(false)
+                return
+            }
             await izinPeranService.bulkUpsert(peran.kode_peran, permissions)
+            setPermsAwal({ ...perms })
             toast.push(<Notification type="success" title="Izin akses berhasil disimpan" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -136,7 +165,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                             )
                         },
                     ].map(({ label, value }) => (
-                        <div key={label} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                        <div key={label} className="flex justify-between items-center py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                             <span className="text-gray-500">{label}</span>
                             <span className="font-medium">{value}</span>
                         </div>
@@ -160,47 +189,64 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                     </div>
 
-                    {menus.length === 0 ? (
+                    {grup.length === 0 ? (
                         <p className="text-gray-400 text-sm py-4 text-center">Belum ada menu terdaftar</p>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                    <tr className="border-b text-gray-500 text-xs">
-                                        <th className="text-left py-2 pr-4 font-medium w-48">Menu</th>
-                                        <th className="py-2 px-3 text-center font-medium w-20">Semua</th>
+                                    <tr>
+                                        <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48">Menu</th>
+                                        <th className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">Semua</th>
                                         {AKSI.map(a => (
-                                            <th key={a} className="py-2 px-3 text-center font-medium capitalize w-20">{a}</th>
+                                            <th key={a} className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">{a}</th>
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {menus.map(m => {
-                                        const allOn = AKSI.every(a => perms[permKey(m.id_menu, a)])
-                                        const someOn = AKSI.some(a => perms[permKey(m.id_menu, a)])
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {grup.map(g => {
+                                        const adaAnak = g.items.some(m => m.id_menu !== g.root.id_menu)
                                         return (
-                                            <tr key={m.id_menu} className="border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                <td className="py-2.5 pr-4 font-medium">{m.nama_menu}</td>
-                                                <td className="py-2.5 px-3 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={allOn}
-                                                        ref={el => { if (el) el.indeterminate = someOn && !allOn }}
-                                                        onChange={() => toggleAll(m.id_menu)}
-                                                        className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
-                                                    />
-                                                </td>
-                                                {AKSI.map(a => (
-                                                    <td key={a} className="py-2.5 px-3 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={perms[permKey(m.id_menu, a)] ?? false}
-                                                            onChange={() => toggle(m.id_menu, a)}
-                                                            className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
-                                                        />
-                                                    </td>
-                                                ))}
-                                            </tr>
+                                            <Fragment key={g.root.id_menu}>
+                                                {adaAnak && (
+                                                    <tr className="bg-gray-50/70 dark:bg-gray-800/40">
+                                                        <td colSpan={2 + AKSI.length} className="py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                                            {g.root.nama_menu}
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {g.items.map(m => {
+                                                    const allOn = AKSI.every(a => perms[permKey(m.id_menu, a)])
+                                                    const someOn = AKSI.some(a => perms[permKey(m.id_menu, a)])
+                                                    return (
+                                                        <tr key={m.id_menu} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                            <td className={`py-2.5 px-3 font-medium ${adaAnak ? 'pl-8' : ''}`}>
+                                                                {m.nama_menu}
+                                                                <span className="text-xs text-gray-400 font-normal font-mono ml-2">{m.path}</span>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={allOn}
+                                                                    ref={el => { if (el) el.indeterminate = someOn && !allOn }}
+                                                                    onChange={() => toggleAll(m.id_menu)}
+                                                                    className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                                                />
+                                                            </td>
+                                                            {AKSI.map(a => (
+                                                                <td key={a} className="py-2.5 px-3 text-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={perms[permKey(m.id_menu, a)] ?? false}
+                                                                        onChange={() => toggle(m.id_menu, a)}
+                                                                        className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </Fragment>
                                         )
                                     })}
                                 </tbody>

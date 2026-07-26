@@ -95,6 +95,8 @@ export const ROUTES = {
     KARYAWAN_BARU:   '/karyawan/baru',
     KARYAWAN_DETAIL: (id: string) => `/karyawan/${id}`,
 
+    CUTI: '/cuti',
+
     PENUGASAN:        '/penugasan',
     PENUGASAN_BARU:   '/penugasan/baru',
     PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,

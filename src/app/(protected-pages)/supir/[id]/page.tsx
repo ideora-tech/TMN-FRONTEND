@@ -11,6 +11,7 @@ import { supirService, Supir } from '@/services/supir.service'
 import { tripService, Trip } from '@/services/trip.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
+import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
 const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
@@ -56,6 +57,17 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     // armada default options
     const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaDefaultList, setArmadaDefaultList] = useState<Armada[]>([])
+
+    // tautan karyawan
+    const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
+
+    useEffect(() => {
+        karyawanService.list(1, 500)
+            .then(res => setKaryawanOptions(res.data
+                .filter((k: Karyawan) => k.aktif)
+                .map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))))
+            .catch(() => {})
+    }, [])
 
     useEffect(() => {
         supirService.get(id)
@@ -232,6 +244,19 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         ? (armadaDefaultList.find(a => a.id_armada === supir.id_armada_default)?.nopol ?? <span className="text-gray-400">—</span>)
                                         : <span className="text-gray-400">—</span>,
                                 },
+                                {
+                                    label: 'Karyawan Tertaut',
+                                    value: supir.id_karyawan
+                                        ? (
+                                            <span
+                                                className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                onClick={() => router.push(ROUTES.KARYAWAN_DETAIL(supir.id_karyawan!))}
+                                            >
+                                                {karyawanOptions.find(o => o.value === supir.id_karyawan)?.label ?? 'Lihat karyawan'}
+                                            </span>
+                                        )
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -286,6 +311,14 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         options={armadaOptions}
                                         value={armadaOptions.find(o => o.value === form.id_armada_default) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, id_armada_default: opt?.value ?? null }))} />
+                                </FormItem>
+                                <FormItem label="Tautkan ke Karyawan (opsional)"
+                                    extra={<span className="text-xs text-gray-400">Hubungkan profil supir dengan data karyawan (gaji, kontrak, BPJS)</span>}>
+                                    <Select isClearable isSearchable
+                                        placeholder="Pilih karyawan..."
+                                        options={karyawanOptions}
+                                        value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

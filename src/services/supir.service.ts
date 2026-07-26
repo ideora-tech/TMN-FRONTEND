@@ -10,6 +10,7 @@ export interface Supir {
     telepon?: string
     status: 'aktif' | 'nonaktif'
     id_armada_default?: string | null
+    id_karyawan?: string | null
 }
 
 export const supirService = {

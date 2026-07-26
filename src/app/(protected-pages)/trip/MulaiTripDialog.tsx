@@ -12,8 +12,9 @@ import { supirService } from '@/services/supir.service'
 import { armadaService } from '@/services/armada.service'
 import { supirVendorService } from '@/services/supirVendor.service'
 import { armadaVendorService } from '@/services/armadaVendor.service'
+import { cutiService } from '@/services/cuti.service'
 
-type Option = { value: string; label: string }
+type Option = { value: string; label: string; isDisabled?: boolean }
 
 type Props = {
     isOpen: boolean
@@ -68,6 +69,11 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         try {
             const res = await penugasanService.list(idProyek, 1, undefined, 100)
             const rows = res.data.filter(p => p.status === 'pending' || p.status === 'aktif')
+            const supirCuti = new Set(
+                (await cutiService.cutiAktif().catch(() => []))
+                    .map(c => c.id_supir)
+                    .filter(Boolean) as string[]
+            )
             const supirIds        = [...new Set(rows.map(p => p.id_supir).filter(Boolean))] as string[]
             const armadaIds       = [...new Set(rows.map(p => p.id_armada).filter(Boolean))] as string[]
             const supirVendorIds  = [...new Set(rows.map(p => p.id_supir_vendor).filter(Boolean))] as string[]
@@ -98,9 +104,11 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                 const armada = nopolArmada[p.id_armada ?? p.id_armada_vendor ?? ''] ?? 'tanpa armada'
                 const warnSim = p.id_supir && simKadaluarsa.has(p.id_supir) ? ' ⚠ SIM kadaluarsa' : ''
                 const warnJalan = p.id_armada && armadaSedangJalan.has(p.id_armada) ? ' ⚠ armada sedang dalam perjalanan' : ''
+                const sedangCuti = !!p.id_supir && supirCuti.has(p.id_supir)
                 return {
                     value: p.id_penugasan,
-                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}${warnSim}${warnJalan}`,
+                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}${warnSim}${warnJalan}${sedangCuti ? ' ⛔ sedang cuti' : ''}`,
+                    isDisabled: sedangCuti,
                 }
             }))
         } catch (err) {
