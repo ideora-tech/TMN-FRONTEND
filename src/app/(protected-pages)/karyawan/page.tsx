@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Select, Tag, Spinner, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineUserGroup } from 'react-icons/hi'
+import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import DataTable from '@/components/shared/DataTable'
+import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
@@ -22,15 +24,6 @@ const STATUS_TAG: Record<string, string> = {
     magang:  'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-200',
 }
 
-const GRAD_COLORS = [
-    'from-blue-500 to-blue-700',
-    'from-indigo-500 to-indigo-700',
-    'from-violet-500 to-violet-700',
-    'from-sky-500 to-sky-700',
-    'from-cyan-500 to-cyan-700',
-    'from-teal-500 to-teal-700',
-]
-
 export default function KaryawanPage() {
     const router = useRouter()
     const [list, setList]               = useState<Karyawan[]>([])
@@ -40,23 +33,22 @@ export default function KaryawanPage() {
     const [search, setSearch]           = useState('')
     const [statusFilter, setStatusFilter] = useState('')
     const [currentPage, setCurrentPage]   = useState(1)
+    const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
-    const [totalPages, setTotalPages]     = useState(1)
     const [deleteTarget, setDeleteTarget] = useState<Karyawan | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await karyawanService.list(currentPage, 15, search, statusFilter)
+            const res = await karyawanService.list(currentPage, pageSize, search, statusFilter)
             setList(res.data)
             setTotal(res.meta.total)
-            setTotalPages(res.meta.totalPages)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }, [currentPage, search, statusFilter])
+    }, [currentPage, pageSize, search, statusFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -78,6 +70,79 @@ export default function KaryawanPage() {
         }
     }
 
+    const columns: ColumnDef<Karyawan>[] = [
+        {
+            header: 'No', id: 'no', size: 50,
+            cell: ({ row }: CellContext<Karyawan, unknown>) =>
+                (currentPage - 1) * pageSize + row.index + 1,
+        },
+        {
+            header: 'NIK', accessorKey: 'nik', size: 130,
+            cell: ({ row }: CellContext<Karyawan, unknown>) => (
+                <span className="font-mono text-xs font-semibold">{row.original.nik}</span>
+            ),
+        },
+        {
+            header: 'Nama', accessorKey: 'nama_karyawan', size: 210,
+            cell: ({ row }: CellContext<Karyawan, unknown>) => (
+                <div>
+                    <p
+                        className="font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                        onClick={() => router.push(ROUTES.KARYAWAN_DETAIL(row.original.id_karyawan))}
+                    >
+                        {row.original.nama_karyawan}
+                    </p>
+                    {row.original.email && <p className="text-xs text-gray-400">{row.original.email}</p>}
+                </div>
+            ),
+        },
+        {
+            header: 'Jabatan', id: 'jabatan', size: 150,
+            cell: ({ row }: CellContext<Karyawan, unknown>) =>
+                row.original.jabatan?.nama_jabatan ?? <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Kepegawaian', accessorKey: 'status_kepegawaian', size: 120,
+            cell: ({ row }: CellContext<Karyawan, unknown>) =>
+                row.original.status_kepegawaian ? (
+                    <Tag className={STATUS_TAG[row.original.status_kepegawaian] ?? 'bg-gray-100 text-gray-600'}>
+                        {row.original.status_kepegawaian.charAt(0).toUpperCase() + row.original.status_kepegawaian.slice(1)}
+                    </Tag>
+                ) : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Status', accessorKey: 'aktif', size: 100,
+            cell: ({ row }: CellContext<Karyawan, unknown>) => (
+                <Tag className={row.original.aktif
+                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
+                    : 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100'}>
+                    {row.original.aktif ? 'Aktif' : 'Nonaktif'}
+                </Tag>
+            ),
+        },
+        {
+            header: '', id: 'action', size: 90,
+            cell: ({ row }: CellContext<Karyawan, unknown>) => (
+                <div className="flex items-center justify-end gap-1">
+                    <Tooltip title="Edit">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => router.push(ROUTES.KARYAWAN_DETAIL(row.original.id_karyawan))}>
+                            <HiOutlinePencilAlt className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Hapus">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}>
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
+                    </Tooltip>
+                </div>
+            ),
+        },
+    ]
+
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -90,9 +155,8 @@ export default function KaryawanPage() {
                     Tambah Karyawan
                 </Button>
             </div>
-            <Card>
-                {/* Search + Filter */}
-                <div className="flex items-center gap-3 mb-5">
+            <Card bodyClass="p-0">
+                <div className="flex items-center gap-3 px-4 py-3">
                     <Input className="flex-1" placeholder="Cari NIK atau nama karyawan... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -102,108 +166,21 @@ export default function KaryawanPage() {
                         onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }} />
                     <div className="w-44 shrink-0">
                         <Select<StatusOption>
+                            isSearchable={false}
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={opt => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }} />
                     </div>
                 </div>
-
-                {/* Content */}
-                {loading ? (
-                    <div className="flex justify-center py-16">
-                        <Spinner size={40} />
-                    </div>
-                ) : list.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
-                            <HiOutlineUserGroup className="text-3xl text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <p className="text-base font-medium text-gray-500 dark:text-gray-400">Belum ada data karyawan</p>
-                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Tambah karyawan pertama dengan klik tombol di atas</p>
-                    </div>
-                ) : (
-                    <>
-                        {/* Card Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {list.map((k, idx) => {
-                                const initials = k.nama_karyawan
-                                    .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
-                                const grad = GRAD_COLORS[idx % GRAD_COLORS.length]
-                                return (
-                                    <div key={k.id_karyawan}
-                                        className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-shadow">
-                                        {/* Gradient header */}
-                                        <div className={`bg-gradient-to-br ${grad} px-4 pt-4 pb-8`}>
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-lg select-none ring-2 ring-white/30">
-                                                    {initials}
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    <button type="button"
-                                                        onClick={() => router.push(ROUTES.KARYAWAN_DETAIL(k.id_karyawan))}
-                                                        className="p-1.5 rounded-lg bg-white/15 hover:bg-white/30 text-white transition-colors">
-                                                        <HiOutlinePencilAlt className="text-sm" />
-                                                    </button>
-                                                    <button type="button"
-                                                        onClick={() => setDeleteTarget(k)}
-                                                        className="p-1.5 rounded-lg bg-white/15 hover:bg-red-400/50 text-white transition-colors">
-                                                        <HiOutlineTrash className="text-sm" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <p className="text-white font-bold text-sm leading-snug tracking-wide uppercase">
-                                                {k.nama_karyawan}
-                                            </p>
-                                            <p className="text-white/70 text-xs mt-0.5">
-                                                {k.jabatan?.nama_jabatan ?? '—'}
-                                            </p>
-                                        </div>
-
-                                        {/* White bottom panel */}
-                                        <div className="bg-white dark:bg-gray-800 px-4 py-3 -mt-4 rounded-t-2xl relative flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">NIK</p>
-                                                <p className="text-sm font-mono font-semibold text-gray-700 dark:text-gray-200">
-                                                    {k.nik}
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1">
-                                                {k.status_kepegawaian ? (
-                                                    <Tag className={`text-xs ${STATUS_TAG[k.status_kepegawaian] ?? ''}`}>
-                                                        {k.status_kepegawaian.charAt(0).toUpperCase() + k.status_kepegawaian.slice(1)}
-                                                    </Tag>
-                                                ) : null}
-                                                <Tag className={`text-xs ${k.aktif
-                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                                    : 'bg-red-50 text-red-500 dark:bg-red-500/20 dark:text-red-400'}`}>
-                                                    {k.aktif ? 'Aktif' : 'Tidak Aktif'}
-                                                </Tag>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* Pagination */}
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <p className="text-sm text-gray-500">Total <span className="font-semibold text-gray-700 dark:text-gray-300">{total}</span> karyawan</p>
-                            {totalPages > 1 && (
-                                <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="default" icon={<HiOutlineChevronLeft />}
-                                        disabled={currentPage <= 1}
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[60px] text-center">
-                                        {currentPage} / {totalPages}
-                                    </span>
-                                    <Button size="sm" variant="default" icon={<HiOutlineChevronRight />}
-                                        disabled={currentPage >= totalPages}
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} />
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                <DataTable
+                    columns={columns}
+                    data={list as unknown[]}
+                    loading={loading}
+                    noData={!loading && list.length === 0}
+                    pagingData={{ total, pageIndex: currentPage, pageSize }}
+                    onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                />
             </Card>
 
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Karyawan?"

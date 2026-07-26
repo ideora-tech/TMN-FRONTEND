@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Input, Tag, Button, DatePicker, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Input, Tag, Button, DatePicker, Dialog, FormItem, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiOutlineSearch, HiOutlineX, HiOutlineCheckCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineCheckCircle, HiOutlineCog, HiOutlineClock } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
-import { absensiService, AbsensiHarianRow, StatusAbsensi } from '@/services/absensi.service'
+import { absensiService, AbsensiHarianRow, StatusAbsensi, PengaturanAbsensi } from '@/services/absensi.service'
 
 type Option = { value: string; label: string }
 
@@ -27,12 +27,46 @@ const STATUS_TAG: Record<string, string> = {
 
 const jamSingkat = (jam: string | null): string => (jam ? jam.substring(0, 5) : '')
 
+const keMenit = (jam: string): number => {
+    const [h, m] = jam.split(':').map(Number)
+    return h * 60 + m
+}
+
+const PENGATURAN_DEFAULT: PengaturanAbsensi = { jam_masuk: '08:00', jam_pulang: '17:00', toleransi_terlambat_menit: 15 }
+
 export default function InputHarianTab() {
     const [tanggal, setTanggal] = useState(dayjs().format('YYYY-MM-DD'))
     const [rows, setRows]       = useState<AbsensiHarianRow[]>([])
     const [loading, setLoading] = useState(false)
     const [saving, setSaving]   = useState(false)
     const [cari, setCari]       = useState('')
+
+    const [pengaturan, setPengaturan]         = useState<PengaturanAbsensi>(PENGATURAN_DEFAULT)
+    const [pengaturanOpen, setPengaturanOpen] = useState(false)
+    const [pengaturanForm, setPengaturanForm] = useState<PengaturanAbsensi>(PENGATURAN_DEFAULT)
+    const [savingPengaturan, setSavingPengaturan] = useState(false)
+
+    const [jamMasukMassal, setJamMasukMassal]   = useState('')
+    const [jamPulangMassal, setJamPulangMassal] = useState('')
+
+    useEffect(() => {
+        absensiService.getPengaturan().then(p => {
+            setPengaturan(p)
+            setJamMasukMassal(p.jam_masuk)
+            setJamPulangMassal(p.jam_pulang)
+        }).catch(() => {})
+    }, [])
+
+    const statusDariJamMasuk = useCallback((jam: string): StatusAbsensi => {
+        const batas = keMenit(pengaturan.jam_masuk) + pengaturan.toleransi_terlambat_menit
+        return keMenit(jam) > batas ? 'terlambat' : 'hadir'
+    }, [pengaturan])
+
+    const menitLembur = useCallback((jamPulang: string | null): number => {
+        if (!jamPulang) return 0
+        const selisih = keMenit(jamPulang) - keMenit(pengaturan.jam_pulang)
+        return selisih > 0 ? selisih : 0
+    }, [pengaturan])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -54,6 +88,48 @@ export default function InputHarianTab() {
 
     const tandaiSemuaHadir = () => {
         setRows(prev => prev.map(r => (r.sedang_cuti ? r : { ...r, status: r.status ?? 'hadir' })))
+    }
+
+    const terapkanJamKeSemua = () => {
+        if (!jamMasukMassal && !jamPulangMassal) return
+        setRows(prev => prev.map(r => {
+            if (r.sedang_cuti) return r
+            if (r.status && !['hadir', 'terlambat'].includes(r.status)) return r
+            const jamMasukBaru = jamMasukMassal || r.jam_masuk
+            return {
+                ...r,
+                jam_masuk: jamMasukMassal || r.jam_masuk,
+                jam_pulang: jamPulangMassal || r.jam_pulang,
+                status: jamMasukBaru ? statusDariJamMasuk(jamMasukBaru) : (r.status ?? 'hadir'),
+            }
+        }))
+        toast.push(<Notification type="info" title="Jam diterapkan — status hadir/terlambat menyesuaikan otomatis. Jangan lupa Simpan." />)
+    }
+
+    const ubahJamMasuk = (idKaryawan: string, jam: string) => {
+        setRows(prev => prev.map(r => {
+            if (r.id_karyawan !== idKaryawan) return r
+            const statusBaru = jam && (!r.status || ['hadir', 'terlambat'].includes(r.status))
+                ? statusDariJamMasuk(jam)
+                : r.status
+            return { ...r, jam_masuk: jam, status: statusBaru }
+        }))
+    }
+
+    const simpanPengaturan = async () => {
+        setSavingPengaturan(true)
+        try {
+            const hasil = await absensiService.simpanPengaturan(pengaturanForm)
+            setPengaturan(hasil)
+            setJamMasukMassal(hasil.jam_masuk)
+            setJamPulangMassal(hasil.jam_pulang)
+            setPengaturanOpen(false)
+            toast.push(<Notification type="success" title="Pengaturan jam kerja tersimpan" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSavingPengaturan(false)
+        }
     }
 
     const handleSimpan = async () => {
@@ -111,6 +187,34 @@ export default function InputHarianTab() {
                         onClick={handleSimpan} disabled={loading || rows.length === 0}>
                         Simpan
                     </Button>
+                    <Tooltip title={`Pengaturan jam kerja (masuk ${pengaturan.jam_masuk}, pulang ${pengaturan.jam_pulang}, toleransi ${pengaturan.toleransi_terlambat_menit} menit)`}>
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors shrink-0"
+                            onClick={() => { setPengaturanForm(pengaturan); setPengaturanOpen(true) }}>
+                            <HiOutlineCog className="text-lg" />
+                        </span>
+                    </Tooltip>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 px-4 pb-3 -mt-1">
+                    <span className="text-xs text-gray-500 shrink-0 inline-flex items-center gap-1">
+                        <HiOutlineClock className="text-sm" /> Isi jam serentak:
+                    </span>
+                    <div className="w-32 shrink-0">
+                        <Input type="time" size="sm" value={jamMasukMassal}
+                            onChange={e => setJamMasukMassal(e.target.value)} />
+                    </div>
+                    <span className="text-xs text-gray-400">s/d</span>
+                    <div className="w-32 shrink-0">
+                        <Input type="time" size="sm" value={jamPulangMassal}
+                            onChange={e => setJamPulangMassal(e.target.value)} />
+                    </div>
+                    <Button variant="default" size="sm" className="shrink-0"
+                        onClick={terapkanJamKeSemua} disabled={loading || rows.length === 0}>
+                        Terapkan ke Semua
+                    </Button>
+                    <span className="text-xs text-gray-400">
+                        Masuk lewat {pengaturan.jam_masuk} (+{pengaturan.toleransi_terlambat_menit}m) otomatis Terlambat · pulang lewat {pengaturan.jam_pulang} dihitung lembur
+                    </span>
                 </div>
 
                 {loading ? (
@@ -153,11 +257,14 @@ export default function InputHarianTab() {
                                                 </td>
                                                 <td className="py-2.5 px-3">
                                                     <Input type="time" size="sm" value={r.jam_masuk ?? ''}
-                                                        onChange={e => ubahRow(r.id_karyawan, { jam_masuk: e.target.value })} />
+                                                        onChange={e => ubahJamMasuk(r.id_karyawan, e.target.value)} />
                                                 </td>
                                                 <td className="py-2.5 px-3">
                                                     <Input type="time" size="sm" value={r.jam_pulang ?? ''}
                                                         onChange={e => ubahRow(r.id_karyawan, { jam_pulang: e.target.value })} />
+                                                    {menitLembur(r.jam_pulang) > 0 && (
+                                                        <p className="text-xs text-amber-600 mt-0.5">+{menitLembur(r.jam_pulang)}m lembur</p>
+                                                    )}
                                                 </td>
                                                 <td className="py-2.5 px-3">
                                                     <Input size="sm" placeholder="Keterangan (opsional)" value={r.keterangan ?? ''}
@@ -188,6 +295,38 @@ export default function InputHarianTab() {
                     )}
                 </div>
             )}
+
+            {/* Dialog Pengaturan Jam Kerja */}
+            <Dialog isOpen={pengaturanOpen} onRequestClose={() => setPengaturanOpen(false)} onClose={() => setPengaturanOpen(false)} width={420}>
+                <h5 className="font-bold mb-1">Pengaturan Jam Kerja</h5>
+                <p className="text-xs text-gray-400 mb-4">
+                    Dipakai untuk deteksi Terlambat otomatis dan perhitungan lembur di rekap bulanan.
+                    Upah lembur dihitung formula pemerintah: gaji pokok × 1/173 per jam — jam pertama ×1,5, jam berikutnya ×2.
+                </p>
+                <form onSubmit={e => { e.preventDefault(); simpanPengaturan() }}>
+                    <FormItem label="Jam Masuk Standar" asterisk>
+                        <Input type="time" value={pengaturanForm.jam_masuk}
+                            onChange={e => setPengaturanForm(p => ({ ...p, jam_masuk: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Jam Pulang Standar" asterisk
+                        extra={<span className="text-xs text-gray-400">Pulang setelah jam ini dihitung sebagai lembur</span>}>
+                        <Input type="time" value={pengaturanForm.jam_pulang}
+                            onChange={e => setPengaturanForm(p => ({ ...p, jam_pulang: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Toleransi Terlambat (menit)" asterisk
+                        extra={<span className="text-xs text-gray-400">Masuk melewati jam masuk + toleransi otomatis berstatus Terlambat</span>}>
+                        <Input type="number" min={0} max={120} value={pengaturanForm.toleransi_terlambat_menit}
+                            onChange={e => setPengaturanForm(p => ({ ...p, toleransi_terlambat_menit: Number(e.target.value) }))} />
+                    </FormItem>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setPengaturanOpen(false)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={savingPengaturan}
+                            disabled={!pengaturanForm.jam_masuk || !pengaturanForm.jam_pulang}>
+                            Simpan
+                        </Button>
+                    </div>
+                </form>
+            </Dialog>
         </div>
     )
 }

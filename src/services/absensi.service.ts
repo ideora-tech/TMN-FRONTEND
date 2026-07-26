@@ -32,6 +32,14 @@ export interface RekapAbsensiRow {
     sakit: number
     alpha: number
     cuti: number
+    lembur_menit: number
+    lembur_rupiah: number
+}
+
+export interface PengaturanAbsensi {
+    jam_masuk: string
+    jam_pulang: string
+    toleransi_terlambat_menit: number
 }
 
 export const absensiService = {
@@ -46,5 +54,13 @@ export const absensiService = {
     async rekap(params: { bulan?: string; page?: number; limit?: number; search?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.ABSENSI_REKAP, { params: { page: 1, limit: 10, ...params } })
         return data as { data: RekapAbsensiRow[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+    async getPengaturan() {
+        const { data } = await axios.get(API_ENDPOINTS.ABSENSI_PENGATURAN)
+        return data.data as PengaturanAbsensi
+    },
+    async simpanPengaturan(payload: PengaturanAbsensi) {
+        const { data } = await axios.put(API_ENDPOINTS.ABSENSI_PENGATURAN, payload)
+        return data.data as PengaturanAbsensi
     },
 }

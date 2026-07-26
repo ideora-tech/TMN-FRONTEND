@@ -7,6 +7,7 @@ import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { formatRupiah } from '@/utils/formatNumber'
 import { absensiService, RekapAbsensiRow } from '@/services/absensi.service'
 
 type Option = { value: string; label: string }
@@ -91,6 +92,23 @@ export default function RekapBulananTab() {
         {
             header: 'Alpha', accessorKey: 'alpha', size: 75,
             cell: ({ row }: CellContext<RekapAbsensiRow, unknown>) => angka(row.original.alpha, 'text-red-500'),
+        },
+        {
+            header: 'Lembur', accessorKey: 'lembur_menit', size: 130,
+            cell: ({ row }: CellContext<RekapAbsensiRow, unknown>) => {
+                const menit = row.original.lembur_menit
+                if (menit <= 0) return <span className="text-gray-300 dark:text-gray-600">—</span>
+                const jam = Math.floor(menit / 60)
+                const sisa = menit % 60
+                return (
+                    <div>
+                        <p className="font-semibold text-amber-600">
+                            {jam > 0 ? `${jam}j ` : ''}{sisa > 0 ? `${sisa}m` : ''}
+                        </p>
+                        <p className="text-xs text-gray-500">{formatRupiah(row.original.lembur_rupiah)}</p>
+                    </div>
+                )
+            },
         },
     ]
 
