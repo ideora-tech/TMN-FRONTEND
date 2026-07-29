@@ -294,4 +294,10 @@ export const API_ENDPOINTS = {
     // Parameter BOK
     PARAMETER_BOK:        '/api/proxy/parameter-bok',
     PARAMETER_BOK_DETAIL: (id: string) => `/api/proxy/parameter-bok/${id}`,
+
+    // Evaluasi Vendor
+    PENUGASAN_EVALUASI:    (idPenugasan: string) => `/api/proxy/penugasan/${idPenugasan}/evaluasi`,
+    EVALUASI_DETAIL:       (id: string) => `/api/proxy/evaluasi/${id}`,
+    EVALUASI_VENDOR_REKAP: '/api/proxy/evaluasi-vendor/rekap',
+    VENDOR_EVALUASI:       (idVendor: string) => `/api/proxy/vendor/${idVendor}/evaluasi`,
 } as const

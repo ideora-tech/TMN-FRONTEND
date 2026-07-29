@@ -19,7 +19,7 @@ export default function TripPage() {
                     <Tabs.TabNav value="aktif">Trip Aktif</Tabs.TabNav>
                     <Tabs.TabNav value="riwayat">Riwayat</Tabs.TabNav>
                 </Tabs.TabList>
-                <div className="mt-3">
+                <div>
                     <Tabs.TabContent value="aktif"><TripAktifTab /></Tabs.TabContent>
                     <Tabs.TabContent value="riwayat"><RiwayatTripTab /></Tabs.TabContent>
                 </div>

@@ -7,8 +7,9 @@ import KontrakVendorTab from './KontrakVendorTab'
 import ArmadaVendorTab from './ArmadaVendorTab'
 import SupirVendorTab from './SupirVendorTab'
 import PenugasanVendorTab from './PenugasanVendorTab'
+import EvaluasiVendorTab from './EvaluasiVendorTab'
 
-const TAB_VALUES = ['vendor', 'kontrak', 'armada', 'supir', 'penugasan']
+const TAB_VALUES = ['vendor', 'kontrak', 'armada', 'supir', 'penugasan', 'evaluasi']
 
 export default function VendorPage() {
     const router = useRouter()
@@ -26,7 +27,7 @@ export default function VendorPage() {
         <div className="flex flex-col gap-4">
             <div>
                 <h3 className="font-bold">Vendor</h3>
-                <p className="text-gray-500 text-sm mt-0.5">Master vendor, kontrak, armada &amp; supir vendor, dan penugasan vendor</p>
+                <p className="text-gray-500 text-sm mt-0.5">Master vendor, kontrak, armada &amp; supir vendor, penugasan, dan evaluasi vendor</p>
             </div>
 
             <Tabs value={activeTab} onChange={val => handleTabChange(val as string)}>
@@ -36,6 +37,7 @@ export default function VendorPage() {
                     <Tabs.TabNav value="armada">Armada</Tabs.TabNav>
                     <Tabs.TabNav value="supir">Supir</Tabs.TabNav>
                     <Tabs.TabNav value="penugasan">Penugasan</Tabs.TabNav>
+                    <Tabs.TabNav value="evaluasi">Evaluasi</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="vendor"><VendorTab /></Tabs.TabContent>
@@ -43,6 +45,7 @@ export default function VendorPage() {
                     <Tabs.TabContent value="armada"><ArmadaVendorTab /></Tabs.TabContent>
                     <Tabs.TabContent value="supir"><SupirVendorTab /></Tabs.TabContent>
                     <Tabs.TabContent value="penugasan"><PenugasanVendorTab /></Tabs.TabContent>
+                    <Tabs.TabContent value="evaluasi"><EvaluasiVendorTab /></Tabs.TabContent>
                 </div>
             </Tabs>
         </div>

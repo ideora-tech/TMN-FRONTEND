@@ -20,6 +20,7 @@ import { projectService, Project } from '@/services/project.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import MulaiTripDialog from '../../trip/MulaiTripDialog'
 import { tripService, Trip } from '@/services/trip.service'
+import { evaluasiService, EvaluasiTrip, EvaluasiPayload } from '@/services/evaluasi.service'
 
 const STATUS_OPTIONS = [
     { value: 'pending', label: 'Pending' },
@@ -49,6 +50,34 @@ const MEKANISME_CLASS: Record<string, string> = {
 }
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+}
+
+const NILAI_OPTIONS = [
+    { value: 1, label: '1 - Sangat Buruk' },
+    { value: 2, label: '2 - Buruk' },
+    { value: 3, label: '3 - Cukup' },
+    { value: 4, label: '4 - Baik' },
+    { value: 5, label: '5 - Sangat Baik' },
+]
+
+type NilaiKey = 'nilai_armada' | 'nilai_supir' | 'nilai_ketepatan_waktu' | 'nilai_kualitas' | 'nilai_harga' | 'nilai_responsif'
+
+const KRITERIA_VENDOR: { key: NilaiKey; label: string }[] = [
+    { key: 'nilai_ketepatan_waktu', label: 'Ketepatan Waktu' },
+    { key: 'nilai_kualitas',        label: 'Kualitas Layanan' },
+    { key: 'nilai_harga',           label: 'Harga' },
+    { key: 'nilai_responsif',       label: 'Responsif' },
+]
+
+const KRITERIA_INTERNAL: { key: NilaiKey; label: string }[] = [
+    { key: 'nilai_armada', label: 'Nilai Armada' },
+    { key: 'nilai_supir',  label: 'Nilai Supir' },
+]
+
+function nilaiTagClass(nilai: number) {
+    if (nilai >= 4) return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+    if (nilai >= 3) return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
+    return 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400'
 }
 
 function shortId(id?: string | null) {
@@ -87,6 +116,14 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [tripList, setTripList]       = useState<Trip[]>([])
     const [tripLoading, setTripLoading] = useState(false)
     const [showMulaiTrip, setShowMulaiTrip] = useState(false)
+
+    // evaluasi
+    const [evaluasi, setEvaluasi]       = useState<EvaluasiTrip | null>(null)
+    const [evalLoading, setEvalLoading] = useState(false)
+    const [evalEditing, setEvalEditing] = useState(false)
+    const [evalForm, setEvalForm]       = useState<EvaluasiPayload>({})
+    const [evalSaving, setEvalSaving]   = useState(false)
+    const [evalError, setEvalError]     = useState('')
 
     useEffect(() => {
         Promise.all([
@@ -156,6 +193,48 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     }, [id])
 
     useEffect(() => { fetchTrip() }, [fetchTrip])
+
+    const fetchEvaluasi = useCallback(async () => {
+        setEvalLoading(true)
+        try {
+            setEvaluasi(await evaluasiService.getByPenugasan(id))
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setEvalLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => {
+        if (penugasan?.status === 'selesai') fetchEvaluasi()
+    }, [penugasan?.status, fetchEvaluasi])
+
+    const handleSaveEvaluasi = async () => {
+        if (!penugasan) return
+        const kriteria = penugasan.sumber === 'vendor' ? KRITERIA_VENDOR : KRITERIA_INTERNAL
+        if (!kriteria.some(k => evalForm[k.key] != null)) {
+            setEvalError('Isi minimal satu nilai')
+            return
+        }
+        setEvalError('')
+        setEvalSaving(true)
+        try {
+            const payload: EvaluasiPayload = { catatan: evalForm.catatan?.trim() || null }
+            kriteria.forEach(k => { payload[k.key] = evalForm[k.key] ?? null })
+            if (evaluasi) {
+                await evaluasiService.update(evaluasi.id_evaluasi, payload)
+            } else {
+                await evaluasiService.create(id, payload)
+            }
+            toast.push(<Notification type="success" title="Evaluasi berhasil disimpan" />)
+            setEvalEditing(false)
+            fetchEvaluasi()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setEvalSaving(false)
+        }
+    }
 
     // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
     // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
@@ -477,6 +556,84 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                     </div>
                 )}
             </Card>
+
+            {penugasan.status === 'selesai' && (
+                <Card>
+                    <div className="flex items-center justify-between mb-1">
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Evaluasi</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {penugasan.sumber === 'vendor'
+                                    ? 'Penilaian kinerja vendor untuk penugasan ini'
+                                    : 'Penilaian armada & supir untuk penugasan ini'}
+                            </p>
+                        </div>
+                        {evaluasi && !evalEditing && (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />}
+                                onClick={() => { setEvalForm(evaluasi); setEvalError(''); setEvalEditing(true) }}>
+                                Ubah
+                            </Button>
+                        )}
+                    </div>
+
+                    {evalLoading ? (
+                        <div className="flex justify-center py-6"><Spinner /></div>
+                    ) : evaluasi && !evalEditing ? (
+                        <div className="mt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                                {(penugasan.sumber === 'vendor' ? KRITERIA_VENDOR : KRITERIA_INTERNAL).map(k => {
+                                    const nilai = evaluasi[k.key]
+                                    return (
+                                        <div key={k.key} className="flex items-center justify-between gap-3">
+                                            <p className="text-sm text-gray-600 dark:text-gray-300">{k.label}</p>
+                                            {nilai != null ? (
+                                                <Tag className={`text-xs font-semibold ${nilaiTagClass(nilai)}`}>{nilai}/5</Tag>
+                                            ) : (
+                                                <span className="text-gray-400 text-sm">—</span>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            {evaluasi.catatan && (
+                                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Catatan</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{evaluasi.catatan}</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <form className="mt-4" onSubmit={e => { e.preventDefault(); handleSaveEvaluasi() }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                {(penugasan.sumber === 'vendor' ? KRITERIA_VENDOR : KRITERIA_INTERNAL).map(k => (
+                                    <FormItem key={k.key} label={k.label}>
+                                        <Select isClearable isSearchable={false} placeholder="Pilih nilai..."
+                                            options={NILAI_OPTIONS}
+                                            value={NILAI_OPTIONS.find(o => o.value === evalForm[k.key]) ?? null}
+                                            onChange={opt => {
+                                                setEvalError('')
+                                                setEvalForm(p => ({ ...p, [k.key]: opt?.value ?? null }))
+                                            }} />
+                                    </FormItem>
+                                ))}
+                                <FormItem label="Keterangan" className="sm:col-span-2">
+                                    <Input textArea rows={3} placeholder="Catatan tambahan (opsional)"
+                                        value={evalForm.catatan ?? ''}
+                                        onChange={e => setEvalForm(p => ({ ...p, catatan: e.target.value }))} />
+                                </FormItem>
+                            </div>
+                            {evalError && <p className="text-red-500 text-sm mt-1">{evalError}</p>}
+                            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                {evaluasi && (
+                                    <Button type="button" variant="plain"
+                                        onClick={() => { setEvalEditing(false); setEvalError('') }}>Batal</Button>
+                                )}
+                                <Button type="submit" variant="solid" loading={evalSaving}>Simpan</Button>
+                            </div>
+                        </form>
+                    )}
+                </Card>
+            )}
 
             <MulaiTripDialog isOpen={showMulaiTrip}
                 onClose={() => setShowMulaiTrip(false)}
