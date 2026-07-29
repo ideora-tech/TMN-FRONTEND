@@ -63,6 +63,10 @@ export const ROUTES = {
     REKONSILIASI_BARU:   '/rekonsiliasi/baru',
     REKONSILIASI_DETAIL: (id: string) => `/rekonsiliasi/${id}`,
 
+    INVOICE_VENDOR:        '/invoice-vendor',
+    INVOICE_VENDOR_BARU:   '/invoice-vendor/baru',
+    INVOICE_VENDOR_DETAIL: (id: string) => `/invoice-vendor/${id}`,
+
     PENGGUNA:        '/pengguna',
     PENGGUNA_BARU:   '/pengguna/baru',
     PENGGUNA_DETAIL: (id: string) => `/pengguna/${id}`,

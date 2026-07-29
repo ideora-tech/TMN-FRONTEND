@@ -262,7 +262,7 @@ export default function SettlementSupirPage() {
                 <p className="text-sm text-gray-500 mb-4">
                     {lunasTarget?.supir_nama ?? 'Tanpa supir'} · {lunasTarget?.rute ?? '—'}
                 </p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                     <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
                         <p className="text-xs text-gray-500 mb-1">Alokasi</p>
                         <p className="font-semibold text-sm">

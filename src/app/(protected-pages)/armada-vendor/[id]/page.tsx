@@ -3,6 +3,8 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import DatePicker from '@/components/ui/DatePicker'
+import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -12,6 +14,19 @@ const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
     { value: '0', label: 'Nonaktif' },
 ]
+
+const renderMasaBerlaku = (tgl?: string | null) => {
+    if (!tgl) return <span className="text-gray-400">—</span>
+    const expired = dayjs(tgl).isBefore(dayjs(), 'day')
+    return (
+        <span className="inline-flex items-center gap-2">
+            <span>{dayjs(tgl).format('DD MMM YYYY')}</span>
+            {expired && (
+                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
+            )}
+        </span>
+    )
+}
 
 export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -50,6 +65,9 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                 merk:  form.merk || null,
                 jenis: form.jenis || null,
                 tahun: form.tahun_str ? Number(form.tahun_str) : null,
+                kapasitas: form.kapasitas?.trim() || null,
+                masa_berlaku_stnk: form.masa_berlaku_stnk || null,
+                masa_berlaku_kir: form.masa_berlaku_kir || null,
                 aktif: form.aktif,
             })
             setData(updated)
@@ -104,11 +122,14 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Vendor', value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
-                                { label: 'Nopol',  value: data.nopol },
-                                { label: 'Merk',   value: data.merk ?? <span className="text-gray-400">—</span> },
-                                { label: 'Jenis',  value: data.jenis ?? <span className="text-gray-400">—</span> },
-                                { label: 'Tahun',  value: data.tahun ?? <span className="text-gray-400">—</span> },
+                                { label: 'Vendor',            value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nopol',             value: data.nopol },
+                                { label: 'Merk',              value: data.merk ?? <span className="text-gray-400">—</span> },
+                                { label: 'Jenis',             value: data.jenis ?? <span className="text-gray-400">—</span> },
+                                { label: 'Tahun',             value: data.tahun ?? <span className="text-gray-400">—</span> },
+                                { label: 'Kapasitas',         value: data.kapasitas ?? <span className="text-gray-400">—</span> },
+                                { label: 'Masa Berlaku STNK', value: renderMasaBerlaku(data.masa_berlaku_stnk) },
+                                { label: 'Masa Berlaku KIR',  value: renderMasaBerlaku(data.masa_berlaku_kir) },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -143,6 +164,20 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                             <FormItem label="Tahun">
                                 <Input value={form.tahun_str ?? ''}
                                     onChange={e => setForm(p => ({ ...p, tahun_str: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Kapasitas">
+                                <Input placeholder="Contoh: 20 ton / 40 ft" value={form.kapasitas ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, kapasitas: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Masa Berlaku STNK">
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.masa_berlaku_stnk ? dayjs(form.masa_berlaku_stnk).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, masa_berlaku_stnk: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
+                            </FormItem>
+                            <FormItem label="Masa Berlaku KIR">
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.masa_berlaku_kir ? dayjs(form.masa_berlaku_kir).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

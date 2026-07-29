@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import DatePicker from '@/components/ui/DatePicker'
+import dayjs from 'dayjs'
 import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -17,7 +19,7 @@ export default function SupirVendorBaruPage() {
     const initialIdVendor = searchParams.get('id_vendor') ?? ''
 
     const [form, setForm] = useState({
-        id_vendor: initialIdVendor, nama: '', telepon: '', no_sim: '',
+        id_vendor: initialIdVendor, nama: '', telepon: '', no_sim: '', masa_berlaku_sim: '',
     })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
@@ -50,6 +52,7 @@ export default function SupirVendorBaruPage() {
                 nama: form.nama,
                 telepon: form.telepon || null,
                 no_sim: form.no_sim || null,
+                masa_berlaku_sim: form.masa_berlaku_sim || null,
             })
             toast.push(<Notification type="success" title="Supir vendor berhasil ditambahkan" />)
             router.push(form.id_vendor ? `${ROUTES.SUPIR_VENDOR}?id_vendor=${form.id_vendor}` : ROUTES.SUPIR_VENDOR)
@@ -92,6 +95,11 @@ export default function SupirVendorBaruPage() {
                     <FormItem label="No SIM">
                         <Input placeholder="Nomor SIM" value={form.no_sim}
                             onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Masa Berlaku SIM">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.masa_berlaku_sim ? dayjs(form.masa_berlaku_sim).toDate() : null}
+                            onChange={date => setForm(p => ({ ...p, masa_berlaku_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

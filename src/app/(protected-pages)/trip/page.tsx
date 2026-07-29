@@ -179,9 +179,9 @@ export default function TripPage() {
             </div>
 
             <Card bodyClass="p-0">
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
-                        className="flex-1"
+                        className="flex-1 min-w-60"
                         placeholder="Cari nama proyek, kode, atau klien... (tekan Enter)"
                         suffix={
                             searchInput

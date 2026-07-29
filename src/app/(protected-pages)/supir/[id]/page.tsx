@@ -189,7 +189,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
 
             {/* Ringkasan statistik */}
             {!tripLoading && tripTotal > 0 && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                         { label: 'Total Trip', value: tripTotal, color: 'text-gray-700 dark:text-gray-200' },
                         { label: 'Sedang Berjalan', value: aktif, color: 'text-emerald-600 dark:text-emerald-400' },

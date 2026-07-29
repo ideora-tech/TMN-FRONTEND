@@ -589,7 +589,7 @@ export default function PenugasanPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Penugasan</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola penugasan armada dan supir</p>
@@ -611,7 +611,7 @@ export default function PenugasanPage() {
             <Card bodyClass="p-0">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3">
                     <Select
-                        className="w-96"
+                        className="w-full sm:w-96"
                         placeholder="Pilih proyek untuk melihat penugasan..."
                         options={proyekOptions}
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}

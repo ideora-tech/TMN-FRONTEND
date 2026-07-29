@@ -213,7 +213,7 @@ export default function DokumenArmadaPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Dokumen Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola dokumen seluruh armada — STNK, KIR, Asuransi, dll</p>
@@ -223,7 +223,7 @@ export default function DokumenArmadaPage() {
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
                     <Input
-                        className="flex-1"
+                        className="flex-1 min-w-60"
                         placeholder="Cari jenis dokumen, nomor, atau nopol... (tekan Enter)"
                         suffix={
                             searchInput

@@ -124,6 +124,14 @@ export const API_ENDPOINTS = {
     REKONSILIASI:        '/api/proxy/rekonsiliasi',
     REKONSILIASI_DETAIL: (id: string) => `/api/proxy/rekonsiliasi/${id}`,
 
+    // Invoice Vendor
+    INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
+    INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
+    INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,
+    INVOICE_VENDOR_VERIFIKASI: (id: string) => `/api/proxy/invoice-vendor/${id}/verifikasi`,
+    INVOICE_VENDOR_PEMBAYARAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran`,
+    INVOICE_VENDOR_PEMBAYARAN_DELETE: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}`,
+
     // Karyawan
     KARYAWAN:        '/api/proxy/karyawan',
     KARYAWAN_DETAIL: (id: string) => `/api/proxy/karyawan/${id}`,
@@ -238,6 +246,11 @@ export const API_ENDPOINTS = {
     VENDOR_DOKUMEN:        (idVendor: string) => `/api/proxy/vendor/${idVendor}/dokumen`,
     VENDOR_DOKUMEN_UPDATE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
     VENDOR_DOKUMEN_DELETE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
+
+    // Rekening Vendor
+    VENDOR_REKENING:        (idVendor: string) => `/api/proxy/vendor/${idVendor}/rekening`,
+    VENDOR_REKENING_UPDATE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/rekening/${id}`,
+    VENDOR_REKENING_DELETE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/rekening/${id}`,
 
     // Penawaran PDF
     PENAWARAN_PDF: (id: string) => `/api/proxy/penawaran/${id}/pdf`,

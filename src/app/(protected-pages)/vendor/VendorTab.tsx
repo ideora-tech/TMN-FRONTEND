@@ -1,52 +1,34 @@
-﻿'use client'
+'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Tooltip, toast, Notification } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { projectService, Project } from '@/services/project.service'
+import { vendorService, Vendor } from '@/services/vendor.service'
 
-type StatusOption = { value: string; label: string }
-
-const STATUS_OPTIONS: StatusOption[] = [
-    { value: '',       label: 'Semua Status' },
-    { value: 'draft',  label: 'Draft' },
-    { value: 'aktif',  label: 'Aktif' },
-    { value: 'selesai', label: 'Selesai' },
-    { value: 'batal',  label: 'Batal' },
-]
-
-const STATUS_TAG: Record<string, string> = {
-    draft:   'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    aktif:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    selesai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-}
-
-export default function ProjectPage() {
+export default function VendorTab() {
     const router = useRouter()
 
-    const [list, setList]             = useState<Project[]>([])
+    const [list, setList]             = useState<Vendor[]>([])
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
 
-    const [searchInput, setSearchInput]   = useState('')
-    const [search, setSearch]             = useState('')
-    const [statusFilter, setStatusFilter] = useState('')
-    const [currentPage, setCurrentPage]   = useState(1)
-    const [pageSize, setPageSize]         = useState(10)
-    const [total, setTotal]               = useState(0)
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch]           = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize]       = useState(10)
+    const [total, setTotal]             = useState(0)
 
-    const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
+    const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await projectService.list(currentPage, pageSize, search, statusFilter)
+            const res = await vendorService.list(currentPage, pageSize, search)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -54,7 +36,7 @@ export default function ProjectPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter])
+    }, [currentPage, pageSize, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -65,8 +47,8 @@ export default function ProjectPage() {
         if (!deleteTarget) return
         setSubmitting(true)
         try {
-            await projectService.delete(deleteTarget.id_proyek)
-            toast.push(<Notification type="success" title="Proyek berhasil dihapus" />)
+            await vendorService.delete(deleteTarget.id_vendor)
+            toast.push(<Notification type="success" title="Vendor berhasil dihapus" />)
             setDeleteTarget(null)
             fetchData()
         } catch (err) {
@@ -76,59 +58,44 @@ export default function ProjectPage() {
         }
     }
 
-    const columns: ColumnDef<Project>[] = [
+    const columns: ColumnDef<Vendor>[] = [
         {
             header: 'No', id: 'no', size: 60,
-            cell: ({ row }: CellContext<Project, unknown>) =>
+            cell: ({ row }: CellContext<Vendor, unknown>) =>
                 (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'Kode Proyek', accessorKey: 'kode_proyek', size: 150,
-            cell: ({ row }: CellContext<Project, unknown>) => (
-                <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
-                    {row.original.kode_proyek}
-                </span>
-            ),
-        },
-        {
-            header: 'Nama Proyek', accessorKey: 'nama_proyek', size: 260,
-            cell: ({ row }: CellContext<Project, unknown>) => {
-                const initials = row.original.nama_proyek
-                    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+            header: 'Nama Vendor', accessorKey: 'nama_vendor', size: 260,
+            cell: ({ row }: CellContext<Vendor, unknown>) => {
+                const initials = row.original.nama_vendor.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
                 return (
                     <div className="flex items-center gap-2.5">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-primary/20 flex items-center justify-center text-xs font-bold">
                             {initials}
                         </div>
-                        <span className="font-semibold">{row.original.nama_proyek}</span>
+                        <span className="font-semibold">{row.original.nama_vendor}</span>
                     </div>
                 )
             },
         },
         {
-            header: 'Status', accessorKey: 'status', size: 120,
-            cell: ({ row }: CellContext<Project, unknown>) => (
-                <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {row.original.status}
-                </Tag>
+            header: 'Telepon', accessorKey: 'telepon', size: 180,
+            cell: ({ row }: CellContext<Vendor, unknown>) => row.original.telepon ?? '-',
+        },
+        {
+            header: 'Email', accessorKey: 'email', size: 220,
+            cell: ({ row }: CellContext<Vendor, unknown>) => (
+                <span className="text-sm">{row.original.email ?? '-'}</span>
             ),
         },
         {
-            header: 'Tgl Mulai', accessorKey: 'tanggal_mulai', size: 130,
-            cell: ({ row }: CellContext<Project, unknown>) => row.original.tanggal_mulai ?? '-',
-        },
-        {
-            header: 'Tgl Selesai', accessorKey: 'tanggal_selesai', size: 130,
-            cell: ({ row }: CellContext<Project, unknown>) => row.original.tanggal_selesai ?? '-',
-        },
-        {
             header: '', id: 'action', size: 100,
-            cell: ({ row }: CellContext<Project, unknown>) => (
+            cell: ({ row }: CellContext<Vendor, unknown>) => (
                 <div className="flex items-center justify-end gap-2">
-                    <Tooltip title="Detail">
+                    <Tooltip title="Edit">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                            onClick={() => router.push(ROUTES.PROYEK_DETAIL(row.original.id_proyek))}
+                            onClick={() => router.push(ROUTES.VENDOR_DETAIL(row.original.id_vendor))}
                         >
                             <HiOutlinePencilAlt className="text-lg" />
                         </span>
@@ -148,25 +115,20 @@ export default function ProjectPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h3 className="font-bold">Proyek</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Kelola proyek klien</p>
-                </div>
+            <div className="flex items-center justify-end">
                 <Button
-                    variant="solid"
-                    size="sm"
+                    variant="solid" size="sm"
                     icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.PROYEK_BARU)}
+                    onClick={() => router.push(ROUTES.VENDOR_BARU)}
                 >
-                    Tambah Proyek
+                    Tambah Vendor
                 </Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
-                        placeholder="Cari kode atau nama proyek... (tekan Enter)"
+                        placeholder="Cari nama atau telepon vendor... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -176,15 +138,7 @@ export default function ProjectPage() {
                         onChange={(e) => setSearchInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
                     />
-                    <div className="w-44 shrink-0">
-                        <Select<StatusOption>
-                            options={STATUS_OPTIONS}
-                            value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
-                            onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
-                        />
-                    </div>
                 </div>
-
                 <DataTable
                     columns={columns}
                     data={list as unknown[]}
@@ -199,19 +153,16 @@ export default function ProjectPage() {
             <ConfirmDialog
                 isOpen={!!deleteTarget}
                 type="danger"
-                title="Hapus Proyek?"
+                title="Hapus Vendor?"
                 confirmText="Ya, Hapus"
                 cancelText="Batal"
-                confirmButtonProps={{
-                    loading: submitting,
-                    customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500',
-                }}
+                confirmButtonProps={{ loading: submitting, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
                 onClose={() => setDeleteTarget(null)}
                 onCancel={() => setDeleteTarget(null)}
                 onConfirm={handleDelete}
             >
                 <p className="text-sm">
-                    Proyek <span className="font-semibold">&ldquo;{deleteTarget?.nama_proyek}&rdquo;</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+                    Vendor <span className="font-semibold">&ldquo;{deleteTarget?.nama_vendor}&rdquo;</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
                 </p>
             </ConfirmDialog>
         </div>

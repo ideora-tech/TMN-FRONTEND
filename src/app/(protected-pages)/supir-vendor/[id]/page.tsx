@@ -3,6 +3,8 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import DatePicker from '@/components/ui/DatePicker'
+import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -12,6 +14,19 @@ const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
     { value: '0', label: 'Nonaktif' },
 ]
+
+const renderMasaBerlaku = (tgl?: string | null) => {
+    if (!tgl) return <span className="text-gray-400">—</span>
+    const expired = dayjs(tgl).isBefore(dayjs(), 'day')
+    return (
+        <span className="inline-flex items-center gap-2">
+            <span>{dayjs(tgl).format('DD MMM YYYY')}</span>
+            {expired && (
+                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
+            )}
+        </span>
+    )
+}
 
 export default function SupirVendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -49,6 +64,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                 nama:    form.nama,
                 telepon: form.telepon || null,
                 no_sim:  form.no_sim || null,
+                masa_berlaku_sim: form.masa_berlaku_sim || null,
                 aktif:   form.aktif,
             })
             setData(updated)
@@ -103,10 +119,11 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Vendor',  value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
-                                { label: 'Nama',    value: data.nama },
-                                { label: 'Telepon', value: data.telepon ?? <span className="text-gray-400">—</span> },
-                                { label: 'No SIM',  value: data.no_sim ?? <span className="text-gray-400">—</span> },
+                                { label: 'Vendor',           value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nama',             value: data.nama },
+                                { label: 'Telepon',          value: data.telepon ?? <span className="text-gray-400">—</span> },
+                                { label: 'No SIM',           value: data.no_sim ?? <span className="text-gray-400">—</span> },
+                                { label: 'Masa Berlaku SIM', value: renderMasaBerlaku(data.masa_berlaku_sim) },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -137,6 +154,11 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                             </FormItem>
                             <FormItem label="No SIM">
                                 <Input value={form.no_sim ?? ''} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Masa Berlaku SIM">
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.masa_berlaku_sim ? dayjs(form.masa_berlaku_sim).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, masa_berlaku_sim: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

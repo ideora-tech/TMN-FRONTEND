@@ -172,7 +172,7 @@ export default function PayrollPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Payroll</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Proses gaji per periode cut-off — draft, koreksi, lalu finalisasi</p>

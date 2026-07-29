@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import DatePicker from '@/components/ui/DatePicker'
+import dayjs from 'dayjs'
 import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -18,6 +20,7 @@ export default function ArmadaVendorBaruPage() {
 
     const [form, setForm] = useState({
         id_vendor: initialIdVendor, nopol: '', merk: '', jenis: '', tahun: '',
+        kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
     })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
@@ -51,6 +54,9 @@ export default function ArmadaVendorBaruPage() {
                 merk: form.merk || null,
                 jenis: form.jenis || null,
                 tahun: form.tahun ? Number(form.tahun) : null,
+                kapasitas: form.kapasitas.trim() || null,
+                masa_berlaku_stnk: form.masa_berlaku_stnk || null,
+                masa_berlaku_kir: form.masa_berlaku_kir || null,
             })
             toast.push(<Notification type="success" title="Armada vendor berhasil ditambahkan" />)
             router.push(form.id_vendor ? `${ROUTES.ARMADA_VENDOR}?id_vendor=${form.id_vendor}` : ROUTES.ARMADA_VENDOR)
@@ -97,6 +103,20 @@ export default function ArmadaVendorBaruPage() {
                     <FormItem label="Tahun">
                         <Input placeholder="2024" value={form.tahun}
                             onChange={e => setForm(p => ({ ...p, tahun: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Kapasitas">
+                        <Input placeholder="Contoh: 20 ton / 40 ft" value={form.kapasitas}
+                            onChange={e => setForm(p => ({ ...p, kapasitas: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Masa Berlaku STNK">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.masa_berlaku_stnk ? dayjs(form.masa_berlaku_stnk).toDate() : null}
+                            onChange={date => setForm(p => ({ ...p, masa_berlaku_stnk: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                    </FormItem>
+                    <FormItem label="Masa Berlaku KIR">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.masa_berlaku_kir ? dayjs(form.masa_berlaku_kir).toDate() : null}
+                            onChange={date => setForm(p => ({ ...p, masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

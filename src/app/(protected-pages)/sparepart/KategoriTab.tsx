@@ -98,8 +98,8 @@ export default function KategoriTab() {
     return (
         <div className="flex flex-col gap-4">
             <Card bodyClass="p-0">
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <Input className="flex-1" placeholder="Cari nama kategori... (tekan Enter)"
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <Input className="flex-1 min-w-60" placeholder="Cari nama kategori... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
                             : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}

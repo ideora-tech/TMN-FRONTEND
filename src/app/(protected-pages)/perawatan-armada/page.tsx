@@ -27,7 +27,7 @@ export default function PerawatanArmadaPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Perawatan Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Riwayat perawatan seluruh armada</p>

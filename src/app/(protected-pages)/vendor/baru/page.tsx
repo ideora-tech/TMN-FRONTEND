@@ -1,15 +1,25 @@
 ﻿'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import { HiArrowLeft } from 'react-icons/hi'
+import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { vendorService } from '@/services/vendor.service'
 
+const JENIS_VENDOR_OPTIONS = [
+    { value: 'Transporter',       label: 'Transporter' },
+    { value: 'Supplier',          label: 'Supplier' },
+    { value: 'Freight Forwarder', label: 'Freight Forwarder' },
+    { value: 'Ekspedisi',         label: 'Ekspedisi' },
+    { value: 'Lainnya',           label: 'Lainnya' },
+]
+
 export default function VendorBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_vendor: '', nama_vendor: '', telepon: '', alamat: '', email: '' })
+    const [form, setForm] = useState({ kode_vendor: '', nama_vendor: '', telepon: '', alamat: '', email: '', jenis_vendor: '', pic_nama: '', npwp: '', tanggal_bergabung: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
 
@@ -35,6 +45,10 @@ export default function VendorBaruPage() {
                 telepon: form.telepon || undefined,
                 alamat: form.alamat || undefined,
                 email: form.email || undefined,
+                jenis_vendor: form.jenis_vendor || undefined,
+                pic_nama: form.pic_nama || undefined,
+                npwp: form.npwp || undefined,
+                tanggal_bergabung: form.tanggal_bergabung || undefined,
                 aktif: true,
             })
             toast.push(<Notification type="success" title="Vendor berhasil ditambahkan" />)
@@ -69,6 +83,16 @@ export default function VendorBaruPage() {
                         <Input placeholder="Nama vendor" value={form.nama_vendor} invalid={!!errors.nama_vendor}
                             onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />
                     </FormItem>
+                    <FormItem label="Jenis Vendor">
+                        <Select isSearchable={false} isClearable placeholder="Pilih jenis vendor..."
+                            options={JENIS_VENDOR_OPTIONS}
+                            value={JENIS_VENDOR_OPTIONS.find(o => o.value === form.jenis_vendor) ?? null}
+                            onChange={(opt) => setForm(p => ({ ...p, jenis_vendor: opt?.value ?? '' }))} />
+                    </FormItem>
+                    <FormItem label="Nama PIC">
+                        <Input placeholder="Nama penanggung jawab" value={form.pic_nama}
+                            onChange={(e) => setForm(p => ({ ...p, pic_nama: e.target.value }))} />
+                    </FormItem>
                     <FormItem label="Telepon">
                         <Input placeholder="No telepon" value={form.telepon}
                             onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
@@ -76,6 +100,15 @@ export default function VendorBaruPage() {
                     <FormItem label="Email">
                         <Input type="email" placeholder="email@vendor.com" value={form.email}
                             onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="NPWP">
+                        <Input placeholder="Contoh: 01.234.567.8-901.000" value={form.npwp}
+                            onChange={(e) => setForm(p => ({ ...p, npwp: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Tanggal Bergabung">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.tanggal_bergabung ? new Date(form.tanggal_bergabung) : null}
+                            onChange={(date) => setForm(p => ({ ...p, tanggal_bergabung: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <div className="sm:col-span-2">
                         <FormItem label="Alamat">

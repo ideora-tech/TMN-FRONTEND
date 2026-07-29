@@ -294,9 +294,9 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     </p>
                 ) : (
                     <>
-                        <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                             <Input
-                                className="flex-1"
+                                className="flex-1 min-w-60"
                                 placeholder="Cari nama atau NIK karyawan..."
                                 suffix={cari
                                     ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCari(''); setCurrentPage(1) }} />

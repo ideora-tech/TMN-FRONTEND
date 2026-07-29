@@ -115,7 +115,7 @@ export default function DepartemenPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Departemen</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master departemen</p>
@@ -126,8 +126,8 @@ export default function DepartemenPage() {
                 </Button>
             </div>
             <Card bodyClass="p-0">
-                <div className="flex items-center gap-3 px-4 py-3">
-                    <Input className="flex-1" placeholder="Cari kode atau nama departemen... (tekan Enter)"
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <Input className="flex-1 min-w-60" placeholder="Cari kode atau nama departemen... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
                             : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}

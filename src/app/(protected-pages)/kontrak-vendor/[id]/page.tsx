@@ -20,6 +20,14 @@ const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
 }
 
+const SATUAN_OPTIONS = [
+    { value: 'per trip',  label: 'Per Trip' },
+    { value: 'per ton',   label: 'Per Ton' },
+    { value: 'per hari',  label: 'Per Hari' },
+    { value: 'per bulan', label: 'Per Bulan' },
+    { value: 'lumpsum',   label: 'Lumpsum' },
+]
+
 const KONTRAK_STATUS_CLASS: Record<string, string> = {
     aktif:   'bg-emerald-100 text-emerald-600',
     selesai: 'bg-blue-100 text-blue-600',
@@ -32,14 +40,22 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [data, setData]     = useState<KontrakVendor | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
-    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string }>({})
+    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; pajak_str?: string; termin_str?: string }>({})
     const [saving, setSaving]   = useState(false)
+
+    const toFormState = (d: KontrakVendor) => ({
+        ...d,
+        nilai_kontrak_str: d.nilai_kontrak ? String(d.nilai_kontrak) : '',
+        rate_str:          d.rate != null ? String(d.rate) : '',
+        pajak_str:         d.pajak_persen != null ? String(d.pajak_persen) : '',
+        termin_str:        d.termin_pembayaran_hari != null ? String(d.termin_pembayaran_hari) : '',
+    })
 
     useEffect(() => {
         kontrakVendorService.get(id)
             .then(d => {
                 setData(d)
-                setForm({ ...d, nilai_kontrak_str: d.nilai_kontrak ? String(d.nilai_kontrak) : '' })
+                setForm(toFormState(d))
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
@@ -50,13 +66,19 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         try {
             const updated = await kontrakVendorService.update(id, {
                 mekanisme:       form.mekanisme,
+                nomor_kontrak:   form.nomor_kontrak?.trim() || null,
+                jenis_layanan:   form.jenis_layanan?.trim() || null,
+                rate:            form.rate_str ? Number(form.rate_str) : null,
+                satuan:          form.satuan || null,
+                pajak_persen:    form.pajak_str ? Number(form.pajak_str) : null,
+                termin_pembayaran_hari: form.termin_str ? Number(form.termin_str) : null,
                 nilai_kontrak:   Number(form.nilai_kontrak_str || '0'),
                 tanggal_mulai:   form.tanggal_mulai ?? null,
                 tanggal_selesai: form.tanggal_selesai ?? null,
                 status:          form.status ?? null,
             })
             setData(updated)
-            setForm({ ...updated, nilai_kontrak_str: updated.nilai_kontrak ? String(updated.nilai_kontrak) : '' })
+            setForm(toFormState(updated))
             setEditing(false)
             toast.push(<Notification type="success" title="Kontrak berhasil diperbarui" />)
         } catch (err) {
@@ -109,11 +131,17 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Vendor',          value: vendorName },
-                                { label: 'Mekanisme',       value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
-                                { label: 'Nilai Kontrak',   value: data.nilai_kontrak ? formatRupiah(data.nilai_kontrak) : <span className="text-gray-400">—</span> },
-                                { label: 'Tanggal Mulai',   value: data.tanggal_mulai ?? <span className="text-gray-400">—</span> },
-                                { label: 'Tanggal Selesai', value: data.tanggal_selesai ?? <span className="text-gray-400">—</span> },
+                                { label: 'Vendor',            value: vendorName },
+                                { label: 'Mekanisme',         value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
+                                { label: 'No. Kontrak',       value: data.nomor_kontrak ?? <span className="text-gray-400">—</span> },
+                                { label: 'Jenis Layanan',     value: data.jenis_layanan ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nilai Kontrak',     value: data.nilai_kontrak ? formatRupiah(data.nilai_kontrak) : <span className="text-gray-400">—</span> },
+                                { label: 'Rate',              value: data.rate ? formatRupiah(data.rate) : <span className="text-gray-400">—</span> },
+                                { label: 'Satuan',            value: data.satuan ?? <span className="text-gray-400">—</span> },
+                                { label: 'Pajak',             value: data.pajak_persen != null ? `${data.pajak_persen} %` : <span className="text-gray-400">—</span> },
+                                { label: 'Termin Pembayaran', value: data.termin_pembayaran_hari != null ? `${data.termin_pembayaran_hari} hari` : <span className="text-gray-400">—</span> },
+                                { label: 'Tanggal Mulai',     value: data.tanggal_mulai ?? <span className="text-gray-400">—</span> },
+                                { label: 'Tanggal Selesai',   value: data.tanggal_selesai ?? <span className="text-gray-400">—</span> },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -141,10 +169,42 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     value={MEKANISME_OPTIONS.find(o => o.value === form.mekanisme) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, mekanisme: opt?.value as KontrakVendor['mekanisme'] }))} />
                             </FormItem>
+                            <FormItem label="No. Kontrak">
+                                <Input placeholder="Nomor kontrak" value={form.nomor_kontrak ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, nomor_kontrak: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Jenis Layanan">
+                                <Input placeholder="mis. Angkutan kontainer" value={form.jenis_layanan ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, jenis_layanan: e.target.value }))} />
+                            </FormItem>
                             <FormItem label="Nilai Kontrak">
                                 <Input prefix="Rp" placeholder="0"
                                     value={form.nilai_kontrak_str ? formatNum(Number(form.nilai_kontrak_str)) : ''}
                                     onChange={e => setForm(p => ({ ...p, nilai_kontrak_str: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Rate">
+                                <Input prefix="Rp" placeholder="0"
+                                    value={form.rate_str ? formatNum(Number(form.rate_str)) : ''}
+                                    onChange={e => setForm(p => ({ ...p, rate_str: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Satuan">
+                                <Select isSearchable={false} isClearable placeholder="Pilih satuan..."
+                                    options={SATUAN_OPTIONS}
+                                    value={SATUAN_OPTIONS.find(o => o.value === form.satuan) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, satuan: opt?.value ?? null }))} />
+                            </FormItem>
+                            <FormItem label="Pajak">
+                                <Input suffix="%" placeholder="0"
+                                    value={form.pajak_str ?? ''}
+                                    onChange={e => {
+                                        const v = e.target.value.replace(/\D/g, '')
+                                        setForm(p => ({ ...p, pajak_str: v && Number(v) > 100 ? '100' : v }))
+                                    }} />
+                            </FormItem>
+                            <FormItem label="Termin Pembayaran">
+                                <Input suffix="hari" placeholder="0"
+                                    value={form.termin_str ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, termin_str: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
                             <FormItem label="Tanggal Mulai">
                                 <DatePicker inputFormat="DD/MM/YYYY"
@@ -160,7 +220,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => {
                                 setEditing(false)
-                                setForm({ ...data, nilai_kontrak_str: data.nilai_kontrak ? String(data.nilai_kontrak) : '' })
+                                setForm(toFormState(data))
                             }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>

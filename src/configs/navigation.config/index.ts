@@ -76,13 +76,6 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'kontrak-vendor', path: '/kontrak-vendor', title: 'Kontrak Vendor',
-        translateKey: 'nav.kontrakVendor', icon: 'contract',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
         key: 'rute', path: '/rute', title: 'Rute',
         translateKey: 'nav.rute', icon: 'path',
         type: NAV_ITEM_TYPE_ITEM,
@@ -108,36 +101,6 @@ const navigationConfig: NavigationTree[] = [
         translateKey: 'nav.laporan', icon: 'clipboard',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['dispatcher', 'keuangan', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-
-    // === OPERASIONAL VENDOR ===
-    {
-        key: 'nav.operasionalVendor', path: '', title: 'Operasional Vendor',
-        translateKey: 'nav.operasionalVendor', icon: '',
-        type: NAV_ITEM_TYPE_TITLE,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
-        key: 'armada-vendor', path: '/armada-vendor', title: 'Armada Vendor',
-        translateKey: 'nav.armadaVendor', icon: 'truck',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
-        key: 'supir-vendor', path: '/supir-vendor', title: 'Supir Vendor',
-        translateKey: 'nav.supirVendor', icon: 'users',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
-        key: 'penugasan-vendor', path: '/penugasan-vendor', title: 'Penugasan Vendor',
-        translateKey: 'nav.penugasanVendor', icon: 'clipboard',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
 
@@ -182,6 +145,13 @@ const navigationConfig: NavigationTree[] = [
     {
         key: 'faktur', path: '/faktur', title: 'Faktur',
         translateKey: 'nav.faktur', icon: 'receipt',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'invoice-vendor', path: '/invoice-vendor', title: 'Invoice Vendor',
+        translateKey: 'nav.invoiceVendor', icon: 'fileText',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],

@@ -42,6 +42,7 @@ export const protectedRoutes: Routes = {
     '/penugasan-vendor/baru': { key: 'penugasan-vendor', authority: [] },
     ...listRoute('laporan', 'laporan'),
     ...listRoute('faktur', 'faktur'),
+    ...listRoute('invoice-vendor', 'invoice-vendor'),
     ...listRoute('rekonsiliasi', 'rekonsiliasi'),
     ...listRoute('pengguna', 'pengguna', ADMIN_ONLY),
     ...listRoute('peran', 'peran', ADMIN_ONLY),

@@ -130,7 +130,7 @@ export default function FakturPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Faktur</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola faktur dan penagihan klien</p>
@@ -168,9 +168,9 @@ export default function FakturPage() {
                 }}
                 bodyClass="p-0"
             >
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
-                        className="flex-1"
+                        className="flex-1 min-w-60"
                         placeholder="Cari nomor faktur... (tekan Enter)"
                         suffix={
                             searchInput
