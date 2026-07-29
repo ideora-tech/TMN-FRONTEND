@@ -16,7 +16,7 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function JabatanBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_jabatan: '', nama_jabatan: '', id_departemen: '', id_peran: '', level: '1', aktif: true })
+    const [form, setForm] = useState({ kode_jabatan: '', nama_jabatan: '', id_departemen: '', id_peran: '', level: '1', tunjangan_jabatan: '', aktif: true })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [departemenOptions, setDepartemenOptions] = useState<{ value: string; label: string }[]>([])
@@ -54,6 +54,7 @@ export default function JabatanBaruPage() {
                 id_departemen: form.id_departemen || null,
                 id_peran: form.id_peran || null,
                 level: Number(form.level) || 1,
+                tunjangan_jabatan: form.tunjangan_jabatan ? Number(form.tunjangan_jabatan) : 0,
                 aktif: form.aktif,
             })
             toast.push(<Notification type="success" title="Jabatan berhasil ditambahkan" />)
@@ -103,6 +104,11 @@ export default function JabatanBaruPage() {
                     <FormItem label="Level">
                         <Input type="number" min={1} placeholder="1" value={form.level}
                             onChange={e => setForm(p => ({ ...p, level: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Tunjangan Jabatan (Rp)"
+                        extra={<span className="text-xs text-gray-400">Default tunjangan untuk semua karyawan di jabatan ini</span>}>
+                        <Input type="number" min={0} placeholder="0" value={form.tunjangan_jabatan}
+                            onChange={e => setForm(p => ({ ...p, tunjangan_jabatan: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Status">
                         <Select isSearchable={false} options={AKTIF_OPTIONS}

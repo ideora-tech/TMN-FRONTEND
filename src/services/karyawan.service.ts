@@ -25,6 +25,11 @@ export interface Karyawan {
     no_bpjs_kesehatan: string | null
     ikut_bpjs_ketenagakerjaan: boolean
     no_bpjs_ketenagakerjaan: string | null
+    override_persen_bpjs_kesehatan: number | null
+    override_persen_bpjs_jht: number | null
+    override_persen_bpjs_jp: number | null
+    override_plafon_bpjs_kesehatan: number | null
+    override_tunjangan_jabatan: number | null
     kontak_darurat_nama: string | null
     kontak_darurat_telepon: string | null
     kontak_darurat_hubungan: string | null
@@ -33,7 +38,7 @@ export interface Karyawan {
     status_kepegawaian: 'tetap' | 'kontrak' | 'magang' | null
     gaji_pokok: number
     aktif: boolean
-    jabatan?: { id_jabatan: string; nama_jabatan: string }
+    jabatan?: { id_jabatan: string; nama_jabatan: string; tunjangan_jabatan: number }
     lokasi?: { id_lokasi: string; nama_lokasi: string }
 }
 
@@ -42,6 +47,15 @@ export type KaryawanPayload = Partial<
 > & {
     id_jabatan?: string | null
     id_lokasi?: string | null
+}
+
+export interface RiwayatJabatan {
+    id_riwayat: string
+    id_jabatan_lama: string | null
+    id_jabatan_baru: string | null
+    jabatan_lama: string | null
+    jabatan_baru: string | null
+    dibuat_pada: string
 }
 
 export const karyawanService = {
@@ -63,5 +77,9 @@ export const karyawanService = {
     },
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.KARYAWAN_DETAIL(id))
+    },
+    async riwayatJabatan(id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.KARYAWAN_RIWAYAT_JABATAN(id))
+        return data.data as RiwayatJabatan[]
     },
 }

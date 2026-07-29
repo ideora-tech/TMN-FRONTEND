@@ -41,6 +41,13 @@ const STATUS_LABEL: Record<string, string> = {
     dibatalkan:  'Dibatalkan',
 }
 
+const RIWAYAT_BORDER: Record<string, string> = {
+    belum_mulai: 'border-l-blue-400',
+    berjalan:    'border-l-emerald-400',
+    selesai:     'border-l-purple-400',
+    dibatalkan:  'border-l-red-400',
+}
+
 const EKSTENSI_GAMBAR = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 const MAX_UKURAN_FOTO = 10 * 1024 * 1024 // 10MB
 
@@ -421,9 +428,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </p>
                         </div>
                     </div>
-                    <Tag className={`${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-700'} border-0 flex-shrink-0`}>
-                        {STATUS_LABEL[trip.status] ?? trip.status}
-                    </Tag>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <Tag className={`${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-700'} border-0`}>
+                            {STATUS_LABEL[trip.status] ?? trip.status}
+                        </Tag>
+                        <Button size="sm" variant="default" onClick={() => router.push(ROUTES.TRIP)}>
+                            Batal
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
@@ -525,12 +537,15 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 ) : (
                     <div className="flex flex-col gap-2">
                         {statuses.map(s => (
-                            <div key={s.id_status} className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-800">
+                            <div key={s.id_status}
+                                className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${RIWAYAT_BORDER[s.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
                                 <div className="flex justify-between items-start">
-                                    <span className="font-medium">{s.status}</span>
+                                    <Tag className={`${STATUS_TAG[s.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0`}>
+                                        {STATUS_LABEL[s.status] ?? s.status}
+                                    </Tag>
                                     <span className="text-xs text-gray-400">{dayjs(s.dibuat_pada).format('DD/MM/YYYY HH:mm')}</span>
                                 </div>
-                                {s.keterangan && <div className="text-sm text-gray-600 mt-1">{s.keterangan}</div>}
+                                {s.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">{s.keterangan}</div>}
                                 {s.latitude && s.longitude && <div className="text-xs text-gray-400 mt-1">Koordinat: {s.latitude}, {s.longitude}</div>}
                             </div>
                         ))}

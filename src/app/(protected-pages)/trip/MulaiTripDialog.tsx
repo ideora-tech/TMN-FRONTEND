@@ -13,6 +13,8 @@ import { armadaService } from '@/services/armada.service'
 import { supirVendorService } from '@/services/supirVendor.service'
 import { armadaVendorService } from '@/services/armadaVendor.service'
 import { cutiService } from '@/services/cuti.service'
+import { jadwalShiftService } from '@/services/jadwalShift.service'
+import dayjs from 'dayjs'
 
 type Option = { value: string; label: string; isDisabled?: boolean }
 
@@ -36,6 +38,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     const [uangJalan, setUangJalan]     = useState('')
     const [memuat, setMemuat] = useState(false)
     const [saving, setSaving] = useState(false)
+    const [warnShiftTerkunci, setWarnShiftTerkunci] = useState(false)
 
     useEffect(() => {
         if (!isOpen) return
@@ -51,6 +54,24 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
 
     const idProyekEfektif = pilihProyek || idProyekTerkunci || ''
+
+    useEffect(() => {
+        if (!isOpen || !terkunci || !idPenugasanTerkunci || !idProyekTerkunci) {
+            setWarnShiftTerkunci(false)
+            return
+        }
+        let dibatalkan = false
+        Promise.all([
+            penugasanService.get(idPenugasanTerkunci),
+            jadwalShiftService.list(idProyekTerkunci, dayjs().startOf('month').format('YYYY-MM-DD'), dayjs().endOf('month').format('YYYY-MM-DD')),
+        ]).then(([p, jadwal]) => {
+            if (dibatalkan) return
+            const hariIni = dayjs().format('YYYY-MM-DD')
+            const punyaShift = jadwal.some(j => j.id_supir === p.id_supir && j.tanggal === hariIni)
+            setWarnShiftTerkunci(jadwal.length > 0 && !!p.id_supir && !punyaShift)
+        }).catch(() => setWarnShiftTerkunci(false))
+        return () => { dibatalkan = true }
+    }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
 
     useEffect(() => {
         if (!isOpen || !idProyekEfektif) {
@@ -74,6 +95,12 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                     .map(c => c.id_supir)
                     .filter(Boolean) as string[]
             )
+            const hariIni = dayjs().format('YYYY-MM-DD')
+            const jadwalShiftBulanIni = await jadwalShiftService
+                .list(idProyek, dayjs().startOf('month').format('YYYY-MM-DD'), dayjs().endOf('month').format('YYYY-MM-DD'))
+                .catch(() => [])
+            const proyekPakaiShift = jadwalShiftBulanIni.length > 0
+            const supirShiftHariIni = new Set(jadwalShiftBulanIni.filter(j => j.tanggal === hariIni).map(j => j.id_supir))
             const supirIds        = [...new Set(rows.map(p => p.id_supir).filter(Boolean))] as string[]
             const armadaIds       = [...new Set(rows.map(p => p.id_armada).filter(Boolean))] as string[]
             const supirVendorIds  = [...new Set(rows.map(p => p.id_supir_vendor).filter(Boolean))] as string[]
@@ -104,10 +131,12 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                 const armada = nopolArmada[p.id_armada ?? p.id_armada_vendor ?? ''] ?? 'tanpa armada'
                 const warnSim = p.id_supir && simKadaluarsa.has(p.id_supir) ? ' ⚠ SIM kadaluarsa' : ''
                 const warnJalan = p.id_armada && armadaSedangJalan.has(p.id_armada) ? ' ⚠ armada sedang dalam perjalanan' : ''
+                const warnShift = proyekPakaiShift && p.id_supir && !supirShiftHariIni.has(p.id_supir)
+                    ? ' ⚠ tanpa jadwal shift hari ini' : ''
                 const sedangCuti = !!p.id_supir && supirCuti.has(p.id_supir)
                 return {
                     value: p.id_penugasan,
-                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}${warnSim}${warnJalan}${sedangCuti ? ' ⛔ sedang cuti' : ''}`,
+                    label: `${supir} — ${armada}${p.sumber === 'vendor' ? ' (vendor)' : ''}${warnSim}${warnJalan}${warnShift}${sedangCuti ? ' ⛔ sedang cuti' : ''}`,
                     isDisabled: sedangCuti,
                 }
             }))
@@ -166,6 +195,11 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                                 onChange={opt => setPilihPenugasan((opt as Option | null)?.value ?? '')} />
                         </FormItem>
                     </>
+                )}
+                {terkunci && warnShiftTerkunci && (
+                    <p className="text-xs text-amber-600 mb-3">
+                        ⚠ Supir tidak punya jadwal shift hari ini di papan jadwal — pastikan memang sesuai rencana.
+                    </p>
                 )}
                 <FormItem label="Rute (opsional)">
                     <Select isClearable

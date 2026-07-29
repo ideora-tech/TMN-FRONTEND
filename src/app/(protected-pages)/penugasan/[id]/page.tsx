@@ -378,8 +378,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                         value={form.tanggal_tugas ? new Date(form.tanggal_tugas) : null}
                                         onChange={date => setForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
                                 </FormItem>
-                                <FormItem label="Status">
+                                <FormItem label="Status"
+                                    extra={penugasan?.status === 'batal'
+                                        ? <span className="text-xs text-gray-400">Penugasan batal tidak dapat diaktifkan kembali — buat penugasan baru</span>
+                                        : undefined}>
                                     <Select isSearchable={false} options={STATUS_OPTIONS}
+                                        isDisabled={penugasan?.status === 'batal'}
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
                                 </FormItem>

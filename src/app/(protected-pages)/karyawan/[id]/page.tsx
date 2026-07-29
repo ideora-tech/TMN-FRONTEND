@@ -11,7 +11,7 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { karyawanService, Karyawan } from '@/services/karyawan.service'
+import { karyawanService, Karyawan, RiwayatJabatan } from '@/services/karyawan.service'
 import { karyawanExitService, JenisExit } from '@/services/karyawanExit.service'
 import { kontrakKaryawanService, KontrakKaryawan, JenisKontrak } from '@/services/kontrakKaryawan.service'
 import { dokumenKaryawanService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
@@ -87,6 +87,7 @@ type KontrakForm = {
     tanggal_mulai: string
     tanggal_selesai: string
     keterangan: string
+    url_file?: string | null
 }
 
 const KONTRAK_FORM_KOSONG: KontrakForm = {
@@ -109,6 +110,17 @@ const InfoSection = ({ title }: { title: string }) => (
 
 const kosong = <span className="text-gray-400">—</span>
 
+const totalHariPkwt = (list: KontrakKaryawan[]): number => {
+    const hariIni = dayjs()
+    return list
+        .filter(k => k.jenis_kontrak === 'pkwt')
+        .reduce((sum, k) => {
+            const mulai = dayjs(k.tanggal_mulai)
+            const akhir = k.tanggal_selesai ? dayjs(k.tanggal_selesai) : hariIni
+            return sum + Math.max(0, akhir.diff(mulai, 'day') + 1)
+        }, 0)
+}
+
 export default function KaryawanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
@@ -125,6 +137,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
     const [kontrakList, setKontrakList]     = useState<KontrakKaryawan[]>([])
     const [kontrakOpen, setKontrakOpen]     = useState(false)
     const [kontrakForm, setKontrakForm]     = useState<KontrakForm>(KONTRAK_FORM_KOSONG)
+    const [kontrakFile, setKontrakFile]     = useState<File | null>(null)
     const [kontrakErrors, setKontrakErrors] = useState<Record<string, string>>({})
     const [kontrakSaving, setKontrakSaving] = useState(false)
     const [kontrakHapus, setKontrakHapus]   = useState<KontrakKaryawan | null>(null)
@@ -165,6 +178,14 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             .then(setDokumenList)
             .catch(() => setDokumenList([]))
     }, [id])
+
+    const [riwayatJabatan, setRiwayatJabatan] = useState<RiwayatJabatan[]>([])
+
+    useEffect(() => {
+        karyawanService.riwayatJabatan(id)
+            .then(setRiwayatJabatan)
+            .catch(() => setRiwayatJabatan([]))
+    }, [id, karyawan?.jabatan?.id_jabatan])
 
     useEffect(() => {
         karyawanService.get(id)
@@ -221,6 +242,11 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                 no_bpjs_kesehatan:    form.no_bpjs_kesehatan || null,
                 ikut_bpjs_ketenagakerjaan: form.ikut_bpjs_ketenagakerjaan ?? false,
                 no_bpjs_ketenagakerjaan:   form.no_bpjs_ketenagakerjaan || null,
+                override_persen_bpjs_kesehatan: form.override_persen_bpjs_kesehatan ?? null,
+                override_persen_bpjs_jht:       form.override_persen_bpjs_jht ?? null,
+                override_persen_bpjs_jp:        form.override_persen_bpjs_jp ?? null,
+                override_plafon_bpjs_kesehatan: form.override_plafon_bpjs_kesehatan ?? null,
+                override_tunjangan_jabatan:     form.override_tunjangan_jabatan ?? null,
                 kontak_darurat_nama:     form.kontak_darurat_nama || null,
                 kontak_darurat_telepon:  form.kontak_darurat_telepon || null,
                 kontak_darurat_hubungan: form.kontak_darurat_hubungan || null,
@@ -245,6 +271,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
 
     const bukaTambahKontrak = () => {
         setKontrakForm(KONTRAK_FORM_KOSONG)
+        setKontrakFile(null)
         setKontrakErrors({})
         setKontrakOpen(true)
     }
@@ -257,7 +284,9 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             tanggal_mulai: k.tanggal_mulai,
             tanggal_selesai: k.tanggal_selesai ?? '',
             keterangan: k.keterangan ?? '',
+            url_file: k.url_file,
         })
+        setKontrakFile(null)
         setKontrakErrors({})
         setKontrakOpen(true)
     }
@@ -282,10 +311,10 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                 keterangan: kontrakForm.keterangan || null,
             }
             if (kontrakForm.id_kontrak) {
-                await kontrakKaryawanService.update(id, kontrakForm.id_kontrak, payload)
+                await kontrakKaryawanService.update(id, kontrakForm.id_kontrak, payload, kontrakFile ?? undefined)
                 toast.push(<Notification type="success" title="Kontrak berhasil diperbarui" />)
             } else {
-                await kontrakKaryawanService.create(id, payload)
+                await kontrakKaryawanService.create(id, payload, kontrakFile)
                 toast.push(<Notification type="success" title="Kontrak berhasil ditambahkan" />)
             }
             setKontrakOpen(false)
@@ -464,6 +493,13 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             <InfoField label="Lokasi Kerja" value={karyawan.lokasi?.nama_lokasi ?? kosong} />
                             <InfoField label="Tanggal Masuk" value={karyawan.tanggal_masuk ? dayjs(karyawan.tanggal_masuk).format('DD MMM YYYY') : kosong} />
                             <InfoField label="Gaji Pokok" value={formatRupiah(karyawan.gaji_pokok)} />
+                            <InfoField label="Tunjangan Jabatan" value={
+                                karyawan.override_tunjangan_jabatan !== null ? (
+                                    <span className="text-amber-600 dark:text-amber-400">
+                                        {formatRupiah(karyawan.override_tunjangan_jabatan)} (override)
+                                    </span>
+                                ) : formatRupiah(karyawan.jabatan?.tunjangan_jabatan ?? 0) + (karyawan.jabatan ? ' (default jabatan)' : '')
+                            } />
 
                             <InfoSection title="Pajak & BPJS" />
                             <InfoField label="Status PTKP" value={karyawan.status_ptkp ?? kosong} />
@@ -474,6 +510,21 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             <InfoField label="BPJS Ketenagakerjaan" value={
                                 karyawan.ikut_bpjs_ketenagakerjaan ? (karyawan.no_bpjs_ketenagakerjaan ?? 'Terdaftar') : 'Tidak ikut'
                             } />
+                            {(karyawan.override_persen_bpjs_kesehatan !== null
+                                || karyawan.override_persen_bpjs_jht !== null
+                                || karyawan.override_persen_bpjs_jp !== null
+                                || karyawan.override_plafon_bpjs_kesehatan !== null) && (
+                                <InfoField label="Override BPJS" value={
+                                    <span className="text-amber-600 dark:text-amber-400">
+                                        {[
+                                            karyawan.override_persen_bpjs_kesehatan !== null ? `Kesehatan ${karyawan.override_persen_bpjs_kesehatan}%` : null,
+                                            karyawan.override_persen_bpjs_jht !== null ? `JHT ${karyawan.override_persen_bpjs_jht}%` : null,
+                                            karyawan.override_persen_bpjs_jp !== null ? `JP ${karyawan.override_persen_bpjs_jp}%` : null,
+                                            karyawan.override_plafon_bpjs_kesehatan !== null ? `Plafon ${formatRupiah(karyawan.override_plafon_bpjs_kesehatan)}` : null,
+                                        ].filter(Boolean).join(' · ')}
+                                    </span>
+                                } />
+                            )}
 
                             <InfoSection title="Rekening Bank" />
                             <InfoField label="Bank" value={karyawan.nama_bank ?? kosong} />
@@ -628,6 +679,38 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                                         onChange={e => setForm(p => ({ ...p, no_bpjs_ketenagakerjaan: e.target.value }))} />
                                 </div>
                             </FormItem>
+
+                            <div className="sm:col-span-2 mt-2">
+                                <p className="text-xs font-medium text-gray-500">Override Persentase BPJS (Opsional)</p>
+                                <p className="text-xs text-gray-400 mt-0.5">Kosongkan untuk ikut pengaturan perusahaan di halaman Payroll</p>
+                            </div>
+                            <FormItem label="Override BPJS Kesehatan (%)">
+                                <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default"
+                                    value={form.override_persen_bpjs_kesehatan ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, override_persen_bpjs_kesehatan: e.target.value === '' ? null : Number(e.target.value) }))} />
+                            </FormItem>
+                            <FormItem label="Override Plafon Gaji BPJS Kesehatan (Rp)">
+                                <Input type="number" min={0} placeholder="Ikut default"
+                                    value={form.override_plafon_bpjs_kesehatan ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, override_plafon_bpjs_kesehatan: e.target.value === '' ? null : Number(e.target.value) }))} />
+                            </FormItem>
+                            <FormItem label="Override BPJS JHT (%)">
+                                <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default"
+                                    value={form.override_persen_bpjs_jht ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, override_persen_bpjs_jht: e.target.value === '' ? null : Number(e.target.value) }))} />
+                            </FormItem>
+                            <FormItem label="Override BPJS JP (%)">
+                                <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default"
+                                    value={form.override_persen_bpjs_jp ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, override_persen_bpjs_jp: e.target.value === '' ? null : Number(e.target.value) }))} />
+                            </FormItem>
+                            <FormItem label="Override Tunjangan Jabatan (Rp)"
+                                extra={<span className="text-xs text-gray-400">Kosongkan untuk ikut default tunjangan jabatan</span>}>
+                                <Input type="number" min={0} placeholder="Ikut default jabatan"
+                                    value={form.override_tunjangan_jabatan ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, override_tunjangan_jabatan: e.target.value === '' ? null : Number(e.target.value) }))} />
+                            </FormItem>
+
                             <FormItem label="Nama Bank">
                                 <Input placeholder="BCA / Mandiri / BRI..." value={form.nama_bank ?? ''}
                                     onChange={e => setForm(p => ({ ...p, nama_bank: e.target.value }))} />
@@ -669,6 +752,24 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         Tambah Kontrak
                     </Button>
                 </div>
+                {(() => {
+                    const hari = totalHariPkwt(kontrakList)
+                    const tahun = hari / 365
+                    if (tahun < 4) return null
+                    const label = (Math.round(tahun * 10) / 10).toString().replace('.', ',')
+                    return (
+                        <div className={`flex items-start gap-2 rounded-lg px-3 py-2.5 mb-4 text-sm border ${tahun >= 5
+                            ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-400'
+                            : 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400'}`}>
+                            <HiOutlineExclamationCircle className="text-lg shrink-0 mt-0.5" />
+                            <span>
+                                {tahun >= 5
+                                    ? <>Total durasi PKWT karyawan ini sudah <strong>{label} tahun</strong> — melebihi batas maksimal 5 tahun (UU Cipta Kerja). Wajib diangkat PKWTT atau hubungan kerja diakhiri.</>
+                                    : <>Total durasi PKWT karyawan ini sudah <strong>{label} tahun</strong> — mendekati batas maksimal 5 tahun (UU Cipta Kerja). Rencanakan pengangkatan PKWTT.</>}
+                            </span>
+                        </div>
+                    )
+                })()}
                 {kontrakList.length === 0 ? (
                     <p className="text-gray-400 text-sm text-center py-6">Belum ada riwayat kontrak.</p>
                 ) : (
@@ -795,6 +896,35 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                 )}
             </Card>
 
+            {riwayatJabatan.length > 0 && (
+                <Card>
+                    <div className="mb-4">
+                        <h5 className="font-bold">Riwayat Jabatan</h5>
+                        <p className="text-gray-500 text-sm mt-0.5">Mutasi & promosi tercatat otomatis saat jabatan diubah</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Tanggal</th>
+                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Dari</th>
+                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Menjadi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {riwayatJabatan.map(r => (
+                                    <tr key={r.id_riwayat}>
+                                        <td className="py-2.5 px-3 text-xs">{dayjs(r.dibuat_pada).format('DD MMM YYYY HH:mm')}</td>
+                                        <td className="py-2.5 px-3">{r.jabatan_lama ?? <span className="text-gray-400">Tanpa jabatan</span>}</td>
+                                        <td className="py-2.5 px-3 font-medium">{r.jabatan_baru ?? <span className="text-gray-400">Tanpa jabatan</span>}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            )}
+
             {/* Dialog Tambah/Edit Dokumen */}
             <Dialog isOpen={dokumenOpen} onRequestClose={() => setDokumenOpen(false)} onClose={() => setDokumenOpen(false)}>
                 <h5 className="font-bold mb-4">{dokumenEdit ? 'Edit Dokumen' : 'Tambah Dokumen'}</h5>
@@ -893,6 +1023,29 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             <Input textArea rows={2} placeholder="Catatan kontrak (opsional)..."
                                 value={kontrakForm.keterangan}
                                 onChange={e => setKontrakForm(p => ({ ...p, keterangan: e.target.value }))} />
+                        </FormItem>
+                    </div>
+                    <div className="sm:col-span-2">
+                        <FormItem label="File Kontrak">
+                            <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
+                                onChange={files => {
+                                    const f = files[0] ?? null
+                                    if (f && f.size > MAX_FILE_SIZE) {
+                                        toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
+                                        return
+                                    }
+                                    setKontrakFile(f)
+                                }}>
+                                <Button type="button" variant="default" className="w-full">
+                                    {kontrakFile ? kontrakFile.name : (kontrakForm.id_kontrak ? 'Ganti file (opsional)' : 'Pilih file (opsional)')}
+                                </Button>
+                            </Upload>
+                            {kontrakForm.url_file && !kontrakFile && (
+                                <a href={kontrakForm.url_file} target="_blank" rel="noreferrer"
+                                    className="text-blue-500 hover:underline text-xs mt-1 inline-block">
+                                    Lihat dokumen saat ini
+                                </a>
+                            )}
                         </FormItem>
                     </div>
                 </div>

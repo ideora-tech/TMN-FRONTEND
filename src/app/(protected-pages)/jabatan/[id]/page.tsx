@@ -11,6 +11,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { jabatanService, Jabatan } from '@/services/jabatan.service'
 import { Departemen } from '@/services/departemen.service'
 import { Peran } from '@/services/peran.service'
+import { formatRupiah } from '@/utils/formatNumber'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
@@ -61,6 +62,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                 id_departemen: form.id_departemen ?? null,
                 id_peran:      form.id_peran ?? null,
                 level:         form.level,
+                tunjangan_jabatan: form.tunjangan_jabatan,
                 aktif:         form.aktif,
             })
             setData(updated); setEditing(false); setErrors({})
@@ -115,6 +117,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                                 { label: 'Kode Jabatan', value: data.kode_jabatan },
                                 { label: 'Nama Jabatan', value: data.nama_jabatan },
                                 { label: 'Level',        value: String(data.level) },
+                                { label: 'Tunjangan Jabatan', value: formatRupiah(data.tunjangan_jabatan ?? 0) },
                                 { label: 'Departemen',   value: deptOptions.find(o => o.value === data.id_departemen)?.label ?? (data.id_departemen ? data.id_departemen : '—') },
                                 { label: 'Peran',        value: peranOptions.find(o => o.value === data.id_peran)?.label ?? (data.id_peran ? data.id_peran : '—') },
                             ]).map(({ label, value }) => (
@@ -160,6 +163,11 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                             <FormItem label="Level">
                                 <Input type="number" min={1} value={form.level ?? 1}
                                     onChange={e => setForm(p => ({ ...p, level: Number(e.target.value) }))} />
+                            </FormItem>
+                            <FormItem label="Tunjangan Jabatan (Rp)"
+                                extra={<span className="text-xs text-gray-400">Default tunjangan untuk semua karyawan di jabatan ini</span>}>
+                                <Input type="number" min={0} value={form.tunjangan_jabatan ?? 0}
+                                    onChange={e => setForm(p => ({ ...p, tunjangan_jabatan: Number(e.target.value) }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

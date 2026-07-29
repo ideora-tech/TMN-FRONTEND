@@ -97,6 +97,9 @@ export const ROUTES = {
 
     CUTI: '/cuti',
     ABSENSI: '/absensi',
+    PAYROLL:            '/payroll',
+    PAYROLL_DETAIL:     (id: string) => `/payroll/${id}`,
+    PAYROLL_PENGATURAN: '/payroll/pengaturan',
 
     PENUGASAN:        '/penugasan',
     PENUGASAN_BARU:   '/penugasan/baru',

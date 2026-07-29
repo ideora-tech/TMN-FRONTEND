@@ -46,6 +46,8 @@ export default function KaryawanBaruPage() {
         npwp: '', nama_bank: '', nomor_rekening: '', atas_nama_rekening: '',
         ikut_bpjs_kesehatan: false, no_bpjs_kesehatan: '',
         ikut_bpjs_ketenagakerjaan: false, no_bpjs_ketenagakerjaan: '',
+        override_persen_bpjs_kesehatan: '', override_persen_bpjs_jht: '', override_persen_bpjs_jp: '',
+        override_plafon_bpjs_kesehatan: '', override_tunjangan_jabatan: '',
         kontak_darurat_nama: '', kontak_darurat_telepon: '', kontak_darurat_hubungan: '',
         tanggal_masuk: '', status_kepegawaian: 'tetap', gaji_pokok: '',
         id_jabatan: '', id_lokasi: '', aktif: true,
@@ -104,6 +106,11 @@ export default function KaryawanBaruPage() {
                 no_bpjs_kesehatan: form.no_bpjs_kesehatan || null,
                 ikut_bpjs_ketenagakerjaan: form.ikut_bpjs_ketenagakerjaan,
                 no_bpjs_ketenagakerjaan: form.no_bpjs_ketenagakerjaan || null,
+                override_persen_bpjs_kesehatan: form.override_persen_bpjs_kesehatan ? Number(form.override_persen_bpjs_kesehatan) : null,
+                override_persen_bpjs_jht: form.override_persen_bpjs_jht ? Number(form.override_persen_bpjs_jht) : null,
+                override_persen_bpjs_jp: form.override_persen_bpjs_jp ? Number(form.override_persen_bpjs_jp) : null,
+                override_plafon_bpjs_kesehatan: form.override_plafon_bpjs_kesehatan ? Number(form.override_plafon_bpjs_kesehatan) : null,
+                override_tunjangan_jabatan: form.override_tunjangan_jabatan ? Number(form.override_tunjangan_jabatan) : null,
                 kontak_darurat_nama: form.kontak_darurat_nama || null,
                 kontak_darurat_telepon: form.kontak_darurat_telepon || null,
                 kontak_darurat_hubungan: form.kontak_darurat_hubungan || null,
@@ -260,6 +267,32 @@ export default function KaryawanBaruPage() {
                                 disabled={!form.ikut_bpjs_ketenagakerjaan}
                                 onChange={e => setForm(p => ({ ...p, no_bpjs_ketenagakerjaan: e.target.value }))} />
                         </div>
+                    </FormItem>
+
+                    <div className="sm:col-span-2 mt-2">
+                        <p className="text-xs font-medium text-gray-500">Override Persentase BPJS (Opsional)</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Kosongkan untuk ikut pengaturan perusahaan di halaman Payroll</p>
+                    </div>
+                    <FormItem label="Override BPJS Kesehatan (%)">
+                        <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default" value={form.override_persen_bpjs_kesehatan}
+                            onChange={e => setForm(p => ({ ...p, override_persen_bpjs_kesehatan: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Override Plafon Gaji BPJS Kesehatan (Rp)">
+                        <Input type="number" min={0} placeholder="Ikut default" value={form.override_plafon_bpjs_kesehatan}
+                            onChange={e => setForm(p => ({ ...p, override_plafon_bpjs_kesehatan: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Override BPJS JHT (%)">
+                        <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default" value={form.override_persen_bpjs_jht}
+                            onChange={e => setForm(p => ({ ...p, override_persen_bpjs_jht: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Override BPJS JP (%)">
+                        <Input type="number" min={0} max={100} step={0.1} placeholder="Ikut default" value={form.override_persen_bpjs_jp}
+                            onChange={e => setForm(p => ({ ...p, override_persen_bpjs_jp: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Override Tunjangan Jabatan (Rp)"
+                        extra={<span className="text-xs text-gray-400">Kosongkan untuk ikut default tunjangan jabatan</span>}>
+                        <Input type="number" min={0} placeholder="Ikut default jabatan" value={form.override_tunjangan_jabatan}
+                            onChange={e => setForm(p => ({ ...p, override_tunjangan_jabatan: e.target.value }))} />
                     </FormItem>
 
                     <SectionHeading>Rekening Bank</SectionHeading>

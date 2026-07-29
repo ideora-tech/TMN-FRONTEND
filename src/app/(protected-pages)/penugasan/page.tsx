@@ -931,9 +931,13 @@ export default function PenugasanPage() {
                                     />
                                 </FormItem>
                             </div>
-                            <FormItem label="Status">
+                            <FormItem label="Status"
+                                extra={editTarget?.status === 'batal'
+                                    ? <span className="text-xs text-gray-400">Penugasan batal tidak dapat diaktifkan kembali — buat penugasan baru</span>
+                                    : undefined}>
                                 <Select
                                     isSearchable={false}
+                                    isDisabled={editTarget?.status === 'batal'}
                                     options={STATUS_OPTIONS}
                                     value={STATUS_OPTIONS.find(o => o.value === editForm.status) ?? null}
                                     onChange={opt => setEditForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))}

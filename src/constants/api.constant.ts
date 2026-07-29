@@ -127,6 +127,7 @@ export const API_ENDPOINTS = {
     // Karyawan
     KARYAWAN:        '/api/proxy/karyawan',
     KARYAWAN_DETAIL: (id: string) => `/api/proxy/karyawan/${id}`,
+    KARYAWAN_RIWAYAT_JABATAN: (id: string) => `/api/proxy/karyawan/${id}/riwayat-jabatan`,
     KARYAWAN_KONTRAK:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak`,
     KARYAWAN_KONTRAK_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak/${id}`,
     DOKUMEN_KARYAWAN:        '/api/proxy/dokumen-karyawan',
@@ -149,6 +150,17 @@ export const API_ENDPOINTS = {
     ABSENSI_HARIAN:     '/api/proxy/absensi/harian',
     ABSENSI_REKAP:      '/api/proxy/absensi/rekap',
     ABSENSI_PENGATURAN: '/api/proxy/absensi/pengaturan',
+
+    // Payroll
+    PAYROLL_PENGATURAN:        '/api/proxy/payroll/pengaturan',
+    PAYROLL_PREVIEW_RENTANG:   '/api/proxy/payroll/preview-rentang',
+    PAYROLL_PERIODE:           '/api/proxy/payroll/periode',
+    PAYROLL_PERIODE_DETAIL:    (id: string) => `/api/proxy/payroll/periode/${id}`,
+    PAYROLL_GENERATE:          (id: string) => `/api/proxy/payroll/periode/${id}/generate`,
+    PAYROLL_FINALISASI:        (id: string) => `/api/proxy/payroll/periode/${id}/finalisasi`,
+    PAYROLL_BATAL_FINALISASI:  (id: string) => `/api/proxy/payroll/periode/${id}/batal-finalisasi`,
+    PAYROLL_SLIP:              (id: string) => `/api/proxy/payroll/slip/${id}`,
+    PAYROLL_SLIP_PDF:          (id: string) => `/api/proxy/payroll/slip/${id}/pdf`,
 
     // Penugasan
     PENUGASAN:        '/api/proxy/penugasan',

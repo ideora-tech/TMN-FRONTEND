@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Card, Input, Tag, Button, DatePicker, Dialog, FormItem, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiOutlineSearch, HiOutlineX, HiOutlineCheckCircle, HiOutlineCog, HiOutlineClock } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineXCircle, HiOutlineCog, HiOutlineClock } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { absensiService, AbsensiHarianRow, StatusAbsensi, PengaturanAbsensi } from '@/services/absensi.service'
@@ -86,9 +86,11 @@ export default function InputHarianTab() {
         setRows(prev => prev.map(r => (r.id_karyawan === idKaryawan ? { ...r, ...patch } : r)))
     }
 
-    const tandaiSemuaHadir = () => {
-        setRows(prev => prev.map(r => (r.sedang_cuti ? r : { ...r, status: r.status ?? 'hadir' })))
+    const batalkanSemuaHadir = () => {
+        setRows(prev => prev.map(r => (r.status === 'hadir' ? { ...r, status: null, jam_masuk: null, jam_pulang: null } : r)))
     }
+
+    const adaYangHadir = rows.some(r => r.status === 'hadir')
 
     const terapkanJamKeSemua = () => {
         if (!jamMasukMassal && !jamPulangMassal) return
@@ -179,10 +181,6 @@ export default function InputHarianTab() {
                         onChange={(e) => setCari(e.target.value)}
                     />
                     <span className="text-xs text-gray-400 shrink-0">{terisi}/{rows.length} terisi</span>
-                    <Button variant="default" size="sm" icon={<HiOutlineCheckCircle />} className="shrink-0"
-                        onClick={tandaiSemuaHadir} disabled={loading}>
-                        Tandai Semua Hadir
-                    </Button>
                     <Button variant="solid" size="sm" className="shrink-0" loading={saving}
                         onClick={handleSimpan} disabled={loading || rows.length === 0}>
                         Simpan
@@ -211,6 +209,10 @@ export default function InputHarianTab() {
                     <Button variant="default" size="sm" className="shrink-0"
                         onClick={terapkanJamKeSemua} disabled={loading || rows.length === 0}>
                         Terapkan ke Semua
+                    </Button>
+                    <Button variant="default" size="sm" icon={<HiOutlineXCircle />} className="shrink-0 text-red-500"
+                        onClick={batalkanSemuaHadir} disabled={loading || !adaYangHadir}>
+                        Batalkan Semua Hadir
                     </Button>
                     <span className="text-xs text-gray-400">
                         Masuk lewat {pengaturan.jam_masuk} (+{pengaturan.toleransi_terlambat_menit}m) otomatis Terlambat · pulang lewat {pengaturan.jam_pulang} dihitung lembur

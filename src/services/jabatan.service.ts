@@ -9,6 +9,7 @@ export interface Jabatan {
     kode_jabatan: string
     nama_jabatan: string
     level: number
+    tunjangan_jabatan: number
     aktif: boolean
 }
 
