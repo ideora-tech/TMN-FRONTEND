@@ -59,7 +59,7 @@ export interface RingkasanProyekTrip {
 }
 
 export const tripService = {
-    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string; id_proyek?: string; search?: string; status?: string } = {}) {
+    async list(params: { page?: number; limit?: number; id_penugasan?: string; id_supir?: string; id_proyek?: string; search?: string; status?: string; tanggal_dari?: string; tanggal_sampai?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.TRIP, { params: { page: 1, limit: 15, ...params } })
         return data as { data: Trip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
