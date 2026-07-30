@@ -1,6 +1,6 @@
 'use client'
 import { use, useEffect, useState, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye } from 'react-icons/hi'
@@ -87,6 +87,8 @@ function shortId(id?: string | null) {
 export default function PenugasanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router  = useRouter()
+    const pathname = usePathname()
+    const dariVendor = pathname.startsWith('/penugasan-vendor')
 
     // penugasan
     const [penugasan, setPenugasan] = useState<Penugasan | null>(null)
@@ -287,12 +289,14 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex flex-col gap-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(penugasan ? `${ROUTES.PENUGASAN}?proyek=${penugasan.id_proyek}` : ROUTES.PENUGASAN)}
+                <button type="button" onClick={() => router.push(dariVendor
+                    ? ROUTES.PENUGASAN_VENDOR
+                    : penugasan ? `${ROUTES.PENUGASAN}?proyek=${penugasan.id_proyek}` : ROUTES.PENUGASAN)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
-                    <h3 className="font-bold">Detail Penugasan</h3>
+                    <h3 className="font-bold">{dariVendor ? 'Detail Penugasan Vendor' : 'Detail Penugasan'}</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Informasi dan pengelolaan penugasan</p>
                 </div>
             </div>

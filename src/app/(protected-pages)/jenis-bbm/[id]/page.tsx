@@ -3,7 +3,7 @@ import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineX } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineX } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -210,7 +210,7 @@ export default function JenisBbmDetailPage({ params }: { params: Promise<{ id: s
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Harga</p>
                         <p className="text-xs text-gray-400 mt-0.5">Diurutkan dari tanggal berlaku terbaru</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowHargaForm(v => !v)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowHargaForm(v => !v)}>
                         Tambah Harga
                     </Button>
                 </div>

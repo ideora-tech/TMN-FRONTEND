@@ -8,6 +8,7 @@ import {
     HiArrowLeft,
     HiOutlineMap,
     HiOutlinePlus,
+    HiPlusCircle,
     HiOutlinePencilAlt,
     HiOutlineTrash,
     HiOutlineX,
@@ -429,6 +430,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        {trip.sumber === 'vendor' && (
+                            <Tag className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300 border-0">
+                                Vendor
+                            </Tag>
+                        )}
                         <Tag className={`${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-700'} border-0`}>
                             {STATUS_LABEL[trip.status] ?? trip.status}
                         </Tag>
@@ -469,6 +475,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 : []),
                             ...(trip.armada_nopol
                                 ? [{ label: 'Armada', value: trip.armada_nopol as React.ReactNode }]
+                                : []),
+                            ...(trip.sumber === 'vendor'
+                                ? [{ label: 'Vendor', value: (trip.vendor_nama ?? '—') as React.ReactNode }]
                                 : []),
                             ...(trip.waktu_berangkat
                                 ? [{ label: 'Waktu Berangkat', value: dayjs(trip.waktu_berangkat).format('DD MMM YYYY HH:mm') as React.ReactNode }]
@@ -563,7 +572,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         </Button>
                     )}
                     {!laporanLoading && !showLaporanForm && !laporan && canIsiLaporan && (
-                        <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={handleOpenCreateLaporan}>
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={handleOpenCreateLaporan}>
                             Isi Laporan
                         </Button>
                     )}

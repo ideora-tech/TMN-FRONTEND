@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -161,7 +161,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                 <Button size="sm" variant="solid"
                                     customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
                                     icon={<HiOutlineTrash />} onClick={() => setDeleteOpen(true)}>Hapus</Button>
-                                <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setStokOpen(true)}>Tambah Stok</Button>
+                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setStokOpen(true)}>Tambah Stok</Button>
                             </>
                         )}
                     </div>

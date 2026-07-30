@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineEye, HiOutlinePhotograph } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiPlusCircle, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineEye, HiOutlinePhotograph } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -726,7 +726,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Dokumen Kendaraan</p>
                         <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal kadaluarsa terdekat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowDocForm(v => !v)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowDocForm(v => !v)}>
                         Tambah Dokumen
                     </Button>
                 </div>
@@ -904,7 +904,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             <Card>
                 <div className="flex items-center justify-between mb-1">
                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Perawatan</p>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowRawatForm(v => !v)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowRawatForm(v => !v)}>
                         Catat Perawatan
                     </Button>
                 </div>

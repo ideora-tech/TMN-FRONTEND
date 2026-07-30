@@ -1,18 +1,18 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Input, DatePicker, Checkbox, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
+import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { penugasanService, Penugasan } from '@/services/penugasan.service'
+import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
 import { Vendor } from '@/services/vendor.service'
@@ -37,6 +37,13 @@ const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
 }
 
+const STATUS_OPTIONS: { value: StatusPenugasan; label: string }[] = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'aktif',   label: 'Aktif' },
+    { value: 'selesai', label: 'Selesai' },
+    { value: 'batal',   label: 'Batal' },
+]
+
 function shortId(id?: string | null) {
     return id ? id.slice(0, 8) : '—'
 }
@@ -54,6 +61,8 @@ const EMPTY_DIALOG_FORM: DialogFormState = {
 
 type DialogErrors = Partial<Record<'id_vendor' | 'id_kontrak_vendor' | 'unit' | 'supir' | 'tanggal_tugas', string>>
 
+type HasilGagal = { supir: string; armada: string; alasan: string }
+
 export default function PenugasanVendorTab() {
     const router = useRouter()
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
@@ -65,6 +74,17 @@ export default function PenugasanVendorTab() {
     const [pageSize]                    = useState(15)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Penugasan | null>(null)
+
+    const tableRef = useRef<DataTableResetHandle | HTMLTableElement | null>(null)
+    const [selectedIds, setSelectedIds]         = useState<string[]>([])
+    const [bulkStatus, setBulkStatus]           = useState<StatusPenugasan | null>(null)
+    const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+    const [bulkSubmitting, setBulkSubmitting]   = useState(false)
+    const [hasilUbahStatus, setHasilUbahStatus] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
+
+    const [editTarget, setEditTarget]         = useState<Penugasan | null>(null)
+    const [editForm, setEditForm]             = useState({ id_supir: '', id_supir_vendor: '', tanggal_tugas: '', estimasi_biaya: '', status: 'pending' as StatusPenugasan })
+    const [editSubmitting, setEditSubmitting] = useState(false)
 
     const [kontrakMap, setKontrakMap]           = useState<Record<string, KontrakVendor>>({})
     const [vendorMap, setVendorMap]             = useState<Record<string, Vendor>>({})
@@ -240,6 +260,16 @@ export default function PenugasanVendorTab() {
             e.unit = 'Centang minimal satu unit'
         } else if (checkedIds.some(id => !rowSupir[id])) {
             e.supir = 'Pilih supir untuk semua unit yang dicentang'
+        } else {
+            const hitungan: Record<string, number> = {}
+            checkedIds.forEach(id => {
+                hitungan[rowSupir[id]] = (hitungan[rowSupir[id]] ?? 0) + 1
+            })
+            const dobel = Object.entries(hitungan).find(([, n]) => n > 1)
+            if (dobel) {
+                const nama = supirRowOptions.find(o => o.value === dobel[0])?.label?.split(' — ')[0] ?? 'Supir'
+                e.supir = `${nama} dipilih di ${dobel[1]} unit — satu supir hanya bisa membawa satu unit`
+            }
         }
         if (!dlgForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setDlgErrors(e)
@@ -310,12 +340,147 @@ export default function PenugasanVendorTab() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
+    const clearBulkSelection = () => {
+        setSelectedIds([])
+        const t = tableRef.current
+        if (t && 'resetSelected' in t) t.resetSelected()
+    }
+
+    const handleRowCheck = (checked: boolean, row: Penugasan) => {
+        setSelectedIds(prev => checked
+            ? Array.from(new Set([...prev, row.id_penugasan]))
+            : prev.filter(id => id !== row.id_penugasan))
+    }
+
+    const handleAllRowCheck = (checked: boolean, rows: Row<Penugasan>[]) => {
+        const ids = rows.map(r => r.original.id_penugasan)
+        setSelectedIds(prev => checked
+            ? Array.from(new Set([...prev, ...ids]))
+            : prev.filter(id => !ids.includes(id)))
+    }
+
+    const handlePageChange = (page: number) => {
+        setSelectedIds([])
+        setCurrentPage(page)
+    }
+
+    useEffect(() => {
+        if (selectedIds.length === 0) setBulkStatus(null)
+    }, [selectedIds.length])
+
+    const bulkStatusLabel = STATUS_OPTIONS.find(o => o.value === bulkStatus)?.label ?? ''
+
+    const bulkTargetCount = useMemo(
+        () => list.filter(p => selectedIds.includes(p.id_penugasan)).length,
+        [list, selectedIds])
+
+    const handleBulkApply = async () => {
+        if (!bulkStatus || selectedIds.length === 0) return
+        const targets = list.filter(p => selectedIds.includes(p.id_penugasan))
+        if (targets.length === 0) {
+            setBulkConfirmOpen(false)
+            setBulkStatus(null)
+            clearBulkSelection()
+            toast.push(<Notification type="info" title="Tidak ada penugasan yang bisa diubah — baris terpilih sudah tidak ada di daftar" />)
+            return
+        }
+        const label = bulkStatusLabel || bulkStatus
+        setBulkSubmitting(true)
+        try {
+            const results = await Promise.allSettled(targets.map(t =>
+                penugasanService.update(t.id_penugasan, { status: bulkStatus })
+            ))
+            const gagal: HasilGagal[] = []
+            results.forEach((r, i) => {
+                if (r.status === 'rejected') {
+                    const t  = targets[i]
+                    const av = t.id_armada_vendor ? armadaVendorMap[t.id_armada_vendor] : null
+                    const sv = t.id_supir_vendor ? supirVendorMap[t.id_supir_vendor] : null
+                    const s  = t.id_supir ? supirMap[t.id_supir] : null
+                    gagal.push({
+                        armada: av?.nopol ?? shortId(t.id_armada_vendor),
+                        supir:  sv?.nama ?? s?.nama ?? shortId(t.id_supir_vendor ?? t.id_supir),
+                        alasan: parseApiError(r.reason),
+                    })
+                }
+            })
+            const sukses = results.length - gagal.length
+            setBulkConfirmOpen(false)
+            setBulkStatus(null)
+            clearBulkSelection()
+            fetchData()
+            if (gagal.length === 0) {
+                toast.push(<Notification type="success" title={`${sukses} penugasan diubah ke ${label}`} />)
+            } else {
+                setHasilUbahStatus({ sukses, gagal })
+            }
+        } finally {
+            setBulkSubmitting(false)
+        }
+    }
+
+    const mekanismeEdit = editTarget?.id_kontrak_vendor
+        ? kontrakMap[editTarget.id_kontrak_vendor]?.mekanisme ?? null
+        : null
+
+    const supirEditOptions = useMemo<Option[]>(() => {
+        if (!editTarget) return []
+        if (mekanismeEdit === 'unit_only') {
+            return supirList
+                .filter(s => s.status === 'aktif')
+                .map(s => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim}` }))
+        }
+        const kontrak = editTarget.id_kontrak_vendor ? kontrakMap[editTarget.id_kontrak_vendor] : null
+        return Object.values(supirVendorMap)
+            .filter(sv => sv.aktif && (!kontrak || sv.id_vendor === kontrak.id_vendor))
+            .map(sv => ({ value: sv.id_supir_vendor, label: `${sv.nama}${sv.telepon ? ' — ' + sv.telepon : ''}` }))
+    }, [editTarget, mekanismeEdit, supirList, supirVendorMap, kontrakMap])
+
+    const openEditDialog = (row: Penugasan) => {
+        setEditTarget(row)
+        setEditForm({
+            id_supir:        row.id_supir ?? '',
+            id_supir_vendor: row.id_supir_vendor ?? '',
+            tanggal_tugas:   row.tanggal_tugas ?? '',
+            estimasi_biaya:  row.estimasi_biaya != null ? String(row.estimasi_biaya) : '',
+            status:          row.status,
+        })
+    }
+
+    const handleSubmitEdit = async () => {
+        if (!editTarget) return
+        setEditSubmitting(true)
+        try {
+            await penugasanService.update(editTarget.id_penugasan, {
+                ...(mekanismeEdit === 'unit_only'
+                    ? { id_supir: editForm.id_supir || null }
+                    : { id_supir_vendor: editForm.id_supir_vendor || null }),
+                tanggal_tugas:  editForm.tanggal_tugas || null,
+                estimasi_biaya: editForm.estimasi_biaya ? Number(editForm.estimasi_biaya) : null,
+                status:         editForm.status,
+            })
+            toast.push(<Notification type="success" title="Penugasan vendor berhasil diperbarui" />)
+            setEditTarget(null)
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setEditSubmitting(false)
+        }
+    }
+
     const handleDelete = async () => {
         if (!deleteTarget) return
         setSubmitting(true)
         try {
             await penugasanService.delete(deleteTarget.id_penugasan)
             toast.push(<Notification type="success" title="Penugasan vendor berhasil dihapus" />)
+            const sisaCentang = selectedIds.filter(id => id !== deleteTarget.id_penugasan)
+            if (sisaCentang.length === 0) {
+                clearBulkSelection()
+            } else {
+                setSelectedIds(sisaCentang)
+            }
             setDeleteTarget(null)
             fetchData()
         } catch (err) {
@@ -336,7 +501,14 @@ export default function PenugasanVendorTab() {
             cell: ({ row }) => {
                 const label = proyekOptions.find(o => o.value === row.original.id_proyek)?.label
                 return label
-                    ? <span>{label}</span>
+                    ? (
+                        <span
+                            className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            onClick={() => router.push(ROUTES.PROYEK_DETAIL(row.original.id_proyek))}
+                        >
+                            {label}
+                        </span>
+                    )
                     : <span className="font-mono text-xs text-gray-400">{shortId(row.original.id_proyek)}</span>
             },
         },
@@ -406,9 +578,17 @@ export default function PenugasanVendorTab() {
                     <Tooltip title="Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                            onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(row.original.id_penugasan))}
+                            onClick={() => router.push(ROUTES.PENUGASAN_VENDOR_DETAIL(row.original.id_penugasan))}
                         >
                             <HiOutlineEye className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                            onClick={() => openEditDialog(row.original)}
+                        >
+                            <HiOutlinePencilAlt className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Hapus">
@@ -492,9 +672,48 @@ export default function PenugasanVendorTab() {
                         placeholder="Pilih proyek untuk melihat penugasan vendor..."
                         options={proyekOptions}
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}
-                        onChange={(opt) => { setSelectedProyek((opt as { value: string } | null)?.value ?? ''); setCurrentPage(1) }}
+                        onChange={(opt) => {
+                            setSelectedProyek((opt as { value: string } | null)?.value ?? '')
+                            setCurrentPage(1)
+                            clearBulkSelection()
+                        }}
                     />
                 </div>
+
+                {selectedProyek && selectedIds.length > 0 && (
+                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-blue-50/60 dark:bg-blue-500/10 flex flex-wrap items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            {selectedIds.length} penugasan dipilih
+                        </span>
+                        <Button
+                            variant="plain"
+                            size="sm"
+                            disabled={bulkSubmitting}
+                            onClick={() => { setBulkStatus(null); clearBulkSelection() }}
+                        >
+                            Batalkan
+                        </Button>
+                        <div className="w-44">
+                            <Select
+                                size="sm"
+                                isSearchable={false}
+                                placeholder="Status tujuan..."
+                                options={STATUS_OPTIONS}
+                                value={STATUS_OPTIONS.find(o => o.value === bulkStatus) ?? null}
+                                onChange={opt => setBulkStatus((opt?.value as StatusPenugasan) ?? null)}
+                            />
+                        </div>
+                        <Button
+                            variant="solid"
+                            size="sm"
+                            loading={bulkSubmitting}
+                            disabled={!bulkStatus}
+                            onClick={() => setBulkConfirmOpen(true)}
+                        >
+                            Terapkan
+                        </Button>
+                    </div>
+                )}
 
                 {!selectedProyek ? (
                     <div className="py-12 text-center text-gray-400 text-sm">
@@ -502,20 +721,122 @@ export default function PenugasanVendorTab() {
                     </div>
                 ) : (
                     <DataTable
+                        ref={(instance: DataTableResetHandle | HTMLTableElement | null) => { tableRef.current = instance }}
+                        selectable
                         columns={columns}
                         data={list as unknown[]}
                         loading={loading}
                         pagingData={{ total, pageIndex: currentPage, pageSize }}
-                        onPaginationChange={setCurrentPage}
+                        onPaginationChange={handlePageChange}
+                        onCheckBoxChange={handleRowCheck}
+                        onIndeterminateCheckBoxChange={handleAllRowCheck}
+                        checkboxChecked={(row: Penugasan) => selectedIds.includes(row.id_penugasan)}
+                        indeterminateCheckboxChecked={(rows: Row<Penugasan>[]) =>
+                            rows.length > 0 && rows.every(r => selectedIds.includes(r.original.id_penugasan))}
                     />
                 )}
             </Card>
+
+            <Dialog isOpen={!!editTarget} onRequestClose={() => setEditTarget(null)} onClose={() => setEditTarget(null)} width={480}>
+                <h5 className="text-base font-semibold mb-1">Edit Penugasan Vendor</h5>
+                <p className="text-xs text-gray-400 mb-4">
+                    {editTarget?.id_armada_vendor && armadaVendorMap[editTarget.id_armada_vendor]
+                        ? `Unit ${armadaVendorMap[editTarget.id_armada_vendor].nopol}`
+                        : 'Perbarui data penugasan'}
+                    {mekanismeEdit ? ` — ${MEKANISME_LABEL[mekanismeEdit] ?? mekanismeEdit}` : ''}
+                </p>
+                <form onSubmit={e => { e.preventDefault(); handleSubmitEdit() }}>
+                    <FormItem label={mekanismeEdit === 'unit_only' ? 'Supir (internal)' : 'Supir Vendor'}>
+                        <Select<Option>
+                            placeholder="Pilih supir..."
+                            options={supirEditOptions}
+                            value={supirEditOptions.find(o => o.value === (mekanismeEdit === 'unit_only' ? editForm.id_supir : editForm.id_supir_vendor)) ?? null}
+                            onChange={opt => setEditForm(p => mekanismeEdit === 'unit_only'
+                                ? { ...p, id_supir: opt?.value ?? '' }
+                                : { ...p, id_supir_vendor: opt?.value ?? '' })}
+                        />
+                    </FormItem>
+                    <FormItem label="Tanggal Tugas">
+                        <DatePicker
+                            inputFormat="DD/MM/YYYY"
+                            value={editForm.tanggal_tugas ? new Date(editForm.tanggal_tugas) : null}
+                            onChange={date => setEditForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
+                        />
+                    </FormItem>
+                    <FormItem label="Estimasi Biaya">
+                        <Input
+                            prefix="Rp"
+                            placeholder="0"
+                            value={editForm.estimasi_biaya ? formatNum(Number(editForm.estimasi_biaya)) : ''}
+                            onChange={e => setEditForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
+                        />
+                    </FormItem>
+                    <FormItem label="Status"
+                        extra={editTarget?.status === 'batal'
+                            ? <span className="text-xs text-gray-400">Penugasan batal tidak dapat diaktifkan kembali — buat penugasan baru</span>
+                            : undefined}>
+                        <Select
+                            isSearchable={false}
+                            isDisabled={editTarget?.status === 'batal'}
+                            options={STATUS_OPTIONS}
+                            value={STATUS_OPTIONS.find(o => o.value === editForm.status) ?? null}
+                            onChange={opt => setEditForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))}
+                        />
+                    </FormItem>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={editSubmitting}>Simpan</Button>
+                    </div>
+                </form>
+            </Dialog>
 
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Penugasan Vendor"
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus penugasan vendor ini? Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
+
+            <ConfirmDialog isOpen={bulkConfirmOpen} type="warning" title="Ubah Status Massal"
+                confirmText="Ya, Ubah" cancelText="Batal"
+                onClose={() => setBulkConfirmOpen(false)} onConfirm={handleBulkApply}
+                confirmButtonProps={{ loading: bulkSubmitting }}>
+                <p>Ubah status {bulkTargetCount} penugasan menjadi {bulkStatusLabel}?</p>
+            </ConfirmDialog>
+
+            <Dialog isOpen={!!hasilUbahStatus} onRequestClose={() => setHasilUbahStatus(null)} onClose={() => setHasilUbahStatus(null)} width={520}>
+                <h5 className="text-base font-semibold mb-1">Hasil Ubah Status</h5>
+                {hasilUbahStatus && (
+                    <>
+                        <p className="text-sm text-gray-500 mb-4">
+                            {hasilUbahStatus.sukses} berhasil, {hasilUbahStatus.gagal.length} gagal.
+                            {hasilUbahStatus.sukses > 0 && ' Perubahan yang berhasil tetap tersimpan.'}
+                        </p>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Unit</th>
+                                        <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
+                                        <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {hasilUbahStatus.gagal.map((g, i) => (
+                                        <tr key={i}>
+                                            <td className="py-2.5 pl-3 pr-4 font-semibold text-gray-800 dark:text-gray-200">{g.armada}</td>
+                                            <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{g.supir}</td>
+                                            <td className="py-2.5 pr-3 text-red-500 text-xs">{g.alasan}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
+                <div className="flex justify-end mt-6">
+                    <Button variant="solid" onClick={() => setHasilUbahStatus(null)}>Tutup</Button>
+                </div>
+            </Dialog>
 
             <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan Vendor</h5>

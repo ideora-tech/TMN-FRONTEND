@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
@@ -399,7 +399,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                     disabled={barisSupir.length === 0}
                     loading={downloading}
                     onClick={handleDownload} />
-                <Button size="sm" variant="solid" icon={<HiOutlinePlus />}
+                <Button size="sm" variant="solid" icon={<HiPlusCircle />}
                     title="Tambah Shift"
                     onClick={bukaTambahShift} />
             </div>

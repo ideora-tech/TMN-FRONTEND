@@ -41,6 +41,7 @@ export const protectedRoutes: Routes = {
     ...listRoute('penugasan', 'penugasan'),
     '/penugasan-vendor': { key: 'penugasan-vendor', authority: [] },
     '/penugasan-vendor/baru': { key: 'penugasan-vendor', authority: [] },
+    '/penugasan-vendor/[id]': { key: 'penugasan-vendor', authority: [], dynamicRoute: true },
     ...listRoute('laporan', 'laporan'),
     ...listRoute('faktur', 'faktur'),
     ...listRoute('invoice-vendor', 'invoice-vendor'),
@@ -62,6 +63,7 @@ export const protectedRoutes: Routes = {
     '/payroll/[id]': { key: 'payroll', authority: [], dynamicRoute: true },
     ...listRoute('perusahaan', 'perusahaan', ADMIN_ONLY),
     ...listRoute('menu-admin', 'menu-admin', ADMIN_ONLY),
+    '/akses-menu': { key: 'akses-menu', authority: ['superadmin'] },
     '/log-error': { key: 'log-error', authority: [] },
     '/log-error/[id]': { key: 'log-error', authority: [], dynamicRoute: true },
 }

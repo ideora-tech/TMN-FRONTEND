@@ -32,6 +32,22 @@ const STATUS_LABEL: Record<string, string> = {
     dibatalkan: 'Dibatalkan',
 }
 
+type SumberValue = '' | 'internal' | 'vendor'
+type SumberOption = { value: SumberValue; label: string }
+
+const SUMBER_OPTIONS: SumberOption[] = [
+    { value: '',         label: 'Semua Sumber' },
+    { value: 'internal', label: 'Internal' },
+    { value: 'vendor',   label: 'Vendor' },
+]
+
+const VENDOR_TAG_CLASS = 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300'
+
+function VendorTag({ nama }: { nama?: string | null }) {
+    const tag = <Tag className={`shrink-0 ${VENDOR_TAG_CLASS}`}>Vendor</Tag>
+    return nama ? <Tooltip title={nama}>{tag}</Tooltip> : tag
+}
+
 export default function RiwayatTripTab() {
     const router = useRouter()
 
@@ -44,6 +60,7 @@ export default function RiwayatTripTab() {
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [sumberFilter, setSumberFilter] = useState<SumberValue>('')
     const [dari, setDari]     = useState<Date | null>(dayjs().subtract(30, 'day').toDate())
     const [sampai, setSampai] = useState<Date | null>(null)
 
@@ -55,6 +72,7 @@ export default function RiwayatTripTab() {
                 limit: pageSize,
                 search: search || undefined,
                 status: statusFilter || STATUS_RIWAYAT,
+                sumber: sumberFilter || undefined,
                 tanggal_dari: dari ? dayjs(dari).format('YYYY-MM-DD') : undefined,
                 tanggal_sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
             })
@@ -65,7 +83,7 @@ export default function RiwayatTripTab() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter, dari, sampai])
+    }, [currentPage, pageSize, search, statusFilter, sumberFilter, dari, sampai])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -93,7 +111,10 @@ export default function RiwayatTripTab() {
             header: 'Supir & Armada', accessorKey: 'supir_nama', size: 180,
             cell: ({ row }: CellContext<Trip, unknown>) => (
                 <div>
-                    <p>{row.original.supir_nama ?? <span className="text-gray-400">Tanpa supir</span>}</p>
+                    <div className="flex items-center gap-2">
+                        <p>{row.original.supir_nama ?? <span className="text-gray-400">Tanpa supir</span>}</p>
+                        {row.original.sumber === 'vendor' && <VendorTag nama={row.original.vendor_nama} />}
+                    </div>
                     <p className="text-xs text-gray-400 font-mono">{row.original.armada_nopol ?? '—'}</p>
                 </div>
             ),
@@ -165,6 +186,15 @@ export default function RiwayatTripTab() {
                         options={STATUS_OPTIONS}
                         value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                         onChange={(opt) => { setStatusFilter((opt as Option).value); setCurrentPage(1) }}
+                    />
+                </div>
+                <div className="w-full sm:w-40 shrink-0">
+                    <Select<SumberOption>
+                        isClearable
+                        isSearchable={false}
+                        options={SUMBER_OPTIONS}
+                        value={SUMBER_OPTIONS.find(o => o.value === sumberFilter) ?? SUMBER_OPTIONS[0]}
+                        onChange={(opt) => { setSumberFilter((opt as SumberOption | null)?.value ?? ''); setCurrentPage(1) }}
                     />
                 </div>
             </div>

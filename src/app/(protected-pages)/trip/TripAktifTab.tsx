@@ -40,6 +40,22 @@ const STATUS_TAG: Record<string, string> = {
     dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
+type SumberValue = '' | 'internal' | 'vendor'
+type SumberOption = { value: SumberValue; label: string }
+
+const SUMBER_OPTIONS: SumberOption[] = [
+    { value: '',         label: 'Semua Sumber' },
+    { value: 'internal', label: 'Internal' },
+    { value: 'vendor',   label: 'Vendor' },
+]
+
+const VENDOR_TAG_CLASS = 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300'
+
+function VendorTag({ nama }: { nama?: string | null }) {
+    const tag = <Tag className={`shrink-0 ${VENDOR_TAG_CLASS}`}>Vendor</Tag>
+    return nama ? <Tooltip title={nama}>{tag}</Tooltip> : tag
+}
+
 const TRIP_TAMPIL_AWAL = 5
 
 const kelompokkanPerRute = (trips: Trip[]) => {
@@ -65,6 +81,7 @@ export default function TripAktifTab() {
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [sumberFilter, setSumberFilter] = useState<SumberValue>('')
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize]                      = useState(10)
     const [total, setTotal]               = useState(0)
@@ -85,7 +102,7 @@ export default function TripAktifTab() {
         setExpandedRute(new Set())
         setShowAllRute(new Set())
         setTripsByProyek({})
-    }, [search, statusFilter])
+    }, [search, statusFilter, sumberFilter])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -126,7 +143,7 @@ export default function TripAktifTab() {
         if (!tripsByProyek[idProyek]) {
             setLoadingTrips(prev => new Set(prev).add(idProyek))
             try {
-                const res = await tripService.list({ id_proyek: idProyek, status: statusEfektif, limit: 100 })
+                const res = await tripService.list({ id_proyek: idProyek, status: statusEfektif, sumber: sumberFilter || undefined, limit: 100 })
                 setTripsByProyek(prev => ({ ...prev, [idProyek]: res.data }))
             } catch (err) {
                 toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -155,7 +172,7 @@ export default function TripAktifTab() {
         setExpanded(prev => new Set(prev).add(idProyek))
         setLoadingTrips(prev => new Set(prev).add(idProyek))
         try {
-            const res = await tripService.list({ id_proyek: idProyek, status: statusEfektif, limit: 100 })
+            const res = await tripService.list({ id_proyek: idProyek, status: statusEfektif, sumber: sumberFilter || undefined, limit: 100 })
             setTripsByProyek(prev => ({ ...prev, [idProyek]: res.data }))
             const terbaru = [...res.data].sort((a, b) => (b.waktu_berangkat ?? '').localeCompare(a.waktu_berangkat ?? ''))[0]
             if (terbaru) {
@@ -194,6 +211,15 @@ export default function TripAktifTab() {
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
+                        />
+                    </div>
+                    <div className="w-44 shrink-0">
+                        <Select<SumberOption>
+                            isClearable
+                            isSearchable={false}
+                            options={SUMBER_OPTIONS}
+                            value={SUMBER_OPTIONS.find(o => o.value === sumberFilter) ?? SUMBER_OPTIONS[0]}
+                            onChange={(opt) => { setSumberFilter((opt as SumberOption | null)?.value ?? ''); setCurrentPage(1) }}
                         />
                     </div>
                 </div>
@@ -294,10 +320,13 @@ export default function TripAktifTab() {
                                                                                             onClick={() => router.push(ROUTES.TRIP_DETAIL(trip.id_trip))}
                                                                                         >
                                                                                             <div className="flex-1 min-w-0">
-                                                                                                <p className="truncate">
-                                                                                                    {trip.supir_nama ?? <span className="text-gray-400">Tanpa supir</span>}
-                                                                                                    <span className="text-gray-400"> · {trip.armada_nopol ?? '—'}</span>
-                                                                                                </p>
+                                                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                                                    <p className="truncate">
+                                                                                                        {trip.supir_nama ?? <span className="text-gray-400">Tanpa supir</span>}
+                                                                                                        <span className="text-gray-400"> · {trip.armada_nopol ?? '—'}</span>
+                                                                                                    </p>
+                                                                                                    {trip.sumber === 'vendor' && <VendorTag nama={trip.vendor_nama} />}
+                                                                                                </div>
                                                                                                 {(trip.waktu_berangkat || trip.waktu_checkout) && (
                                                                                                     <p className="text-xs text-gray-400">
                                                                                                         {trip.waktu_berangkat && `Berangkat ${dayjs(trip.waktu_berangkat).format('DD/MM/YY HH:mm')}`}

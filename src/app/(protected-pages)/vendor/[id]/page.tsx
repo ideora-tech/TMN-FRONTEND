@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -534,7 +534,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Dokumen Vendor</p>
                         <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal kadaluarsa terdekat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowDocForm(v => !v)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowDocForm(v => !v)}>
                         Tambah Dokumen
                     </Button>
                 </div>
@@ -667,7 +667,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rekening Bank</p>
                         <p className="text-xs text-gray-400 mt-0.5">Rekening tujuan pembayaran vendor</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowRekForm(v => !v)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowRekForm(v => !v)}>
                         Tambah Rekening
                     </Button>
                 </div>

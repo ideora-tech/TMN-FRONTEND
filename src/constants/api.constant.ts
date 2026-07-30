@@ -206,6 +206,8 @@ export const API_ENDPOINTS = {
     // Menu
     MENU:        '/api/proxy/menu',
     MENU_DETAIL: (id: string) => `/api/proxy/menu/${id}`,
+    MENU_AKSES_PERAN:        '/api/proxy/menu/akses-peran',
+    MENU_AKSES_PERAN_SIMPAN: (kodePeran: string) => `/api/proxy/menu/akses-peran/${kodePeran}`,
 
     // Log Error
     LOG_ERROR:        '/api/proxy/log-error',
