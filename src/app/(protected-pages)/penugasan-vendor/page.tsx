@@ -1,22 +1,14 @@
 'use client'
-import { useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Spinner } from '@/components/ui'
-import { ROUTES } from '@/constants/route.constant'
+import PenugasanVendorTab from '../vendor/PenugasanVendorTab'
 
-export default function PenugasanVendorRedirectPage() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
-
-    useEffect(() => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('tab', 'penugasan')
-        router.replace(`${ROUTES.VENDOR}?${params.toString()}`)
-    }, [router, searchParams])
-
+export default function PenugasanVendorPage() {
     return (
-        <div className="flex items-center justify-center py-24">
-            <Spinner size={40} />
+        <div className="flex flex-col gap-4">
+            <div>
+                <h3 className="font-bold">Penugasan Vendor</h3>
+                <p className="text-gray-500 text-sm mt-0.5">Kelola penugasan armada dan supir vendor ke project</p>
+            </div>
+            <PenugasanVendorTab />
         </div>
     )
 }

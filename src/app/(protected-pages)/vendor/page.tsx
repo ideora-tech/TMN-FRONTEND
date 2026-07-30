@@ -1,53 +1,47 @@
 'use client'
+import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import Tabs from '@/components/ui/Tabs'
+import { Spinner } from '@/components/ui'
 import { ROUTES } from '@/constants/route.constant'
 import VendorTab from './VendorTab'
-import KontrakVendorTab from './KontrakVendorTab'
-import ArmadaVendorTab from './ArmadaVendorTab'
-import SupirVendorTab from './SupirVendorTab'
-import PenugasanVendorTab from './PenugasanVendorTab'
-import EvaluasiVendorTab from './EvaluasiVendorTab'
 
-const TAB_VALUES = ['vendor', 'kontrak', 'armada', 'supir', 'penugasan', 'evaluasi']
+const TAB_ROUTE_MAP: Record<string, string> = {
+    kontrak: ROUTES.KONTRAK_VENDOR,
+    armada: ROUTES.ARMADA_VENDOR,
+    supir: ROUTES.SUPIR_VENDOR,
+    penugasan: ROUTES.PENUGASAN_VENDOR,
+    evaluasi: ROUTES.EVALUASI_VENDOR,
+}
 
 export default function VendorPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const tabParam = searchParams.get('tab') ?? 'vendor'
-    const activeTab = TAB_VALUES.includes(tabParam) ? tabParam : 'vendor'
+    const tabParam = searchParams.get('tab')
+    const targetRoute = tabParam ? TAB_ROUTE_MAP[tabParam] : undefined
 
-    const handleTabChange = (val: string) => {
+    useEffect(() => {
+        if (!targetRoute) return
         const params = new URLSearchParams(searchParams.toString())
-        params.set('tab', val)
-        router.replace(`${ROUTES.VENDOR}?${params.toString()}`)
+        params.delete('tab')
+        const qs = params.toString()
+        router.replace(qs ? `${targetRoute}?${qs}` : targetRoute)
+    }, [targetRoute, router, searchParams])
+
+    if (targetRoute) {
+        return (
+            <div className="flex items-center justify-center py-24">
+                <Spinner size={40} />
+            </div>
+        )
     }
 
     return (
         <div className="flex flex-col gap-4">
             <div>
-                <h3 className="font-bold">Vendor</h3>
-                <p className="text-gray-500 text-sm mt-0.5">Master vendor, kontrak, armada &amp; supir vendor, penugasan, dan evaluasi vendor</p>
+                <h3 className="font-bold">Data Vendor</h3>
+                <p className="text-gray-500 text-sm mt-0.5">Kelola data master vendor mitra transportasi</p>
             </div>
-
-            <Tabs value={activeTab} onChange={val => handleTabChange(val as string)}>
-                <Tabs.TabList>
-                    <Tabs.TabNav value="vendor">Data Vendor</Tabs.TabNav>
-                    <Tabs.TabNav value="kontrak">Kontrak</Tabs.TabNav>
-                    <Tabs.TabNav value="armada">Armada</Tabs.TabNav>
-                    <Tabs.TabNav value="supir">Supir</Tabs.TabNav>
-                    <Tabs.TabNav value="penugasan">Penugasan</Tabs.TabNav>
-                    <Tabs.TabNav value="evaluasi">Evaluasi</Tabs.TabNav>
-                </Tabs.TabList>
-                <div>
-                    <Tabs.TabContent value="vendor"><VendorTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="kontrak"><KontrakVendorTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="armada"><ArmadaVendorTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="supir"><SupirVendorTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="penugasan"><PenugasanVendorTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="evaluasi"><EvaluasiVendorTab /></Tabs.TabContent>
-                </div>
-            </Tabs>
+            <VendorTab />
         </div>
     )
 }

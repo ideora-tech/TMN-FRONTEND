@@ -1,5 +1,6 @@
 import {
     NAV_ITEM_TYPE_TITLE,
+    NAV_ITEM_TYPE_COLLAPSE,
     NAV_ITEM_TYPE_ITEM,
 } from '@/constants/navigation.constant'
 
@@ -69,13 +70,6 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'vendor', path: '/vendor', title: 'Vendor',
-        translateKey: 'nav.vendor', icon: 'building',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
         key: 'rute', path: '/rute', title: 'Rute',
         translateKey: 'nav.rute', icon: 'path',
         type: NAV_ITEM_TYPE_ITEM,
@@ -102,6 +96,58 @@ const navigationConfig: NavigationTree[] = [
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['dispatcher', 'keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],
+    },
+
+    // === VENDOR ===
+    {
+        key: 'vendor', path: '', title: 'Vendor',
+        translateKey: 'nav.vendor', icon: 'building',
+        type: NAV_ITEM_TYPE_COLLAPSE,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [
+            {
+                key: 'vendor', path: '/vendor', title: 'Data Vendor',
+                translateKey: 'nav.vendor.data', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+            {
+                key: 'kontrak-vendor', path: '/kontrak-vendor', title: 'Kontrak Vendor',
+                translateKey: 'nav.vendor.kontrak', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+            {
+                key: 'armada-vendor', path: '/armada-vendor', title: 'Armada Vendor',
+                translateKey: 'nav.vendor.armada', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+            {
+                key: 'supir-vendor', path: '/supir-vendor', title: 'Supir Vendor',
+                translateKey: 'nav.vendor.supir', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+            {
+                key: 'penugasan-vendor', path: '/penugasan-vendor', title: 'Penugasan Vendor',
+                translateKey: 'nav.vendor.penugasan', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+            {
+                key: 'evaluasi-vendor', path: '/evaluasi-vendor', title: 'Evaluasi Vendor',
+                translateKey: 'nav.vendor.evaluasi', icon: '',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+                subMenu: [],
+            },
+        ],
     },
 
     // === SDM ===

@@ -3,7 +3,7 @@ import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineEye } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -497,7 +497,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Trip</p>
                         <p className="text-xs text-gray-400 mt-0.5">{tripList.length} trip tercatat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiOutlinePlus />} onClick={() => setShowMulaiTrip(true)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowMulaiTrip(true)}>
                         Mulai Trip
                     </Button>
                 </div>

@@ -147,6 +147,8 @@ export const ROUTES = {
     PENUGASAN_VENDOR:      '/penugasan-vendor',
     PENUGASAN_VENDOR_BARU: '/penugasan-vendor/baru',
 
+    EVALUASI_VENDOR: '/evaluasi-vendor',
+
     PARAMETER_BOK:        '/parameter-bok',
     PARAMETER_BOK_BARU:   '/parameter-bok/baru',
     PARAMETER_BOK_DETAIL: (id: string) => `/parameter-bok/${id}`,

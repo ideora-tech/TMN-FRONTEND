@@ -788,7 +788,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         content: <h5>Armada Vendor</h5>,
                         extra: (
                             <Button variant="default" size="sm"
-                                onClick={() => router.push(`${ROUTES.VENDOR}?tab=armada&id_vendor=${id}`)}>
+                                onClick={() => router.push(`${ROUTES.ARMADA_VENDOR}?id_vendor=${id}`)}>
                                 Kelola
                             </Button>
                         ),
@@ -832,7 +832,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         content: <h5>Supir Vendor</h5>,
                         extra: (
                             <Button variant="default" size="sm"
-                                onClick={() => router.push(`${ROUTES.VENDOR}?tab=supir&id_vendor=${id}`)}>
+                                onClick={() => router.push(`${ROUTES.SUPIR_VENDOR}?id_vendor=${id}`)}>
                                 Kelola
                             </Button>
                         ),
