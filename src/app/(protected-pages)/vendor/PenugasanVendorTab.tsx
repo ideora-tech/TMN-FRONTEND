@@ -591,14 +591,16 @@ export default function PenugasanVendorTab() {
                             <HiOutlinePencilAlt className="text-lg" />
                         </span>
                     </Tooltip>
-                    <Tooltip title="Hapus">
-                        <span
-                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                            onClick={() => setDeleteTarget(row.original)}
-                        >
-                            <HiOutlineTrash className="text-lg" />
-                        </span>
-                    </Tooltip>
+                    {row.original.status !== 'selesai' && (
+                        <Tooltip title="Hapus">
+                            <span
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                onClick={() => setDeleteTarget(row.original)}
+                            >
+                                <HiOutlineTrash className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
                 </div>
             ),
         },
