@@ -33,4 +33,25 @@ export const jadwalShiftService = {
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.JADWAL_SHIFT_DETAIL(id))
     },
+    async importExcel(idProyek: string, file: File) {
+        const formData = new FormData()
+        formData.append('id_proyek', idProyek)
+        formData.append('file', file)
+        const { data } = await axios.post(API_ENDPOINTS.JADWAL_SHIFT_IMPORT, formData)
+        return data.data as { sukses: number; gagal: { baris: number; no_sim: string; alasan: string }[] }
+    },
+    async downloadTemplate(idProyek: string, dari: string, sampai: string) {
+        const res = await axios.get(API_ENDPOINTS.JADWAL_SHIFT_IMPORT_TEMPLATE, {
+            responseType: 'blob',
+            params: { id_proyek: idProyek, dari, sampai },
+        })
+        const href = URL.createObjectURL(res.data)
+        const link = document.createElement('a')
+        link.href = href
+        link.download = `template-jadwal-shift-${dari}.xlsx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(href)
+    },
 }

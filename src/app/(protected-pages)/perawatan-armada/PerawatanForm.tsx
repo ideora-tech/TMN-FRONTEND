@@ -1,14 +1,14 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlinePaperClip } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { perawatanArmadaService, PerawatanArmada, StatusPerawatan, PerawatanSparepartInput } from '@/services/perawatanArmada.service'
+import { perawatanArmadaService, PerawatanArmada, StatusPerawatan, PerawatanSparepartInput, BuktiPerawatan } from '@/services/perawatanArmada.service'
 import { jenisPerawatanService } from '@/services/jenisPerawatan.service'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -41,6 +41,34 @@ const emptyForm = (): FormState => ({
     status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '',
 })
 
+const MAX_BUKTI = 10
+const MAX_UKURAN_BUKTI = 5 * 1024 * 1024
+const BUKTI_ACCEPT = '.jpg,.jpeg,.png,.webp'
+
+function FotoBuktiBaru({ file, onRemove }: { file: File; onRemove: () => void }) {
+    const [src, setSrc] = useState('')
+    useEffect(() => {
+        const url = URL.createObjectURL(file)
+        setSrc(url)
+        return () => URL.revokeObjectURL(url)
+    }, [file])
+
+    return (
+        <div className="relative">
+            {src && (
+                <img src={src} alt={file.name}
+                    className="w-full h-24 object-cover rounded-lg border border-dashed border-blue-300 dark:border-blue-500/40" />
+            )}
+            <p className="text-xs text-gray-400 truncate mt-1">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
+            <span
+                className="absolute top-1 right-1 cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/90 text-red-500 hover:bg-red-50 shadow transition-colors"
+                onClick={onRemove}>
+                <HiOutlineTrash className="text-sm" />
+            </span>
+        </div>
+    )
+}
+
 export default function PerawatanForm({ editId, editArmadaId }: { editId?: string; editArmadaId?: string }) {
     const router = useRouter()
     const isEdit = !!editId
@@ -49,6 +77,11 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
     const [items, setItems] = useState<ItemRow[]>([])
     const [loading, setLoading] = useState(isEdit)
     const [saving, setSaving]   = useState(false)
+
+    const [buktiBaru, setBuktiBaru] = useState<File[]>([])
+    const [buktiLama, setBuktiLama] = useState<BuktiPerawatan[]>([])
+    const [buktiHapus, setBuktiHapus] = useState<BuktiPerawatan | null>(null)
+    const [menghapusBukti, setMenghapusBukti] = useState(false)
 
     const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
     const [armadaList, setArmadaList] = useState<Armada[]>([])
@@ -92,6 +125,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     qty: String(it.qty),
                     harga: String(it.harga),
                 })))
+                setBuktiLama(p.bukti ?? [])
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
@@ -175,6 +209,41 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
         })
     }
 
+    const validasiBukti = (files: File[]): File[] => {
+        const valid = files.filter(f => {
+            if (!f.type.startsWith('image/')) {
+                toast.push(<Notification type="danger" title={`${f.name} bukan file foto`} />)
+                return false
+            }
+            if (f.size > MAX_UKURAN_BUKTI) {
+                toast.push(<Notification type="danger" title={`${f.name} melebihi 5 MB`} />)
+                return false
+            }
+            return true
+        })
+        const sisa = MAX_BUKTI - buktiLama.length
+        if (valid.length > sisa) {
+            toast.push(<Notification type="danger" title={`Maksimal ${MAX_BUKTI} file bukti per perawatan`} />)
+            return valid.slice(0, Math.max(sisa, 0))
+        }
+        return valid
+    }
+
+    const hapusBuktiLama = async () => {
+        if (!buktiHapus || !editId || !editArmadaId) return
+        setMenghapusBukti(true)
+        try {
+            await perawatanArmadaService.hapusBukti(editArmadaId, editId, buktiHapus.id_bukti)
+            setBuktiLama(p => p.filter(b => b.id_bukti !== buktiHapus.id_bukti))
+            toast.push(<Notification type="success" title="Bukti berhasil dihapus" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenghapusBukti(false)
+            setBuktiHapus(null)
+        }
+    }
+
     const totalSparepart = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.harga) || 0), 0)
     const selectedArmada = armadaList.find(a => a.id_armada === form.id_armada)
 
@@ -199,12 +268,25 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     harga: Number(it.harga) || 0,
                 })),
             }
+            let idPerawatan: string
+            let idArmadaTujuan: string
             if (isEdit && editId && editArmadaId) {
                 await perawatanArmadaService.update(editArmadaId, editId, payload)
+                idPerawatan = editId
+                idArmadaTujuan = editArmadaId
                 toast.push(<Notification type="success" title="Perawatan berhasil diperbarui" />)
             } else {
-                await perawatanArmadaService.create(form.id_armada, payload)
+                const created = await perawatanArmadaService.create(form.id_armada, payload)
+                idPerawatan = created.id_perawatan
+                idArmadaTujuan = form.id_armada
                 toast.push(<Notification type="success" title="Perawatan berhasil dicatat" />)
+            }
+            if (buktiBaru.length > 0) {
+                try {
+                    await perawatanArmadaService.uploadBukti(idArmadaTujuan, idPerawatan, buktiBaru)
+                } catch (err) {
+                    toast.push(<Notification type="warning" title={`Perawatan tersimpan, tapi upload bukti gagal: ${parseApiError(err)}. Buka Edit untuk unggah ulang.`} />)
+                }
             }
             router.push(ROUTES.PERAWATAN_ARMADA)
         } catch (err) {
@@ -283,6 +365,43 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
 
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Bukti / Lampiran</p>
+                            <Upload multiple accept={BUKTI_ACCEPT} showList={false} fileList={buktiBaru}
+                                onChange={files => setBuktiBaru(validasiBukti(files))}>
+                                <Button type="button" size="sm" variant="plain" icon={<HiOutlinePaperClip />}>Pilih Foto</Button>
+                            </Upload>
+                        </div>
+                        <p className="text-xs text-gray-400 -mt-2 mb-2">Foto kerusakan / nota bengkel — JPG, PNG, WEBP · maks. 5 MB per foto · maks. {MAX_BUKTI} foto</p>
+                        {buktiLama.length === 0 && buktiBaru.length === 0 ? (
+                            <p className="text-gray-400 text-xs py-2">Belum ada foto bukti dilampirkan.</p>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                                {buktiLama.map(b => (
+                                    <div key={b.id_bukti} className="relative">
+                                        <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                            <img src={b.url_file} alt={b.nama_asli}
+                                                className="w-full h-24 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
+                                        </a>
+                                        <p className="text-xs text-gray-400 truncate mt-1">{b.nama_asli}</p>
+                                        {isEdit && (
+                                            <span
+                                                className="absolute top-1 right-1 cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/90 text-red-500 hover:bg-red-50 shadow transition-colors"
+                                                onClick={() => setBuktiHapus(b)}>
+                                                <HiOutlineTrash className="text-sm" />
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                                {buktiBaru.map((f, idx) => (
+                                    <FotoBuktiBaru key={`${f.name}-${f.size}-${idx}`} file={f}
+                                        onRemove={() => setBuktiBaru(p => p.filter((_, i) => i !== idx))} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
                             <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addItem}>Tambah Part</Button>
                         </div>
@@ -327,6 +446,15 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     </div>
                 </form>
             </Card>
+
+            <Dialog isOpen={!!buktiHapus} onClose={() => setBuktiHapus(null)} onRequestClose={() => setBuktiHapus(null)}>
+                <h5 className="mb-4">Hapus Bukti</h5>
+                <p>Hapus file <span className="font-semibold">{buktiHapus?.nama_asli}</span> dari perawatan ini?</p>
+                <div className="text-right mt-6 flex justify-end gap-2">
+                    <Button type="button" variant="plain" onClick={() => setBuktiHapus(null)}>Batal</Button>
+                    <Button type="button" variant="solid" customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'} loading={menghapusBukti} onClick={hapusBuktiLama}>Hapus</Button>
+                </div>
+            </Dialog>
         </div>
     )
 }

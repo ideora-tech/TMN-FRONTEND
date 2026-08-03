@@ -84,6 +84,13 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
+        key: 'alokasi-armada', path: '/alokasi-armada', title: 'Alokasi Armada',
+        translateKey: 'nav.alokasiArmada', icon: 'repeat',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
         key: 'trip', path: '/trip', title: 'Trip Monitor',
         translateKey: 'nav.trip', icon: 'mapPin',
         type: NAV_ITEM_TYPE_ITEM,

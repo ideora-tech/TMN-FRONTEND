@@ -35,6 +35,13 @@ export const ROUTES = {
     PAKET_PERAWATAN_SPAREPART_BARU:   '/paket-perawatan-sparepart/baru',
     PAKET_PERAWATAN_SPAREPART_DETAIL: (id: string) => `/paket-perawatan-sparepart/${id}`,
 
+    SUPPLIER: '/supplier',
+
+    PEMBELIAN_SPAREPART:         '/pembelian-sparepart',
+    PEMBELIAN_SPAREPART_BARU:    '/pembelian-sparepart/baru',
+    PEMBELIAN_SPAREPART_DETAIL:  (id: string) => `/pembelian-sparepart/${id}`,
+    PEMBELIAN_SPAREPART_EDIT:    (id: string) => `/pembelian-sparepart/${id}/edit`,
+
     SHIFT:        '/shift',
     SHIFT_BARU:   '/shift/baru',
     SHIFT_DETAIL: (id: string) => `/shift/${id}`,
@@ -105,6 +112,7 @@ export const ROUTES = {
     PAYROLL_DETAIL:     (id: string) => `/payroll/${id}`,
     PAYROLL_PENGATURAN: '/payroll/pengaturan',
 
+    ALOKASI_ARMADA:   '/alokasi-armada',
     PENUGASAN:        '/penugasan',
     PENUGASAN_BARU:   '/penugasan/baru',
     PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,

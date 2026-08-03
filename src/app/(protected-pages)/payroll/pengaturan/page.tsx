@@ -7,33 +7,90 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { payrollService, PengaturanPayroll } from '@/services/payroll.service'
 
-const PENGATURAN_DEFAULT: PengaturanPayroll = {
-    tanggal_mulai_cutoff: 21,
-    hari_kerja_per_bulan: 25,
-    persen_bpjs_kesehatan: 1,
-    persen_bpjs_jht: 2,
-    persen_bpjs_jp: 1,
-    plafon_gaji_bpjs_kesehatan: 12000000,
+type FormPengaturan = Record<keyof PengaturanPayroll, string>
+type ErrorPengaturan = Partial<Record<keyof PengaturanPayroll, string>>
+
+const FORM_DEFAULT: FormPengaturan = {
+    tanggal_mulai_cutoff: '21',
+    hari_kerja_per_bulan: '25',
+    persen_bpjs_kesehatan: '1',
+    persen_bpjs_jht: '2',
+    persen_bpjs_jp: '1',
+    plafon_gaji_bpjs_kesehatan: '12000000',
 }
+
+const ATURAN: { key: keyof PengaturanPayroll; label: string; min: number; max?: number; bulat?: boolean }[] = [
+    { key: 'tanggal_mulai_cutoff', label: 'Tanggal mulai cut-off', min: 1, max: 28, bulat: true },
+    { key: 'hari_kerja_per_bulan', label: 'Hari kerja per bulan', min: 1, max: 31, bulat: true },
+    { key: 'persen_bpjs_kesehatan', label: 'BPJS Kesehatan', min: 0, max: 100 },
+    { key: 'persen_bpjs_jht', label: 'BPJS JHT', min: 0, max: 100 },
+    { key: 'persen_bpjs_jp', label: 'BPJS JP', min: 0, max: 100 },
+    { key: 'plafon_gaji_bpjs_kesehatan', label: 'Plafon gaji BPJS Kesehatan', min: 0 },
+]
+
+const keForm = (p: PengaturanPayroll): FormPengaturan => ({
+    tanggal_mulai_cutoff: String(p.tanggal_mulai_cutoff),
+    hari_kerja_per_bulan: String(p.hari_kerja_per_bulan),
+    persen_bpjs_kesehatan: String(p.persen_bpjs_kesehatan),
+    persen_bpjs_jht: String(p.persen_bpjs_jht),
+    persen_bpjs_jp: String(p.persen_bpjs_jp),
+    plafon_gaji_bpjs_kesehatan: String(p.plafon_gaji_bpjs_kesehatan),
+})
+
+const keAngka = (v: string): number => Number(v.trim().replace(',', '.'))
 
 export default function PengaturanPayrollPage() {
     const router = useRouter()
-    const [form, setForm]       = useState<PengaturanPayroll>(PENGATURAN_DEFAULT)
+    const [form, setForm]       = useState<FormPengaturan>(FORM_DEFAULT)
+    const [errors, setErrors]   = useState<ErrorPengaturan>({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving]   = useState(false)
 
     useEffect(() => {
         payrollService.getPengaturan()
-            .then(setForm)
+            .then(p => setForm(keForm(p)))
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [])
 
+    const ubah = (key: keyof PengaturanPayroll, value: string) => {
+        setForm(p => ({ ...p, [key]: value }))
+        setErrors(p => ({ ...p, [key]: undefined }))
+    }
+
+    const validasi = (): boolean => {
+        const hasil: ErrorPengaturan = {}
+        for (const { key, label, min, max, bulat } of ATURAN) {
+            const teks = form[key].trim()
+            if (!teks) {
+                hasil[key] = `${label} wajib diisi`
+                continue
+            }
+            const polaValid = bulat ? /^\d+$/.test(teks) : /^\d+([.,]\d+)?$/.test(teks)
+            const angka = keAngka(teks)
+            if (!polaValid || Number.isNaN(angka) || angka < min || (max !== undefined && angka > max)) {
+                hasil[key] = max !== undefined
+                    ? `Harus angka${bulat ? ' bulat' : ''} ${min}–${max}`
+                    : `Harus angka ${min} atau lebih`
+            }
+        }
+        setErrors(hasil)
+        return Object.keys(hasil).length === 0
+    }
+
     const handleSubmit = async () => {
+        if (!validasi()) return
         setSaving(true)
         try {
-            const hasil = await payrollService.simpanPengaturan(form)
-            setForm(hasil)
+            const hasil = await payrollService.simpanPengaturan({
+                tanggal_mulai_cutoff: keAngka(form.tanggal_mulai_cutoff),
+                hari_kerja_per_bulan: keAngka(form.hari_kerja_per_bulan),
+                persen_bpjs_kesehatan: keAngka(form.persen_bpjs_kesehatan),
+                persen_bpjs_jht: keAngka(form.persen_bpjs_jht),
+                persen_bpjs_jp: keAngka(form.persen_bpjs_jp),
+                plafon_gaji_bpjs_kesehatan: keAngka(form.plafon_gaji_bpjs_kesehatan),
+            })
+            setForm(keForm(hasil))
             toast.push(<Notification type="success" title="Pengaturan payroll tersimpan" />)
             router.push(ROUTES.PAYROLL)
         } catch (err) {
@@ -67,14 +124,16 @@ export default function PengaturanPayrollPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                             <FormItem label="Tanggal Mulai Cut-off" asterisk
-                                extra={<span className="text-xs text-gray-400">Contoh 21 = periode 21 bulan lalu s/d 20 bulan gajian. Isi 1 untuk bulan kalender penuh.</span>}>
-                                <Input type="number" min={1} max={28} value={form.tanggal_mulai_cutoff}
-                                    onChange={e => setForm(p => ({ ...p, tanggal_mulai_cutoff: Number(e.target.value) }))} />
+                                invalid={!!errors.tanggal_mulai_cutoff} errorMessage={errors.tanggal_mulai_cutoff}
+                                extra={<span className="text-xs text-gray-400">Contoh 21 = periode 21 bulan lalu s/d 20 bulan gajian. Isi 1 untuk bulan kalender penuh. Maksimal 28 (menyesuaikan Februari).</span>}>
+                                <Input type="text" value={form.tanggal_mulai_cutoff} invalid={!!errors.tanggal_mulai_cutoff}
+                                    onChange={e => ubah('tanggal_mulai_cutoff', e.target.value)} />
                             </FormItem>
                             <FormItem label="Hari Kerja per Bulan" asterisk
+                                invalid={!!errors.hari_kerja_per_bulan} errorMessage={errors.hari_kerja_per_bulan}
                                 extra={<span className="text-xs text-gray-400">Pembagi potongan alpha: potongan = alpha × (gaji pokok ÷ angka ini)</span>}>
-                                <Input type="number" min={1} max={31} value={form.hari_kerja_per_bulan}
-                                    onChange={e => setForm(p => ({ ...p, hari_kerja_per_bulan: Number(e.target.value) }))} />
+                                <Input type="text" value={form.hari_kerja_per_bulan} invalid={!!errors.hari_kerja_per_bulan}
+                                    onChange={e => ubah('hari_kerja_per_bulan', e.target.value)} />
                             </FormItem>
                         </div>
 
@@ -84,22 +143,26 @@ export default function PengaturanPayrollPage() {
                             <div className="border-t border-gray-100 dark:border-gray-700 mt-2" />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="BPJS Kesehatan (%)" asterisk>
-                                <Input type="number" min={0} max={100} step={0.1} value={form.persen_bpjs_kesehatan}
-                                    onChange={e => setForm(p => ({ ...p, persen_bpjs_kesehatan: Number(e.target.value) }))} />
+                            <FormItem label="BPJS Kesehatan (%)" asterisk
+                                invalid={!!errors.persen_bpjs_kesehatan} errorMessage={errors.persen_bpjs_kesehatan}>
+                                <Input type="text" value={form.persen_bpjs_kesehatan} invalid={!!errors.persen_bpjs_kesehatan}
+                                    onChange={e => ubah('persen_bpjs_kesehatan', e.target.value)} />
                             </FormItem>
                             <FormItem label="Plafon Gaji BPJS Kesehatan (Rp)" asterisk
+                                invalid={!!errors.plafon_gaji_bpjs_kesehatan} errorMessage={errors.plafon_gaji_bpjs_kesehatan}
                                 extra={<span className="text-xs text-gray-400">Gaji di atas plafon dihitung sesuai batas ini</span>}>
-                                <Input type="number" min={0} value={form.plafon_gaji_bpjs_kesehatan}
-                                    onChange={e => setForm(p => ({ ...p, plafon_gaji_bpjs_kesehatan: Number(e.target.value) }))} />
+                                <Input type="text" value={form.plafon_gaji_bpjs_kesehatan} invalid={!!errors.plafon_gaji_bpjs_kesehatan}
+                                    onChange={e => ubah('plafon_gaji_bpjs_kesehatan', e.target.value)} />
                             </FormItem>
-                            <FormItem label="BPJS Ketenagakerjaan — JHT (%)" asterisk>
-                                <Input type="number" min={0} max={100} step={0.1} value={form.persen_bpjs_jht}
-                                    onChange={e => setForm(p => ({ ...p, persen_bpjs_jht: Number(e.target.value) }))} />
+                            <FormItem label="BPJS Ketenagakerjaan — JHT (%)" asterisk
+                                invalid={!!errors.persen_bpjs_jht} errorMessage={errors.persen_bpjs_jht}>
+                                <Input type="text" value={form.persen_bpjs_jht} invalid={!!errors.persen_bpjs_jht}
+                                    onChange={e => ubah('persen_bpjs_jht', e.target.value)} />
                             </FormItem>
-                            <FormItem label="BPJS Ketenagakerjaan — JP (%)" asterisk>
-                                <Input type="number" min={0} max={100} step={0.1} value={form.persen_bpjs_jp}
-                                    onChange={e => setForm(p => ({ ...p, persen_bpjs_jp: Number(e.target.value) }))} />
+                            <FormItem label="BPJS Ketenagakerjaan — JP (%)" asterisk
+                                invalid={!!errors.persen_bpjs_jp} errorMessage={errors.persen_bpjs_jp}>
+                                <Input type="text" value={form.persen_bpjs_jp} invalid={!!errors.persen_bpjs_jp}
+                                    onChange={e => ubah('persen_bpjs_jp', e.target.value)} />
                             </FormItem>
                         </div>
 

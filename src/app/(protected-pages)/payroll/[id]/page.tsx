@@ -146,6 +146,11 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 <div>
                     <p className="font-medium">{row.original.nama_karyawan}</p>
                     <p className="text-xs text-gray-400 font-mono">{row.original.karyawan_nik}</p>
+                    {row.original.catatan && (
+                        <Tooltip title={row.original.catatan}>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 truncate max-w-40">{row.original.catatan}</p>
+                        </Tooltip>
+                    )}
                 </div>
             ),
         },
@@ -183,7 +188,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
         {
             header: 'BPJS', id: 'bpjs', size: 110,
             cell: ({ row }: CellContext<PayrollSlip, unknown>) => {
-                const total = row.original.potongan_bpjs_kesehatan + row.original.potongan_bpjs_tk
+                const total = Number(row.original.potongan_bpjs_kesehatan) + Number(row.original.potongan_bpjs_tk)
                 return total > 0 ? <span className="text-red-500">{formatRupiah(total)}</span> : strip
             },
         },
@@ -244,7 +249,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                             {periode.status === 'final' ? 'Final' : 'Draft'}
                         </Tag>
                     </div>
-                    <p className="text-gray-500 text-sm mt-0.5">Slip gaji seluruh karyawan aktif pada periode ini</p>
+                    <p className="text-gray-500 text-sm mt-0.5">Slip gaji seluruh karyawan pada periode ini</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {draft && (
@@ -290,7 +295,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     <div className="flex justify-center py-12"><Spinner size={36} /></div>
                 ) : slips.length === 0 ? (
                     <p className="text-gray-400 text-sm text-center py-10">
-                        Belum ada slip — klik <span className="font-semibold">Generate Slip</span> untuk menghitung gaji seluruh karyawan aktif.
+                        Belum ada slip — klik <span className="font-semibold">Generate Slip</span> untuk menghitung gaji seluruh karyawan.
                     </p>
                 ) : (
                     <>

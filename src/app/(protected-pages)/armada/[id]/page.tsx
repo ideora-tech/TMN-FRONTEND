@@ -196,6 +196,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [updatingRawat, setUpdatingRawat]     = useState(false)
     const [deleteRawatTarget, setDeleteRawatTarget] = useState<PerawatanArmada | null>(null)
     const [deletingRawat, setDeletingRawat]         = useState(false)
+    const [alasanHapusRawat, setAlasanHapusRawat]   = useState('')
     const [sparepartList, setSparepartList] = useState<Sparepart[]>([])
 
     useEffect(() => {
@@ -453,12 +454,12 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const handleDeletePerawatan = async () => {
-        if (!deleteRawatTarget) return
+        if (!deleteRawatTarget || !alasanHapusRawat.trim()) return
         setDeletingRawat(true)
         try {
-            await perawatanArmadaService.delete(id, deleteRawatTarget.id_perawatan)
+            await perawatanArmadaService.delete(id, deleteRawatTarget.id_perawatan, alasanHapusRawat.trim())
             toast.push(<Notification type="success" title="Data perawatan berhasil dihapus" />)
-            setDeleteRawatTarget(null); fetchPerawatan(); fetchPrediksi()
+            setDeleteRawatTarget(null); setAlasanHapusRawat(''); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setDeletingRawat(false) }
@@ -1315,11 +1316,16 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             {/* Confirm Hapus Perawatan */}
             <ConfirmDialog isOpen={!!deleteRawatTarget} type="danger" title="Hapus Perawatan"
                 confirmText="Ya, Hapus" cancelText="Batal"
-                onClose={() => setDeleteRawatTarget(null)}
-                onCancel={() => setDeleteRawatTarget(null)}
+                onClose={() => { setDeleteRawatTarget(null); setAlasanHapusRawat('') }}
+                onCancel={() => { setDeleteRawatTarget(null); setAlasanHapusRawat('') }}
                 onConfirm={handleDeletePerawatan}
-                confirmButtonProps={{ loading: deletingRawat }}>
+                confirmButtonProps={{ loading: deletingRawat, disabled: !alasanHapusRawat.trim() }}>
                 <p>Hapus data perawatan <strong>{deleteRawatTarget?.jenis_perawatan}</strong>?</p>
+                <div className="mt-3">
+                    <p className="text-sm font-semibold mb-1">Alasan penghapusan <span className="text-red-500">*</span></p>
+                    <Input textArea rows={3} placeholder="Tulis alasan kenapa data ini dihapus..."
+                        value={alasanHapusRawat} onChange={e => setAlasanHapusRawat(e.target.value)} />
+                </div>
             </ConfirmDialog>
         </div>
     )

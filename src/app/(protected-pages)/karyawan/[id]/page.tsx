@@ -1073,8 +1073,8 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
 
             {/* Exit Modal */}
             <Dialog isOpen={exitOpen} onClose={() => setExitOpen(false)}>
-                <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
+                <div>
+                    <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30">
                             <HiOutlineExclamationCircle className="text-xl text-red-600" />
                         </div>
@@ -1103,7 +1103,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={e => setExitForm(p => ({ ...p, alasan: e.target.value }))} />
                             </FormItem>
                         </div>
-                        <div className="sm:col-span-2 flex items-center gap-3 py-2">
+                        <div className="sm:col-span-2 flex items-center gap-3 py-1">
                             <input type="checkbox" id="dapat_direkrut"
                                 checked={exitForm.dapat_direkrut_kembali}
                                 onChange={e => setExitForm(p => ({ ...p, dapat_direkrut_kembali: e.target.checked }))}
@@ -1114,7 +1114,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setExitOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" className="bg-red-600 hover:bg-red-700" loading={exitSaving}
                             disabled={!exitForm.jenis_exit || !exitForm.tanggal_efektif}>

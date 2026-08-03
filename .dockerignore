@@ -3,3 +3,5 @@
 node_modules
 *.md
 docs
+tsconfig.tsbuildinfo
+.eslintcache

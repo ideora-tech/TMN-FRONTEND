@@ -213,12 +213,12 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                                 onClick={() => setShowDetailBiaya(s => !s)}>
                                 {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                                Biaya Operasional (opsional)
+                                Uang Jalan (opsional)
                             </button>
                             {showDetailBiaya && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                                     <p className="text-xs text-gray-400 sm:col-span-2 -mt-1 mb-1">
-                                        Mengubah biaya operasional di sini akan memperbarui tarif ini untuk semua proyek/penawaran lain yang memakainya.
+                                        Mengubah uang jalan di sini akan memperbarui tarif ini untuk semua proyek/penawaran lain yang memakainya.
                                     </p>
                                     <FormItem label="Estimasi Tol">
                                         <Input prefix="Rp" placeholder="0"
@@ -278,7 +278,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                         onClick={() => setShowDetailBiaya(s => !s)}>
                         {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                        Biaya Operasional (opsional)
+                        Uang Jalan (opsional)
                     </button>
                     {showDetailBiaya && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">

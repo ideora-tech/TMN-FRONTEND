@@ -82,7 +82,18 @@ export default function PenugasanPage() {
     const [armadaMap, setArmadaMap]         = useState<Record<string, Armada>>({})
     const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [supirList, setSupirList]         = useState<Supir[]>([])
-    const [selectedProyek, setSelectedProyek] = useState<string>(searchParams.get('proyek') ?? '')
+    const [selectedProyek, setSelectedProyek] = useState<string>(() =>
+        searchParams.get('proyek')
+        ?? (typeof window !== 'undefined' ? localStorage.getItem('penugasan.proyek') ?? '' : ''))
+
+    const gantiProyek = (id: string) => {
+        setSelectedProyek(id)
+        if (typeof window !== 'undefined') {
+            if (id) localStorage.setItem('penugasan.proyek', id)
+            else localStorage.removeItem('penugasan.proyek')
+        }
+        router.replace(id ? `${ROUTES.PENUGASAN}?proyek=${id}` : ROUTES.PENUGASAN, { scroll: false })
+    }
     const [viewMode, setViewMode]             = useState<'tabel' | 'papan'>('tabel')
     const [list, setList]             = useState<Penugasan[]>([])
     const [loading, setLoading]       = useState(false)
@@ -386,7 +397,6 @@ export default function PenugasanPage() {
 
     const validateEditForm = () => {
         const e: typeof editFormErrors = {}
-        if (!editForm.id_armada) e.id_armada = 'Pilih armada'
         if (!editForm.id_supir) e.id_supir = 'Pilih supir'
         if (!editForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setEditFormErrors(e)
@@ -450,7 +460,7 @@ export default function PenugasanPage() {
         try {
             const estimasi = editForm.estimasi_biaya ? Number(editForm.estimasi_biaya) : null
             await penugasanService.update(editTarget.id_penugasan, {
-                id_armada:      editForm.id_armada,
+                id_armada:      editForm.id_armada || null,
                 id_supir:       editForm.id_supir,
                 tanggal_tugas:  editForm.tanggal_tugas,
                 estimasi_biaya: estimasi,
@@ -618,7 +628,7 @@ export default function PenugasanPage() {
                         options={proyekOptions}
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}
                         onChange={(opt) => {
-                            setSelectedProyek((opt as { value: string } | null)?.value ?? '')
+                            gantiProyek((opt as { value: string } | null)?.value ?? '')
                             setCurrentPage(1)
                             clearBulkSelection()
                         }}
@@ -675,7 +685,8 @@ export default function PenugasanPage() {
                         Pilih proyek di atas untuk melihat daftar penugasan
                     </div>
                 ) : viewMode === 'papan' ? (
-                    <PapanShift idProyek={selectedProyek} />
+                    <PapanShift idProyek={selectedProyek}
+                        namaProyek={proyekOptions.find(o => o.value === selectedProyek)?.label ?? ''} />
                 ) : (
                     <DataTable
                         ref={(instance: DataTableResetHandle | HTMLTableElement | null) => { tableRef.current = instance }}
@@ -892,9 +903,10 @@ export default function PenugasanPage() {
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
-                            <FormItem label="Armada" asterisk invalid={!!editFormErrors.id_armada} errorMessage={editFormErrors.id_armada}>
+                            <FormItem label="Armada" invalid={!!editFormErrors.id_armada} errorMessage={editFormErrors.id_armada}>
                                 <Select
-                                    placeholder="Pilih armada..."
+                                    isClearable
+                                    placeholder="Kosongkan untuk supir shift — armada diisi otomatis dari jadwal"
                                     options={armadaOptionsForEdit}
                                     value={armadaOptionsForEdit.find(o => o.value === editForm.id_armada) ?? null}
                                     onChange={opt => {
@@ -902,6 +914,7 @@ export default function PenugasanPage() {
                                         setEditFormErrors(prev => ({ ...prev, id_armada: undefined }))
                                     }}
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Supir shift/pengganti: biarkan kosong — sistem meminjamkan mobil supir yang libur saat dia dijadwalkan.</p>
                             </FormItem>
                             <FormItem label="Supir" asterisk invalid={!!editFormErrors.id_supir} errorMessage={editFormErrors.id_supir}>
                                 <Select

@@ -35,8 +35,18 @@ export const API_ENDPOINTS = {
     // Perawatan Armada (nested)
     ARMADA_PERAWATAN:       (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan`,
     ARMADA_PERAWATAN_DETAIL:(idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}`,
+    ARMADA_PERAWATAN_BUKTI: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti`,
+    ARMADA_PERAWATAN_BUKTI_DETAIL: (idArmada: string, id: string, idBukti: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti/${idBukti}`,
     ARMADA_PREDIKSI_PERAWATAN: (idArmada: string) => `/api/proxy/armada/${idArmada}/prediksi-perawatan`,
+    ALOKASI_ARMADA:         '/api/proxy/alokasi-armada',
+    ALOKASI_ARMADA_DETAIL:  (id: string) => `/api/proxy/alokasi-armada/${id}`,
+    ALOKASI_ARMADA_TERSEDIA: '/api/proxy/alokasi-armada/armada-tersedia',
+    ALOKASI_ARMADA_EXPORT:  (format: 'excel' | 'pdf') => `/api/proxy/alokasi-armada/export/${format}`,
+    ALOKASI_ARMADA_RIWAYAT: '/api/proxy/alokasi-armada/riwayat',
     PERAWATAN_ARMADA:       '/api/proxy/perawatan-armada',
+    PERAWATAN_REKAP_PER_UNIT: '/api/proxy/perawatan-armada/rekap-per-unit',
+    PERAWATAN_REKAP_EXPORT: (format: 'excel' | 'pdf') => `/api/proxy/perawatan-armada/rekap-per-unit/export/${format}`,
+    ARMADA_PERAWATAN_EXPORT: (idArmada: string, format: 'excel' | 'pdf') => `/api/proxy/armada/${idArmada}/perawatan/export/${format}`,
 
     // Jenis Perawatan
     JENIS_PERAWATAN:        '/api/proxy/jenis-perawatan',
@@ -65,6 +75,22 @@ export const API_ENDPOINTS = {
     PAKET_PERAWATAN_SPAREPART_DETAIL:   (id: string) => `/api/proxy/paket-perawatan-sparepart/${id}`,
     PAKET_PERAWATAN_SPAREPART_RESOLUSI: '/api/proxy/paket-perawatan-sparepart/resolusi',
 
+    // Supplier
+    SUPPLIER:        '/api/proxy/supplier',
+    SUPPLIER_DETAIL: (id: string) => `/api/proxy/supplier/${id}`,
+
+    // Pembelian Sparepart
+    PEMBELIAN_SPAREPART:                 '/api/proxy/pembelian-sparepart',
+    PEMBELIAN_SPAREPART_LAPORAN:         '/api/proxy/pembelian-sparepart/laporan',
+    PEMBELIAN_SPAREPART_DETAIL:          (id: string) => `/api/proxy/pembelian-sparepart/${id}`,
+    PEMBELIAN_SPAREPART_APPROVE_MANAGER: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-manager`,
+    PEMBELIAN_SPAREPART_APPROVE_FINANCE: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-finance`,
+    PEMBELIAN_SPAREPART_TOLAK:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/tolak`,
+    PEMBELIAN_SPAREPART_REALISASI:       (id: string) => `/api/proxy/pembelian-sparepart/${id}/realisasi`,
+    PEMBELIAN_SPAREPART_LUNAS:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/lunas`,
+    PEMBELIAN_SPAREPART_BUKTI:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/bukti`,
+    PEMBELIAN_SPAREPART_BUKTI_DETAIL:    (id: string, idBukti: string) => `/api/proxy/pembelian-sparepart/${id}/bukti/${idBukti}`,
+
     // Shift
     SHIFT:        '/api/proxy/shift',
     SHIFT_DETAIL: (id: string) => `/api/proxy/shift/${id}`,
@@ -72,6 +98,8 @@ export const API_ENDPOINTS = {
     // Jadwal Shift
     JADWAL_SHIFT:        '/api/proxy/jadwal-shift',
     JADWAL_SHIFT_DETAIL: (id: string) => `/api/proxy/jadwal-shift/${id}`,
+    JADWAL_SHIFT_IMPORT:          '/api/proxy/jadwal-shift/import',
+    JADWAL_SHIFT_IMPORT_TEMPLATE: '/api/proxy/jadwal-shift/import/template',
 
     // Karyawan Exit
     KARYAWAN_EXIT: '/api/proxy/karyawan-exit',

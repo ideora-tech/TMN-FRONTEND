@@ -1,0 +1,308 @@
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import { Card, Input, Tag, Tooltip, toast, Notification, DatePicker, Pagination, Spinner, Dialog, Button } from '@/components/ui'
+import Tabs from '@/components/ui/Tabs'
+import Select from '@/components/ui/Select'
+import RiwayatUnitTab from './RiwayatUnitTab'
+import { HiOutlineSearch, HiOutlineX, HiOutlineSwitchHorizontal, HiOutlineDownload } from 'react-icons/hi'
+import dayjs from 'dayjs'
+import { parseApiError } from '@/utils/error.util'
+import { alokasiArmadaService, AlokasiArmada, ArmadaTersedia } from '@/services/alokasiArmada.service'
+import { armadaService, Armada } from '@/services/armada.service'
+
+type Option = { value: string; label: string }
+
+const SUMBER_TAG: Record<string, { label: string; className: string }> = {
+    default:  { label: 'Default',  className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100' },
+    otomatis: { label: 'Otomatis', className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' },
+    manual:   { label: 'Manual',   className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+}
+
+const PAGE_SIZE_OPTIONS = [
+    { value: 10, label: '10 / halaman' },
+    { value: 20, label: '20 / halaman' },
+    { value: 50, label: '50 / halaman' },
+]
+
+const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
+
+export default function AlokasiArmadaPage() {
+    const [tab, setTab]         = useState('harian')
+    const [list, setList]       = useState<AlokasiArmada[]>([])
+    const [loading, setLoading] = useState(false)
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch]           = useState('')
+    const [tanggalDari, setTanggalDari]     = useState<Date | null>(new Date())
+    const [tanggalSampai, setTanggalSampai] = useState<Date | null>(new Date())
+    const [armadaFilter, setArmadaFilter]   = useState('')
+    const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
+    const [mengunduh, setMengunduh]         = useState<'excel' | 'pdf' | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize]       = useState(10)
+    const [total, setTotal]             = useState(0)
+
+    const [gantiTarget, setGantiTarget] = useState<AlokasiArmada | null>(null)
+    const [opsiArmada, setOpsiArmada]   = useState<ArmadaTersedia[]>([])
+    const [armadaPilihan, setArmadaPilihan] = useState('')
+    const [memuatOpsi, setMemuatOpsi]   = useState(false)
+    const [menyimpan, setMenyimpan]     = useState(false)
+
+    const fetchData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await alokasiArmadaService.list({
+                page: currentPage, limit: pageSize,
+                tanggal_dari: tanggalDari ? dayjs(tanggalDari).format('YYYY-MM-DD') : undefined,
+                tanggal_sampai: tanggalSampai ? dayjs(tanggalSampai).format('YYYY-MM-DD') : undefined,
+                search: search || undefined,
+                id_armada: armadaFilter || undefined,
+            })
+            setList(res.data)
+            setTotal(res.meta.total)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setLoading(false)
+        }
+    }, [currentPage, pageSize, tanggalDari, tanggalSampai, search, armadaFilter])
+
+    useEffect(() => { fetchData() }, [fetchData])
+
+    useEffect(() => {
+        armadaService.list(1, 100).then(res => {
+            setArmadaOptions(res.data.map((a: Armada) => ({ value: a.id_armada, label: a.nopol })))
+        }).catch(() => {})
+    }, [])
+
+    const unduhRiwayat = async (format: 'excel' | 'pdf') => {
+        if (!armadaFilter) return
+        const nopol = armadaOptions.find(o => o.value === armadaFilter)?.label ?? 'armada'
+        setMengunduh(format)
+        try {
+            await alokasiArmadaService.downloadRiwayatArmada(nopol, format, {
+                id_armada: armadaFilter,
+                tanggal_dari: tanggalDari ? dayjs(tanggalDari).format('YYYY-MM-DD') : undefined,
+                tanggal_sampai: tanggalSampai ? dayjs(tanggalSampai).format('YYYY-MM-DD') : undefined,
+            })
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMengunduh(null)
+        }
+    }
+
+    const bukaGanti = async (item: AlokasiArmada) => {
+        setGantiTarget(item)
+        setArmadaPilihan(item.id_armada ?? '')
+        setMemuatOpsi(true)
+        try {
+            setOpsiArmada(await alokasiArmadaService.armadaTersedia(item.tanggal, item.id_supir, item.id_proyek))
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMemuatOpsi(false)
+        }
+    }
+
+    const simpanGanti = async () => {
+        if (!gantiTarget || !armadaPilihan) return
+        setMenyimpan(true)
+        try {
+            await alokasiArmadaService.override(gantiTarget.id_alokasi, armadaPilihan)
+            toast.push(<Notification type="success" title="Alokasi armada berhasil diubah" />)
+            setGantiTarget(null)
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyimpan(false)
+        }
+    }
+
+    const opsiOptions: Option[] = [
+        ...(gantiTarget?.id_armada && !opsiArmada.some(o => o.id_armada === gantiTarget.id_armada)
+            ? [{ value: gantiTarget.id_armada, label: `${gantiTarget.armada_nopol} (saat ini)` }]
+            : []),
+        ...opsiArmada.map(o => ({
+            value: o.id_armada,
+            label: `${o.nopol} — ${o.keterangan}${o.nama_pemilik ? ` (${o.nama_pemilik})` : ''}`,
+        })),
+    ]
+
+    return (
+        <div className="flex flex-col gap-4">
+            <div>
+                <h3 className="font-bold">Alokasi Armada</h3>
+                <p className="text-gray-500 text-sm mt-0.5">History pasangan supir & armada per hari — otomatis dari papan jadwal</p>
+            </div>
+
+            <Tabs value={tab} onChange={v => setTab(v as string)}>
+                <Tabs.TabList>
+                    <Tabs.TabNav value="harian">Alokasi Harian</Tabs.TabNav>
+                    <Tabs.TabNav value="riwayat">Riwayat per Unit</Tabs.TabNav>
+                </Tabs.TabList>
+                <div>
+                    <Tabs.TabContent value="riwayat"><RiwayatUnitTab /></Tabs.TabContent>
+                    <Tabs.TabContent value="harian">
+            <Card bodyClass="p-0">
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <Input
+                        className="flex-1 min-w-60"
+                        placeholder="Cari nama supir atau nopol... (tekan Enter)"
+                        suffix={
+                            searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setSearchInput(''); setSearch(''); setCurrentPage(1) }} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setSearch(searchInput); setCurrentPage(1) }} />
+                        }
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { setSearch(searchInput); setCurrentPage(1) } }}
+                    />
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker placeholder="Dari tanggal" value={tanggalDari}
+                            onChange={(date) => { setTanggalDari(date); setCurrentPage(1) }} />
+                    </div>
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker placeholder="Sampai tanggal" value={tanggalSampai}
+                            onChange={(date) => { setTanggalSampai(date); setCurrentPage(1) }} />
+                    </div>
+                    <div className="w-full sm:w-48 shrink-0">
+                        <Select
+                            placeholder="Semua Armada"
+                            isClearable
+                            options={armadaOptions}
+                            value={armadaOptions.find(o => o.value === armadaFilter) ?? null}
+                            onChange={opt => { setArmadaFilter((opt as Option | null)?.value ?? ''); setCurrentPage(1) }}
+                        />
+                    </div>
+                    <Tooltip title={armadaFilter ? 'Unduh riwayat pemegang armada terpilih (Excel)' : 'Pilih armada dulu untuk laporan per mobil'}>
+                        <span>
+                            <Button size="sm" icon={<HiOutlineDownload />} disabled={!armadaFilter}
+                                loading={mengunduh === 'excel'} onClick={() => unduhRiwayat('excel')}>
+                                Excel
+                            </Button>
+                        </span>
+                    </Tooltip>
+                    <Tooltip title={armadaFilter ? 'Unduh riwayat pemegang armada terpilih (PDF)' : 'Pilih armada dulu untuk laporan per mobil'}>
+                        <span>
+                            <Button size="sm" icon={<HiOutlineDownload />} disabled={!armadaFilter}
+                                loading={mengunduh === 'pdf'} onClick={() => unduhRiwayat('pdf')}>
+                                PDF
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-blue-50 dark:bg-blue-500/10">
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                                <th className={TH_CLASS}>Tanggal</th>
+                                <th className={TH_CLASS}>Proyek</th>
+                                <th className={TH_CLASS}>Supir</th>
+                                <th className={TH_CLASS}>Armada</th>
+                                <th className={TH_CLASS}>Milik</th>
+                                <th className={TH_CLASS}>Sumber</th>
+                                <th className="py-2.5 px-3" />
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={7} className="py-10 text-center">
+                                        <Spinner className="inline-block" size={28} />
+                                    </td>
+                                </tr>
+                            ) : list.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} className="py-10 text-center text-gray-400">
+                                        Belum ada alokasi pada periode ini — alokasi terbentuk otomatis saat papan jadwal diisi
+                                    </td>
+                                </tr>
+                            ) : (
+                                list.map(item => {
+                                    const sumber = SUMBER_TAG[item.sumber] ?? SUMBER_TAG.otomatis
+                                    return (
+                                        <tr key={item.id_alokasi}>
+                                            <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(item.tanggal).format('DD MMM YYYY')}</td>
+                                            <td className="py-2.5 px-3">{item.nama_proyek ?? '—'}</td>
+                                            <td className="py-2.5 px-3 font-semibold">{item.supir_nama}</td>
+                                            <td className="py-2.5 px-3">
+                                                {item.armada_nopol
+                                                    ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{item.armada_nopol}</span>
+                                                    : <Tag className="text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Belum dapat armada</Tag>}
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                {item.pemilik_nama
+                                                    ? (
+                                                        <div>
+                                                            <p className="text-xs font-medium">{item.pemilik_nama}</p>
+                                                            {item.keterangan && <p className="text-xs text-gray-400">{item.keterangan}</p>}
+                                                        </div>
+                                                    )
+                                                    : <span className="text-gray-400 text-xs">{item.keterangan ?? '—'}</span>}
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                <Tag className={`text-xs font-semibold ${sumber.className}`}>{sumber.label}</Tag>
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                <div className="flex items-center justify-end">
+                                                    <Tooltip title="Ganti armada">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                            onClick={() => bukaGanti(item)}>
+                                                            <HiOutlineSwitchHorizontal className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                    <Pagination currentPage={currentPage} pageSize={pageSize} total={total} onChange={setCurrentPage} />
+                    <div className="w-40">
+                        <Select
+                            size="sm"
+                            isSearchable={false}
+                            options={PAGE_SIZE_OPTIONS}
+                            value={PAGE_SIZE_OPTIONS.find(o => o.value === pageSize) ?? PAGE_SIZE_OPTIONS[0]}
+                            onChange={opt => { if (opt) { setPageSize((opt as { value: number }).value); setCurrentPage(1) } }}
+                        />
+                    </div>
+                </div>
+            </Card>
+                    </Tabs.TabContent>
+                </div>
+            </Tabs>
+
+            <Dialog isOpen={!!gantiTarget} onClose={() => setGantiTarget(null)} onRequestClose={() => setGantiTarget(null)}>
+                <h5 className="mb-1">Ganti Armada</h5>
+                <p className="text-sm text-gray-500 mb-3">
+                    {gantiTarget?.supir_nama} — {gantiTarget ? dayjs(gantiTarget.tanggal).format('DD MMM YYYY') : ''}
+                </p>
+                {memuatOpsi ? (
+                    <div className="py-6 text-center"><Spinner className="inline-block" size={24} /></div>
+                ) : (
+                    <Select
+                        placeholder={opsiOptions.length ? 'Pilih armada...' : 'Tidak ada armada tersedia'}
+                        options={opsiOptions}
+                        value={opsiOptions.find(o => o.value === armadaPilihan) ?? null}
+                        onChange={opt => setArmadaPilihan((opt as Option | null)?.value ?? '')}
+                    />
+                )}
+                <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="plain" onClick={() => setGantiTarget(null)}>Batal</Button>
+                    <Button type="button" variant="solid" loading={menyimpan}
+                        disabled={!armadaPilihan || armadaPilihan === (gantiTarget?.id_armada ?? '')}
+                        onClick={simpanGanti}>
+                        Simpan
+                    </Button>
+                </div>
+            </Dialog>
+        </div>
+    )
+}

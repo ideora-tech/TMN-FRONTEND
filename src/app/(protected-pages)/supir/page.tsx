@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification, Dialog, Upload } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -155,6 +155,13 @@ export default function SupirPage() {
         },
         { header: 'Jenis SIM', accessorKey: 'jenis_sim', size: 110 },
         {
+            header: 'Armada', accessorKey: 'armada_default', size: 130,
+            cell: ({ row }: CellContext<Supir, unknown>) =>
+                row.original.armada_default
+                    ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{row.original.armada_default}</span>
+                    : <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Kadaluarsa SIM', accessorKey: 'tgl_kadaluarsa_sim', size: 170,
             cell: ({ row }: CellContext<Supir, unknown>) => {
                 const tgl = row.original.tgl_kadaluarsa_sim
@@ -188,12 +195,12 @@ export default function SupirPage() {
             header: '', id: 'action', size: 100,
             cell: ({ row }: CellContext<Supir, unknown>) => (
                 <div className="flex items-center justify-end gap-2">
-                    <Tooltip title="Edit">
+                    <Tooltip title="Lihat Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                             onClick={() => router.push(ROUTES.SUPIR_DETAIL(row.original.id_supir))}
                         >
-                            <HiOutlinePencilAlt className="text-lg" />
+                            <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Hapus">

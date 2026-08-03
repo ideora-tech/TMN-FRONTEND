@@ -8,14 +8,17 @@ import { ROUTES } from '@/constants/route.constant'
 import PerawatanArmadaTab from './PerawatanArmadaTab'
 import IntervalPerawatanTab from './IntervalPerawatanTab'
 import JenisPerawatanTab from './JenisPerawatanTab'
+import LaporanPerUnitTab from './LaporanPerUnitTab'
 
-const TAB_VALUES = ['armada', 'interval', 'jenis'] as const
+const TAB_VALUES = ['armada', 'riwayat', 'interval', 'jenis', 'laporan'] as const
 type TabValue = (typeof TAB_VALUES)[number]
 
-const TAB_META: Record<TabValue, { addLabel: string; addRoute: string }> = {
+const TAB_META: Record<TabValue, { addLabel: string; addRoute: string } | null> = {
     armada:   { addLabel: 'Catat Perawatan', addRoute: ROUTES.PERAWATAN_ARMADA_BARU },
+    riwayat:  null,
     interval: { addLabel: 'Tambah Interval', addRoute: ROUTES.INTERVAL_PERAWATAN_BARU },
     jenis:    { addLabel: 'Tambah Jenis Perawatan', addRoute: ROUTES.JENIS_PERAWATAN_BARU },
+    laporan:  null,
 }
 
 export default function PerawatanArmadaPage() {
@@ -32,21 +35,27 @@ export default function PerawatanArmadaPage() {
                     <h3 className="font-bold">Perawatan Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Riwayat perawatan seluruh armada</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(TAB_META[activeTab].addRoute)}>
-                    {TAB_META[activeTab].addLabel}
-                </Button>
+                {TAB_META[activeTab] && (
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                        onClick={() => router.push(TAB_META[activeTab]!.addRoute)}>
+                        {TAB_META[activeTab]!.addLabel}
+                    </Button>
+                )}
             </div>
             <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="armada">Perawatan Armada</Tabs.TabNav>
+                    <Tabs.TabNav value="riwayat">Riwayat Selesai</Tabs.TabNav>
                     <Tabs.TabNav value="interval">Interval Perawatan</Tabs.TabNav>
                     <Tabs.TabNav value="jenis">Jenis Perawatan</Tabs.TabNav>
+                    <Tabs.TabNav value="laporan">Laporan per Unit</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="armada"><PerawatanArmadaTab /></Tabs.TabContent>
+                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" /></Tabs.TabContent>
                     <Tabs.TabContent value="interval"><IntervalPerawatanTab /></Tabs.TabContent>
                     <Tabs.TabContent value="jenis"><JenisPerawatanTab /></Tabs.TabContent>
+                    <Tabs.TabContent value="laporan"><LaporanPerUnitTab /></Tabs.TabContent>
                 </div>
             </Tabs>
         </div>

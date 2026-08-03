@@ -1,13 +1,15 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
+import { proyekRuteService } from '@/services/proyekRute.service'
 import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
+import { alokasiArmadaService } from '@/services/alokasiArmada.service'
 import { shiftService, Shift } from '@/services/shift.service'
 import { penugasanService } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -22,16 +24,22 @@ const HARI = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB']
 
 const jam = (t: string) => t.slice(0, 5) // "08:00:00" -> "08:00"
 
-type BarisSupir = { idSupir: string; nama: string; nopol: string | null }
+type BarisSupir = { idSupir: string; nama: string; nopol: string | null; jenis: string | null }
 
 type PilihanSel = { supir: BarisSupir; tanggal: string; jadwal?: JadwalShift }
 
-export default function PapanShift({ idProyek }: { idProyek: string }) {
+export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: string; namaProyek?: string }) {
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
+    const [importing, setImporting] = useState(false)
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+    const [importGagal, setImportGagal] = useState<{ baris: number; no_sim: string; alasan: string }[]>([])
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const selTerakhir = useRef<{ idSupir: string; tanggal: string } | null>(null)
     const [loading, setLoading] = useState(false)
 
     const [barisSupir, setBarisSupir]   = useState<BarisSupir[]>([])
     const [jadwalList, setJadwalList]   = useState<JadwalShift[]>([])
+    const [alokasiMap, setAlokasiMap]   = useState<Record<string, Record<string, string>>>({})
     const [shiftList, setShiftList]     = useState<Shift[]>([])
     const [cariSupir, setCariSupir]     = useState('')
 
@@ -47,6 +55,9 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
     // Dialog tambah master shift cepat (tombol toolbar)
     const [shiftFormOpen, setShiftFormOpen]     = useState(false)
+    const [shiftHapus, setShiftHapus]           = useState<Shift | null>(null)
+    const [menghapusShift, setMenghapusShift]   = useState(false)
+    const [shiftEdit, setShiftEdit]             = useState<Shift | null>(null)
     const [shiftForm, setShiftForm]             = useState({ nama: '', jam_mulai: '', jam_selesai: '' })
     const [shiftFormErrors, setShiftFormErrors] = useState<Record<string, string>>({})
     const [shiftSaving, setShiftSaving]         = useState(false)
@@ -78,11 +89,13 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
         try {
             const dari   = bulan.format('YYYY-MM-DD')
             const sampai = bulan.endOf('month').format('YYYY-MM-DD')
-            const [penugasan, jadwal, supirRes, armadaRes] = await Promise.all([
+            const [penugasan, jadwal, supirRes, armadaRes, alokasiRes] = await Promise.all([
                 penugasanService.list(idProyek, 1, 'internal', 100),
                 jadwalShiftService.list(idProyek, dari, sampai),
                 supirService.list(1, 100),
                 armadaService.list(1, 100),
+                alokasiArmadaService.list({ tanggal_dari: dari, tanggal_sampai: sampai, id_proyek: idProyek, limit: 500 })
+                    .catch(() => ({ data: [] })),
             ])
             const supirMap: Record<string, Supir> = {}
             supirRes.data.forEach((s: Supir) => { supirMap[s.id_supir] = s })
@@ -99,10 +112,19 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                         idSupir: p.id_supir!,
                         nama: s?.nama ?? p.id_supir!.slice(0, 8),
                         nopol: p.id_armada ? (armadaMap[p.id_armada]?.nopol ?? null) : null,
+                        jenis: p.id_armada ? (armadaMap[p.id_armada]?.nama_jenis ?? null) : null,
                     })
                 })
             setBarisSupir(Array.from(unik.values()).sort((a, b) => a.nama.localeCompare(b.nama)))
             setJadwalList(jadwal)
+
+            const aMap: Record<string, Record<string, string>> = {}
+            alokasiRes.data.forEach(al => {
+                if (!al.armada_nopol) return
+                aMap[al.id_supir] ??= {}
+                aMap[al.id_supir][al.tanggal.substring(0, 10)] = al.armada_nopol
+            })
+            setAlokasiMap(aMap)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -152,6 +174,45 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
             else next[key] = { supir, tanggal, jadwal }
             return next
         })
+        selTerakhir.current = { idSupir: supir.idSupir, tanggal }
+    }
+
+    // Shift+klik: pilih rentang (persegi) dari sel terakhir diklik sampai sel ini,
+    // lintas baris supir dan kolom tanggal — untuk hapus/ganti/assign massal cepat.
+    const klikSel = (e: React.MouseEvent, supir: BarisSupir, tanggal: string, jadwal?: JadwalShift) => {
+        if (!e.shiftKey || selTerakhir.current === null) {
+            toggleSel(supir, tanggal, jadwal)
+            return
+        }
+
+        const idxBaris1 = barisTampil.findIndex(b => b.idSupir === selTerakhir.current!.idSupir)
+        const idxBaris2 = barisTampil.findIndex(b => b.idSupir === supir.idSupir)
+        const idxTgl1   = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === selTerakhir.current!.tanggal)
+        const idxTgl2   = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === tanggal)
+        if (idxBaris1 < 0 || idxBaris2 < 0 || idxTgl1 < 0 || idxTgl2 < 0) {
+            toggleSel(supir, tanggal, jadwal)
+            return
+        }
+
+        const [b1, b2] = [Math.min(idxBaris1, idxBaris2), Math.max(idxBaris1, idxBaris2)]
+        const [t1, t2] = [Math.min(idxTgl1, idxTgl2), Math.max(idxTgl1, idxTgl2)]
+
+        setSelCells(prev => {
+            const next = { ...prev }
+            for (let bi = b1; bi <= b2; bi++) {
+                const baris = barisTampil[bi]
+                for (let ti = t1; ti <= t2; ti++) {
+                    const tgl = tanggalList[ti].format('YYYY-MM-DD')
+                    next[`${baris.idSupir}|${tgl}`] = {
+                        supir: baris,
+                        tanggal: tgl,
+                        jadwal: jadwalMap[baris.idSupir]?.[tgl],
+                    }
+                }
+            }
+            return next
+        })
+        selTerakhir.current = { idSupir: supir.idSupir, tanggal }
     }
 
     const bukaBulkAssign = () => {
@@ -191,10 +252,42 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
         setDialogOpen(true)
     }
 
+    const handleHapusShift = async () => {
+        if (!shiftHapus) return
+        setMenghapusShift(true)
+        try {
+            await shiftService.delete(shiftHapus.id_shift)
+            toast.push(<Notification type="success" title="Shift berhasil dihapus" />)
+            setShiftHapus(null)
+            fetchShiftList()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenghapusShift(false)
+        }
+    }
+
     const bukaTambahShift = () => {
+        setShiftEdit(null)
         setShiftForm({ nama: '', jam_mulai: '', jam_selesai: '' })
         setShiftFormErrors({})
         setShiftFormOpen(true)
+    }
+
+    const mulaiEditShift = (s: Shift) => {
+        setShiftEdit(s)
+        setShiftForm({
+            nama: s.nama,
+            jam_mulai: (s.jam_mulai ?? '').substring(0, 5),
+            jam_selesai: (s.jam_selesai ?? '').substring(0, 5),
+        })
+        setShiftFormErrors({})
+    }
+
+    const batalEditShift = () => {
+        setShiftEdit(null)
+        setShiftForm({ nama: '', jam_mulai: '', jam_selesai: '' })
+        setShiftFormErrors({})
     }
 
     const handleSubmitShift = async () => {
@@ -206,14 +299,26 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
         if (Object.keys(e).length > 0) return
         setShiftSaving(true)
         try {
-            await shiftService.create({
-                nama: shiftForm.nama,
-                jam_mulai: shiftForm.jam_mulai,
-                jam_selesai: shiftForm.jam_selesai,
-            })
-            toast.push(<Notification type="success" title="Shift berhasil ditambahkan" />)
-            setShiftFormOpen(false)
-            fetchShiftList()
+            if (shiftEdit) {
+                await shiftService.update(shiftEdit.id_shift, {
+                    nama: shiftForm.nama,
+                    jam_mulai: shiftForm.jam_mulai,
+                    jam_selesai: shiftForm.jam_selesai,
+                })
+                toast.push(<Notification type="success" title="Shift diperbarui — semua jadwal yang memakainya ikut terbarui" />)
+                batalEditShift()
+                fetchShiftList()
+                fetchBoard()
+            } else {
+                await shiftService.create({
+                    nama: shiftForm.nama,
+                    jam_mulai: shiftForm.jam_mulai,
+                    jam_selesai: shiftForm.jam_selesai,
+                })
+                toast.push(<Notification type="success" title="Shift berhasil ditambahkan" />)
+                setShiftFormOpen(false)
+                fetchShiftList()
+            }
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -337,27 +442,49 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
         setDownloading(true)
         try {
             await new Promise(r => setTimeout(r, 30))
-            const nKolom = tanggalList.length + 1
+            const ruteProyek = await proyekRuteService.list(idProyek).catch(() => [])
+            const origin = ruteProyek[0]?.asal ?? '-'
+            const namaRute = ruteProyek[0]?.nama_rute ?? '-'
+
+            const nKolom = tanggalList.length + 8
             const baris: SelXlsx[][] = []
+            baris.push(Array.from({ length: nKolom }, (_, i) => ({
+                teks: i === 0 ? (namaProyek || 'JADWAL SHIFT SUPIR') : '',
+                gaya: 'judulKuning' as const,
+            })))
+            baris.push(Array.from({ length: nKolom }, (_, i) => ({
+                teks: i === 0 ? `PERIODE ${bulan.format('MMMM YYYY').toUpperCase()}` : '',
+                gaya: 'polos' as const,
+            })))
             baris.push([
-                { teks: 'JADWAL SHIFT SUPIR', gaya: 'judul' },
-                ...tanggalList.map(() => ({ teks: '', gaya: 'polos' as const })),
+                { teks: 'NO', gaya: 'headerBiru' },
+                { teks: 'ORIGIN', gaya: 'headerBiru' },
+                { teks: 'ROUTE', gaya: 'headerBiru' },
+                { teks: 'FLEET', gaya: 'headerBiru' },
+                { teks: 'VENDOR', gaya: 'headerBiru' },
+                { teks: 'NOPOL', gaya: 'headerBiru' },
+                { teks: 'NAMA DRIVER', gaya: 'headerBiru' },
+                { teks: 'STAND BY', gaya: 'headerBiru' },
+                ...tanggalList.map(t => ({ teks: String(t.date()), gaya: 'headerBiru' as const })),
             ])
-            baris.push([
-                { teks: `PERIODE ${bulan.format('MMMM YYYY').toUpperCase()}`, gaya: 'polos' },
-                ...tanggalList.map(() => ({ teks: '', gaya: 'polos' as const })),
-            ])
-            baris.push([
-                { teks: 'Nama Supir', gaya: 'header' },
-                ...tanggalList.map(t => ({ teks: String(t.date()), gaya: 'header' as const })),
-            ])
-            barisSupir.forEach(b => {
+            barisSupir.forEach((b, idx) => {
+                const jadwalSupir = jadwalMap[b.idSupir] ?? {}
+                const adaJadwal = Object.keys(jadwalSupir).length > 0
+                const pertama = Object.values(jadwalSupir)[0]
                 baris.push([
-                    { teks: b.nopol ? `${b.nama} (${b.nopol})` : b.nama, gaya: 'nama' },
+                    { teks: String(idx + 1), gaya: 'hadir' },
+                    { teks: origin, gaya: 'hadir' },
+                    { teks: namaRute, gaya: 'hadir' },
+                    { teks: b.jenis ?? '-', gaya: 'hadir' },
+                    { teks: 'Internal', gaya: 'hadir' },
+                    { teks: b.nopol ?? '-', gaya: 'hadir' },
+                    { teks: b.nama, gaya: 'nama' },
+                    { teks: pertama ? jam(pertama.jam_mulai) : '-', gaya: 'hadir' },
                     ...tanggalList.map(t => {
-                        const j = jadwalMap[b.idSupir]?.[t.format('YYYY-MM-DD')]
-                        return j
-                            ? { teks: `${j.shift_nama}\n${jam(j.jam_mulai)}-${jam(j.jam_selesai)}`, gaya: 'isi' as const }
+                        const j = jadwalSupir[t.format('YYYY-MM-DD')]
+                        if (j) return { teks: 'H', gaya: 'hadir' as const }
+                        return adaJadwal
+                            ? { teks: 'L', gaya: 'libur' as const }
                             : { teks: '', gaya: 'kosong' as const }
                     }),
                 ])
@@ -368,10 +495,16 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                     `A2:${kolomXlsx(nKolom - 1)}2`,
                 ],
                 lebarKolom: [
-                    { dari: 1, sampai: 1, lebar: 32 },
-                    { dari: 2, sampai: nKolom, lebar: 14 },
+                    { dari: 1, sampai: 1, lebar: 5 },
+                    { dari: 2, sampai: 2, lebar: 14 },
+                    { dari: 3, sampai: 3, lebar: 18 },
+                    { dari: 4, sampai: 5, lebar: 10 },
+                    { dari: 6, sampai: 6, lebar: 14 },
+                    { dari: 7, sampai: 7, lebar: 26 },
+                    { dari: 8, sampai: 8, lebar: 10 },
+                    { dari: 9, sampai: nKolom, lebar: 5 },
                 ],
-                tinggiBaris: Object.fromEntries(barisSupir.map((_, i) => [i + 4, 30])),
+                tinggiBaris: { 1: 26 },
             })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
@@ -386,9 +519,41 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
     const hariIni = dayjs().format('YYYY-MM-DD')
 
+    const handleUnduhTemplate = async () => {
+        setDownloadingTemplate(true)
+        try {
+            await jadwalShiftService.downloadTemplate(
+                idProyek,
+                bulan.format('YYYY-MM-DD'),
+                bulan.endOf('month').format('YYYY-MM-DD'),
+            )
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingTemplate(false)
+        }
+    }
+
+    const handleImportFile = async (file: File | null) => {
+        if (!file) return
+        setImporting(true)
+        try {
+            const hasil = await jadwalShiftService.importExcel(idProyek, file)
+            toast.push(<Notification type={hasil.gagal.length ? 'warning' : 'success'}
+                title={`Import selesai: ${hasil.sukses} jadwal masuk${hasil.gagal.length ? `, ${hasil.gagal.length} gagal` : ''}`} />)
+            if (hasil.gagal.length) setImportGagal(hasil.gagal)
+            fetchBoard()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setImporting(false)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+    }
+
     return (
         <div className="p-4 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" variant="default" icon={<HiOutlineChevronLeft />}
                     onClick={() => setBulan(b => b.subtract(1, 'month'))} />
                 <span className="font-semibold min-w-[140px] text-center">{bulan.format('MMMM YYYY')}</span>
@@ -402,7 +567,37 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                 <Button size="sm" variant="solid" icon={<HiPlusCircle />}
                     title="Tambah Shift"
                     onClick={bukaTambahShift} />
+                <div className="ml-auto flex items-center gap-2">
+                    <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                        title="Unduh template import"
+                        loading={downloadingTemplate}
+                        onClick={handleUnduhTemplate}>
+                        Template
+                    </Button>
+                    <Button size="sm" variant="default" icon={<HiOutlineUpload />}
+                        title="Import jadwal dari Excel (isi sel H = masuk, L/kosong = libur)"
+                        loading={importing}
+                        onClick={() => fileInputRef.current?.click()}>
+                        Import Excel
+                    </Button>
+                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+                        onChange={e => handleImportFile(e.target.files?.[0] ?? null)} />
+                </div>
             </div>
+
+            <Dialog isOpen={importGagal.length > 0} onClose={() => setImportGagal([])} onRequestClose={() => setImportGagal([])}>
+                <h5 className="mb-3">Baris yang Gagal Diimport</h5>
+                <div className="max-h-80 overflow-y-auto flex flex-col gap-2">
+                    {importGagal.map((g, i) => (
+                        <div key={i} className="text-sm px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                            Baris {g.baris} ({g.no_sim}): {g.alasan}
+                        </div>
+                    ))}
+                </div>
+                <div className="flex justify-end mt-4">
+                    <Button size="sm" variant="solid" onClick={() => setImportGagal([])}>Tutup</Button>
+                </div>
+            </Dialog>
 
             {selList.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
@@ -438,7 +633,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                 </p>
             ) : (
                 <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg shadow-xs">
-                    <table className="border-separate border-spacing-0 min-w-full">
+                    <table className="border-separate border-spacing-0 min-w-full select-none">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[220px] border-b border-r border-gray-200 dark:border-gray-600">
@@ -494,7 +689,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                                                                 ? 'border-blue-500 ring-2 ring-blue-400 dark:ring-blue-500 bg-blue-100 dark:bg-blue-500/20'
                                                                 : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
                                                         }`}
-                                                            onClick={() => toggleSel(b, key, j)}>
+                                                            onClick={e => klikSel(e, b, key, j)}>
                                                             <div className="flex items-center justify-between gap-1">
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
                                                                 <span className="flex items-center shrink-0">
@@ -511,7 +706,28 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                                                             <p className="text-sm font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
                                                                 {jam(j.jam_mulai)} - {jam(j.jam_selesai)}
                                                             </p>
+                                                            {(() => {
+                                                                const nopolHari = alokasiMap[b.idSupir]?.[key]
+                                                                if (!nopolHari || nopolHari === b.nopol) return null
+                                                                return (
+                                                                    <span title="Mobil yang dipakai hari ini (pinjaman/override)"
+                                                                        className="inline-block mt-0.5 px-1.5 py-px rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                                                        {nopolHari}
+                                                                    </span>
+                                                                )
+                                                            })()}
                                                         </div>
+                                                    ) : countShift(b.idSupir) > 0 ? (
+                                                        <button type="button"
+                                                            title="Libur — klik untuk jadwalkan"
+                                                            className={`w-full h-12 rounded-lg border flex items-center justify-center transition-colors ${
+                                                                terpilih
+                                                                    ? 'border-solid border-blue-500 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300'
+                                                                    : 'border-dashed border-transparent bg-red-50/80 text-red-300 hover:border-blue-300 hover:text-blue-400 dark:bg-red-500/10 dark:text-red-500/50'
+                                                            }`}
+                                                            onClick={e => klikSel(e, b, key)}>
+                                                            {terpilih ? <HiOutlinePlus className="w-4 h-4" /> : <span className="text-[11px] font-bold tracking-wide">L</span>}
+                                                        </button>
                                                     ) : (
                                                         <button type="button"
                                                             className={`w-full h-12 rounded-lg border flex items-center justify-center transition-colors ${
@@ -519,7 +735,7 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                                                                     ? 'border-solid border-blue-500 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300'
                                                                     : 'border-dashed border-transparent hover:border-blue-300 text-transparent hover:text-blue-400'
                                                             }`}
-                                                            onClick={() => toggleSel(b, key)}>
+                                                            onClick={e => klikSel(e, b, key)}>
                                                             <HiOutlinePlus className="w-4 h-4" />
                                                         </button>
                                                     )}
@@ -589,8 +805,50 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
 
             {/* Dialog tambah master shift cepat */}
             <Dialog isOpen={shiftFormOpen} onRequestClose={() => setShiftFormOpen(false)} onClose={() => setShiftFormOpen(false)} width={440}>
-                <h5 className="text-base font-semibold mb-1">Tambah Shift</h5>
-                <p className="text-xs text-gray-400 mb-4">Daftarkan shift baru — langsung bisa dipakai di papan ini.</p>
+                <h5 className="text-base font-semibold mb-1">Kelola Shift</h5>
+                <p className="text-xs text-gray-400 mb-3">Daftar shift yang ada — hapus yang tidak terpakai, atau tambahkan yang baru.</p>
+                {shiftList.length > 0 && (
+                    <div className="flex flex-col gap-1.5 mb-4 max-h-44 overflow-y-auto">
+                        {shiftList.map(s => (
+                            <div key={s.id_shift}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                                    shiftEdit?.id_shift === s.id_shift
+                                        ? 'border-blue-400 bg-blue-50/60 dark:border-blue-500/50 dark:bg-blue-500/10'
+                                        : 'border-gray-100 dark:border-gray-700'
+                                }`}>
+                                <span className="flex-1 min-w-0 truncate text-sm font-medium">{s.nama}</span>
+                                <span className="text-xs text-gray-400 font-mono shrink-0">{jam(s.jam_mulai)} - {jam(s.jam_selesai)}</span>
+                                <span
+                                    className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors shrink-0"
+                                    onClick={() => mulaiEditShift(s)}>
+                                    <HiOutlinePencilAlt className="text-sm" />
+                                </span>
+                                <span
+                                    className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors shrink-0"
+                                    onClick={() => setShiftHapus(s)}>
+                                    <HiOutlineTrash className="text-sm" />
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                        {shiftEdit ? `Edit Shift: ${shiftEdit.nama}` : 'Tambah Shift Baru'}
+                    </p>
+                    {shiftEdit && (
+                        <button type="button" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            onClick={batalEditShift}>
+                            Batal edit
+                        </button>
+                    )}
+                </div>
+                {shiftEdit && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-3 py-2 mb-3">
+                        Perubahan jam akan mengubah SEMUA jadwal yang memakai shift ini — termasuk jadwal lampau.
+                        Untuk perubahan kebijakan jam ke depan, lebih aman buat shift baru.
+                    </p>
+                )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmitShift() }}>
                     <FormItem label="Nama Shift" asterisk invalid={!!shiftFormErrors.nama} errorMessage={shiftFormErrors.nama}>
                         <Input placeholder="Contoh: Shift Pagi, Shift Malam" value={shiftForm.nama} invalid={!!shiftFormErrors.nama}
@@ -608,11 +866,25 @@ export default function PapanShift({ idProyek }: { idProyek: string }) {
                     </div>
                     <p className="text-xs text-gray-400 -mt-1">Jam selesai lebih kecil dari jam mulai = shift berakhir keesokan hari</p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setShiftFormOpen(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={shiftSaving}>Simpan</Button>
+                        <Button type="button" variant="plain" onClick={() => { batalEditShift(); setShiftFormOpen(false) }}>Tutup</Button>
+                        <Button type="submit" variant="solid" loading={shiftSaving}>
+                            {shiftEdit ? 'Simpan Perubahan' : 'Simpan'}
+                        </Button>
                     </div>
                 </form>
             </Dialog>
+
+            <ConfirmDialog isOpen={!!shiftHapus} type="danger" title="Hapus Shift?"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                onClose={() => setShiftHapus(null)}
+                onCancel={() => setShiftHapus(null)}
+                onConfirm={handleHapusShift}
+                confirmButtonProps={{ loading: menghapusShift }}>
+                <p className="text-sm">
+                    Shift <span className="font-semibold">&ldquo;{shiftHapus?.nama}&rdquo;</span> akan dihapus.
+                    Shift yang masih dipakai di jadwal aktif akan ditolak sistem.
+                </p>
+            </ConfirmDialog>
 
             {/* Dialog hasil rentang — tampil bila ada hari yang gagal */}
             <Dialog isOpen={!!hasilGagal} onRequestClose={() => setHasilGagal(null)} onClose={() => setHasilGagal(null)} width={520}>

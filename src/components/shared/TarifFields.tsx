@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { FormItem, Input, Button } from '@/components/ui'
+import { FormItem, Input } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import { HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
@@ -45,10 +45,20 @@ type Props = {
 }
 
 export default function TarifFields({ value, onChange, jenisOptions, klienOptions, idRute }: Props) {
-    const [showRincian, setShowRincian] = useState(false)
+    const [showRincian, setShowRincian] = useState(true)
     const [estimasi, setEstimasi] = useState<EstimasiBok | null>(null)
 
     const set = (patch: Partial<TarifFieldsState>) => onChange({ ...value, ...patch })
+
+    // Uang Jalan (kolom `harga`) terisi otomatis = total 4 komponen detail.
+    const setDetailDenganTotal = (patch: Partial<TarifFieldsState>) => {
+        const next = { ...value, ...patch }
+        const total = (Number(next.estimasi_tol) || 0)
+            + (Number(next.estimasi_bbm) || 0)
+            + (Number(next.estimasi_uang_jalan) || 0)
+            + (Number(next.estimasi_biaya_lain) || 0)
+        onChange({ ...next, harga: total > 0 ? String(total) : '' })
+    }
 
     // Panel Estimasi Keuangan (BOK) — murni referensi, tidak memblokir simpan.
     // Butuh idRute nyata (rute sudah tersimpan) — saat staging di form Tambah Rute
@@ -86,10 +96,10 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                         value={klienOptions.find(o => o.value === value.id_klien) ?? null}
                         onChange={opt => set({ id_klien: opt?.value ?? '' })} />
                 </FormItem>
-                <FormItem label="Harga per Trip" asterisk>
-                    <Input prefix="Rp" placeholder="0"
-                        value={value.harga ? formatNum(Number(value.harga)) : ''}
-                        onChange={e => set({ harga: e.target.value.replace(/\D/g, '') })} />
+                <FormItem label="Uang Jalan" asterisk>
+                    <Input prefix="Rp" placeholder="0" disabled
+                        value={value.harga ? formatNum(Number(value.harga)) : ''} />
+                    <p className="text-xs text-gray-400 mt-1">Terisi otomatis dari total Detail Uang Jalan</p>
                 </FormItem>
                 <FormItem label="Tanggal Mulai" asterisk>
                     <DatePicker inputFormat="DD/MM/YYYY"
@@ -107,29 +117,29 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                 onClick={() => setShowRincian(v => !v)}>
                 {showRincian ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                Biaya Operasional (opsional)
+                Detail Uang Jalan
             </button>
             {showRincian && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                     <FormItem label="Estimasi Tol">
                         <Input prefix="Rp" placeholder="0"
                             value={value.estimasi_tol ? formatNum(Number(value.estimasi_tol)) : ''}
-                            onChange={e => set({ estimasi_tol: e.target.value.replace(/\D/g, '') })} />
+                            onChange={e => setDetailDenganTotal({ estimasi_tol: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
                     <FormItem label="Estimasi BBM">
                         <Input prefix="Rp" placeholder="0"
                             value={value.estimasi_bbm ? formatNum(Number(value.estimasi_bbm)) : ''}
-                            onChange={e => set({ estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
+                            onChange={e => setDetailDenganTotal({ estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
                     <FormItem label="Estimasi Uang Jalan">
                         <Input prefix="Rp" placeholder="0"
                             value={value.estimasi_uang_jalan ? formatNum(Number(value.estimasi_uang_jalan)) : ''}
-                            onChange={e => set({ estimasi_uang_jalan: e.target.value.replace(/\D/g, '') })} />
+                            onChange={e => setDetailDenganTotal({ estimasi_uang_jalan: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
                     <FormItem label="Estimasi Biaya Lain">
                         <Input prefix="Rp" placeholder="0"
                             value={value.estimasi_biaya_lain ? formatNum(Number(value.estimasi_biaya_lain)) : ''}
-                            onChange={e => set({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
+                            onChange={e => setDetailDenganTotal({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
                 </div>
             )}
@@ -164,14 +174,9 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between mt-3">
-                                <p className="text-xs text-gray-400">
-                                    Jarak {formatNum(estimasi.komponen.jarak_km, 1)} km · BBM {formatRupiah(estimasi.komponen.harga_bbm_per_liter)}/L ÷ {formatNum(estimasi.komponen.konsumsi_km_per_liter, 1)} km/L · referensi saja, tidak mengunci harga
-                                </p>
-                                <Button type="button" size="sm" onClick={() => set({ harga: String(Math.round(estimasi.saran_harga)) })}>
-                                    Pakai Saran Harga
-                                </Button>
-                            </div>
+                            <p className="text-xs text-gray-400 mt-3">
+                                Jarak {formatNum(estimasi.komponen.jarak_km, 1)} km · BBM {formatRupiah(estimasi.komponen.harga_bbm_per_liter)}/L ÷ {formatNum(estimasi.komponen.konsumsi_km_per_liter, 1)} km/L · referensi saja, tidak mengunci harga
+                            </p>
                         </>
                     ) : (
                         <p className="text-sm text-gray-400">
