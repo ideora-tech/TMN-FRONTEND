@@ -19,13 +19,6 @@ export interface AlokasiArmada {
     nama_proyek: string | null
 }
 
-export interface ArmadaTersedia {
-    id_armada: string
-    nopol: string
-    nama_pemilik: string | null
-    keterangan: string
-}
-
 export interface RiwayatAlokasiItem {
     tanggal: string
     sumber: SumberAlokasi
@@ -58,15 +51,5 @@ export const alokasiArmadaService = {
         link.click()
         document.body.removeChild(link)
         URL.revokeObjectURL(href)
-    },
-    async armadaTersedia(tanggal: string, idSupir?: string, idProyek?: string) {
-        const { data } = await axios.get(API_ENDPOINTS.ALOKASI_ARMADA_TERSEDIA, {
-            params: { tanggal, id_supir: idSupir || undefined, id_proyek: idProyek || undefined },
-        })
-        return data.data as ArmadaTersedia[]
-    },
-    async override(id: string, idArmada: string) {
-        const { data } = await axios.put(API_ENDPOINTS.ALOKASI_ARMADA_DETAIL(id), { id_armada: idArmada })
-        return data.data as AlokasiArmada
     },
 }

@@ -9,7 +9,6 @@ import { parseApiError } from '@/utils/error.util'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
 import { proyekRuteService } from '@/services/proyekRute.service'
 import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
-import { alokasiArmadaService } from '@/services/alokasiArmada.service'
 import { shiftService, Shift } from '@/services/shift.service'
 import { penugasanService } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -39,7 +38,6 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
 
     const [barisSupir, setBarisSupir]   = useState<BarisSupir[]>([])
     const [jadwalList, setJadwalList]   = useState<JadwalShift[]>([])
-    const [alokasiMap, setAlokasiMap]   = useState<Record<string, Record<string, string>>>({})
     const [shiftList, setShiftList]     = useState<Shift[]>([])
     const [cariSupir, setCariSupir]     = useState('')
 
@@ -89,13 +87,11 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
         try {
             const dari   = bulan.format('YYYY-MM-DD')
             const sampai = bulan.endOf('month').format('YYYY-MM-DD')
-            const [penugasan, jadwal, supirRes, armadaRes, alokasiRes] = await Promise.all([
+            const [penugasan, jadwal, supirRes, armadaRes] = await Promise.all([
                 penugasanService.list(idProyek, 1, 'internal', 100),
                 jadwalShiftService.list(idProyek, dari, sampai),
                 supirService.list(1, 100),
                 armadaService.list(1, 100),
-                alokasiArmadaService.list({ tanggal_dari: dari, tanggal_sampai: sampai, id_proyek: idProyek, limit: 500 })
-                    .catch(() => ({ data: [] })),
             ])
             const supirMap: Record<string, Supir> = {}
             supirRes.data.forEach((s: Supir) => { supirMap[s.id_supir] = s })
@@ -117,14 +113,6 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                 })
             setBarisSupir(Array.from(unik.values()).sort((a, b) => a.nama.localeCompare(b.nama)))
             setJadwalList(jadwal)
-
-            const aMap: Record<string, Record<string, string>> = {}
-            alokasiRes.data.forEach(al => {
-                if (!al.armada_nopol) return
-                aMap[al.id_supir] ??= {}
-                aMap[al.id_supir][al.tanggal.substring(0, 10)] = al.armada_nopol
-            })
-            setAlokasiMap(aMap)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -706,16 +694,6 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                                                             <p className="text-sm font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
                                                                 {jam(j.jam_mulai)} - {jam(j.jam_selesai)}
                                                             </p>
-                                                            {(() => {
-                                                                const nopolHari = alokasiMap[b.idSupir]?.[key]
-                                                                if (!nopolHari || nopolHari === b.nopol) return null
-                                                                return (
-                                                                    <span title="Mobil yang dipakai hari ini (pinjaman/override)"
-                                                                        className="inline-block mt-0.5 px-1.5 py-px rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
-                                                                        {nopolHari}
-                                                                    </span>
-                                                                )
-                                                            })()}
                                                         </div>
                                                     ) : countShift(b.idSupir) > 0 ? (
                                                         <button type="button"

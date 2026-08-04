@@ -53,12 +53,11 @@ type Pasangan = {
 }
 
 type CreateFormState = {
-    tanggal_tugas: string
     estimasi_biaya: string
 }
 
 const EMPTY_CREATE_FORM: CreateFormState = {
-    tanggal_tugas: '', estimasi_biaya: '',
+    estimasi_biaya: '',
 }
 
 type EditFormState = {
@@ -114,7 +113,7 @@ export default function PenugasanPage() {
     const [createForm, setCreateForm]                   = useState<CreateFormState>(EMPTY_CREATE_FORM)
     const [checkedIds, setCheckedIds]                   = useState<string[]>([])
     const [pairSearch, setPairSearch]                   = useState('')
-    const [createFormErrors, setCreateFormErrors]       = useState<Partial<Record<'pasangan' | 'tanggal_tugas', string>>>({})
+    const [createFormErrors, setCreateFormErrors]       = useState<Partial<Record<'pasangan', string>>>({})
     const [createSubmitting, setCreateSubmitting]       = useState(false)
     const [estimasiManual, setEstimasiManual]           = useState(false)
     const {
@@ -390,7 +389,6 @@ export default function PenugasanPage() {
     const validateCreateForm = () => {
         const e: typeof createFormErrors = {}
         if (checkedIds.length === 0) e.pasangan = 'Centang minimal satu pasangan'
-        if (!createForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setCreateFormErrors(e)
         return Object.keys(e).length === 0
     }
@@ -398,7 +396,6 @@ export default function PenugasanPage() {
     const validateEditForm = () => {
         const e: typeof editFormErrors = {}
         if (!editForm.id_supir) e.id_supir = 'Pilih supir'
-        if (!editForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setEditFormErrors(e)
         return Object.keys(e).length === 0
     }
@@ -419,7 +416,6 @@ export default function PenugasanPage() {
                     id_proyek:      selectedProyek,
                     id_supir:       p.supir.id_supir,
                     id_armada:      p.supir.id_armada_default ?? undefined,
-                    tanggal_tugas:  createForm.tanggal_tugas,
                     estimasi_biaya: estimasi,
                 })
             ))
@@ -462,7 +458,7 @@ export default function PenugasanPage() {
             await penugasanService.update(editTarget.id_penugasan, {
                 id_armada:      editForm.id_armada || null,
                 id_supir:       editForm.id_supir,
-                tanggal_tugas:  editForm.tanggal_tugas,
+                tanggal_tugas:  editForm.tanggal_tugas || null,
                 estimasi_biaya: estimasi,
                 status:         editForm.status,
             })
@@ -756,7 +752,8 @@ export default function PenugasanPage() {
             <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    Centang satu atau lebih pasangan supir–armada, lalu tentukan tanggal tugas.
+                    Centang satu atau lebih pasangan supir–armada untuk di-assign ke proyek ini.
+                    Jadwal harian per tanggal diatur belakangan di tab Papan Jadwal.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitCreate() }}>
                     {pasanganLoading ? (
@@ -842,15 +839,6 @@ export default function PenugasanPage() {
                             )}
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-5">
-                                <FormItem label="Tanggal Tugas" asterisk invalid={!!createFormErrors.tanggal_tugas} errorMessage={createFormErrors.tanggal_tugas}>
-                                    <DatePicker
-                                        value={createForm.tanggal_tugas ? new Date(createForm.tanggal_tugas) : null}
-                                        onChange={date => {
-                                            setCreateForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
-                                            setCreateFormErrors(prev => ({ ...prev, tanggal_tugas: undefined }))
-                                        }}
-                                    />
-                                </FormItem>
                                 {ruteOptions.length > 1 && (
                                     <FormItem label="Rute (untuk estimasi)">
                                         <Select isSearchable={false}
@@ -928,7 +916,7 @@ export default function PenugasanPage() {
                                 />
                             </FormItem>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Tanggal Tugas" asterisk invalid={!!editFormErrors.tanggal_tugas} errorMessage={editFormErrors.tanggal_tugas}>
+                                <FormItem label="Tanggal Tugas">
                                     <DatePicker
                                         value={editForm.tanggal_tugas ? new Date(editForm.tanggal_tugas) : null}
                                         onChange={date => {

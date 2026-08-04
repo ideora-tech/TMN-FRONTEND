@@ -39,8 +39,6 @@ export const API_ENDPOINTS = {
     ARMADA_PERAWATAN_BUKTI_DETAIL: (idArmada: string, id: string, idBukti: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti/${idBukti}`,
     ARMADA_PREDIKSI_PERAWATAN: (idArmada: string) => `/api/proxy/armada/${idArmada}/prediksi-perawatan`,
     ALOKASI_ARMADA:         '/api/proxy/alokasi-armada',
-    ALOKASI_ARMADA_DETAIL:  (id: string) => `/api/proxy/alokasi-armada/${id}`,
-    ALOKASI_ARMADA_TERSEDIA: '/api/proxy/alokasi-armada/armada-tersedia',
     ALOKASI_ARMADA_EXPORT:  (format: 'excel' | 'pdf') => `/api/proxy/alokasi-armada/export/${format}`,
     ALOKASI_ARMADA_RIWAYAT: '/api/proxy/alokasi-armada/riwayat',
     PERAWATAN_ARMADA:       '/api/proxy/perawatan-armada',
