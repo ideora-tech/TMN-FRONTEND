@@ -10,6 +10,8 @@ export interface JadwalShift {
     shift_nama: string
     jam_mulai: string
     jam_selesai: string
+    nopol_alokasi?: string | null
+    sumber_alokasi?: string | null
 }
 
 export interface HasilBatchShift {

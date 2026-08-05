@@ -694,6 +694,12 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                                                             <p className="text-sm font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
                                                                 {jam(j.jam_mulai)} - {jam(j.jam_selesai)}
                                                             </p>
+                                                            {j.nopol_alokasi && j.nopol_alokasi !== b.nopol && (
+                                                                <p className="text-[10px] font-mono font-semibold text-amber-600 dark:text-amber-400 truncate"
+                                                                    title="Armada pinjaman (alokasi otomatis)">
+                                                                    {j.nopol_alokasi}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     ) : countShift(b.idSupir) > 0 ? (
                                                         <button type="button"
