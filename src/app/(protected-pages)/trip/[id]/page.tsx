@@ -754,7 +754,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 { label: 'Biaya BBM',      value: formatRupiah(laporan.biaya_bbm) },
                                 { label: 'Uang Jalan',     value: formatRupiah(laporan.uang_jalan) },
                                 { label: 'Uang Tol',       value: formatRupiah(laporan.uang_tol) },
-                                { label: 'Jarak Tempuh',   value: `${formatNum(laporan.jarak_tempuh_km)} km` },
+                                { label: 'Jarak Tempuh',   value: laporan.jarak_tempuh_km != null ? `${formatNum(laporan.jarak_tempuh_km)} km` : '-' },
                                 { label: 'Catatan Insiden', value: laporan.catatan_insiden || '-' },
                             ].map(({ label, value }) => (
                                 <div key={label}>

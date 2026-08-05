@@ -17,7 +17,7 @@ export interface LaporanPerjalanan {
     id_laporan: string
     id_trip: string
     biaya_bbm: number
-    jarak_tempuh_km: number
+    jarak_tempuh_km: number | null
     uang_jalan: number
     uang_tol: number
     catatan_insiden: string | null
