@@ -98,8 +98,14 @@ export interface PrediksiPerawatanItem {
     id_jenis_perawatan: string
     nama_jenis_perawatan: string
     interval_hari: number
+    interval_km: number | null
     tanggal_servis_terakhir: string | null
     jadwal_servis_berikutnya: string | null
+    km_servis_terakhir: number | null
+    km_sekarang: number | null
+    km_jatuh_tempo: number | null
+    sisa_km: number | null
+    status_km: StatusPrediksi | null
     status: StatusPrediksi
     sisa_hari: number | null
     sparepart_standar: PrediksiSparepartStandar[]

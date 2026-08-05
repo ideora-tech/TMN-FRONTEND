@@ -14,11 +14,12 @@ interface FormState {
     id_jenis_perawatan: string
     id_jenis_kendaraan: string
     interval_hari: string
+    interval_km: string
 }
 
 type Option = { value: string; label: string }
 
-const INIT: FormState = { id_jenis_perawatan: '', id_jenis_kendaraan: '', interval_hari: '' }
+const INIT: FormState = { id_jenis_perawatan: '', id_jenis_kendaraan: '', interval_hari: '', interval_km: '' }
 
 export default function IntervalPerawatanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -46,6 +47,7 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
                 id_jenis_perawatan: d.id_jenis_perawatan,
                 id_jenis_kendaraan: d.id_jenis_kendaraan,
                 interval_hari: String(d.interval_hari),
+                interval_km: d.interval_km != null ? String(d.interval_km) : '',
             }))
             .catch(() => setNotFound(true))
             .finally(() => setLoading(false))
@@ -76,6 +78,7 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
                 id_jenis_perawatan: form.id_jenis_perawatan,
                 id_jenis_kendaraan: form.id_jenis_kendaraan,
                 interval_hari: parseInt(form.interval_hari),
+                interval_km: form.interval_km ? parseInt(form.interval_km) : null,
             })
             toast.push(<Notification type="success" title="Interval perawatan berhasil diperbarui" />)
             router.push(ROUTES.INTERVAL_PERAWATAN)
@@ -121,6 +124,12 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
                                 value={form.interval_hari}
                                 invalid={!!errors.interval_hari}
                                 onChange={e => set('interval_hari', e.target.value.replace(/\D/g, ''))} />
+                        </FormItem>
+                        <FormItem label="Interval Kilometer (opsional)"
+                            extra={<span className="text-xs text-gray-400">Warning muncul saat odometer armada mendekati km jatuh tempo (sisa ≤ 10% interval)</span>}>
+                            <Input type="number" step="1" min="1" suffix="km" placeholder="Contoh: 10000"
+                                value={form.interval_km}
+                                onChange={e => set('interval_km', e.target.value.replace(/\D/g, ''))} />
                         </FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

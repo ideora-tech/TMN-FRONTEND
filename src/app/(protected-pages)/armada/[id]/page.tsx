@@ -883,6 +883,17 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                             </td>
                                             <td className="py-3 px-3 text-xs text-gray-500 whitespace-nowrap">
                                                 {item.jadwal_servis_berikutnya ? dayjs(item.jadwal_servis_berikutnya).format('DD MMM YYYY') : <span className="text-gray-300">—</span>}
+                                                {item.km_jatuh_tempo != null && item.sisa_km != null && (
+                                                    <p className={`mt-0.5 font-mono ${
+                                                        item.status_km === 'lewat_jatuh_tempo' ? 'text-red-500 font-semibold'
+                                                        : item.status_km === 'segera' ? 'text-orange-500 font-semibold'
+                                                        : 'text-gray-400'
+                                                    }`}>
+                                                        {formatNum(item.km_jatuh_tempo)} km ({item.sisa_km < 0
+                                                            ? `lewat ${formatNum(Math.abs(item.sisa_km))} km`
+                                                            : `sisa ${formatNum(item.sisa_km)} km`})
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="py-3 px-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${meta.className}`}>{meta.label}</span>

@@ -28,7 +28,11 @@ export interface ArmadaServisJatuhTempo {
     id_armada: string
     nopol: string
     jenis_perawatan: string
-    jadwal_servis_berikutnya: string
+    basis: 'hari' | 'km'
+    jadwal_servis_berikutnya?: string
+    km_jatuh_tempo?: number
+    km_sekarang?: number
+    sisa_km?: number
 }
 
 export type ArmadaPayload = Partial<Omit<Armada, 'id_armada' | 'url_foto' | 'nama_jenis'>>

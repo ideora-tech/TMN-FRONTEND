@@ -9,6 +9,7 @@ export interface IntervalPerawatan {
     nama_jenis_perawatan: string | null
     nama_jenis_kendaraan: string | null
     interval_hari: number
+    interval_km: number | null
     aktif: boolean
     dibuat_pada: string
     diubah_pada: string | null
@@ -18,6 +19,7 @@ export type IntervalPerawatanPayload = {
     id_jenis_perawatan: string
     id_jenis_kendaraan: string
     interval_hari: number
+    interval_km?: number | null
     aktif?: boolean
 }
 

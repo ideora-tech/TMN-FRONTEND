@@ -7,6 +7,7 @@ import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
+import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaService, Armada, ArmadaServisJatuhTempo } from '@/services/armada.service'
@@ -192,18 +193,32 @@ export default function ArmadaPage() {
             id: 'servis',
             size: 130,
             cell: ({ row }: CellContext<Armada, unknown>) => {
-                const servis = servisJatuhTempo.find(s => s.id_armada === row.original.id_armada)
-                if (!servis) return <span className="text-gray-300 text-xs">—</span>
-                const days = Math.ceil((new Date(servis.jadwal_servis_berikutnya).getTime() - Date.now()) / 86400000)
-                const className = days < 0
-                    ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                    : days <= 7
-                        ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                const items = servisJatuhTempo.filter(s => s.id_armada === row.original.id_armada)
+                if (items.length === 0) return <span className="text-gray-300 text-xs">—</span>
+
+                const merah = 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                const amber = 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                const servisHari = items.find(s => s.basis === 'hari' && s.jadwal_servis_berikutnya)
+                const servisKm   = items.find(s => s.basis === 'km' && s.sisa_km != null)
+
                 return (
-                    <Tag className={`text-xs font-semibold ${className}`}>
-                        {days < 0 ? 'Lewat jadwal' : `${days} hari lagi`}
-                    </Tag>
+                    <div className="flex flex-col items-start gap-1">
+                        {servisHari && (() => {
+                            const days = Math.ceil((new Date(servisHari.jadwal_servis_berikutnya!).getTime() - Date.now()) / 86400000)
+                            return (
+                                <Tag className={`text-xs font-semibold ${days <= 7 ? merah : amber}`}>
+                                    {days < 0 ? 'Lewat jadwal' : `${days} hari lagi`}
+                                </Tag>
+                            )
+                        })()}
+                        {servisKm && (
+                            <Tag className={`text-xs font-semibold ${servisKm.sisa_km! < 0 ? merah : amber}`}>
+                                {servisKm.sisa_km! < 0
+                                    ? `Lewat ${formatNum(Math.abs(servisKm.sisa_km!))} km`
+                                    : `${formatNum(servisKm.sisa_km!)} km lagi`}
+                            </Tag>
+                        )}
+                    </div>
                 )
             },
         },
