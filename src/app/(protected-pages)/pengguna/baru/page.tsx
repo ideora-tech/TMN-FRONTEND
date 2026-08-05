@@ -10,19 +10,26 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { penggunaService } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
+import { supirService, Supir } from '@/services/supir.service'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
 export default function PenggunaBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ username: '', email: '', kata_sandi: '', kode_peran: '', aktif: true })
+    const [form, setForm] = useState({ username: '', email: '', kata_sandi: '', kode_peran: '', aktif: true, id_supir: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
+    const [supirOptions, setSupirOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } })
             .then(r => setPeranOptions((r.data.data as Peran[]).map(p => ({ value: p.kode_peran, label: p.nama_peran }))))
+            .catch(() => {})
+        supirService.list(1, 500)
+            .then(res => setSupirOptions(res.data
+                .filter((s: Supir) => !s.id_pengguna)
+                .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — ${s.no_sim ?? 'tanpa SIM'}` }))))
             .catch(() => {})
     }, [])
 
@@ -31,7 +38,7 @@ export default function PenggunaBaruPage() {
         if (!form.username.trim()) e.username = 'Username wajib diisi'
         if (!form.email.trim()) e.email = 'Email wajib diisi'
         if (!form.kata_sandi.trim()) e.kata_sandi = 'Kata sandi wajib diisi'
-        else if (form.kata_sandi.length < 6) e.kata_sandi = 'Kata sandi minimal 6 karakter'
+        else if (form.kata_sandi.length < 8) e.kata_sandi = 'Kata sandi minimal 8 karakter'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -44,7 +51,7 @@ export default function PenggunaBaruPage() {
         }
         setLoading(true)
         try {
-            await penggunaService.create({
+            const created = await penggunaService.create({
                 id_perusahaan: null,
                 id_karyawan: null,
                 username: form.username,
@@ -54,7 +61,18 @@ export default function PenggunaBaruPage() {
                 aktif: form.aktif,
                 harus_ganti_password: false,
             })
-            toast.push(<Notification type="success" title="Pengguna berhasil ditambahkan" />)
+
+            if (form.kode_peran === 'SUPIR' && form.id_supir) {
+                try {
+                    await supirService.update(form.id_supir, { id_pengguna: created.id_pengguna })
+                    toast.push(<Notification type="success" title="Pengguna berhasil ditambahkan dan ditautkan ke supir" />)
+                } catch (errTaut) {
+                    toast.push(<Notification type="warning" title={`Akun dibuat, tapi gagal ditautkan ke supir: ${parseApiError(errTaut)}`} />)
+                }
+            } else {
+                toast.push(<Notification type="success" title="Pengguna berhasil ditambahkan" />)
+            }
+
             router.push(ROUTES.PENGGUNA)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -87,20 +105,30 @@ export default function PenggunaBaruPage() {
                             onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Kata Sandi" asterisk invalid={!!errors.kata_sandi} errorMessage={errors.kata_sandi}>
-                        <Input type="password" placeholder="Min. 6 karakter" value={form.kata_sandi} invalid={!!errors.kata_sandi}
+                        <Input type="password" placeholder="Min. 8 karakter" value={form.kata_sandi} invalid={!!errors.kata_sandi}
                             onChange={e => setForm(p => ({ ...p, kata_sandi: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Peran">
                         <Select isClearable isSearchable placeholder="Pilih peran..."
                             options={peranOptions}
                             value={peranOptions.find(o => o.value === form.kode_peran) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '' }))} />
+                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '', id_supir: opt?.value === 'SUPIR' ? p.id_supir : '' }))} />
                     </FormItem>
                     <FormItem label="Status">
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                     </FormItem>
+                    {form.kode_peran === 'SUPIR' && (
+                        <FormItem label="Tautkan ke Supir (opsional)"
+                            extra={<span className="text-xs text-gray-400">Supir yang memakai akun ini untuk login aplikasi mobile — hanya supir yang belum punya akun yang muncul</span>}>
+                            <Select isClearable isSearchable
+                                placeholder="Pilih supir..."
+                                options={supirOptions}
+                                value={supirOptions.find(o => o.value === form.id_supir) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, id_supir: opt?.value ?? '' }))} />
+                        </FormItem>
+                    )}
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>

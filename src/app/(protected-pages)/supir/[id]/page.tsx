@@ -7,7 +7,7 @@ import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineE
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { supirService, Supir } from '@/services/supir.service'
+import { supirService, Supir, OpsiPenggunaSupir } from '@/services/supir.service'
 import { tripService, Trip } from '@/services/trip.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -61,13 +61,21 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     // tautan karyawan
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
 
+    // tautan akun login mobile
+    const [penggunaOptions, setPenggunaOptions] = useState<{ value: string; label: string }[]>([])
+
     useEffect(() => {
         karyawanService.list(1, 500)
             .then(res => setKaryawanOptions(res.data
                 .filter((k: Karyawan) => k.aktif)
                 .map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))))
             .catch(() => {})
-    }, [])
+        supirService.opsiPengguna()
+            .then(res => setPenggunaOptions(res
+                .filter((o: OpsiPenggunaSupir) => !o.id_supir_tertaut || o.id_supir_tertaut === id)
+                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: `${o.username} — ${o.email}` }))))
+            .catch(() => {})
+    }, [id])
 
     useEffect(() => {
         supirService.get(id)
@@ -257,6 +265,12 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         )
                                         : <span className="text-gray-400">Belum ditautkan</span>,
                                 },
+                                {
+                                    label: 'Akun Login Mobile',
+                                    value: supir.id_pengguna
+                                        ? <span className="font-mono">{supir.username_pengguna ?? supir.id_pengguna}</span>
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -319,6 +333,14 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         options={karyawanOptions}
                                         value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
+                                </FormItem>
+                                <FormItem label="Akun Login Mobile (opsional)"
+                                    extra={<span className="text-xs text-gray-400">Akun berperan SUPIR untuk login aplikasi mobile — buat akunnya di menu Pengaturan → Pengguna</span>}>
+                                    <Select isClearable isSearchable
+                                        placeholder="Pilih akun pengguna..."
+                                        options={penggunaOptions}
+                                        value={penggunaOptions.find(o => o.value === form.id_pengguna) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_pengguna: opt?.value ?? null }))} />
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

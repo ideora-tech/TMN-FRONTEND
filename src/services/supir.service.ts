@@ -12,6 +12,16 @@ export interface Supir {
     id_armada_default?: string | null
     armada_default?: string | null
     id_karyawan?: string | null
+    id_pengguna?: string | null
+    username_pengguna?: string | null
+}
+
+export interface OpsiPenggunaSupir {
+    id_pengguna: string
+    username: string
+    email: string
+    id_supir_tertaut: string | null
+    nama_supir_tertaut: string | null
 }
 
 export const supirService = {
@@ -33,5 +43,9 @@ export const supirService = {
     },
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.SUPIR_DETAIL(id))
+    },
+    async opsiPengguna() {
+        const { data } = await axios.get(API_ENDPOINTS.SUPIR_OPSI_PENGGUNA)
+        return data.data as OpsiPenggunaSupir[]
     },
 }

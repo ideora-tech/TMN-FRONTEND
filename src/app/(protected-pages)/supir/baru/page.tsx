@@ -7,7 +7,7 @@ import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { supirService } from '@/services/supir.service'
+import { supirService, OpsiPenggunaSupir } from '@/services/supir.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
@@ -15,13 +15,19 @@ const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, labe
 
 export default function SupirBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '', id_armada_default: '', id_karyawan: '' })
+    const [form, setForm] = useState({ nama: '', no_sim: '', jenis_sim: 'B2', tgl_kadaluarsa_sim: '', telepon: '', id_armada_default: '', id_karyawan: '', id_pengguna: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
     const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
+    const [penggunaOptions, setPenggunaOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
+        supirService.opsiPengguna()
+            .then(res => setPenggunaOptions(res
+                .filter((o: OpsiPenggunaSupir) => !o.id_supir_tertaut)
+                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: `${o.username} — ${o.email}` }))))
+            .catch(() => {})
         armadaService.list(1, 100)
             .then(res => setArmadaOptions(res.data
                 .filter((a: Armada) => a.aktif !== false)
@@ -58,6 +64,7 @@ export default function SupirBaruPage() {
                 telepon: form.telepon || undefined,
                 id_armada_default: form.id_armada_default || undefined,
                 id_karyawan: form.id_karyawan || undefined,
+                id_pengguna: form.id_pengguna || undefined,
             })
             toast.push(<Notification type="success" title="Supir berhasil ditambahkan" />)
             router.push(ROUTES.SUPIR)
@@ -120,6 +127,14 @@ export default function SupirBaruPage() {
                             options={karyawanOptions}
                             value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
                             onChange={(option) => setForm(p => ({ ...p, id_karyawan: option?.value ?? '' }))} />
+                    </FormItem>
+                    <FormItem label="Akun Login Mobile (opsional)"
+                        extra={<span className="text-xs text-gray-400">Akun berperan SUPIR untuk login aplikasi mobile — buat akunnya di menu Pengaturan → Pengguna</span>}>
+                        <Select isClearable isSearchable
+                            placeholder="Pilih akun pengguna..."
+                            options={penggunaOptions}
+                            value={penggunaOptions.find(o => o.value === form.id_pengguna) ?? null}
+                            onChange={(option) => setForm(p => ({ ...p, id_pengguna: option?.value ?? '' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

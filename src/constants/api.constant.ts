@@ -110,6 +110,7 @@ export const API_ENDPOINTS = {
     // Supir
     SUPIR:        '/api/proxy/supir',
     SUPIR_ME:     '/api/proxy/supir/me',
+    SUPIR_OPSI_PENGGUNA: '/api/proxy/supir/opsi-pengguna',
     SUPIR_DETAIL: (id: string) => `/api/proxy/supir/${id}`,
 
     // Import Supir

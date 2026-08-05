@@ -162,6 +162,13 @@ export default function SupirPage() {
                     : <span className="text-gray-400">—</span>,
         },
         {
+            header: 'Akun Mobile', accessorKey: 'username_pengguna', size: 150,
+            cell: ({ row }: CellContext<Supir, unknown>) =>
+                row.original.username_pengguna
+                    ? <span className="font-mono text-xs text-gray-600 dark:text-gray-300">{row.original.username_pengguna}</span>
+                    : <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Kadaluarsa SIM', accessorKey: 'tgl_kadaluarsa_sim', size: 170,
             cell: ({ row }: CellContext<Supir, unknown>) => {
                 const tgl = row.original.tgl_kadaluarsa_sim
