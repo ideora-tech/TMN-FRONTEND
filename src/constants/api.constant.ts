@@ -266,6 +266,8 @@ export const API_ENDPOINTS = {
     TRIP_REKAP_BIAYA:        (id: string) => `/api/proxy/trip/${id}/rekap-biaya`,
     TRIP_BATALKAN:           (id: string) => `/api/proxy/trip/${id}/batalkan`,
     TRIP_LAPORAN_PERJALANAN: (idTrip: string) => `/api/proxy/trip/${idTrip}/laporan-perjalanan`,
+    TRIP_REKAP_SUPIR_EXPORT_EXCEL: '/api/proxy/trip/rekap-supir/export/excel',
+    TRIP_REKAP_SUPIR_EXPORT_PDF:   '/api/proxy/trip/rekap-supir/export/pdf',
     LAPORAN_PERJALANAN_DETAIL: (id: string) => `/api/proxy/laporan-perjalanan/${id}`,
     LAPORAN_PERJALANAN_FOTO:   (id: string) => `/api/proxy/laporan-perjalanan/${id}/foto`,
     LAPORAN_PERJALANAN_FOTO_DELETE: (id: string, idFoto: string) => `/api/proxy/laporan-perjalanan/${id}/foto/${idFoto}`,

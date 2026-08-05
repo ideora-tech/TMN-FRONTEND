@@ -1,15 +1,17 @@
 'use client'
+import axios from 'axios'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification, Button } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { tripService, Trip } from '@/services/trip.service'
 
 type Option = { value: string; label: string }
@@ -63,6 +65,7 @@ export default function RiwayatTripTab() {
     const [sumberFilter, setSumberFilter] = useState<SumberValue>('')
     const [dari, setDari]     = useState<Date | null>(dayjs().subtract(30, 'day').toDate())
     const [sampai, setSampai] = useState<Date | null>(null)
+    const [downloading, setDownloading] = useState<'excel' | 'pdf' | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -89,6 +92,37 @@ export default function RiwayatTripTab() {
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const downloadFile = async (url: string, filename: string, key: 'excel' | 'pdf') => {
+        setDownloading(key)
+        try {
+            const res = await axios.get(url, {
+                responseType: 'blob',
+                params: {
+                    dari: dari ? dayjs(dari).format('YYYY-MM-DD') : undefined,
+                    sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
+                    sumber: sumberFilter || undefined,
+                    status: statusFilter || undefined,
+                },
+            })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloading(null)
+        }
+    }
+
+    const today = dayjs().format('YYYY-MM-DD')
+    const handleExportExcel = () => downloadFile(API_ENDPOINTS.TRIP_REKAP_SUPIR_EXPORT_EXCEL, `rekap-trip-supir-${today}.xlsx`, 'excel')
+    const handleExportPdf   = () => downloadFile(API_ENDPOINTS.TRIP_REKAP_SUPIR_EXPORT_PDF, `rekap-trip-supir-${today}.pdf`, 'pdf')
 
     const columns: ColumnDef<Trip>[] = [
         {
@@ -197,6 +231,14 @@ export default function RiwayatTripTab() {
                         onChange={(opt) => { setSumberFilter((opt as SumberOption | null)?.value ?? ''); setCurrentPage(1) }}
                     />
                 </div>
+                <Button variant="default" size="sm" icon={<HiOutlineDownload />}
+                    loading={downloading === 'excel'} onClick={handleExportExcel}>
+                    Export Excel
+                </Button>
+                <Button variant="default" size="sm" icon={<HiOutlineDownload />}
+                    loading={downloading === 'pdf'} onClick={handleExportPdf}>
+                    Export PDF
+                </Button>
             </div>
             <DataTable
                 columns={columns}

@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Input, DatePicker, Checkbox, Spinner } from '@/components/ui'
+import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Input, Checkbox, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
@@ -10,14 +10,13 @@ import PapanShift from './PapanShift'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
 import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
 import { ROUTES } from '@/constants/route.constant'
 import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
-import dayjs from 'dayjs'
 
 const STATUS_CLASS: Record<string, string> = {
     pending: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
@@ -63,13 +62,12 @@ const EMPTY_CREATE_FORM: CreateFormState = {
 type EditFormState = {
     id_armada: string
     id_supir: string
-    tanggal_tugas: string
     estimasi_biaya: string
     status: StatusPenugasan
 }
 
 const EMPTY_EDIT_FORM: EditFormState = {
-    id_armada: '', id_supir: '', tanggal_tugas: '', estimasi_biaya: '', status: 'pending',
+    id_armada: '', id_supir: '', estimasi_biaya: '', status: 'pending',
 }
 
 type HasilGagal = { supir: string; armada: string; alasan: string }
@@ -133,7 +131,7 @@ export default function PenugasanPage() {
     const [editDialogOpen, setEditDialogOpen]     = useState(false)
     const [editTarget, setEditTarget]             = useState<Penugasan | null>(null)
     const [editForm, setEditForm]                 = useState<EditFormState>(EMPTY_EDIT_FORM)
-    const [editFormErrors, setEditFormErrors]     = useState<Partial<Record<'id_armada' | 'id_supir' | 'tanggal_tugas', string>>>({})
+    const [editFormErrors, setEditFormErrors]     = useState<Partial<Record<'id_armada' | 'id_supir', string>>>({})
     const [editSubmitting, setEditSubmitting]     = useState(false)
 
     const [hasilPenugasan, setHasilPenugasan] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
@@ -375,7 +373,6 @@ export default function PenugasanPage() {
         setEditForm({
             id_armada:      row.id_armada ?? '',
             id_supir:       row.id_supir ?? '',
-            tanggal_tugas:  row.tanggal_tugas ?? '',
             estimasi_biaya: row.estimasi_biaya != null ? String(row.estimasi_biaya) : '',
             status:         row.status,
         })
@@ -458,7 +455,6 @@ export default function PenugasanPage() {
             await penugasanService.update(editTarget.id_penugasan, {
                 id_armada:      editForm.id_armada || null,
                 id_supir:       editForm.id_supir,
-                tanggal_tugas:  editForm.tanggal_tugas || null,
                 estimasi_biaya: estimasi,
                 status:         editForm.status,
             })
@@ -503,9 +499,9 @@ export default function PenugasanPage() {
             },
         },
         {
-            header: 'Tanggal Tugas', accessorKey: 'tanggal_tugas', size: 150,
-            cell: ({ row }) => row.original.tanggal_tugas
-                ? dayjs(row.original.tanggal_tugas).format('DD MMM YYYY')
+            header: 'Estimasi Biaya', accessorKey: 'estimasi_biaya', size: 150,
+            cell: ({ row }) => row.original.estimasi_biaya != null
+                ? formatRupiah(row.original.estimasi_biaya)
                 : <span className="text-gray-400">—</span>,
         },
         {
@@ -878,7 +874,7 @@ export default function PenugasanPage() {
             <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} onClose={closeEditDialog} width={520}>
                 <h5 className="text-base font-semibold mb-1">Edit Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    Ubah armada, supir, tanggal tugas, estimasi biaya, atau status penugasan ini.
+                    Ubah armada, supir, estimasi biaya, atau status penugasan ini.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitEdit() }}>
                     {pasanganLoading ? (
@@ -915,25 +911,14 @@ export default function PenugasanPage() {
                                     }}
                                 />
                             </FormItem>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                                <FormItem label="Tanggal Tugas">
-                                    <DatePicker
-                                        value={editForm.tanggal_tugas ? new Date(editForm.tanggal_tugas) : null}
-                                        onChange={date => {
-                                            setEditForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
-                                            setEditFormErrors(prev => ({ ...prev, tanggal_tugas: undefined }))
-                                        }}
-                                    />
-                                </FormItem>
-                                <FormItem label="Estimasi Biaya">
-                                    <Input
-                                        prefix="Rp"
-                                        placeholder="0"
-                                        value={editForm.estimasi_biaya ? formatNum(Number(editForm.estimasi_biaya)) : ''}
-                                        onChange={e => setEditForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
-                                    />
-                                </FormItem>
-                            </div>
+                            <FormItem label="Estimasi Biaya">
+                                <Input
+                                    prefix="Rp"
+                                    placeholder="0"
+                                    value={editForm.estimasi_biaya ? formatNum(Number(editForm.estimasi_biaya)) : ''}
+                                    onChange={e => setEditForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
+                                />
+                            </FormItem>
                             <FormItem label="Status"
                                 extra={editTarget?.status === 'batal'
                                     ? <span className="text-xs text-gray-400">Penugasan batal tidak dapat diaktifkan kembali — buat penugasan baru</span>

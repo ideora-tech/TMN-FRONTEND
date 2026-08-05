@@ -12,13 +12,6 @@ import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, Sparepart, SparepartMutasi } from '@/services/sparepart.service'
 import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
 
-type Option = { value: 'masuk' | 'penyesuaian'; label: string }
-
-const JENIS_STOK_OPTIONS: Option[] = [
-    { value: 'masuk',       label: 'Barang Masuk' },
-    { value: 'penyesuaian', label: 'Penyesuaian (koreksi +/-)' },
-]
-
 const MUTASI_CLASS: Record<string, string> = {
     masuk:       'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
     keluar:      'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
@@ -42,7 +35,8 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
     const [mutasiLoading, setMutasiLoading] = useState(false)
 
     const [stokOpen, setStokOpen]   = useState(false)
-    const [stokForm, setStokForm]   = useState<{ jenis: 'masuk' | 'penyesuaian'; qty: string; harga: string; keterangan: string }>({ jenis: 'masuk', qty: '', harga: '', keterangan: '' })
+    const [stokForm, setStokForm]   = useState({ qty: '', harga: '', keterangan: '' })
+    const [stokSubmitted, setStokSubmitted] = useState(false)
     const [stokSaving, setStokSaving] = useState(false)
 
     const fetchSparepart = useCallback(async () => {
@@ -112,21 +106,23 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
-    const handleTambahStok = async () => {
+    const handlePenyesuaianStok = async () => {
+        setStokSubmitted(true)
         const qty = Number(stokForm.qty)
-        if (!qty) return
+        if (!qty || !stokForm.keterangan.trim()) return
         setStokSaving(true)
         try {
-            const updated = await sparepartService.tambahStok(id, {
-                jenis: stokForm.jenis,
+            const updated = await sparepartService.penyesuaianStok(id, {
+                jenis: 'penyesuaian',
                 qty,
                 harga: stokForm.harga ? Number(stokForm.harga) : null,
-                keterangan: stokForm.keterangan || null,
+                keterangan: stokForm.keterangan.trim(),
             })
             setSparepart(updated)
             setStokOpen(false)
-            setStokForm({ jenis: 'masuk', qty: '', harga: '', keterangan: '' })
-            toast.push(<Notification type="success" title="Stok berhasil diperbarui" />)
+            setStokForm({ qty: '', harga: '', keterangan: '' })
+            setStokSubmitted(false)
+            toast.push(<Notification type="success" title="Penyesuaian stok tersimpan" />)
             fetchMutasi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -161,7 +157,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                 <Button size="sm" variant="solid"
                                     customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
                                     icon={<HiOutlineTrash />} onClick={() => setDeleteOpen(true)}>Hapus</Button>
-                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setStokOpen(true)}>Tambah Stok</Button>
+                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => { setStokForm({ qty: '', harga: '', keterangan: '' }); setStokSubmitted(false); setStokOpen(true) }}>Penyesuaian Stok</Button>
                             </>
                         )}
                     </div>
@@ -179,7 +175,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                 label: 'Stok Saat Ini',
                                 value: (
                                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                        sparepart.stok === 0 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                        sparepart.stok <= 0 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                                         : sparepart.stok < 5 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'
                                         : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
                                     }`}>
@@ -290,31 +286,35 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
             </Card>
 
             <Dialog isOpen={stokOpen} onRequestClose={() => setStokOpen(false)} onClose={() => setStokOpen(false)} width={480}>
-                <h5 className="text-base font-semibold mb-5">Tambah / Sesuaikan Stok</h5>
-                <FormItem label="Jenis" asterisk>
-                    <Select isSearchable={false}
-                        options={JENIS_STOK_OPTIONS}
-                        value={JENIS_STOK_OPTIONS.find(o => o.value === stokForm.jenis) ?? null}
-                        onChange={opt => opt && setStokForm(p => ({ ...p, jenis: (opt as Option).value }))} />
-                </FormItem>
-                <FormItem label={stokForm.jenis === 'masuk' ? 'Qty Masuk' : 'Qty Koreksi (+/-)'} asterisk>
-                    <Input type="number" placeholder={stokForm.jenis === 'masuk' ? 'Contoh: 10' : 'Contoh: -3 atau 5'}
-                        value={stokForm.qty}
-                        onChange={e => setStokForm(p => ({ ...p, qty: e.target.value }))} />
-                </FormItem>
-                <FormItem label="Harga Beli per Unit (opsional)">
-                    <Input prefix="Rp" placeholder="0"
-                        value={stokForm.harga ? formatNum(Number(stokForm.harga)) : ''}
-                        onChange={e => setStokForm(p => ({ ...p, harga: e.target.value.replace(/\D/g, '') }))} />
-                </FormItem>
-                <FormItem label="Keterangan">
-                    <Input textArea placeholder="Contoh: Pembelian rutin / stok opname" value={stokForm.keterangan}
-                        onChange={e => setStokForm(p => ({ ...p, keterangan: e.target.value }))} />
-                </FormItem>
-                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => setStokOpen(false)}>Batal</Button>
-                    <Button variant="solid" loading={stokSaving} disabled={!Number(stokForm.qty)} onClick={handleTambahStok}>Simpan</Button>
-                </div>
+                <h5 className="text-base font-semibold mb-2">Penyesuaian Stok</h5>
+                <p className="text-xs text-gray-500 mb-5">
+                    Hanya untuk koreksi stock opname, saldo awal, atau retur.
+                    Barang masuk dari pembelian tercatat otomatis saat realisasi di menu Pembelian Sparepart.
+                </p>
+                <form onSubmit={e => { e.preventDefault(); handlePenyesuaianStok() }}>
+                    <FormItem label="Qty Koreksi (+/-)" asterisk
+                        invalid={stokSubmitted && !Number(stokForm.qty)}
+                        errorMessage="Qty wajib diisi dan tidak boleh 0">
+                        <Input type="number" placeholder="Contoh: -3 atau 5"
+                            value={stokForm.qty}
+                            onChange={e => setStokForm(p => ({ ...p, qty: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Harga per Unit (opsional)">
+                        <Input prefix="Rp" placeholder="0"
+                            value={stokForm.harga ? formatNum(Number(stokForm.harga)) : ''}
+                            onChange={e => setStokForm(p => ({ ...p, harga: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Keterangan / Alasan" asterisk
+                        invalid={stokSubmitted && !stokForm.keterangan.trim()}
+                        errorMessage="Keterangan wajib diisi">
+                        <Input textArea placeholder="Contoh: Koreksi stock opname Juli / saldo awal gudang" value={stokForm.keterangan}
+                            onChange={e => setStokForm(p => ({ ...p, keterangan: e.target.value }))} />
+                    </FormItem>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setStokOpen(false)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={stokSaving}>Simpan</Button>
+                    </div>
+                </form>
             </Dialog>
 
             <ConfirmDialog isOpen={deleteOpen} type="danger" title="Hapus Spare Part"

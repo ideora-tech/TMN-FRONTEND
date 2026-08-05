@@ -79,12 +79,11 @@ type Pasangan = {
 }
 
 type CreateFormState = {
-    tanggal_tugas: string
     estimasi_biaya: string
 }
 
 const EMPTY_CREATE_FORM: CreateFormState = {
-    tanggal_tugas: '', estimasi_biaya: '',
+    estimasi_biaya: '',
 }
 
 type HasilGagal = { supir: string; armada: string; alasan: string }
@@ -135,7 +134,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [createForm, setCreateForm]               = useState<CreateFormState>(EMPTY_CREATE_FORM)
     const [checkedIds, setCheckedIds]               = useState<string[]>([]) // id_supir yang dicentang
     const [pairSearch, setPairSearch]               = useState('')
-    const [createFormErrors, setCreateFormErrors]   = useState<Partial<Record<'pasangan' | 'tanggal_tugas', string>>>({})
+    const [createFormErrors, setCreateFormErrors]   = useState<Partial<Record<'pasangan', string>>>({})
     const [createSubmitting, setCreateSubmitting]   = useState(false)
     const [hasilPenugasan, setHasilPenugasan]       = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
     const [estimasiManual, setEstimasiManual]       = useState(false)
@@ -422,7 +421,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const validateCreateForm = () => {
         const e: typeof createFormErrors = {}
         if (checkedIds.length === 0) e.pasangan = 'Centang minimal satu pasangan'
-        if (!createForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setCreateFormErrors(e)
         return Object.keys(e).length === 0
     }
@@ -442,7 +440,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     id_proyek:      id,
                     id_supir:       p.supir.id_supir,
                     id_armada:      p.supir.id_armada_default ?? undefined,
-                    tanggal_tugas:  createForm.tanggal_tugas,
                     estimasi_biaya: estimasi,
                 })
             ))
@@ -838,9 +835,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal Tugas</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Armada</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Estimasi Biaya</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
@@ -848,9 +845,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                 {penugasanList.map(p => (
                                     <tr key={p.id_penugasan}>
-                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                            {p.tanggal_tugas ? dayjs(p.tanggal_tugas).format('DD MMM YYYY') : <span className="text-gray-400">—</span>}
-                                        </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
                                             {(p.id_supir ? supirList.find(s => s.id_supir === p.id_supir)?.nama : undefined)
                                                 ?? karyawanOptions.find(o => o.value === p.id_karyawan)?.label?.split(' — ')[1]
@@ -859,6 +853,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
                                             {p.id_armada
                                                 ? (armadaMap[p.id_armada]?.nopol ?? p.id_armada.slice(0, 8))
+                                                : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
+                                            {p.estimasi_biaya != null
+                                                ? formatRupiah(p.estimasi_biaya)
                                                 : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4">
@@ -898,7 +897,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    Centang satu atau lebih pasangan supir–armada, lalu tentukan tanggal tugas.
+                    Centang satu atau lebih pasangan supir–armada untuk di-assign ke proyek ini.
+                    Jadwal harian per tanggal diatur belakangan di menu Penugasan → tab Papan Jadwal.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitCreate() }}>
                     {pasanganLoading ? (
@@ -984,15 +984,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             )}
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-5">
-                                <FormItem label="Tanggal Tugas" asterisk invalid={!!createFormErrors.tanggal_tugas} errorMessage={createFormErrors.tanggal_tugas}>
-                                    <DatePicker
-                                        value={createForm.tanggal_tugas ? new Date(createForm.tanggal_tugas) : null}
-                                        onChange={date => {
-                                            setCreateForm(p => ({ ...p, tanggal_tugas: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
-                                            setCreateFormErrors(prev => ({ ...prev, tanggal_tugas: undefined }))
-                                        }}
-                                    />
-                                </FormItem>
                                 {ruteOptions.length > 1 && (
                                     <FormItem label="Rute (untuk estimasi)">
                                         <Select isSearchable={false}

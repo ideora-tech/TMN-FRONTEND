@@ -38,10 +38,10 @@ export type SparepartPayload = {
 }
 
 export type StokPayload = {
-    jenis: 'masuk' | 'penyesuaian'
+    jenis: 'penyesuaian'
     qty: number
     harga?: number | null
-    keterangan?: string | null
+    keterangan: string
 }
 
 export const sparepartService = {
@@ -64,7 +64,7 @@ export const sparepartService = {
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.SPAREPART_DETAIL(id))
     },
-    async tambahStok(id: string, payload: StokPayload) {
+    async penyesuaianStok(id: string, payload: StokPayload) {
         const { data } = await axios.post(API_ENDPOINTS.SPAREPART_STOK(id), payload)
         return data.data as Sparepart
     },

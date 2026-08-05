@@ -9,6 +9,7 @@ import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { projectService, Project } from '@/services/project.service'
+import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
 
@@ -115,11 +116,13 @@ export default function ProjectPage() {
         },
         {
             header: 'Tgl Mulai', accessorKey: 'tanggal_mulai', size: 130,
-            cell: ({ row }: CellContext<Project, unknown>) => row.original.tanggal_mulai ?? '-',
+            cell: ({ row }: CellContext<Project, unknown>) =>
+                row.original.tanggal_mulai ? dayjs(row.original.tanggal_mulai).format('DD MMM YYYY') : '-',
         },
         {
             header: 'Tgl Selesai', accessorKey: 'tanggal_selesai', size: 130,
-            cell: ({ row }: CellContext<Project, unknown>) => row.original.tanggal_selesai ?? '-',
+            cell: ({ row }: CellContext<Project, unknown>) =>
+                row.original.tanggal_selesai ? dayjs(row.original.tanggal_selesai).format('DD MMM YYYY') : '-',
         },
         {
             header: '', id: 'action', size: 100,
