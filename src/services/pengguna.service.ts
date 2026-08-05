@@ -27,7 +27,7 @@ export const penggunaService = {
         const { data } = await axios.post(API_ENDPOINTS.PENGGUNA, { ...rest, password: kata_sandi })
         return data.data as Pengguna
     },
-    async update(id: string, payload: Partial<Omit<Pengguna, 'id_pengguna'>>) {
+    async update(id: string, payload: Partial<Omit<Pengguna, 'id_pengguna'>> & { password?: string }) {
         const { data } = await axios.put(API_ENDPOINTS.PENGGUNA_DETAIL(id), payload)
         return data.data as Pengguna
     },

@@ -11,6 +11,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { penggunaService, Pengguna } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
+import { supirService, Supir } from '@/services/supir.service'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
@@ -24,6 +25,11 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
     const [saving, setSaving]   = useState(false)
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
 
+    // tautan supir (akun login mobile)
+    const [supirList, setSupirList]     = useState<Supir[]>([])
+    const [idSupirAwal, setIdSupirAwal] = useState('')
+    const [idSupirTaut, setIdSupirTaut] = useState('')
+
     const [pwOpen, setPwOpen]   = useState(false)
     const [pwForm, setPwForm]   = useState({ kata_sandi_baru: '', konfirmasi: '' })
     const [pwErrors, setPwErrors] = useState<Record<string, string>>({})
@@ -33,12 +39,25 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
         Promise.all([
             penggunaService.get(id),
             axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } }),
-        ]).then(([p, pRes]) => {
+            supirService.list(1, 500).catch(() => null),
+        ]).then(([p, pRes, sRes]) => {
             setData(p); setForm(p)
             setPeranOptions((pRes.data.data as Peran[]).map(r => ({ value: r.kode_peran, label: r.nama_peran })))
+            if (sRes) {
+                setSupirList(sRes.data)
+                const tertaut = sRes.data.find((s: Supir) => s.id_pengguna === id)
+                setIdSupirAwal(tertaut?.id_supir ?? '')
+                setIdSupirTaut(tertaut?.id_supir ?? '')
+            }
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
           .finally(() => setLoading(false))
     }, [id])
+
+    const supirOptions = supirList
+        .filter(s => !s.id_pengguna || s.id_pengguna === id)
+        .map(s => ({ value: s.id_supir, label: `${s.nama} — ${s.no_sim ?? 'tanpa SIM'}` }))
+
+    const namaSupirTertaut = supirList.find(s => s.id_supir === idSupirAwal)?.nama ?? null
 
     const handleSave = async () => {
         setSaving(true)
@@ -49,7 +68,24 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 kode_peran: form.kode_peran ?? null,
                 aktif:      form.aktif,
             })
-            setData(updated); setEditing(false)
+            setData(updated)
+
+            if (form.kode_peran === 'SUPIR' && idSupirTaut !== idSupirAwal) {
+                try {
+                    if (idSupirAwal) await supirService.update(idSupirAwal, { id_pengguna: null })
+                    if (idSupirTaut) await supirService.update(idSupirTaut, { id_pengguna: id })
+                    setSupirList(prev => prev.map(s => ({
+                        ...s,
+                        id_pengguna: s.id_supir === idSupirTaut ? id : (s.id_pengguna === id ? null : s.id_pengguna),
+                    })))
+                    setIdSupirAwal(idSupirTaut)
+                } catch (errTaut) {
+                    setIdSupirTaut(idSupirAwal)
+                    toast.push(<Notification type="warning" title={`Data tersimpan, tapi tautan supir gagal diperbarui: ${parseApiError(errTaut)}`} />)
+                }
+            }
+
+            setEditing(false)
             toast.push(<Notification type="success" title="Pengguna berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -61,14 +97,14 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
     const handleChangePassword = async () => {
         const e: Record<string, string> = {}
         if (!pwForm.kata_sandi_baru.trim()) e.kata_sandi_baru = 'Kata sandi baru wajib diisi'
-        else if (pwForm.kata_sandi_baru.length < 6) e.kata_sandi_baru = 'Minimal 6 karakter'
+        else if (pwForm.kata_sandi_baru.length < 8) e.kata_sandi_baru = 'Minimal 8 karakter'
         if (pwForm.kata_sandi_baru !== pwForm.konfirmasi) e.konfirmasi = 'Kata sandi tidak cocok'
         setPwErrors(e)
         if (Object.keys(e).length > 0) return
 
         setPwSaving(true)
         try {
-            await axios.post(API_ENDPOINTS.PENGGUNA_CHANGE_PASSWORD(id), { kata_sandi_baru: pwForm.kata_sandi_baru })
+            await penggunaService.update(id, { password: pwForm.kata_sandi_baru })
             toast.push(<Notification type="success" title="Kata sandi berhasil diubah" />)
             setPwOpen(false)
             setPwForm({ kata_sandi_baru: '', konfirmasi: '' })
@@ -123,6 +159,12 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 { label: 'Email',         value: data.email },
                                 { label: 'Peran',         value: peranOptions.find(o => o.value === data.kode_peran)?.label ?? data.kode_peran ?? <span className="text-gray-400">—</span> },
                                 { label: 'Login Terakhir', value: data.login_terakhir ? dayjs(data.login_terakhir).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span> },
+                                ...(data.kode_peran === 'SUPIR' ? [{
+                                    label: 'Supir Tertaut',
+                                    value: namaSupirTertaut
+                                        ? <span className="font-semibold">{namaSupirTertaut}</span>
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                }] : []),
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -165,9 +207,19 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
+                            {form.kode_peran === 'SUPIR' && (
+                                <FormItem label="Tautkan ke Supir (opsional)"
+                                    extra={<span className="text-xs text-gray-400">Supir yang memakai akun ini untuk login aplikasi mobile — hanya supir yang belum punya akun yang muncul</span>}>
+                                    <Select isClearable isSearchable
+                                        placeholder="Pilih supir..."
+                                        options={supirOptions}
+                                        value={supirOptions.find(o => o.value === idSupirTaut) ?? null}
+                                        onChange={opt => setIdSupirTaut(opt?.value ?? '')} />
+                                </FormItem>
+                            )}
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setIdSupirTaut(idSupirAwal) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -189,7 +241,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                     <form onSubmit={e => { e.preventDefault(); handleChangePassword() }}>
                     <div className="flex flex-col gap-4">
                         <FormItem label="Kata Sandi Baru" asterisk invalid={!!pwErrors.kata_sandi_baru} errorMessage={pwErrors.kata_sandi_baru}>
-                            <Input type="password" placeholder="Min. 6 karakter" value={pwForm.kata_sandi_baru}
+                            <Input type="password" placeholder="Min. 8 karakter" value={pwForm.kata_sandi_baru}
                                 invalid={!!pwErrors.kata_sandi_baru}
                                 onChange={e => setPwForm(p => ({ ...p, kata_sandi_baru: e.target.value }))} />
                         </FormItem>
