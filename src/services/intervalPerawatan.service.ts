@@ -8,7 +8,7 @@ export interface IntervalPerawatan {
     id_jenis_kendaraan: string
     nama_jenis_perawatan: string | null
     nama_jenis_kendaraan: string | null
-    interval_hari: number
+    interval_hari: number | null
     interval_km: number | null
     aktif: boolean
     dibuat_pada: string
@@ -18,8 +18,8 @@ export interface IntervalPerawatan {
 export type IntervalPerawatanPayload = {
     id_jenis_perawatan: string
     id_jenis_kendaraan: string
-    interval_hari: number
-    interval_km?: number | null
+    interval_hari?: number | null
+    interval_km: number
     aktif?: boolean
 }
 
@@ -43,7 +43,7 @@ export const intervalPerawatanService = {
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.INTERVAL_PERAWATAN_DETAIL(id))
     },
-    async resolusi(params: { id_jenis_perawatan: string; id_jenis_kendaraan: string }): Promise<{ interval_hari: number } | null> {
+    async resolusi(params: { id_jenis_perawatan: string; id_jenis_kendaraan: string }): Promise<{ interval_hari: number | null } | null> {
         const { data } = await axios.get(API_ENDPOINTS.INTERVAL_PERAWATAN_RESOLUSI, { params })
         return data?.data ?? null
     },

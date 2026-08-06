@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { penggunaService, Pengguna } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
@@ -27,6 +28,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
 
     // tautan supir (akun login mobile)
     const [supirList, setSupirList]     = useState<Supir[]>([])
+    const [karyawanList, setKaryawanList] = useState<Karyawan[]>([])
     const [idSupirAwal, setIdSupirAwal] = useState('')
     const [idSupirTaut, setIdSupirTaut] = useState('')
 
@@ -40,9 +42,11 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
             penggunaService.get(id),
             axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } }),
             supirService.list(1, 500).catch(() => null),
-        ]).then(([p, pRes, sRes]) => {
+            karyawanService.list(1, 500).catch(() => null),
+        ]).then(([p, pRes, sRes, kRes]) => {
             setData(p); setForm(p)
             setPeranOptions((pRes.data.data as Peran[]).map(r => ({ value: r.kode_peran, label: r.nama_peran })))
+            if (kRes) setKaryawanList(kRes.data)
             if (sRes) {
                 setSupirList(sRes.data)
                 const tertaut = sRes.data.find((s: Supir) => s.id_pengguna === id)
@@ -59,14 +63,17 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
 
     const namaSupirTertaut = supirList.find(s => s.id_supir === idSupirAwal)?.nama ?? null
 
+    const karyawanOptions = karyawanList.map(k => ({ value: k.id_karyawan, label: `${k.nama_karyawan} — ${k.nik}` }))
+
     const handleSave = async () => {
         setSaving(true)
         try {
             const updated = await penggunaService.update(id, {
-                username:   form.username,
-                email:      form.email,
-                kode_peran: form.kode_peran ?? null,
-                aktif:      form.aktif,
+                username:    form.username,
+                email:       form.email,
+                kode_peran:  form.kode_peran ?? null,
+                aktif:       form.aktif,
+                id_karyawan: form.id_karyawan ?? null,
             })
             setData(updated)
 
@@ -159,6 +166,12 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 { label: 'Email',         value: data.email },
                                 { label: 'Peran',         value: peranOptions.find(o => o.value === data.kode_peran)?.label ?? data.kode_peran ?? <span className="text-gray-400">—</span> },
                                 { label: 'Login Terakhir', value: data.login_terakhir ? dayjs(data.login_terakhir).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Karyawan Tertaut',
+                                    value: data.id_karyawan
+                                        ? <span className="font-semibold">{karyawanOptions.find(o => o.value === data.id_karyawan)?.label ?? data.id_karyawan}</span>
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                },
                                 ...(data.kode_peran === 'SUPIR' ? [{
                                     label: 'Supir Tertaut',
                                     value: namaSupirTertaut
@@ -206,6 +219,14 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
+                            </FormItem>
+                            <FormItem label="Tautkan ke Karyawan (opsional)"
+                                extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini untuk login aplikasi mobile staff (absensi & cuti)</span>}>
+                                <Select isClearable isSearchable
+                                    placeholder="Pilih karyawan..."
+                                    options={karyawanOptions}
+                                    value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
                             </FormItem>
                             {form.kode_peran === 'SUPIR' && (
                                 <FormItem label="Tautkan ke Supir (opsional)"

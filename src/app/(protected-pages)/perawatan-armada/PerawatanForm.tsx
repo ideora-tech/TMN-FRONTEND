@@ -144,7 +144,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             id_jenis_kendaraan: armada.id_jenis_kendaraan,
         })
             .then(res => {
-                if (aktif && res) {
+                if (aktif && res && res.interval_hari != null) {
                     const jadwal = dayjs(form.tanggal).add(res.interval_hari, 'day').format('YYYY-MM-DD')
                     setForm(p => ({ ...p, jadwal_servis_berikutnya: jadwal }))
                 }

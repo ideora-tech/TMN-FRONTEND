@@ -476,7 +476,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             id_jenis_kendaraan: armada.id_jenis_kendaraan,
         })
             .then(res => {
-                if (aktif && res) {
+                if (aktif && res && res.interval_hari != null) {
                     const jadwal = dayjs(rawatForm.tanggal).add(res.interval_hari, 'day').format('YYYY-MM-DD')
                     setRawatForm(p => ({ ...p, jadwal_servis_berikutnya: jadwal }))
                 }

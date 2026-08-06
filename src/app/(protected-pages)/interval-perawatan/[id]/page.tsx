@@ -60,7 +60,7 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
         const e: Partial<Record<keyof FormState, string>> = {}
         if (!form.id_jenis_perawatan) e.id_jenis_perawatan = 'Jenis perawatan wajib diisi'
         if (!form.id_jenis_kendaraan) e.id_jenis_kendaraan = 'Jenis kendaraan wajib diisi'
-        if (!form.interval_hari || parseInt(form.interval_hari) <= 0) e.interval_hari = 'Interval wajib diisi'
+        if (!form.interval_km || parseInt(form.interval_km) <= 0) e.interval_km = 'Interval kilometer wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -77,8 +77,8 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
             await intervalPerawatanService.update(id, {
                 id_jenis_perawatan: form.id_jenis_perawatan,
                 id_jenis_kendaraan: form.id_jenis_kendaraan,
-                interval_hari: parseInt(form.interval_hari),
-                interval_km: form.interval_km ? parseInt(form.interval_km) : null,
+                interval_hari: form.interval_hari ? parseInt(form.interval_hari) : null,
+                interval_km: parseInt(form.interval_km),
             })
             toast.push(<Notification type="success" title="Interval perawatan berhasil diperbarui" />)
             router.push(ROUTES.INTERVAL_PERAWATAN)
@@ -119,17 +119,18 @@ export default function IntervalPerawatanDetailPage({ params }: { params: Promis
                                 value={jenisKendaraanOptions.find(o => o.value === form.id_jenis_kendaraan) ?? null}
                                 onChange={opt => set('id_jenis_kendaraan', opt?.value ?? '')} />
                         </FormItem>
-                        <FormItem label="Interval (Hari)" asterisk invalid={!!errors.interval_hari} errorMessage={errors.interval_hari}>
-                            <Input type="number" step="1" min="1" suffix="hari" placeholder="Contoh: 180"
-                                value={form.interval_hari}
-                                invalid={!!errors.interval_hari}
-                                onChange={e => set('interval_hari', e.target.value.replace(/\D/g, ''))} />
-                        </FormItem>
-                        <FormItem label="Interval Kilometer (opsional)"
+                        <FormItem label="Interval Kilometer" asterisk invalid={!!errors.interval_km} errorMessage={errors.interval_km}
                             extra={<span className="text-xs text-gray-400">Warning muncul saat odometer armada mendekati km jatuh tempo (sisa ≤ 10% interval)</span>}>
                             <Input type="number" step="1" min="1" suffix="km" placeholder="Contoh: 10000"
                                 value={form.interval_km}
+                                invalid={!!errors.interval_km}
                                 onChange={e => set('interval_km', e.target.value.replace(/\D/g, ''))} />
+                        </FormItem>
+                        <FormItem label="Interval Hari (opsional)"
+                            extra={<span className="text-xs text-gray-400">Isi bila jenis perawatan ini juga punya batas waktu (contoh: servis berkala 6 bulanan)</span>}>
+                            <Input type="number" step="1" min="1" suffix="hari" placeholder="Contoh: 180"
+                                value={form.interval_hari}
+                                onChange={e => set('interval_hari', e.target.value.replace(/\D/g, ''))} />
                         </FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

@@ -77,17 +77,14 @@ export default function IntervalPerawatanTab() {
         },
         {
             header: 'Interval',
-            accessorKey: 'interval_hari',
+            accessorKey: 'interval_km',
             cell: (props: CellContext<IntervalPerawatan, unknown>) => {
                 const row = props.row.original
-                return (
-                    <span>
-                        {formatNum(row.interval_hari)} hari
-                        {row.interval_km != null && (
-                            <span className="text-gray-500"> · {formatNum(row.interval_km)} km</span>
-                        )}
-                    </span>
-                )
+                const bagian = [
+                    row.interval_km != null ? `${formatNum(row.interval_km)} km` : null,
+                    row.interval_hari != null ? `${formatNum(row.interval_hari)} hari` : null,
+                ].filter(Boolean)
+                return bagian.length > 0 ? bagian.join(' · ') : '—'
             },
         },
         {
