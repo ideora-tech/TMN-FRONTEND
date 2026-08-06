@@ -673,10 +673,12 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                                                 <td key={key} className="px-1.5 py-2 border-b border-r border-gray-200 dark:border-gray-600 align-middle">
                                                     {j ? (
                                                         <div className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${
-                                                            terpilih
-                                                                ? 'border-blue-500 ring-2 ring-blue-400 dark:ring-blue-500 bg-blue-100 dark:bg-blue-500/20'
+                                                            j.status_trip === 'berjalan'
+                                                                ? 'border-emerald-400 dark:border-emerald-500/50 bg-emerald-50 dark:bg-emerald-500/10'
+                                                                : j.status_trip === 'selesai'
+                                                                ? 'border-purple-300 dark:border-purple-500/50 bg-purple-50 dark:bg-purple-500/10'
                                                                 : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
-                                                        }`}
+                                                        } ${terpilih ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''}`}
                                                             onClick={e => klikSel(e, b, key, j)}>
                                                             <div className="flex items-center justify-between gap-1">
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
@@ -691,9 +693,26 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                                                                     </button>
                                                                 </span>
                                                             </div>
-                                                            <p className="text-sm font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                                                            <p className={`text-sm font-bold whitespace-nowrap ${
+                                                                j.status_trip === 'berjalan'
+                                                                    ? 'text-emerald-600 dark:text-emerald-300'
+                                                                    : j.status_trip === 'selesai'
+                                                                    ? 'text-purple-600 dark:text-purple-300'
+                                                                    : 'text-blue-600 dark:text-blue-300'
+                                                            }`}>
                                                                 {jam(j.jam_mulai)} - {jam(j.jam_selesai)}
                                                             </p>
+                                                            {j.status_trip === 'berjalan' && (
+                                                                <p className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                    SEDANG JALAN
+                                                                </p>
+                                                            )}
+                                                            {j.status_trip === 'selesai' && (
+                                                                <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                                                                    ✓ SELESAI
+                                                                </p>
+                                                            )}
                                                             {j.nopol_alokasi && j.nopol_alokasi !== b.nopol && (
                                                                 <p className="text-[10px] font-mono font-semibold text-amber-600 dark:text-amber-400 truncate"
                                                                     title="Armada pinjaman (alokasi otomatis)">
