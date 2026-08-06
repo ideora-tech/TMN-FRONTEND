@@ -41,6 +41,10 @@ export const alokasiArmadaService = {
         })
         return data.data as { armada: { id_armada: string; nopol: string; merk: string | null }; items: RiwayatAlokasiItem[] }
     },
+    async hitungUlang(params: { id_proyek: string; dari: string; sampai: string }) {
+        const { data } = await axios.post(API_ENDPOINTS.ALOKASI_ARMADA_HITUNG_ULANG, params)
+        return data.data as { jumlah_dihitung_ulang: number }
+    },
     async downloadRiwayatArmada(nopol: string, format: 'excel' | 'pdf', params: { id_armada: string; tanggal_dari?: string; tanggal_sampai?: string }) {
         const res = await axios.get(API_ENDPOINTS.ALOKASI_ARMADA_EXPORT(format), { responseType: 'blob', params })
         const href = URL.createObjectURL(res.data)
