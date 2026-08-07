@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineRefresh } from 'react-icons/hi'
+import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
@@ -13,7 +13,6 @@ import { shiftService, Shift } from '@/services/shift.service'
 import { penugasanService } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
-import { alokasiArmadaService } from '@/services/alokasiArmada.service'
 
 type Option = { value: string; label: string }
 
@@ -32,7 +31,6 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
     const [importing, setImporting] = useState(false)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
-    const [hitungUlangLoading, setHitungUlangLoading] = useState(false)
     const [importGagal, setImportGagal] = useState<{ baris: number; no_sim: string; alasan: string }[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
     const selTerakhir = useRef<{ idSupir: string; tanggal: string } | null>(null)
@@ -524,22 +522,7 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
         }
     }
 
-    const handleHitungUlang = async () => {
-        setHitungUlangLoading(true)
-        try {
-            const dari   = bulan.format('YYYY-MM-DD')
-            const sampai = bulan.endOf('month').format('YYYY-MM-DD')
-            const hasil = await alokasiArmadaService.hitungUlang({ id_proyek: idProyek, dari, sampai })
-            toast.push(<Notification type="success" title={`${hasil.jumlah_dihitung_ulang} jadwal berhasil dihitung ulang alokasinya`} />)
-            fetchBoard()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setHitungUlangLoading(false)
-        }
-    }
-
-    const handleImportFile = async (file: File | null) => {
+const handleImportFile = async (file: File | null) => {
         if (!file) return
         setImporting(true)
         try {
@@ -569,13 +552,6 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                     disabled={barisSupir.length === 0}
                     loading={downloading}
                     onClick={handleDownload} />
-                <Button size="sm" variant="default" icon={<HiOutlineRefresh />}
-                    title="Hitung ulang alokasi armada otomatis bulan ini — pakai bila ada supir yang jadwalnya baru diubah/dihapus sehingga armadanya jadi menganggur"
-                    disabled={barisSupir.length === 0}
-                    loading={hitungUlangLoading}
-                    onClick={handleHitungUlang}>
-                    Hitung Ulang
-                </Button>
                 <Button size="sm" variant="solid" icon={<HiPlusCircle />}
                     title="Tambah Shift"
                     onClick={bukaTambahShift} />
