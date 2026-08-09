@@ -1,12 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import { HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
-import { tarifRuteService, TarifRutePayload } from '@/services/tarifRute.service'
+import { tarifRuteService, TarifRutePayload, TarifRute } from '@/services/tarifRute.service'
 import { parseApiError } from '@/utils/error.util'
 
 export type TarifBaruForm = {
@@ -77,6 +77,7 @@ type Props = {
     ruteOptions: RuteOption[]
     jenisOptions: Option[]
     idKlien: string
+    ritaseSlot?: ReactNode
 }
 
 function formatDurasi(menit: number): string {
@@ -86,7 +87,7 @@ function formatDurasi(menit: number): string {
     return sisa > 0 ? `${jam} jam ${sisa} menit` : `${jam} jam`
 }
 
-export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, idKlien }: Props) {
+export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, idKlien, ritaseSlot }: Props) {
     const [showDetailBiaya, setShowDetailBiaya] = useState(false)
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
     const adaDetailRute = !!ruteTerpilih && (
@@ -204,6 +205,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                             value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
                             onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
                     </FormItem>
+                    {ritaseSlot}
 
                     {value.detailBiaya && (
                         <>
@@ -271,6 +273,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                 onChange={date => setTarifBaru({ tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
                         </FormItem>
                     </div>
+                    {ritaseSlot}
 
                     <button type="button"
                         className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
@@ -354,4 +357,23 @@ export async function resolveTarifId(state: RuteTarifState, idKlien: string): Pr
 
 export function hargaPenawaranEfektif(state: RuteTarifState): string {
     return state.tarifBaru ? state.tarifBaru.harga : state.harga_penawaran
+}
+
+export function stateDariTarifBaru(idRute: string, t: TarifRute): RuteTarifState {
+    return {
+        id_rute: idRute,
+        id_jenis_kendaraan: t.id_jenis_kendaraan,
+        id_tarif_rute: t.id_tarif_rute,
+        harga_penawaran: String(t.harga),
+        estimasiBiaya: t.harga,
+        tarifBaru: null,
+        detailBiaya: {
+            estimasi_tol: t.estimasi_tol != null ? String(t.estimasi_tol) : '',
+            estimasi_bbm: t.estimasi_bbm != null ? String(t.estimasi_bbm) : '',
+            estimasi_uang_jalan: t.estimasi_uang_jalan != null ? String(t.estimasi_uang_jalan) : '',
+            estimasi_biaya_lain: t.estimasi_biaya_lain != null ? String(t.estimasi_biaya_lain) : '',
+            tanggal_berakhir: t.tanggal_berakhir ?? '',
+            keterangan: t.keterangan ?? '',
+        },
+    }
 }

@@ -22,7 +22,8 @@ import { proyekRuteService, ProyekRute, ProyekRutePayload } from '@/services/pro
 import { ruteService, Rute } from '@/services/rute.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
-import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption } from '@/components/shared/RuteTarifFields'
+import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption, stateDariTarifBaru } from '@/components/shared/RuteTarifFields'
+import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -133,6 +134,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [updatingRute, setUpdatingRute]       = useState(false)
     const [deleteRuteTarget, setDeleteRuteTarget] = useState<ProyekRute | null>(null)
     const [deletingRute, setDeletingRute]       = useState(false)
+    const [showRuteBaru, setShowRuteBaru]       = useState(false)
 
     // Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan)
     const [createDialogOpen, setCreateDialogOpen]   = useState(false)
@@ -253,7 +255,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => { fetchRuteProyek() }, [fetchRuteProyek])
 
-    useEffect(() => {
+    const muatRuteOptions = () =>
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptionsMaster((res.data ?? []).map((r: Rute) => ({
                 value: r.id_rute,
@@ -264,6 +266,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 estimasi_durasi_menit: r.estimasi_durasi_menit,
             }))))
             .catch(() => {})
+
+    useEffect(() => {
+        muatRuteOptions()
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisOptionsMaster(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
@@ -728,21 +733,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek</p>
                         <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
-                        Tambah Rute
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="default" onClick={() => setShowRuteBaru(true)}>
+                            Rute Baru
+                        </Button>
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
+                            Tambah Rute
+                        </Button>
+                    </div>
                 </div>
 
                 {showRuteForm && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
-                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                            <FormItem label="Ritase">
-                                <Input type="number" min="1" value={ruteRitase}
-                                    onChange={e => setRuteRitase(e.target.value)} />
-                            </FormItem>
-                        </div>
+                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
+                            ritaseSlot={
+                                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                                    <FormItem label="Ritase">
+                                        <Input type="number" min="1" value={ruteRitase}
+                                            onChange={e => setRuteRitase(e.target.value)} />
+                                    </FormItem>
+                                </div>
+                            } />
                         <div className="mt-3">
                             <FormItem label="Keterangan">
                                 <Input textArea placeholder="Keterangan tambahan..." value={ruteKeterangan}
@@ -838,18 +850,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 )}
             </Card>
 
+            <RuteBaruDialog isOpen={showRuteBaru} onClose={() => setShowRuteBaru(false)}
+                onSaved={(rute, tarifDibuat) => {
+                    setShowRuteBaru(false)
+                    muatRuteOptions()
+                    setRuteTarif(tarifDibuat.length > 0
+                        ? stateDariTarifBaru(rute.id_rute, tarifDibuat[0])
+                        : { ...EMPTY_RUTE_TARIF_STATE, id_rute: rute.id_rute })
+                    setRuteRitase('1')
+                    setRuteKeterangan('')
+                    setShowRuteForm(true)
+                    toast.push(<Notification type="success" title="Rute berhasil dibuat — lengkapi lalu simpan ke proyek" />)
+                }} />
+
             {/* Dialog Edit Rute Proyek */}
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={520}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
                     <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
-                        ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                        <FormItem label="Ritase">
-                            <Input type="number" min="1" value={editRuteRitase}
-                                onChange={e => setEditRuteRitase(e.target.value)} />
-                        </FormItem>
-                    </div>
+                        ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
+                        ritaseSlot={
+                            <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                                <FormItem label="Ritase">
+                                    <Input type="number" min="1" value={editRuteRitase}
+                                        onChange={e => setEditRuteRitase(e.target.value)} />
+                                </FormItem>
+                            </div>
+                        } />
                     <div className="mt-3">
                         <FormItem label="Keterangan">
                             <Input textArea value={editRuteKeterangan}

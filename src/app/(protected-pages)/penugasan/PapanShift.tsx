@@ -709,7 +709,7 @@ const handleImportFile = async (file: File | null) => {
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
                                                                 <span className="flex items-center shrink-0">
                                                                     {j.status_trip && j.id_trip && (
-                                                                        <button type="button" className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                                                        <button type="button" className="p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
                                                                             title={j.status_trip === 'berjalan' ? 'Lihat trip yang sedang jalan' : 'Lihat trip selesai'}
                                                                             onClick={e => { e.stopPropagation(); window.open(ROUTES.TRIP_DETAIL(j.id_trip!), '_blank', 'noopener') }}>
                                                                             <HiOutlineEye className="w-3.5 h-3.5" />

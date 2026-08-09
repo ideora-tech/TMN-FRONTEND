@@ -13,7 +13,8 @@ import { formatRupiah } from '@/utils/formatNumber'
 import { ruteService, Rute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
-import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption } from '@/components/shared/RuteTarifFields'
+import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption, stateDariTarifBaru } from '@/components/shared/RuteTarifFields'
+import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -56,6 +57,7 @@ export default function ProjectBaruPage() {
     const [manualRuteKeterangan, setManualRuteKeterangan] = useState('')
     const [manualRuteRitase, setManualRuteRitase] = useState('1')
     const [manualRuteList, setManualRuteList] = useState<StagedRute[]>([])
+    const [showRuteBaru, setShowRuteBaru] = useState(false)
 
     useEffect(() => {
         klienService.list(1).then(res =>
@@ -70,8 +72,7 @@ export default function ProjectBaruPage() {
             .catch(() => {})
     }, [fromPenawaran])
 
-    useEffect(() => {
-        if (fromPenawaran) return
+    const muatRuteOptions = () =>
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptionsMaster((res.data ?? []).map((r: Rute) => ({
                 value: r.id_rute,
@@ -82,6 +83,10 @@ export default function ProjectBaruPage() {
                 estimasi_durasi_menit: r.estimasi_durasi_menit,
             }))))
             .catch(() => {})
+
+    useEffect(() => {
+        if (fromPenawaran) return
+        muatRuteOptions()
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisOptionsMaster(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
@@ -238,24 +243,31 @@ export default function ProjectBaruPage() {
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek (opsional)</p>
                                 <p className="text-xs text-gray-400 mt-0.5">{manualRuteList.length} rute akan ditambahkan</p>
                             </div>
-                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                disabled={!form.id_klien}
-                                onClick={openAddManualRute}>
-                                Tambah Rute
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button type="button" size="sm" variant="default" onClick={() => setShowRuteBaru(true)}>
+                                    Rute Baru
+                                </Button>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                    disabled={!form.id_klien}
+                                    onClick={openAddManualRute}>
+                                    Tambah Rute
+                                </Button>
+                            </div>
                         </div>
                         {!form.id_klien && <p className="text-xs text-amber-500 mt-1">Pilih klien dulu sebelum menambah rute</p>}
 
                         {showManualRuteForm && (
                             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <RuteTarifFields value={manualRuteTarif} onChange={setManualRuteTarif}
-                                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={form.id_klien} />
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                    <FormItem label="Ritase">
-                                        <Input type="number" min="1" value={manualRuteRitase}
-                                            onChange={e => setManualRuteRitase(e.target.value)} />
-                                    </FormItem>
-                                </div>
+                                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={form.id_klien}
+                                    ritaseSlot={
+                                        <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                                            <FormItem label="Ritase">
+                                                <Input type="number" min="1" value={manualRuteRitase}
+                                                    onChange={e => setManualRuteRitase(e.target.value)} />
+                                            </FormItem>
+                                        </div>
+                                    } />
                                 <div className="mt-3">
                                     <FormItem label="Keterangan">
                                         <Input textArea placeholder="Keterangan tambahan..." value={manualRuteKeterangan}
@@ -335,6 +347,18 @@ export default function ProjectBaruPage() {
                 </div>
                 </form>
             </Card>
+            <RuteBaruDialog isOpen={showRuteBaru} onClose={() => setShowRuteBaru(false)}
+                onSaved={(rute, tarifDibuat) => {
+                    setShowRuteBaru(false)
+                    muatRuteOptions()
+                    setManualRuteTarif(tarifDibuat.length > 0
+                        ? stateDariTarifBaru(rute.id_rute, tarifDibuat[0])
+                        : { ...EMPTY_RUTE_TARIF_STATE, id_rute: rute.id_rute })
+                    setManualRuteRitase('1')
+                    setManualRuteKeterangan('')
+                    setShowManualRuteForm(true)
+                    toast.push(<Notification type="success" title="Rute berhasil dibuat — lengkapi lalu tambah ke daftar" />)
+                }} />
         </div>
     )
 }

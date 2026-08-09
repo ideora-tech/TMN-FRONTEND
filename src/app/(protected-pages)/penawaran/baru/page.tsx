@@ -380,8 +380,6 @@ export default function PenawaranBaruPage() {
                 onClose={() => setDialogRuteTerbuka(false)}
                 onPilih={tambahItemDariDialog}
                 onRuteBaru={tambahRuteOption}
-                idKlien={form.id_klien || undefined}
-                namaKlien={klienOptions.find(o => o.value === form.id_klien)?.label}
             />
         </div>
     )

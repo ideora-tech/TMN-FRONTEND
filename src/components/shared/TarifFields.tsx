@@ -42,9 +42,10 @@ type Props = {
     jenisOptions: Option[]
     klienOptions: Option[]
     idRute: string | null
+    menuPortal?: boolean
 }
 
-export default function TarifFields({ value, onChange, jenisOptions, klienOptions /* , idRute */ }: Props) {
+export default function TarifFields({ value, onChange, jenisOptions, klienOptions, menuPortal /* , idRute */ }: Props) {
     const [showRincian, setShowRincian] = useState(true)
     // const [estimasi, setEstimasi] = useState<EstimasiBok | null>(null)
 
@@ -90,12 +91,16 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                     <Select<Option> isSearchable placeholder="Pilih jenis kendaraan..."
                         options={jenisOptions}
                         value={jenisOptions.find(o => o.value === value.id_jenis_kendaraan) ?? null}
+                        menuPortalTarget={menuPortal && typeof document !== 'undefined' ? document.body : undefined}
+                        styles={menuPortal ? { menuPortal: base => ({ ...base, zIndex: 9999 }) } : undefined}
                         onChange={opt => set({ id_jenis_kendaraan: opt?.value ?? '' })} />
                 </FormItem>
                 <FormItem label="Klien">
                     <Select<Option> isClearable isSearchable placeholder="Harga umum (semua klien)"
                         options={klienOptions}
                         value={klienOptions.find(o => o.value === value.id_klien) ?? null}
+                        menuPortalTarget={menuPortal && typeof document !== 'undefined' ? document.body : undefined}
+                        styles={menuPortal ? { menuPortal: base => ({ ...base, zIndex: 9999 }) } : undefined}
                         onChange={opt => set({ id_klien: opt?.value ?? '' })} />
                 </FormItem>
                 <FormItem label="Uang Jalan" asterisk>

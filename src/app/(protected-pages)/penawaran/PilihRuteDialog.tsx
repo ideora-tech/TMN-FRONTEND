@@ -1,23 +1,19 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Button, Checkbox, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import Select from '@/components/ui/Select'
-import dayjs from 'dayjs'
+import { Button, Dialog, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import {
     HiArrowLeft,
     HiOutlineChevronDown,
     HiOutlineChevronUp,
     HiOutlinePencilAlt,
     HiOutlineSearch,
-    HiOutlineTrash,
     HiPlusCircle,
 } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { tarifRuteService, TarifRute } from '@/services/tarifRute.service'
-import { lokasiService } from '@/services/lokasi.service'
-import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import { RuteBaruForm } from '@/components/shared/RuteBaruDialog'
 
 export type PilihanItemRute = {
     id_rute: string
@@ -31,44 +27,16 @@ type Props = {
     onClose: () => void
     onPilih: (pilihan: PilihanItemRute) => void
     onRuteBaru: (rute: Rute) => void
-    idKlien?: string
-    namaKlien?: string
 }
 
-type Option = { value: string; label: string }
 type Tampilan = 'daftar' | 'buat'
-
-interface FormRuteBaru {
-    kode_rute: string
-    nama_rute: string
-    id_lokasi_asal: string
-    id_lokasi_tujuan: string
-    estimasi_jarak_km: string
-    estimasi_durasi_menit: string
-}
-
-interface TarifDraft {
-    id_jenis_kendaraan: string
-    namaJenis: string
-    hargaStr: string
-    khususKlien: boolean
-}
-
-const FORM_RUTE_KOSONG: FormRuteBaru = {
-    kode_rute: '', nama_rute: '', id_lokasi_asal: '', id_lokasi_tujuan: '',
-    estimasi_jarak_km: '', estimasi_durasi_menit: '',
-}
-
-const TARIF_DRAFT_KOSONG: TarifDraft = {
-    id_jenis_kendaraan: '', namaJenis: '', hargaStr: '', khususKlien: false,
-}
 
 const LIMIT_RUTE = 20
 
 const TAG_UMUM = 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400 border-0'
 const TAG_KLIEN = 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 border-0'
 
-export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, idKlien, namaKlien }: Props) {
+export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }: Props) {
     const [tampilan, setTampilan] = useState<Tampilan>('daftar')
 
     const [cari, setCari] = useState('')
@@ -87,16 +55,6 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
     const [editTarif, setEditTarif] = useState<{ id: string; idRute: string; hargaStr: string } | null>(null)
     const [menyimpanTarif, setMenyimpanTarif] = useState(false)
 
-    const [formRute, setFormRute] = useState<FormRuteBaru>(FORM_RUTE_KOSONG)
-    const [errorsRute, setErrorsRute] = useState<Partial<Record<'kode_rute' | 'nama_rute', string>>>({})
-    const [lokasiOptions, setLokasiOptions] = useState<Option[]>([])
-    const [jenisOptions, setJenisOptions] = useState<Option[]>([])
-    const [opsiFormDimuat, setOpsiFormDimuat] = useState(false)
-    const [tarifDraft, setTarifDraft] = useState<TarifDraft>(TARIF_DRAFT_KOSONG)
-    const [showTarifDraft, setShowTarifDraft] = useState(false)
-    const [stagedTarif, setStagedTarif] = useState<TarifDraft[]>([])
-    const [menyimpanRute, setMenyimpanRute] = useState(false)
-
     useEffect(() => {
         if (!isOpen) return
         setTampilan('daftar')
@@ -105,11 +63,6 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         setRuteTerbuka(null)
         setTarifPerRute({})
         setEditTarif(null)
-        setFormRute(FORM_RUTE_KOSONG)
-        setErrorsRute({})
-        setTarifDraft(TARIF_DRAFT_KOSONG)
-        setShowTarifDraft(false)
-        setStagedTarif([])
     }, [isOpen])
 
     useEffect(() => {
@@ -199,72 +152,10 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         }
     }
 
-    const bukaFormBuat = () => {
-        setTampilan('buat')
-        if (opsiFormDimuat) return
-        setOpsiFormDimuat(true)
-        lokasiService.list(1, 200)
-            .then(res => setLokasiOptions(res.data.map(l => ({
-                value: l.id_lokasi,
-                label: `${l.nama_lokasi}${l.kota && l.kota.trim().toLowerCase() !== l.nama_lokasi.trim().toLowerCase() ? ' — ' + l.kota : ''}`,
-            }))))
-            .catch(() => { })
-        jenisKendaraanService.list(1, 100)
-            .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
-            .catch(() => { })
-    }
+    const bukaFormBuat = () => setTampilan('buat')
 
-    const tambahKeDaftarTarif = () => {
-        if (!tarifDraft.id_jenis_kendaraan || !tarifDraft.hargaStr) return
-        setStagedTarif(prev => [...prev, tarifDraft])
-        setTarifDraft(TARIF_DRAFT_KOSONG)
-        setShowTarifDraft(false)
-    }
-
-    const simpanRuteBaru = async (e: React.FormEvent) => {
-        e.preventDefault()
-        const errs: Partial<Record<'kode_rute' | 'nama_rute', string>> = {}
-        if (!formRute.kode_rute.trim()) errs.kode_rute = 'Kode rute wajib diisi'
-        if (!formRute.nama_rute.trim()) errs.nama_rute = 'Nama rute wajib diisi'
-        setErrorsRute(errs)
-        if (Object.keys(errs).length > 0) return
-
-        setMenyimpanRute(true)
-        let rute: Rute
-        try {
-            rute = await ruteService.create({
-                kode_rute: formRute.kode_rute.trim(),
-                nama_rute: formRute.nama_rute.trim(),
-                id_lokasi_asal: formRute.id_lokasi_asal || null,
-                id_lokasi_tujuan: formRute.id_lokasi_tujuan || null,
-                estimasi_jarak_km: formRute.estimasi_jarak_km ? parseFloat(formRute.estimasi_jarak_km) : null,
-                estimasi_durasi_menit: formRute.estimasi_durasi_menit ? parseInt(formRute.estimasi_durasi_menit) : null,
-            })
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-            setMenyimpanRute(false)
-            return
-        }
-
+    const ruteBaruTersimpan = (rute: Rute, tarifDibuat: TarifRute[]) => {
         onRuteBaru(rute)
-
-        const tarifDibuat: TarifRute[] = []
-        const gagal: string[] = []
-        for (const draft of stagedTarif) {
-            try {
-                const t = await tarifRuteService.create({
-                    id_rute: rute.id_rute,
-                    id_jenis_kendaraan: draft.id_jenis_kendaraan,
-                    id_klien: draft.khususKlien && idKlien ? idKlien : null,
-                    harga: Number(draft.hargaStr),
-                    tanggal_mulai: dayjs().format('YYYY-MM-DD'),
-                })
-                tarifDibuat.push(t)
-            } catch (err) {
-                gagal.push(`${draft.namaJenis}: ${parseApiError(err)}`)
-            }
-        }
-
         if (tarifDibuat.length > 0) {
             tarifDibuat.forEach(t => onPilih({
                 id_rute: rute.id_rute,
@@ -275,22 +166,11 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         } else {
             onPilih({ id_rute: rute.id_rute, id_jenis_kendaraan: null, id_tarif_rute: null, harga_satuan: null })
         }
-
-        if (gagal.length > 0) {
-            toast.push(<Notification type="danger" title={`Sebagian tarif gagal disimpan — ${gagal.join('; ')}`} />)
-        }
         toast.push(<Notification type="success" title={
             tarifDibuat.length > 0
                 ? `Rute dibuat, ${tarifDibuat.length} item ditambahkan ke penawaran`
                 : 'Rute dibuat & item ditambahkan ke penawaran'
         } />)
-
-        setFormRute(FORM_RUTE_KOSONG)
-        setErrorsRute({})
-        setTarifDraft(TARIF_DRAFT_KOSONG)
-        setShowTarifDraft(false)
-        setStagedTarif([])
-        setMenyimpanRute(false)
         setCari('')
         setCariDebounced('')
         setVersiDaftar(v => v + 1)
@@ -298,7 +178,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
     }
 
     return (
-        <Dialog isOpen={isOpen} onRequestClose={onClose} onClose={onClose} width={700}>
+        <Dialog isOpen={isOpen} onRequestClose={onClose} onClose={onClose} width={840}>
             {tampilan === 'daftar' ? (
                 <>
                     <h5 className="text-base font-semibold mb-1">Daftar Rute</h5>
@@ -463,140 +343,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
                     <p className="text-xs text-gray-400 mb-4 ml-9">
                         Rute langsung tersedia di penawaran setelah disimpan
                     </p>
-                    <form onSubmit={simpanRuteBaru}>
-                        <div className="max-h-[55vh] overflow-y-auto pr-1">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                                <FormItem label="Kode Rute" asterisk invalid={!!errorsRute.kode_rute} errorMessage={errorsRute.kode_rute}>
-                                    <Input placeholder="Contoh: RT-001" value={formRute.kode_rute}
-                                        invalid={!!errorsRute.kode_rute}
-                                        onChange={e => setFormRute(p => ({ ...p, kode_rute: e.target.value }))} />
-                                </FormItem>
-                                <FormItem label="Nama Rute" asterisk invalid={!!errorsRute.nama_rute} errorMessage={errorsRute.nama_rute}>
-                                    <Input placeholder="Contoh: Jakarta - Surabaya" value={formRute.nama_rute}
-                                        invalid={!!errorsRute.nama_rute}
-                                        onChange={e => setFormRute(p => ({ ...p, nama_rute: e.target.value }))} />
-                                </FormItem>
-                                <FormItem label="Asal">
-                                    <Select<Option> isClearable isSearchable placeholder="Pilih lokasi asal..."
-                                        options={lokasiOptions}
-                                        value={lokasiOptions.find(o => o.value === formRute.id_lokasi_asal) ?? null}
-                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                        onChange={opt => setFormRute(p => ({ ...p, id_lokasi_asal: opt?.value ?? '' }))} />
-                                </FormItem>
-                                <FormItem label="Tujuan">
-                                    <Select<Option> isClearable isSearchable placeholder="Pilih lokasi tujuan..."
-                                        options={lokasiOptions}
-                                        value={lokasiOptions.find(o => o.value === formRute.id_lokasi_tujuan) ?? null}
-                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                        onChange={opt => setFormRute(p => ({ ...p, id_lokasi_tujuan: opt?.value ?? '' }))} />
-                                </FormItem>
-                                <FormItem label="Estimasi Jarak (km)">
-                                    <Input type="number" step="0.01" min="0" placeholder="Contoh: 750.5"
-                                        value={formRute.estimasi_jarak_km}
-                                        onChange={e => setFormRute(p => ({ ...p, estimasi_jarak_km: e.target.value }))} />
-                                </FormItem>
-                                <FormItem label="Estimasi Durasi (menit)">
-                                    <Input type="number" min="0" placeholder="Contoh: 480"
-                                        value={formRute.estimasi_durasi_menit}
-                                        onChange={e => setFormRute(p => ({ ...p, estimasi_durasi_menit: e.target.value }))} />
-                                </FormItem>
-                            </div>
-
-                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Tarif Awal (opsional)</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{stagedTarif.length} tarif akan disimpan & jadi item penawaran</p>
-                                    </div>
-                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                        onClick={() => { setTarifDraft(TARIF_DRAFT_KOSONG); setShowTarifDraft(true) }}>
-                                        Tambah Tarif
-                                    </Button>
-                                </div>
-
-                                {showTarifDraft && (
-                                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 mb-3">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                                            <FormItem label="Jenis Kendaraan">
-                                                <Select<Option> isSearchable placeholder="Pilih jenis..."
-                                                    options={jenisOptions}
-                                                    value={jenisOptions.find(o => o.value === tarifDraft.id_jenis_kendaraan) ?? null}
-                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                    onChange={opt => setTarifDraft(p => ({ ...p, id_jenis_kendaraan: opt?.value ?? '', namaJenis: opt?.label ?? '' }))} />
-                                            </FormItem>
-                                            <FormItem label="Harga per Trip">
-                                                <Input prefix="Rp" placeholder="0"
-                                                    value={tarifDraft.hargaStr ? formatNum(Number(tarifDraft.hargaStr)) : ''}
-                                                    onChange={e => setTarifDraft(p => ({ ...p, hargaStr: e.target.value.replace(/\D/g, '') }))} />
-                                            </FormItem>
-                                        </div>
-                                        {idKlien && (
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Checkbox
-                                                    checked={tarifDraft.khususKlien}
-                                                    onChange={() => setTarifDraft(p => ({ ...p, khususKlien: !p.khususKlien }))}
-                                                />
-                                                <span className="text-sm">
-                                                    Tarif khusus klien: <span className="font-semibold">{namaKlien ?? ''}</span>
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-end gap-2">
-                                            <Button type="button" size="sm" variant="plain" onClick={() => setShowTarifDraft(false)}>Batal</Button>
-                                            <Button type="button" size="sm" variant="solid"
-                                                disabled={!tarifDraft.id_jenis_kendaraan || !tarifDraft.hargaStr}
-                                                onClick={tambahKeDaftarTarif}>
-                                                Tambah ke daftar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {stagedTarif.length > 0 && (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                                <tr className="text-left text-gray-600 dark:text-gray-300">
-                                                    <th className="px-2 py-1.5 font-semibold">Jenis Kendaraan</th>
-                                                    <th className="px-2 py-1.5 font-semibold">Harga</th>
-                                                    <th className="px-2 py-1.5 font-semibold">Berlaku Untuk</th>
-                                                    <th className="px-2 py-1.5 w-10"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {stagedTarif.map((t, i) => (
-                                                    <tr key={i} className="border-b border-gray-100 dark:border-gray-700">
-                                                        <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-200">{t.namaJenis}</td>
-                                                        <td className="px-2 py-2">{formatRupiah(Number(t.hargaStr))}</td>
-                                                        <td className="px-2 py-2">
-                                                            <Tag className={t.khususKlien ? TAG_KLIEN : TAG_UMUM}>
-                                                                {t.khususKlien ? (namaKlien ?? 'Khusus klien') : 'Umum'}
-                                                            </Tag>
-                                                        </td>
-                                                        <td className="px-2 py-2 text-right">
-                                                            <span
-                                                                className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                                onClick={() => setStagedTarif(prev => prev.filter((_, idx) => idx !== i))}
-                                                            >
-                                                                <HiOutlineTrash />
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => setTampilan('daftar')}>Kembali</Button>
-                            <Button type="submit" variant="solid" loading={menyimpanRute}>Simpan Rute</Button>
-                        </div>
-                    </form>
+                    <RuteBaruForm onBatal={() => setTampilan('daftar')} onSaved={ruteBaruTersimpan} />
                 </>
             )}
         </Dialog>
