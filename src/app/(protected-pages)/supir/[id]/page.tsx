@@ -436,6 +436,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Waktu Berangkat</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Proyek</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-in</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Check-out</th>
@@ -448,6 +449,18 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                     <tr key={t.id_trip}>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                             {t.waktu_berangkat ? dayjs(t.waktu_berangkat).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 max-w-[200px] truncate">
+                                            {t.id_proyek && t.nama_proyek ? (
+                                                <span
+                                                    className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                    onClick={() => router.push(ROUTES.PROYEK_DETAIL(t.id_proyek!))}
+                                                >
+                                                    {t.nama_proyek}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">—</span>
+                                            )}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
                                             {t.rute ?? <span className="text-gray-400">—</span>}
