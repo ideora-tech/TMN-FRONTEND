@@ -3,9 +3,10 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload } from 'react-icons/hi'
+import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { ROUTES } from '@/constants/route.constant'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
 import { proyekRuteService } from '@/services/proyekRute.service'
 import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
@@ -707,6 +708,13 @@ const handleImportFile = async (file: File | null) => {
                                                             <div className="flex items-center justify-between gap-1">
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
                                                                 <span className="flex items-center shrink-0">
+                                                                    {j.status_trip && j.id_trip && (
+                                                                        <button type="button" className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                                                            title={j.status_trip === 'berjalan' ? 'Lihat trip yang sedang jalan' : 'Lihat trip selesai'}
+                                                                            onClick={e => { e.stopPropagation(); window.open(ROUTES.TRIP_DETAIL(j.id_trip!), '_blank', 'noopener') }}>
+                                                                            <HiOutlineEye className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    )}
                                                                     <button type="button" className="p-0.5 text-blue-500 hover:text-blue-700"
                                                                         onClick={e => { e.stopPropagation(); bukaGanti(b, j) }}>
                                                                         <HiOutlinePencilAlt className="w-3.5 h-3.5" />

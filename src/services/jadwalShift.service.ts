@@ -13,6 +13,7 @@ export interface JadwalShift {
     nopol_alokasi?: string | null
     sumber_alokasi?: string | null
     status_trip?: 'berjalan' | 'selesai' | null
+    id_trip?: string | null
 }
 
 export interface HasilBatchShift {

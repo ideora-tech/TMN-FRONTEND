@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     PROYEK_STATUS: (id: string) => `/api/proxy/proyek/${id}/status`,
     PROYEK_RUTE:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/rute`,
     PROYEK_RUTE_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/rute/${id}`,
+    PROYEK_PDF:         (id: string) => `/api/proxy/proyek/${id}/pdf`,
 
     // Armada
     ARMADA:        '/api/proxy/armada',

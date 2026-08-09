@@ -27,6 +27,7 @@ type StagedRute = {
     keterangan: string
     namaRute: string
     namaJenis: string
+    ritase: string
 }
 
 export default function ProjectBaruPage() {
@@ -53,6 +54,7 @@ export default function ProjectBaruPage() {
     const [showManualRuteForm, setShowManualRuteForm] = useState(false)
     const [manualRuteTarif, setManualRuteTarif] = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
     const [manualRuteKeterangan, setManualRuteKeterangan] = useState('')
+    const [manualRuteRitase, setManualRuteRitase] = useState('1')
     const [manualRuteList, setManualRuteList] = useState<StagedRute[]>([])
 
     useEffect(() => {
@@ -101,6 +103,7 @@ export default function ProjectBaruPage() {
     const openAddManualRute = () => {
         setManualRuteTarif(EMPTY_RUTE_TARIF_STATE)
         setManualRuteKeterangan('')
+        setManualRuteRitase('1')
         setShowManualRuteForm(true)
     }
 
@@ -111,6 +114,7 @@ export default function ProjectBaruPage() {
             keterangan: manualRuteKeterangan,
             namaRute: ruteOptionsMaster.find(o => o.value === manualRuteTarif.id_rute)?.label ?? 'Rute',
             namaJenis: jenisOptionsMaster.find(o => o.value === manualRuteTarif.id_jenis_kendaraan)?.label ?? '',
+            ritase: manualRuteRitase,
         }])
         setShowManualRuteForm(false)
     }
@@ -134,6 +138,7 @@ export default function ProjectBaruPage() {
                     id_jenis_kendaraan: staged.tarif.id_jenis_kendaraan,
                     id_tarif_rute: idTarifRute ?? undefined,
                     harga_penawaran: hargaPenawaranEfektif(staged.tarif) ? Number(hargaPenawaranEfektif(staged.tarif)) : undefined,
+                    estimasi_ritase: Number(staged.ritase || 1),
                     keterangan: staged.keterangan || undefined,
                 })
             }
@@ -245,6 +250,12 @@ export default function ProjectBaruPage() {
                             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <RuteTarifFields value={manualRuteTarif} onChange={setManualRuteTarif}
                                     ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={form.id_klien} />
+                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                                    <FormItem label="Ritase">
+                                        <Input type="number" min="1" value={manualRuteRitase}
+                                            onChange={e => setManualRuteRitase(e.target.value)} />
+                                    </FormItem>
+                                </div>
                                 <div className="mt-3">
                                     <FormItem label="Keterangan">
                                         <Input textArea placeholder="Keterangan tambahan..." value={manualRuteKeterangan}
@@ -268,6 +279,8 @@ export default function ProjectBaruPage() {
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
                                             <th className="py-2.5" />
                                         </tr>
                                     </thead>
@@ -278,6 +291,12 @@ export default function ProjectBaruPage() {
                                                 <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{staged.namaJenis}</td>
                                                 <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
                                                     {hargaPenawaranEfektif(staged.tarif) ? formatRupiah(Number(hargaPenawaranEfektif(staged.tarif))) : '—'}
+                                                </td>
+                                                <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{staged.ritase || '1'}</td>
+                                                <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                                    {hargaPenawaranEfektif(staged.tarif)
+                                                        ? formatRupiah(Number(hargaPenawaranEfektif(staged.tarif)) * Number(staged.ritase || 1))
+                                                        : '—'}
                                                 </td>
                                                 <td className="py-3 text-right">
                                                     <Tooltip title="Hapus">
@@ -292,6 +311,18 @@ export default function ProjectBaruPage() {
                                             </tr>
                                         ))}
                                     </tbody>
+                                    <tfoot>
+                                        <tr className="border-t border-gray-200 dark:border-gray-600">
+                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Proyek</td>
+                                            <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                                {formatRupiah(manualRuteList.reduce((sum, s) =>
+                                                    sum + (hargaPenawaranEfektif(s.tarif)
+                                                        ? Number(hargaPenawaranEfektif(s.tarif)) * Number(s.ritase || 1)
+                                                        : 0), 0))}
+                                            </td>
+                                            <td />
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         )}

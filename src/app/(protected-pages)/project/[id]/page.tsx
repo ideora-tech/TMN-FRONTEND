@@ -7,6 +7,8 @@ import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
+import axios from 'axios'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { projectService, Project } from '@/services/project.service'
@@ -99,6 +101,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [form, setForm]         = useState<Partial<Project>>({})
     const [saving, setSaving]     = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [downloadingPdf, setDownloadingPdf] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
     const [errors, setErrors]     = useState<Partial<Record<keyof Project, string>>>({})
 
@@ -119,12 +122,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [showRuteForm, setShowRuteForm]       = useState(false)
     const [ruteTarif, setRuteTarif]             = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
     const [ruteKeterangan, setRuteKeterangan]   = useState('')
+    const [ruteRitase, setRuteRitase]           = useState('1')
     const [ruteOptionsMaster, setRuteOptionsMaster] = useState<RuteOption[]>([])
     const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
     const [addingRute, setAddingRute]           = useState(false)
     const [editRuteTarget, setEditRuteTarget]   = useState<ProyekRute | null>(null)
     const [editRuteTarif, setEditRuteTarif]     = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
     const [editRuteKeterangan, setEditRuteKeterangan] = useState('')
+    const [editRuteRitase, setEditRuteRitase]   = useState('1')
     const [updatingRute, setUpdatingRute]       = useState(false)
     const [deleteRuteTarget, setDeleteRuteTarget] = useState<ProyekRute | null>(null)
     const [deletingRute, setDeletingRute]       = useState(false)
@@ -267,6 +272,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const openAddRute = () => {
         setRuteTarif(EMPTY_RUTE_TARIF_STATE)
         setRuteKeterangan('')
+        setRuteRitase('1')
         setShowRuteForm(true)
     }
 
@@ -280,6 +286,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 id_jenis_kendaraan: ruteTarif.id_jenis_kendaraan,
                 id_tarif_rute: idTarifRute ?? undefined,
                 harga_penawaran: hargaPenawaranEfektif(ruteTarif) ? Number(hargaPenawaranEfektif(ruteTarif)) : undefined,
+                estimasi_ritase: Number(ruteRitase || 1),
                 keterangan: ruteKeterangan || undefined,
             }
             await proyekRuteService.create(id, payload)
@@ -305,6 +312,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             detailBiaya: null,
         })
         setEditRuteKeterangan(r.keterangan ?? '')
+        setEditRuteRitase(String(r.estimasi_ritase ?? 1))
 
         if (r.id_tarif_rute) {
             try {
@@ -334,6 +342,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 id_jenis_kendaraan: editRuteTarif.id_jenis_kendaraan,
                 id_tarif_rute: idTarifRute ?? undefined,
                 harga_penawaran: hargaPenawaranEfektif(editRuteTarif) ? Number(hargaPenawaranEfektif(editRuteTarif)) : undefined,
+                estimasi_ritase: Number(editRuteRitase || 1),
                 keterangan: editRuteKeterangan || undefined,
             })
             toast.push(<Notification type="success" title="Rute proyek berhasil diperbarui" />)
@@ -358,6 +367,26 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setDeletingRute(false)
+        }
+    }
+
+    const handleDownloadPdf = async () => {
+        if (!project) return
+        setDownloadingPdf(true)
+        try {
+            const res = await axios.get(API_ENDPOINTS.PROYEK_PDF(id), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `proyek-${project.kode_proyek}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingPdf(false)
         }
     }
 
@@ -610,6 +639,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <Tag className={`text-xs font-semibold ${STATUS_CLASS[project.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                     {project.status}
                                 </Tag>
+                                <Button size="sm" variant="default" loading={downloadingPdf} onClick={handleDownloadPdf}>
+                                    Download PDF
+                                </Button>
                                 <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
                             </div>
                         </div>
@@ -705,6 +737,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
                             ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                            <FormItem label="Ritase">
+                                <Input type="number" min="1" value={ruteRitase}
+                                    onChange={e => setRuteRitase(e.target.value)} />
+                            </FormItem>
+                        </div>
                         <div className="mt-3">
                             <FormItem label="Keterangan">
                                 <Input textArea placeholder="Keterangan tambahan..." value={ruteKeterangan}
@@ -733,6 +771,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5" />
                                 </tr>
@@ -749,6 +789,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                             {r.harga_penawaran != null
                                                 ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.harga_penawaran)}</span>
                                                 : <Tag className="text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Belum diisi</Tag>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{r.estimasi_ritase}</td>
+                                        <td className="py-3 pr-4">
+                                            {r.subtotal != null
+                                                ? <span className="font-semibold text-gray-800 dark:text-gray-100">{formatRupiah(r.subtotal)}</span>
+                                                : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4">
                                             {r.uang_jalan != null
@@ -778,6 +824,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     </tr>
                                 ))}
                             </tbody>
+                            <tfoot>
+                                <tr className="border-t border-gray-200 dark:border-gray-600">
+                                    <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Proyek</td>
+                                    <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                        {formatRupiah(ruteProyekList.reduce((sum, r) => sum + (r.subtotal ?? 0), 0))}
+                                    </td>
+                                    <td colSpan={2} />
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 )}
@@ -789,6 +844,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
                     <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
                         ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''} />
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                        <FormItem label="Ritase">
+                            <Input type="number" min="1" value={editRuteRitase}
+                                onChange={e => setEditRuteRitase(e.target.value)} />
+                        </FormItem>
+                    </div>
                     <div className="mt-3">
                         <FormItem label="Keterangan">
                             <Input textArea value={editRuteKeterangan}
