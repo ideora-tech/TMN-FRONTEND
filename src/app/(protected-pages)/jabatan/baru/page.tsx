@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Switcher, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft } from 'react-icons/hi'
 import axios from 'axios'
@@ -16,7 +16,7 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function JabatanBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_jabatan: '', nama_jabatan: '', id_departemen: '', id_peran: '', level: '1', tunjangan_jabatan: '', aktif: true })
+    const [form, setForm] = useState({ kode_jabatan: '', nama_jabatan: '', id_departemen: '', id_peran: '', level: '1', tunjangan_jabatan: '', aktif: true, is_supir: false })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [departemenOptions, setDepartemenOptions] = useState<{ value: string; label: string }[]>([])
@@ -56,6 +56,7 @@ export default function JabatanBaruPage() {
                 level: Number(form.level) || 1,
                 tunjangan_jabatan: form.tunjangan_jabatan ? Number(form.tunjangan_jabatan) : 0,
                 aktif: form.aktif,
+                is_supir: form.is_supir,
             })
             toast.push(<Notification type="success" title="Jabatan berhasil ditambahkan" />)
             router.push(ROUTES.JABATAN)
@@ -114,6 +115,11 @@ export default function JabatanBaruPage() {
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
+                    </FormItem>
+                    <FormItem label="Jabatan Supir"
+                        extra={<span className="text-xs text-gray-400">Karyawan baru atau yang dimutasi ke jabatan ini otomatis dibuatkan profil supir</span>}>
+                        <Switcher checked={form.is_supir}
+                            onChange={(checked) => setForm(p => ({ ...p, is_supir: checked }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

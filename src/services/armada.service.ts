@@ -35,6 +35,31 @@ export interface ArmadaServisJatuhTempo {
     sisa_km?: number
 }
 
+export interface PerawatanAktif {
+    id_perawatan: string
+    id_armada: string
+    nopol: string
+    jenis_perawatan: string
+    tanggal: string
+    status: 'terjadwal' | 'dalam_proses'
+    km_odometer: number | null
+}
+
+export interface DashboardArmada {
+    statistik: {
+        total: number
+        tersedia: number
+        digunakan: number
+        perawatan: number
+        tidak_aktif: number
+        dalamPerawatan: number
+        terjadwal: number
+        harusServis: number
+    }
+    harusServis: ArmadaServisJatuhTempo[]
+    perawatanAktif: PerawatanAktif[]
+}
+
 export type ArmadaPayload = Partial<Omit<Armada, 'id_armada' | 'url_foto' | 'nama_jenis'>>
 
 function buildFormData(payload: ArmadaPayload, foto: File): FormData {
@@ -81,5 +106,9 @@ export const armadaService = {
     async servisJatuhTempo(days = 30) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_SERVIS_JATUH_TEMPO, { params: { days } })
         return data.data as ArmadaServisJatuhTempo[]
+    },
+    async dashboard() {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_DASHBOARD)
+        return data.data as DashboardArmada
     },
 }

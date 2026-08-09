@@ -8,6 +8,7 @@ export interface Jabatan {
     id_peran: string | null
     kode_jabatan: string
     nama_jabatan: string
+    is_supir: boolean
     level: number
     tunjangan_jabatan: number
     aktif: boolean

@@ -10,6 +10,8 @@ export const ROUTES = {
     PROYEK_BARU:   '/project/baru',
     PROYEK_DETAIL: (id: string) => `/project/${id}`,
 
+    DASHBOARD_ARMADA: '/dashboard-armada',
+
     ARMADA:        '/armada',
     ARMADA_BARU:   '/armada/baru',
     ARMADA_DETAIL: (id: string) => `/armada/${id}`,

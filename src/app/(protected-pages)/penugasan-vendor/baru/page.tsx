@@ -56,7 +56,7 @@ export default function PenugasanVendorBaruPage() {
         supirService.list(1, 100).then(res =>
             setSupirOptions(res.data
                 .filter((s: Supir) => s.status === 'aktif')
-                .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })))
+                .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim ?? '-'})` })))
         ).catch(() => {})
     }, [])
 

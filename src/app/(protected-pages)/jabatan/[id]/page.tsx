@@ -1,7 +1,7 @@
 ﻿'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Switcher, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import axios from 'axios'
@@ -21,7 +21,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
     const [data, setData]     = useState<Jabatan | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
-    const [form, setForm]       = useState<Partial<Jabatan>>({})
+    const [form, setForm]       = useState<Partial<Jabatan>>({ is_supir: false })
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
     const [deptOptions, setDeptOptions] = useState<{ value: string; label: string }[]>([])
@@ -33,7 +33,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
             axios.get(API_ENDPOINTS.DEPARTEMEN, { params: { limit: 999 } }),
             axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } }),
         ]).then(([j, dRes, pRes]) => {
-            setData(j); setForm(j)
+            setData(j); setForm({ ...j, is_supir: !!j.is_supir })
             setDeptOptions((dRes.data.data as Departemen[]).map(d => ({ value: d.id_departemen, label: d.nama_departemen })))
             setPeranOptions((pRes.data.data as Peran[]).map(p => ({ value: p.id_peran, label: p.nama_peran })))
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
@@ -64,6 +64,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                 level:         form.level,
                 tunjangan_jabatan: form.tunjangan_jabatan,
                 aktif:         form.aktif,
+                is_supir:      form.is_supir,
             })
             setData(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Jabatan berhasil diperbarui" />)
@@ -173,6 +174,11 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
+                            </FormItem>
+                            <FormItem label="Jabatan Supir"
+                                extra={<span className="text-xs text-gray-400">Karyawan baru atau yang dimutasi ke jabatan ini otomatis dibuatkan profil supir</span>}>
+                                <Switcher checked={form.is_supir}
+                                    onChange={(checked) => setForm(p => ({ ...p, is_supir: checked }))} />
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

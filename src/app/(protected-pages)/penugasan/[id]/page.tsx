@@ -140,7 +140,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             projectService.get(p.id_proyek).then(setProyek).catch(() => {})
             const karyawanOpts = karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))
             const armadaOpts   = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
-            const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` }))
+            const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim ?? '-'})` }))
             const ruteOpts     = rute.data.map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))
             let supirData: Supir[] = supir.data
             let armadaData: Armada[] = armada.data
@@ -161,7 +161,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             if (p.id_supir && !supirOpts.some(o => o.value === p.id_supir)) {
                 try {
                     const s = await supirService.get(p.id_supir)
-                    supirOpts.unshift({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})` })
+                    supirOpts.unshift({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim ?? '-'})` })
                     supirData = [s, ...supirData]
                 } catch { /* supir sudah dihapus */ }
             }

@@ -60,7 +60,7 @@ export default function PenugasanBaruPage() {
                 const simKadaluarsa = s.tgl_kadaluarsa_sim && new Date(s.tgl_kadaluarsa_sim).getTime() < Date.now()
                 return {
                     value: s.id_supir,
-                    label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim})${simKadaluarsa ? ' ⚠ SIM kadaluarsa' : ''}`,
+                    label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim ?? '-'})${simKadaluarsa ? ' ⚠ SIM kadaluarsa' : ''}`,
                 }
             }))
             setSupirList(supirAktif)

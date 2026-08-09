@@ -7,7 +7,8 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
+import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { tarifRuteService } from '@/services/tarifRute.service'
 import { ruteService, Rute } from '@/services/rute.service'
@@ -81,6 +82,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [ruteOptions, setRuteOptions] = useState<Option[]>([])
     const [jenisOptions, setJenisOptions] = useState<Option[]>([])
     const [klienOptions, setKlienOptions] = useState<Option[]>([])
+    const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
 
     useEffect(() => {
         ruteService.list({ limit: 100 })
@@ -104,6 +106,21 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             return next
         })
     }
+
+    const tambahItemDariDialog = (pilihan: PilihanItemRute) => {
+        setItems(prev => [...prev, {
+            ...ITEM_KOSONG,
+            id_rute: pilihan.id_rute,
+            id_jenis_kendaraan: pilihan.id_jenis_kendaraan ?? '',
+            id_tarif_rute: pilihan.id_tarif_rute,
+            harga_satuan_str: pilihan.harga_satuan != null ? String(Math.round(pilihan.harga_satuan)) : '',
+        }])
+    }
+
+    const tambahRuteOption = (r: Rute) =>
+        setRuteOptions(prev => prev.some(o => o.value === r.id_rute)
+            ? prev
+            : [...prev, { value: r.id_rute, label: r.nama_rute }])
 
     // Auto-fill harga: kontrak klien menang, fallback harga umum; tetap bisa diedit manual.
     // Guard stale response: id_rute/id_jenis_kendaraan dicapture saat pemanggilan; hasil hanya
@@ -536,10 +553,16 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
                                         <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
                                     </div>
-                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                        onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
-                                        Tambah Item
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button type="button" size="sm" variant="default" icon={<HiOutlineViewList />}
+                                            onClick={() => setDialogRuteTerbuka(true)}>
+                                            Daftar Rute
+                                        </Button>
+                                        <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                            onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
+                                            Tambah Item
+                                        </Button>
+                                    </div>
                                 </div>
                                 {itemError && <p className="text-red-500 text-sm mb-2">{itemError}</p>}
                                 {items.length > 0 && (
@@ -642,6 +665,15 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     Tindakan ini tidak dapat dibatalkan.
                 </p>
             </ConfirmDialog>
+
+            <PilihRuteDialog
+                isOpen={dialogRuteTerbuka}
+                onClose={() => setDialogRuteTerbuka(false)}
+                onPilih={tambahItemDariDialog}
+                onRuteBaru={tambahRuteOption}
+                idKlien={form.id_klien || undefined}
+                namaKlien={klienOptions.find(o => o.value === form.id_klien)?.label}
+            />
         </div>
     )
 }

@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Supir {
     id_supir: string
     nama: string
-    no_sim: string
+    no_sim: string | null
     jenis_sim: string
     tgl_kadaluarsa_sim?: string
     telepon?: string

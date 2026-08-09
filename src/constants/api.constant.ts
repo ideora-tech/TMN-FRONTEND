@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     // Armada
     ARMADA:        '/api/proxy/armada',
     ARMADA_DETAIL: (id: string) => `/api/proxy/armada/${id}`,
+    ARMADA_DASHBOARD: '/api/proxy/armada/dashboard',
 
     // Import Armada
     ARMADA_IMPORT_TEMPLATE: '/api/proxy/armada/import/template',

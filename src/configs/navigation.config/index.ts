@@ -56,6 +56,13 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
+        key: 'dashboard-armada', path: '/dashboard-armada', title: 'Dashboard Armada',
+        translateKey: 'nav.dashboard-armada', icon: 'truck',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
         key: 'armada', path: '/armada', title: 'Armada',
         translateKey: 'nav.armada', icon: 'truck',
         type: NAV_ITEM_TYPE_ITEM,
