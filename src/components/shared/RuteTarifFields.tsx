@@ -103,14 +103,12 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
         try {
             const tarif = await tarifRuteService.resolusi({ id_rute: idRute, id_jenis_kendaraan: idJenis, id_klien: idKlien || undefined })
             if (tarif) {
-                const komponen = [tarif.estimasi_tol, tarif.estimasi_bbm, tarif.estimasi_uang_jalan, tarif.estimasi_biaya_lain]
-                const estimasi = komponen.every(k => k == null) ? null : komponen.reduce((s: number, k) => s + (k ?? 0), 0)
                 onChange({
                     id_rute: idRute,
                     id_jenis_kendaraan: idJenis,
                     id_tarif_rute: tarif.id_tarif_rute,
                     harga_penawaran: String(tarif.harga),
-                    estimasiBiaya: estimasi,
+                    estimasiBiaya: tarif.harga,
                     tarifBaru: null,
                     detailBiaya: {
                         estimasi_tol: tarif.estimasi_tol != null ? String(tarif.estimasi_tol) : '',
@@ -199,7 +197,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
             {value.id_rute && value.id_jenis_kendaraan && value.tarifBaru === null && (
                 <div className="mt-2">
                     <p className="text-xs text-gray-400">
-                        Tarif ditemukan{value.estimasiBiaya != null ? ` — estimasi biaya ${formatRupiah(value.estimasiBiaya)}` : ''}
+                        Tarif ditemukan{value.estimasiBiaya != null ? ` — uang jalan ${formatRupiah(value.estimasiBiaya)}` : ''}
                     </p>
                     <FormItem label="Harga Penawaran" asterisk className="mt-1">
                         <Input prefix="Rp" placeholder="0"

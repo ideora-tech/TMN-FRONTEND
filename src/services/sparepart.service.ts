@@ -23,6 +23,7 @@ export interface SparepartMutasi {
     qty: number
     harga: number | null
     id_perawatan: string | null
+    id_pembelian: string | null
     keterangan: string | null
     tanggal: string
     dibuat_pada: string

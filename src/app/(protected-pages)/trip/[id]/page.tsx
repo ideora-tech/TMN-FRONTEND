@@ -886,7 +886,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         {rekap && rekap.estimasi_biaya != null && (
                             <div className="grid grid-cols-1 gap-3 mb-4 sm:grid-cols-2">
                                 <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                                    <div className="text-xs mb-1 text-gray-500">Estimasi Biaya</div>
+                                    <div className="text-xs mb-1 text-gray-500">Uang Jalan</div>
                                     <div className="font-semibold text-sm">{formatRupiah(rekap.estimasi_biaya)}</div>
                                 </div>
                                 <div className={`rounded-lg p-3 border ${

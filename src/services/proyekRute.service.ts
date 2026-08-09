@@ -13,6 +13,7 @@ export interface ProyekRute {
     nama_jenis: string | null
     id_tarif_rute: string | null
     harga_penawaran: number | null
+    uang_jalan: number | null
     estimasi_biaya: number | null
     keterangan: string | null
     dibuat_pada: string

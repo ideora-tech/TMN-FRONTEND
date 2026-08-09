@@ -32,6 +32,7 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
     const [importing, setImporting] = useState(false)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
     const [importGagal, setImportGagal] = useState<{ baris: number; no_sim: string; alasan: string }[]>([])
+    const [importDitimpa, setImportDitimpa] = useState<{ baris: number; no_sim: string; tanggal: string; shift_lama: string; shift_baru: string }[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
     const selTerakhir = useRef<{ idSupir: string; tanggal: string } | null>(null)
     const [loading, setLoading] = useState(false)
@@ -527,8 +528,13 @@ const handleImportFile = async (file: File | null) => {
         setImporting(true)
         try {
             const hasil = await jadwalShiftService.importExcel(idProyek, file)
+            const ditimpa = hasil.ditimpa ?? []
+            const ringkasan = [`${hasil.sukses} jadwal masuk`]
+            if (ditimpa.length) ringkasan.push(`${ditimpa.length} ditimpa`)
+            if (hasil.gagal.length) ringkasan.push(`${hasil.gagal.length} gagal`)
             toast.push(<Notification type={hasil.gagal.length ? 'warning' : 'success'}
-                title={`Import selesai: ${hasil.sukses} jadwal masuk${hasil.gagal.length ? `, ${hasil.gagal.length} gagal` : ''}`} />)
+                title={`Import selesai: ${ringkasan.join(', ')}`} />)
+            if (ditimpa.length) setImportDitimpa(ditimpa)
             if (hasil.gagal.length) setImportGagal(hasil.gagal)
             fetchBoard()
         } catch (err) {
@@ -573,17 +579,35 @@ const handleImportFile = async (file: File | null) => {
                 </div>
             </div>
 
-            <Dialog isOpen={importGagal.length > 0} onClose={() => setImportGagal([])} onRequestClose={() => setImportGagal([])}>
-                <h5 className="mb-3">Baris yang Gagal Diimport</h5>
-                <div className="max-h-80 overflow-y-auto flex flex-col gap-2">
-                    {importGagal.map((g, i) => (
-                        <div key={i} className="text-sm px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
-                            Baris {g.baris} ({g.no_sim}): {g.alasan}
+            <Dialog isOpen={importGagal.length > 0 || importDitimpa.length > 0}
+                onClose={() => { setImportGagal([]); setImportDitimpa([]) }}
+                onRequestClose={() => { setImportGagal([]); setImportDitimpa([]) }}>
+                {importDitimpa.length > 0 && (
+                    <>
+                        <h5 className="mb-3">Baris yang Ditimpa</h5>
+                        <div className="max-h-60 overflow-y-auto flex flex-col gap-2 mb-4">
+                            {importDitimpa.map((d, i) => (
+                                <div key={i} className="text-sm px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                                    Baris {d.baris} ({d.no_sim}): Tanggal {d.tanggal}: {d.shift_lama} → {d.shift_baru}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </>
+                )}
+                {importGagal.length > 0 && (
+                    <>
+                        <h5 className="mb-3">Baris yang Gagal Diimport</h5>
+                        <div className="max-h-60 overflow-y-auto flex flex-col gap-2">
+                            {importGagal.map((g, i) => (
+                                <div key={i} className="text-sm px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                                    Baris {g.baris} ({g.no_sim}): {g.alasan}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
                 <div className="flex justify-end mt-4">
-                    <Button size="sm" variant="solid" onClick={() => setImportGagal([])}>Tutup</Button>
+                    <Button size="sm" variant="solid" onClick={() => { setImportGagal([]); setImportDitimpa([]) }}>Tutup</Button>
                 </div>
             </Dialog>
 

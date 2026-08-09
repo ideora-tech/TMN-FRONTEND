@@ -41,7 +41,11 @@ export const jadwalShiftService = {
         formData.append('id_proyek', idProyek)
         formData.append('file', file)
         const { data } = await axios.post(API_ENDPOINTS.JADWAL_SHIFT_IMPORT, formData)
-        return data.data as { sukses: number; gagal: { baris: number; no_sim: string; alasan: string }[] }
+        return data.data as {
+            sukses: number
+            ditimpa: { baris: number; no_sim: string; tanggal: string; shift_lama: string; shift_baru: string }[]
+            gagal: { baris: number; no_sim: string; alasan: string }[]
+        }
     },
     async downloadTemplate(idProyek: string, dari: string, sampai: string) {
         const res = await axios.get(API_ENDPOINTS.JADWAL_SHIFT_IMPORT_TEMPLATE, {

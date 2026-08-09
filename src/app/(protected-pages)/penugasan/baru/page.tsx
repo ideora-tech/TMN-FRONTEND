@@ -30,6 +30,7 @@ export default function PenugasanBaruPage() {
         id_proyek: '', id_armada: '', id_supir: '', id_karyawan: '', tanggal_tugas: '', status: 'pending' as StatusPenugasan,
     })
     const [proyekOptions, setProyekOptions]     = useState<{ value: string; label: string }[]>([])
+    const [proyekList, setProyekList]           = useState<Project[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
     const [armadaList, setArmadaList]           = useState<Armada[]>([])         // simpan objek utuh utk id_jenis_kendaraan
@@ -50,6 +51,7 @@ export default function PenugasanBaruPage() {
             supirService.list(1),
         ]).then(([proyek, karyawan, armada, supir]) => {
             setProyekOptions(proyek.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
+            setProyekList(proyek.data)
             setKaryawanOptions(karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
             setArmadaOptions(armada.data
                 .filter((a: Armada) => a.aktif !== false)
@@ -77,22 +79,24 @@ export default function PenugasanBaruPage() {
             .catch(() => setSupirCutiSet(new Set()))
     }, [form.tanggal_tugas])
 
-    // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
-    // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
+    // Auto-fill estimasi biaya dari uang jalan tarif rute (resolusi tarif klien proyek → tarif umum)
+    // saat armada (jenis kendaraan) & rute estimasi terpilih — nilai manual tidak ditimpa selain itu.
     useEffect(() => {
         const armada = armadaList.find(a => a.id_armada === form.id_armada)
         if (!armada?.id_jenis_kendaraan || !idRuteEstimasi) return
+        const idKlien = proyekList.find(p => p.id_proyek === form.id_proyek)?.id_klien
         let aktif = true
-        tarifRuteService.estimasiBok({
+        tarifRuteService.resolusi({
             id_rute: idRuteEstimasi,
             id_jenis_kendaraan: armada.id_jenis_kendaraan,
+            id_klien: idKlien || undefined,
         })
-            .then(est => {
-                if (aktif && est) setEstimasiBiayaStr(String(Math.round(est.harga_pokok)))
+            .then(tarif => {
+                if (aktif && tarif) setEstimasiBiayaStr(String(Math.round(tarif.harga)))
             })
             .catch(() => {})
         return () => { aktif = false }
-    }, [form.id_armada, idRuteEstimasi, armadaList])
+    }, [form.id_armada, form.id_proyek, idRuteEstimasi, armadaList, proyekList])
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
@@ -198,13 +202,13 @@ export default function PenugasanBaruPage() {
                             isClearable
                         />
                     </FormItem>
-                    <FormItem label="Rute (untuk estimasi biaya)">
+                    <FormItem label="Rute (untuk uang jalan)">
                         <Select isClearable isSearchable placeholder="Pilih rute..."
                             options={ruteEstimasiOptions}
                             value={ruteEstimasiOptions.find(o => o.value === idRuteEstimasi) ?? null}
                             onChange={opt => setIdRuteEstimasi(opt?.value ?? '')} />
                     </FormItem>
-                    <FormItem label="Estimasi Biaya" extra="Terisi otomatis dari BOK bila armada & rute dipilih — bisa diubah">
+                    <FormItem label="Uang Jalan" extra="Terisi otomatis dari tarif rute bila armada & rute dipilih — bisa diubah">
                         <Input prefix="Rp" placeholder="0"
                             value={estimasiBiayaStr ? formatNum(Number(estimasiBiayaStr)) : ''}
                             onChange={e => setEstimasiBiayaStr(e.target.value.replace(/\D/g, ''))} />

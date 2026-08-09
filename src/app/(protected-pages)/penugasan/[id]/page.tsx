@@ -238,20 +238,24 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
-    // Auto-fill estimasi biaya dari BOK saat armada (jenis kendaraan) & rute estimasi terpilih.
-    // Hanya jalan saat form.id_armada / idRuteEstimasi / armadaList berubah — nilai manual tidak ditimpa selain itu.
+    // Auto-fill estimasi biaya dari uang jalan tarif rute (resolusi tarif klien proyek → tarif umum)
+    // saat armada (jenis kendaraan) & rute estimasi terpilih — nilai manual tidak ditimpa selain itu.
     useEffect(() => {
         if (!bolehAutoFill.current) return
         const armada = armadaList.find(a => a.id_armada === form.id_armada)
         if (!armada?.id_jenis_kendaraan || !idRuteEstimasi) return
         let aktif = true
-        tarifRuteService.estimasiBok({ id_rute: idRuteEstimasi, id_jenis_kendaraan: armada.id_jenis_kendaraan })
-            .then(est => {
-                if (aktif && est) setForm(p => ({ ...p, estimasi_biaya: Math.round(est.harga_pokok) }))
+        tarifRuteService.resolusi({
+            id_rute: idRuteEstimasi,
+            id_jenis_kendaraan: armada.id_jenis_kendaraan,
+            id_klien: proyek?.id_klien || undefined,
+        })
+            .then(tarif => {
+                if (aktif && tarif) setForm(p => ({ ...p, estimasi_biaya: Math.round(tarif.harga) }))
             })
             .catch(() => {})
         return () => { aktif = false }
-    }, [form.id_armada, idRuteEstimasi, armadaList])
+    }, [form.id_armada, idRuteEstimasi, armadaList, proyek])
 
     const handleSave = async () => {
         setSaving(true)
@@ -344,7 +348,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 ) : armadaLabel },
                                 { label: 'Supir',         value: supirLabel },
                                 { label: 'Karyawan PIC',  value: karyawanLabel },
-                                { label: 'Estimasi Biaya', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },
+                                { label: 'Uang Jalan', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },
                                 { label: 'Dibuat',        value: dayjs(penugasan.dibuat_pada).format('DD MMM YYYY HH:mm') },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -470,7 +474,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
                                 </FormItem>
-                                <FormItem label="Rute (untuk estimasi biaya)">
+                                <FormItem label="Rute (untuk uang jalan)">
                                     <Select isClearable isSearchable placeholder="Pilih rute..."
                                         options={ruteOptions}
                                         value={ruteOptions.find(o => o.value === idRuteEstimasi) ?? null}
@@ -479,7 +483,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             setIdRuteEstimasi(opt?.value ?? '')
                                         }} />
                                 </FormItem>
-                                <FormItem label="Estimasi Biaya" extra="Terisi otomatis dari BOK bila armada & rute dipilih — bisa diubah">
+                                <FormItem label="Uang Jalan" extra="Terisi otomatis dari tarif rute bila armada & rute dipilih — bisa diubah">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.estimasi_biaya ? formatNum(Number(form.estimasi_biaya)) : ''}
                                         onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />

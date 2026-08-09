@@ -499,7 +499,7 @@ export default function PenugasanPage() {
             },
         },
         {
-            header: 'Estimasi Biaya', accessorKey: 'estimasi_biaya', size: 150,
+            header: 'Uang Jalan', accessorKey: 'estimasi_biaya', size: 150,
             cell: ({ row }) => row.original.estimasi_biaya != null
                 ? formatRupiah(row.original.estimasi_biaya)
                 : <span className="text-gray-400">—</span>,
@@ -844,7 +844,7 @@ export default function PenugasanPage() {
                                         />
                                     </FormItem>
                                 )}
-                                <FormItem label="Estimasi Biaya">
+                                <FormItem label="Uang Jalan">
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
@@ -855,7 +855,7 @@ export default function PenugasanPage() {
                                         <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
                                     )}
                                     {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
-                                        <p className="text-xs text-amber-500 mt-1">Data tarif rute belum lengkap — isi estimasi manual</p>
+                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya tarif — isi estimasi manual</p>
                                     )}
                                 </FormItem>
                             </div>
@@ -874,7 +874,7 @@ export default function PenugasanPage() {
             <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} onClose={closeEditDialog} width={520}>
                 <h5 className="text-base font-semibold mb-1">Edit Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    Ubah armada, supir, estimasi biaya, atau status penugasan ini.
+                    Ubah armada, supir, uang jalan, atau status penugasan ini.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitEdit() }}>
                     {pasanganLoading ? (
@@ -911,7 +911,7 @@ export default function PenugasanPage() {
                                     }}
                                 />
                             </FormItem>
-                            <FormItem label="Estimasi Biaya">
+                            <FormItem label="Uang Jalan">
                                 <Input
                                     prefix="Rp"
                                     placeholder="0"

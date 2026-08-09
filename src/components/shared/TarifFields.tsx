@@ -1,12 +1,12 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { /* useEffect, */ useState } from 'react'
 import { FormItem, Input } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import { HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
 import dayjs from 'dayjs'
-import { formatNum, formatRupiah } from '@/utils/formatNumber'
-import { tarifRuteService, TarifRutePayload, EstimasiBok } from '@/services/tarifRute.service'
+import { formatNum /* , formatRupiah */ } from '@/utils/formatNumber'
+import { /* tarifRuteService, */ TarifRutePayload /* , EstimasiBok */ } from '@/services/tarifRute.service'
 
 export type TarifFieldsState = {
     id_jenis_kendaraan: string
@@ -46,7 +46,7 @@ type Props = {
 
 export default function TarifFields({ value, onChange, jenisOptions, klienOptions, idRute }: Props) {
     const [showRincian, setShowRincian] = useState(true)
-    const [estimasi, setEstimasi] = useState<EstimasiBok | null>(null)
+    // const [estimasi, setEstimasi] = useState<EstimasiBok | null>(null)
 
     const set = (patch: Partial<TarifFieldsState>) => onChange({ ...value, ...patch })
 
@@ -63,6 +63,7 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
     // Panel Estimasi Keuangan (BOK) — murni referensi, tidak memblokir simpan.
     // Butuh idRute nyata (rute sudah tersimpan) — saat staging di form Tambah Rute
     // (idRute masih null), panel ini otomatis tidak tampil sama sekali.
+    /*
     useEffect(() => {
         if (!idRute || !value.id_jenis_kendaraan) { setEstimasi(null); return }
         let aktif = true
@@ -80,6 +81,7 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
     const marginAktual = estimasi && estimasi.harga_pokok > 0 && hargaInput > 0
         ? ((hargaInput - estimasi.harga_pokok) / estimasi.harga_pokok) * 100
         : null
+    */
 
     return (
         <div>
@@ -144,7 +146,7 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                 </div>
             )}
 
-            {idRute && value.id_jenis_kendaraan && (
+            {/* idRute && value.id_jenis_kendaraan && (
                 <div className="mt-5 rounded-xl border border-blue-100 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5 p-4">
                     <p className="font-semibold text-sm text-gray-800 dark:text-gray-100 mb-3">Estimasi Keuangan (BOK)</p>
                     {estimasi ? (
@@ -184,7 +186,7 @@ export default function TarifFields({ value, onChange, jenisOptions, klienOption
                         </p>
                     )}
                 </div>
-            )}
+            ) */}
 
             <div className="grid grid-cols-1 mt-3">
                 <FormItem label="Keterangan">

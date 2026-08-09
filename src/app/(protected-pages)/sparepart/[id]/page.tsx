@@ -1,5 +1,6 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, Tag, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -276,7 +277,16 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                             m.jenis === 'keluar' || m.qty < 0 ? 'text-red-500' : 'text-emerald-600'
                                         }`}>{m.jenis === 'keluar' || m.qty < 0 ? '-' : '+'}{formatNum(Math.abs(m.qty))}</td>
                                         <td className="py-3 pr-4 text-right whitespace-nowrap">{m.harga != null ? formatRupiah(m.harga) : <span className="text-gray-400">—</span>}</td>
-                                        <td className="py-3 text-gray-600 dark:text-gray-400 max-w-[240px] truncate">{m.keterangan ?? <span className="text-gray-400">—</span>}</td>
+                                        <td className="py-3 text-gray-600 dark:text-gray-400 max-w-[240px] truncate">
+                                            {m.id_pembelian ? (
+                                                <Link href={ROUTES.PEMBELIAN_SPAREPART_DETAIL(m.id_pembelian)}
+                                                    className="text-blue-500 hover:underline">
+                                                    {m.keterangan}
+                                                </Link>
+                                            ) : (
+                                                m.keterangan ?? <span className="text-gray-400">—</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

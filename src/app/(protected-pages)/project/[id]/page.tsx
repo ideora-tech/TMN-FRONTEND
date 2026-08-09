@@ -300,7 +300,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             id_jenis_kendaraan: r.id_jenis_kendaraan,
             id_tarif_rute: r.id_tarif_rute,
             harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
-            estimasiBiaya: r.estimasi_biaya,
+            estimasiBiaya: r.uang_jalan,
             tarifBaru: null,
             detailBiaya: null,
         })
@@ -733,7 +733,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Estimasi Biaya</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -751,9 +751,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                 : <Tag className="text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Belum diisi</Tag>}
                                         </td>
                                         <td className="py-3 pr-4">
-                                            {r.estimasi_biaya != null
-                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.estimasi_biaya)}</span>
-                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Data belum lengkap</Tag>}
+                                            {r.uang_jalan != null
+                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.uang_jalan)}</span>
+                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Belum ada tarif</Tag>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
@@ -837,7 +837,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Armada</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Estimasi Biaya</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
                                     <th className="py-2.5" />
                                 </tr>
@@ -985,7 +985,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-5">
                                 {ruteOptions.length > 1 && (
-                                    <FormItem label="Rute (untuk estimasi)">
+                                    <FormItem label="Rute (untuk uang jalan)">
                                         <Select isSearchable={false}
                                             options={ruteOptions}
                                             value={ruteOptions.find(o => o.value === ruteItemId) ?? null}
@@ -993,7 +993,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         />
                                     </FormItem>
                                 )}
-                                <FormItem label="Estimasi Biaya">
+                                <FormItem label="Uang Jalan">
                                     <Input
                                         prefix="Rp"
                                         placeholder="0"
@@ -1004,7 +1004,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
                                     )}
                                     {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
-                                        <p className="text-xs text-amber-500 mt-1">Data tarif rute belum lengkap — isi estimasi manual</p>
+                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya tarif — isi estimasi manual</p>
                                     )}
                                 </FormItem>
                             </div>

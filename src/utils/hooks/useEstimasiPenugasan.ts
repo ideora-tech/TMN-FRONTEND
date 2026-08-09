@@ -23,7 +23,7 @@ export function useEstimasiPenugasan(idProyek: string | null) {
     }, [idProyek])
 
     const selected = items.find(i => i.id_proyek_rute === selectedItemId) ?? null
-    const estimasi = selected?.estimasi_biaya ?? null
+    const estimasi = selected?.uang_jalan ?? null
     const namaRute = selected ? (selected.nama_rute ?? selected.kode_rute ?? '') : ''
     const dataTidakLengkap = selected != null && estimasi == null
 
