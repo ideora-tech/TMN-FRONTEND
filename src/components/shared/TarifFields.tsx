@@ -44,7 +44,7 @@ type Props = {
     idRute: string | null
 }
 
-export default function TarifFields({ value, onChange, jenisOptions, klienOptions, idRute }: Props) {
+export default function TarifFields({ value, onChange, jenisOptions, klienOptions /* , idRute */ }: Props) {
     const [showRincian, setShowRincian] = useState(true)
     // const [estimasi, setEstimasi] = useState<EstimasiBok | null>(null)
 
