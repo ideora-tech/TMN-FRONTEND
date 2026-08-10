@@ -13,10 +13,6 @@ export const protectedRoutes: Routes = {
     '/home': {
         key: 'home',
         authority: [],
-        meta: {
-            pageBackgroundType: 'plain',
-            pageContainerType: 'contained',
-        },
     },
     ...listRoute('klien', 'klien'),
     ...listRoute('project', 'project'),

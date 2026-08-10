@@ -88,10 +88,6 @@ export default function AlokasiArmadaTab() {
 
     return (
         <div className="flex flex-col gap-4">
-            <p className="text-gray-500 text-sm">
-                History pasangan supir & armada per hari — otomatis dari papan jadwal.
-                Pilih armada untuk riwayat lengkap pemegang unit (termasuk alokasi yang digantikan).
-            </p>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
