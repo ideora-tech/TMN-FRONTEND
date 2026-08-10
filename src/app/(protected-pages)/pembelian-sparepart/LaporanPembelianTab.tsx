@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, toast, Notification } from '@/components/ui'
-import DatePicker from '@/components/ui/DatePicker'
+import { Card, Button, DatePicker, toast, Notification } from '@/components/ui'
+import { HiOutlineDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -9,31 +9,59 @@ import { pembelianSparepartService, LaporanPembelian } from '@/services/pembelia
 
 export default function LaporanPembelianTab() {
     const [laporan, setLaporan] = useState<LaporanPembelian | null>(null)
-    const [dari, setDari] = useState('')
-    const [sampai, setSampai] = useState('')
+    const [tanggalDari, setTanggalDari]     = useState<Date | null>(null)
+    const [tanggalSampai, setTanggalSampai] = useState<Date | null>(null)
+    const [mengunduh, setMengunduh] = useState<'excel' | 'pdf' | null>(null)
+
+    const periode = useCallback(() => ({
+        dari: tanggalDari ? dayjs(tanggalDari).format('YYYY-MM-DD') : undefined,
+        sampai: tanggalSampai ? dayjs(tanggalSampai).format('YYYY-MM-DD') : undefined,
+    }), [tanggalDari, tanggalSampai])
 
     const fetchData = useCallback(async () => {
         try {
-            setLaporan(await pembelianSparepartService.laporan({ dari: dari || undefined, sampai: sampai || undefined }))
+            setLaporan(await pembelianSparepartService.laporan(periode()))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         }
-    }, [dari, sampai])
+    }, [periode])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    const unduh = async (format: 'excel' | 'pdf') => {
+        setMengunduh(format)
+        try {
+            await pembelianSparepartService.downloadLaporan(format, periode())
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMengunduh(null)
+        }
+    }
 
     const selisihPositif = (laporan?.ringkasan.selisih ?? 0) > 0
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="w-44"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Dari tanggal"
-                    value={dari ? dayjs(dari).toDate() : null}
-                    onChange={d => setDari(d ? dayjs(d).format('YYYY-MM-DD') : '')} /></div>
-                <div className="w-44"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Sampai tanggal"
-                    value={sampai ? dayjs(sampai).toDate() : null}
-                    onChange={d => setSampai(d ? dayjs(d).format('YYYY-MM-DD') : '')} /></div>
-            </div>
+            <Card bodyClass="px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker placeholder="Dari tanggal" value={tanggalDari} onChange={setTanggalDari} />
+                    </div>
+                    <div className="w-full sm:w-40 shrink-0">
+                        <DatePicker placeholder="Sampai tanggal" value={tanggalSampai} onChange={setTanggalSampai} />
+                    </div>
+                    <div className="flex-1" />
+                    <Button size="sm" icon={<HiOutlineDownload />} loading={mengunduh === 'excel'}
+                        onClick={() => unduh('excel')}>
+                        Export Excel
+                    </Button>
+                    <Button size="sm" icon={<HiOutlineDownload />} loading={mengunduh === 'pdf'}
+                        onClick={() => unduh('pdf')}>
+                        Export PDF
+                    </Button>
+                </div>
+            </Card>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card><p className="text-xs text-gray-400 uppercase tracking-wide">Total Estimasi</p>

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type SumberAlokasi = 'default' | 'otomatis' | 'manual'
+export type SumberAlokasi = 'penugasan' | 'default' | 'otomatis' | 'manual'
 
 export interface AlokasiArmada {
     id_alokasi: string
@@ -13,6 +13,7 @@ export interface AlokasiArmada {
     sumber: SumberAlokasi
     keterangan: string | null
     dibuat_pada: string
+    dihapus_pada: string | null
     supir_nama: string
     armada_nopol: string | null
     pemilik_nama: string | null

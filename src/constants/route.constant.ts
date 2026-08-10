@@ -114,7 +114,6 @@ export const ROUTES = {
     PAYROLL_DETAIL:     (id: string) => `/payroll/${id}`,
     PAYROLL_PENGATURAN: '/payroll/pengaturan',
 
-    ALOKASI_ARMADA:   '/alokasi-armada',
     PENUGASAN:        '/penugasan',
     PENUGASAN_BARU:   '/penugasan/baru',
     PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,

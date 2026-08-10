@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { Card, Input, Tag, Tooltip, toast, Notification, DatePicker, Pagination, Spinner, Button } from '@/components/ui'
-import Tabs from '@/components/ui/Tabs'
 import Select from '@/components/ui/Select'
-import RiwayatUnitTab from './RiwayatUnitTab'
 import { HiOutlineSearch, HiOutlineX, HiOutlineDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -18,10 +16,16 @@ const PAGE_SIZE_OPTIONS = [
     { value: 50, label: '50 / halaman' },
 ]
 
+const SUMBER_TAG: Record<string, { label: string; className: string }> = {
+    penugasan: { label: 'Dari Penugasan', className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100' },
+    default:  { label: 'Default',  className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100' },
+    otomatis: { label: 'Otomatis', className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' },
+    manual:   { label: 'Manual',   className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+}
+
 const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
-export default function AlokasiArmadaPage() {
-    const [tab, setTab]         = useState('harian')
+export default function AlokasiArmadaTab() {
     const [list, setList]       = useState<AlokasiArmada[]>([])
     const [loading, setLoading] = useState(false)
     const [searchInput, setSearchInput] = useState('')
@@ -79,21 +83,15 @@ export default function AlokasiArmadaPage() {
         }
     }
 
+    const kolomStatus = !!armadaFilter
+    const jumlahKolom = kolomStatus ? 7 : 6
+
     return (
         <div className="flex flex-col gap-4">
-            <div>
-                <h3 className="font-bold">Alokasi Armada</h3>
-                <p className="text-gray-500 text-sm mt-0.5">History pasangan supir & armada per hari — otomatis dari papan jadwal</p>
-            </div>
-
-            <Tabs value={tab} onChange={v => setTab(v as string)}>
-                <Tabs.TabList>
-                    <Tabs.TabNav value="harian">Alokasi Harian</Tabs.TabNav>
-                    <Tabs.TabNav value="riwayat">Riwayat per Unit</Tabs.TabNav>
-                </Tabs.TabList>
-                <div>
-                    <Tabs.TabContent value="riwayat"><RiwayatUnitTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="harian">
+            <p className="text-gray-500 text-sm">
+                History pasangan supir & armada per hari — otomatis dari papan jadwal.
+                Pilih armada untuk riwayat lengkap pemegang unit (termasuk alokasi yang digantikan).
+            </p>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
@@ -122,7 +120,13 @@ export default function AlokasiArmadaPage() {
                             isClearable
                             options={armadaOptions}
                             value={armadaOptions.find(o => o.value === armadaFilter) ?? null}
-                            onChange={opt => { setArmadaFilter((opt as Option | null)?.value ?? ''); setCurrentPage(1) }}
+                            onChange={opt => {
+                                const v = (opt as Option | null)?.value ?? ''
+                                setArmadaFilter(v)
+                                setTanggalDari(v ? null : new Date())
+                                setTanggalSampai(v ? null : new Date())
+                                setCurrentPage(1)
+                            }}
                         />
                     </div>
                     <Tooltip title={armadaFilter ? 'Unduh riwayat pemegang armada terpilih (Excel)' : 'Pilih armada dulu untuk laporan per mobil'}>
@@ -150,34 +154,56 @@ export default function AlokasiArmadaPage() {
                                 <th className={TH_CLASS}>Proyek</th>
                                 <th className={TH_CLASS}>Supir</th>
                                 <th className={TH_CLASS}>Armada</th>
+                                <th className={TH_CLASS}>Sumber</th>
+                                <th className={TH_CLASS}>Milik / Keterangan</th>
+                                {kolomStatus && <th className={TH_CLASS}>Status</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="py-10 text-center">
+                                    <td colSpan={jumlahKolom} className="py-10 text-center">
                                         <Spinner className="inline-block" size={28} />
                                     </td>
                                 </tr>
                             ) : list.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="py-10 text-center text-gray-400">
+                                    <td colSpan={jumlahKolom} className="py-10 text-center text-gray-400">
                                         Belum ada alokasi pada periode ini — alokasi terbentuk otomatis saat papan jadwal diisi
                                     </td>
                                 </tr>
                             ) : (
-                                list.map(item => (
-                                    <tr key={item.id_alokasi}>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(item.tanggal).format('DD MMM YYYY')}</td>
-                                        <td className="py-2.5 px-3">{item.nama_proyek ?? '—'}</td>
-                                        <td className="py-2.5 px-3 font-semibold">{item.supir_nama}</td>
-                                        <td className="py-2.5 px-3">
-                                            {item.armada_nopol
-                                                ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{item.armada_nopol}</span>
-                                                : <Tag className="text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Belum dapat armada</Tag>}
-                                        </td>
-                                    </tr>
-                                ))
+                                list.map(item => {
+                                    const sumber = SUMBER_TAG[item.sumber] ?? SUMBER_TAG.otomatis
+                                    const digantikan = item.dihapus_pada !== null
+                                    return (
+                                        <tr key={item.id_alokasi} className={digantikan ? 'opacity-50' : ''}>
+                                            <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(item.tanggal).format('DD MMM YYYY')}</td>
+                                            <td className="py-2.5 px-3">{item.nama_proyek ?? '—'}</td>
+                                            <td className="py-2.5 px-3 font-semibold">{item.supir_nama}</td>
+                                            <td className="py-2.5 px-3">
+                                                {item.armada_nopol
+                                                    ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{item.armada_nopol}</span>
+                                                    : <Tag className="text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Belum dapat armada</Tag>}
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                <Tag className={`text-xs font-semibold ${sumber.className}`}>{sumber.label}</Tag>
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                {item.pemilik_nama
+                                                    ? <span className="text-xs">{item.pemilik_nama}{item.keterangan ? ` — ${item.keterangan}` : ''}</span>
+                                                    : <span className="text-xs text-gray-400">{item.keterangan ?? '—'}</span>}
+                                            </td>
+                                            {kolomStatus && (
+                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                    {item.dihapus_pada
+                                                        ? <span className="text-xs text-gray-400">Digantikan {dayjs(item.dihapus_pada).format('DD MMM HH:mm')}</span>
+                                                        : <Tag className="text-xs font-semibold bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100">Berlaku</Tag>}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    )
+                                })
                             )}
                         </tbody>
                     </table>
@@ -195,9 +221,6 @@ export default function AlokasiArmadaPage() {
                     </div>
                 </div>
             </Card>
-                    </Tabs.TabContent>
-                </div>
-            </Tabs>
         </div>
     )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button, FormItem, Input, toast, Notification, Dialog } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { parseApiError } from '@/utils/error.util'
@@ -7,7 +7,7 @@ import { formatNum } from '@/utils/formatNumber'
 import { tripService } from '@/services/trip.service'
 import { projectService } from '@/services/project.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
-import { proyekRuteService } from '@/services/proyekRute.service'
+import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService } from '@/services/supir.service'
 import { armadaService } from '@/services/armada.service'
 import { supirVendorService } from '@/services/supirVendor.service'
@@ -34,11 +34,20 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     const [penugasanOptions, setPenugasanOptions] = useState<Option[]>([])
     const [pilihPenugasan, setPilihPenugasan]     = useState('')
     const [ruteOptions, setRuteOptions] = useState<Option[]>([])
+    const [rutePerProyek, setRutePerProyek] = useState<ProyekRute[]>([])
     const [pilihRute, setPilihRute]     = useState<string | null>(null)
     const [uangJalan, setUangJalan]     = useState('')
+    const [penugasanRows, setPenugasanRows] = useState<Penugasan[]>([])
+    const [defaultUangJalanPenugasan, setDefaultUangJalanPenugasan] = useState<number | null>(null)
+    const uangJalanManual = useRef(false)
     const [memuat, setMemuat] = useState(false)
     const [saving, setSaving] = useState(false)
     const [warnShiftTerkunci, setWarnShiftTerkunci] = useState(false)
+
+    const terapkanDefaultUangJalan = (nilai: number | null) => {
+        if (uangJalanManual.current) return
+        setUangJalan(nilai != null ? String(Math.round(nilai)) : '')
+    }
 
     useEffect(() => {
         if (!isOpen) return
@@ -46,6 +55,8 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setPilihPenugasan(idPenugasanTerkunci ?? '')
         setPilihRute(null)
         setUangJalan('')
+        setDefaultUangJalanPenugasan(null)
+        uangJalanManual.current = false
         if (!terkunci) {
             projectService.list(1, 100)
                 .then(res => setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: p.nama_proyek }))))
@@ -69,6 +80,8 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             const hariIni = dayjs().format('YYYY-MM-DD')
             const punyaShift = jadwal.some(j => j.id_supir === p.id_supir && j.tanggal === hariIni)
             setWarnShiftTerkunci(jadwal.length > 0 && !!p.id_supir && !punyaShift)
+            setDefaultUangJalanPenugasan(p.estimasi_biaya ?? null)
+            terapkanDefaultUangJalan(p.estimasi_biaya ?? null)
         }).catch(() => setWarnShiftTerkunci(false))
         return () => { dibatalkan = true }
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
@@ -76,13 +89,17 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     useEffect(() => {
         if (!isOpen || !idProyekEfektif) {
             setRuteOptions([])
+            setRutePerProyek([])
             setPilihRute(null)
             return
         }
         setPilihRute(null)
         proyekRuteService.list(idProyekEfektif)
-            .then(rows => setRuteOptions(rows.map(r => ({ value: r.id_rute, label: r.nama_rute ?? r.kode_rute ?? r.id_rute }))))
-            .catch(() => setRuteOptions([]))
+            .then(rows => {
+                setRutePerProyek(rows)
+                setRuteOptions(rows.map(r => ({ value: r.id_rute, label: r.nama_rute ?? r.kode_rute ?? r.id_rute })))
+            })
+            .catch(() => { setRutePerProyek([]); setRuteOptions([]) })
     }, [isOpen, idProyekEfektif])
 
     const muatPenugasan = useCallback(async (idProyek: string) => {
@@ -90,6 +107,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         try {
             const res = await penugasanService.list(idProyek, 1, undefined, 100)
             const rows = res.data.filter(p => p.status === 'pending' || p.status === 'aktif')
+            setPenugasanRows(rows)
             const supirCuti = new Set(
                 (await cutiService.cutiAktif().catch(() => []))
                     .map(c => c.id_supir)
@@ -153,6 +171,13 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         muatPenugasan(pilihProyek)
     }, [isOpen, terkunci, pilihProyek, muatPenugasan])
 
+    useEffect(() => {
+        if (!isOpen || terkunci || !pilihPenugasan) return
+        const row = penugasanRows.find(p => p.id_penugasan === pilihPenugasan)
+        setDefaultUangJalanPenugasan(row?.estimasi_biaya ?? null)
+        terapkanDefaultUangJalan(row?.estimasi_biaya ?? null)
+    }, [isOpen, terkunci, pilihPenugasan, penugasanRows])
+
     const handleSubmit = async () => {
         if (!pilihPenugasan) return
         setSaving(true)
@@ -207,12 +232,17 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                         placeholder={!idProyekEfektif ? 'Pilih proyek dahulu...' : ruteOptions.length === 0 ? 'Belum ada rute terdaftar untuk proyek ini' : 'Pilih rute...'}
                         options={ruteOptions}
                         value={ruteOptions.find(o => o.value === pilihRute) ?? null}
-                        onChange={opt => setPilihRute((opt as Option | null)?.value ?? null)} />
+                        onChange={opt => {
+                            const idRute = (opt as Option | null)?.value ?? null
+                            setPilihRute(idRute)
+                            const row = idRute ? rutePerProyek.find(r => r.id_rute === idRute) : null
+                            terapkanDefaultUangJalan(row?.uang_jalan ?? defaultUangJalanPenugasan)
+                        }} />
                 </FormItem>
-                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Uang yang dibawa supir — dasar settlement setelah trip selesai</span>}>
+                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Terisi otomatis dari uang jalan penugasan/tarif rute — bisa diubah. Dasar settlement setelah trip selesai</span>}>
                     <Input prefix="Rp" placeholder="0"
                         value={uangJalan ? formatNum(Number(uangJalan)) : ''}
-                        onChange={e => setUangJalan(e.target.value.replace(/\D/g, ''))} />
+                        onChange={e => { uangJalanManual.current = true; setUangJalan(e.target.value.replace(/\D/g, '')) }} />
                 </FormItem>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={onClose}>Batal</Button>

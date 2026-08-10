@@ -1044,8 +1044,8 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                         </td>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">{formatRupiah(p.biaya)}</td>
                                         <td className="py-3 pr-4">
-                                            <Tag className={`text-xs font-semibold ${RAWAT_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {p.status}
+                                            <Tag className={`text-xs font-semibold whitespace-nowrap ${RAWAT_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {p.status.replace(/_/g, ' ')}
                                             </Tag>
                                         </td>
                                         <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">

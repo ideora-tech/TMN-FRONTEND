@@ -113,4 +113,16 @@ export const pembelianSparepartService = {
         const { data } = await axios.get(API_ENDPOINTS.PEMBELIAN_SPAREPART_LAPORAN, { params })
         return data.data as LaporanPembelian
     },
+    async downloadLaporan(format: 'excel' | 'pdf', params?: { dari?: string; sampai?: string }) {
+        const res = await axios.get(API_ENDPOINTS.PEMBELIAN_SPAREPART_LAPORAN_EXPORT(format), { responseType: 'blob', params })
+        const ekstensi = format === 'excel' ? 'xlsx' : 'pdf'
+        const href = URL.createObjectURL(res.data)
+        const link = document.createElement('a')
+        link.href = href
+        link.download = `laporan-pembelian-sparepart.${ekstensi}`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(href)
+    },
 }

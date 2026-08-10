@@ -43,7 +43,6 @@ export const protectedRoutes: Routes = {
     '/trip/[id]': { key: 'trip', authority: [], dynamicRoute: true },
     '/settlement-supir': { key: 'settlement-supir', authority: [] },
     ...listRoute('penugasan', 'penugasan'),
-    '/alokasi-armada': { key: 'alokasi-armada', authority: [] },
     '/penugasan-vendor': { key: 'penugasan-vendor', authority: [] },
     '/penugasan-vendor/baru': { key: 'penugasan-vendor', authority: [] },
     '/penugasan-vendor/[id]': { key: 'penugasan-vendor', authority: [], dynamicRoute: true },

@@ -82,6 +82,7 @@ export const API_ENDPOINTS = {
     // Pembelian Sparepart
     PEMBELIAN_SPAREPART:                 '/api/proxy/pembelian-sparepart',
     PEMBELIAN_SPAREPART_LAPORAN:         '/api/proxy/pembelian-sparepart/laporan',
+    PEMBELIAN_SPAREPART_LAPORAN_EXPORT:  (format: 'excel' | 'pdf') => `/api/proxy/pembelian-sparepart/laporan/export/${format}`,
     PEMBELIAN_SPAREPART_DETAIL:          (id: string) => `/api/proxy/pembelian-sparepart/${id}`,
     PEMBELIAN_SPAREPART_APPROVE_MANAGER: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-manager`,
     PEMBELIAN_SPAREPART_APPROVE_FINANCE: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-finance`,

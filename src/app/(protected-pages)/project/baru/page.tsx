@@ -244,7 +244,7 @@ export default function ProjectBaruPage() {
                                 <p className="text-xs text-gray-400 mt-0.5">{manualRuteList.length} rute akan ditambahkan</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button type="button" size="sm" variant="default" onClick={() => setShowRuteBaru(true)}>
+                                <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />} onClick={() => setShowRuteBaru(true)}>
                                     Rute Baru
                                 </Button>
                                 <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}

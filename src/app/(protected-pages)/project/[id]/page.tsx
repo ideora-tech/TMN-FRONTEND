@@ -734,7 +734,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="default" onClick={() => setShowRuteBaru(true)}>
+                        <Button size="sm" variant="default" icon={<HiPlusCircle />} onClick={() => setShowRuteBaru(true)}>
                             Rute Baru
                         </Button>
                         <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
