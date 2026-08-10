@@ -103,6 +103,7 @@ export default function RiwayatTripTab() {
                     sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
                     sumber: sumberFilter || undefined,
                     status: statusFilter || undefined,
+                    search: search || undefined,
                 },
             })
             const href = URL.createObjectURL(res.data)
@@ -121,8 +122,8 @@ export default function RiwayatTripTab() {
     }
 
     const today = dayjs().format('YYYY-MM-DD')
-    const handleExportExcel = () => downloadFile(API_ENDPOINTS.TRIP_REKAP_SUPIR_EXPORT_EXCEL, `rekap-trip-supir-${today}.xlsx`, 'excel')
-    const handleExportPdf   = () => downloadFile(API_ENDPOINTS.TRIP_REKAP_SUPIR_EXPORT_PDF, `rekap-trip-supir-${today}.pdf`, 'pdf')
+    const handleExportExcel = () => downloadFile(API_ENDPOINTS.TRIP_RIWAYAT_EXPORT_EXCEL, `riwayat-trip-${today}.xlsx`, 'excel')
+    const handleExportPdf   = () => downloadFile(API_ENDPOINTS.TRIP_RIWAYAT_EXPORT_PDF, `riwayat-trip-${today}.pdf`, 'pdf')
 
     const columns: ColumnDef<Trip>[] = [
         {
