@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -11,7 +11,8 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { pembelianSparepartService, PembelianSparepart, PembelianPayload } from '@/services/pembelianSparepart.service'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { pembelianSparepartService, PembelianSparepart, PembelianBukti, PembelianPayload } from '@/services/pembelianSparepart.service'
 import { supplierService } from '@/services/supplier.service'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
 
@@ -30,12 +31,54 @@ type Props = {
 
 const EMPTY_ROW: ItemRow = { id_sparepart: '', qty: '1', harga_estimasi: '' }
 
+function LampiranPreview({ file }: { file: File }) {
+    const isGambar = file.type.startsWith('image/')
+    const url = useMemo(() => (isGambar ? URL.createObjectURL(file) : null), [file, isGambar])
+    useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
+
+    if (!url) {
+        const ekstensi = (file.name.split('.').pop() ?? '').toLowerCase()
+        return (
+            <div className="w-full h-32 flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400">
+                <HiOutlineDocumentText className="text-3xl" />
+                <span className="text-xs font-semibold uppercase">{ekstensi || 'File'}</span>
+            </div>
+        )
+    }
+
+    return (
+        <img
+            src={url}
+            alt={file.name}
+            className="w-full max-h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+        />
+    )
+}
+
 export default function PembelianForm({ mode, initial }: Props) {
     const router = useRouter()
     const [idSupplier, setIdSupplier] = useState(initial?.id_supplier ?? '')
     const [tanggalPengajuan, setTanggalPengajuan] = useState(initial?.tanggal_pengajuan ?? dayjs().format('YYYY-MM-DD'))
     const [keterangan, setKeterangan] = useState(initial?.keterangan ?? '')
     const [lampiran, setLampiran] = useState<File[]>([])
+    const [buktiLama, setBuktiLama] = useState<PembelianBukti[]>(initial?.bukti ?? [])
+    const [hapusBuktiTarget, setHapusBuktiTarget] = useState<PembelianBukti | null>(null)
+    const [menghapusBukti, setMenghapusBukti] = useState(false)
+
+    const handleHapusBuktiLama = async () => {
+        if (!initial || !hapusBuktiTarget) return
+        setMenghapusBukti(true)
+        try {
+            await pembelianSparepartService.hapusBukti(initial.id_pembelian, hapusBuktiTarget.id_bukti)
+            setBuktiLama(prev => prev.filter(b => b.id_bukti !== hapusBuktiTarget.id_bukti))
+            setHapusBuktiTarget(null)
+            toast.push(<Notification type="success" title="Lampiran dihapus" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenghapusBukti(false)
+        }
+    }
     const [idArmada, setIdArmada] = useState('')
     const [idPerawatan, setIdPerawatan] = useState(initial?.id_perawatan ?? '')
     const [items, setItems] = useState<ItemRow[]>(
@@ -129,7 +172,7 @@ export default function PembelianForm({ mode, initial }: Props) {
             const hasil = mode === 'edit' && initial
                 ? await pembelianSparepartService.update(initial.id_pembelian, payload)
                 : await pembelianSparepartService.create(payload)
-            if (mode === 'baru' && lampiran.length > 0) {
+            if (lampiran.length > 0) {
                 try {
                     await pembelianSparepartService.uploadBukti(hasil.id_pembelian, lampiran)
                 } catch (err) {
@@ -245,11 +288,34 @@ export default function PembelianForm({ mode, initial }: Props) {
                         </FormItem>
                     </div>
 
-                    {mode === 'baru' && (
-                        <div className="mt-1">
-                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-                                Lampiran (opsional) — penawaran supplier, foto kerusakan, dsb.
-                            </p>
+                    <div className="mt-1">
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                            Lampiran (opsional) — penawaran supplier, foto kerusakan, dsb.
+                        </p>
+                        {mode === 'edit' && buktiLama.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-3">
+                                {buktiLama.map(b => (
+                                    <div key={b.id_bukti} className="relative group">
+                                        <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                            {b.nama_asli.toLowerCase().endsWith('.pdf') ? (
+                                                <div className="w-full h-24 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 px-2 text-center">
+                                                    {b.nama_asli}
+                                                </div>
+                                            ) : (
+                                                <img src={b.url_file} alt={b.nama_asli}
+                                                    className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+                                            )}
+                                        </a>
+                                        <button type="button"
+                                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white items-center justify-center hidden group-hover:flex"
+                                            onClick={() => setHapusBuktiTarget(b)}>
+                                            <HiOutlineTrash className="text-sm" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div>
                             <Upload
                                 accept=".jpg,.jpeg,.png,.webp,.pdf"
                                 multiple
@@ -269,23 +335,24 @@ export default function PembelianForm({ mode, initial }: Props) {
                                 </Button>
                             </Upload>
                             {lampiran.length > 0 && (
-                                <div className="flex flex-col gap-1.5 mt-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                                     {lampiran.map((file, idx) => (
-                                        <div key={`${file.name}-${idx}`}
-                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                                            <span className="text-sm truncate">{file.name}</span>
-                                            <span
-                                                className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0"
+                                        <div key={`${file.name}-${idx}`} className="relative group">
+                                            <LampiranPreview file={file} />
+                                            <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
+                                            <button
+                                                type="button"
+                                                className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
                                                 onClick={() => setLampiran(prev => prev.filter((_, i) => i !== idx))}
                                             >
-                                                <HiOutlineTrash className="text-sm" />
-                                            </span>
+                                                <HiOutlineTrash className="text-xs" />
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
-                    )}
+                    </div>
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
@@ -295,6 +362,13 @@ export default function PembelianForm({ mode, initial }: Props) {
                     </div>
                 </form>
             </Card>
+
+            <ConfirmDialog isOpen={!!hapusBuktiTarget} type="danger" title="Hapus Lampiran"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                onClose={() => setHapusBuktiTarget(null)} onCancel={() => setHapusBuktiTarget(null)}
+                onConfirm={handleHapusBuktiLama} confirmButtonProps={{ loading: menghapusBukti }}>
+                <p>Hapus lampiran <strong>{hapusBuktiTarget?.nama_asli}</strong>?</p>
+            </ConfirmDialog>
         </div>
     )
 }

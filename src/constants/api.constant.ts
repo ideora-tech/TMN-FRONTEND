@@ -268,8 +268,8 @@ export const API_ENDPOINTS = {
     NOTIFIKASI_BACA_SEMUA: '/api/proxy/notifikasi/baca-semua',
 
     // Export
-    FAKTUR_EXPORT_EXCEL:   '/api/proxy/faktur/export/excel',
-    FAKTUR_EXPORT_PDF:     '/api/proxy/faktur/export/pdf',
+    FAKTUR_EXPORT_EXCEL:   (id: string) => `/api/proxy/faktur/${id}/export/excel`,
+    FAKTUR_EXPORT_PDF:     (id: string) => `/api/proxy/faktur/${id}/export/pdf`,
     LAPORAN_EXPORT_EXCEL:  '/api/proxy/laporan/export/excel',
     LAPORAN_EXPORT_PDF:    '/api/proxy/laporan/export/pdf',
 

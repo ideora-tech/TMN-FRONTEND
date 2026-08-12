@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { PiFileXlsDuotone, PiFilePdfDuotone } from 'react-icons/pi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
@@ -41,7 +42,7 @@ export default function FakturPage() {
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
-    const [downloading, setDownloading]   = useState<'excel' | 'pdf' | null>(null)
+    const [downloading, setDownloading]   = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -61,14 +62,19 @@ export default function FakturPage() {
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
-    const downloadFile = async (url: string, filename: string, type: 'excel' | 'pdf') => {
-        setDownloading(type)
+    const downloadFaktur = async (faktur: Faktur, type: 'excel' | 'pdf') => {
+        const key = `${faktur.id_faktur}-${type}`
+        if (downloading) return
+        setDownloading(key)
         try {
+            const url = type === 'excel'
+                ? API_ENDPOINTS.FAKTUR_EXPORT_EXCEL(faktur.id_faktur)
+                : API_ENDPOINTS.FAKTUR_EXPORT_PDF(faktur.id_faktur)
             const res = await axios.get(url, { responseType: 'blob' })
             const href = URL.createObjectURL(res.data)
             const link = document.createElement('a')
             link.href = href
-            link.download = filename
+            link.download = `faktur-${faktur.nomor_faktur}.${type === 'excel' ? 'xlsx' : 'pdf'}`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -79,9 +85,6 @@ export default function FakturPage() {
             setDownloading(null)
         }
     }
-
-    const handleExcelDownload = () => downloadFile(API_ENDPOINTS.FAKTUR_EXPORT_EXCEL, `faktur-${new Date().toISOString().slice(0,10)}.xlsx`, 'excel')
-    const handlePdfDownload   = () => downloadFile(API_ENDPOINTS.FAKTUR_EXPORT_PDF,   `faktur-${new Date().toISOString().slice(0,10)}.pdf`,  'pdf')
 
     const columns: ColumnDef<Faktur>[] = [
         {
@@ -112,9 +115,25 @@ export default function FakturPage() {
             ),
         },
         {
-            header: '', id: 'action', size: 80,
+            header: '', id: 'action', size: 150,
             cell: ({ row }: CellContext<Faktur, unknown>) => (
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-1.5">
+                    <Tooltip title="Cetak Excel">
+                        <span
+                            className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 transition-colors ${downloading === `${row.original.id_faktur}-excel` ? 'opacity-50 pointer-events-none' : ''}`}
+                            onClick={() => downloadFaktur(row.original, 'excel')}
+                        >
+                            <PiFileXlsDuotone className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Cetak PDF">
+                        <span
+                            className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloading === `${row.original.id_faktur}-pdf` ? 'opacity-50 pointer-events-none' : ''}`}
+                            onClick={() => downloadFaktur(row.original, 'pdf')}
+                        >
+                            <PiFilePdfDuotone className="text-lg" />
+                        </span>
+                    </Tooltip>
                     <Tooltip title="Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -143,31 +162,7 @@ export default function FakturPage() {
                     Buat Faktur
                 </Button>
             </div>
-            <Card
-                header={{
-                    content: <span />,
-                    extra: (
-                        <div className="flex items-center gap-2">
-                            <Button
-                                size="sm" variant="default"
-                                loading={downloading === 'excel'}
-                                onClick={handleExcelDownload}
-                            >
-                                Export Excel
-                            </Button>
-                            <Button
-                                size="sm" variant="default"
-                                loading={downloading === 'pdf'}
-                                onClick={handlePdfDownload}
-                            >
-                                Export PDF
-                            </Button>
-                        </div>
-                    ),
-                    bordered: false,
-                }}
-                bodyClass="p-0"
-            >
+            <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
