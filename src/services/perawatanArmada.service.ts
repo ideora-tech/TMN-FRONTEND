@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type StatusPerawatan = 'terjadwal' | 'dalam_proses' | 'selesai'
+export type StatusPerawatan = 'terjadwal' | 'dalam_proses' | 'selesai' | 'dibatalkan'
 
 export interface PerawatanSparepartItem {
     id_perawatan_sparepart: string
@@ -35,6 +35,7 @@ export interface PerawatanArmada {
     biaya: number
     km_odometer: number | null
     status: StatusPerawatan
+    alasan_batal: string | null
     jadwal_servis_berikutnya: string | null
     keterangan: string | null
     dibuat_pada: string
@@ -134,6 +135,10 @@ export const perawatanArmadaService = {
     },
     async delete(idArmada: string, id: string, alasan: string) {
         await axios.delete(API_ENDPOINTS.ARMADA_PERAWATAN_DETAIL(idArmada, id), { data: { alasan } })
+    },
+    async batal(idArmada: string, id: string, alasan: string) {
+        const { data } = await axios.post(API_ENDPOINTS.ARMADA_PERAWATAN_BATAL(idArmada, id), { alasan })
+        return data.data as PerawatanArmada
     },
     async rekapPerUnit(params?: ParamPeriode) {
         const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_REKAP_PER_UNIT, { params })

@@ -1,10 +1,11 @@
 'use client'
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
+import { Card, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown } from 'react-icons/hi'
+import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -20,13 +21,28 @@ const STATUS_OPTIONS: { value: StatusPerawatan | ''; label: string }[] = [
     { value: 'dalam_proses', label: 'Dalam Proses' },
 ]
 
-const STATUS_AKTIF = 'terjadwal,dalam_proses'
+const STATUS_AKTIF   = 'terjadwal,dalam_proses'
+const STATUS_RIWAYAT = 'selesai,dibatalkan'
+
+const RIWAYAT_STATUS_OPTIONS: { value: StatusPerawatan | ''; label: string }[] = [
+    { value: '',           label: 'Semua Status' },
+    { value: 'selesai',    label: 'Selesai' },
+    { value: 'dibatalkan', label: 'Dibatalkan' },
+]
 
 const STATUS_CLASS: Record<string, string> = {
     terjadwal:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
     dalam_proses: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     selesai:      'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+    dibatalkan:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300',
 }
+
+const STATUS_UBAH: { value: StatusPerawatan; label: string; dot: string }[] = [
+    { value: 'terjadwal',    label: 'Terjadwal',    dot: 'bg-blue-500' },
+    { value: 'dalam_proses', label: 'Dalam Proses', dot: 'bg-emerald-500' },
+    { value: 'selesai',      label: 'Selesai',      dot: 'bg-purple-500' },
+    { value: 'dibatalkan',   label: 'Dibatalkan',   dot: 'bg-red-500' },
+]
 
 const PAGE_SIZE_OPTIONS = [
     { value: 10, label: '10 / halaman' },
@@ -65,13 +81,19 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
     const [deleting, setDeleting]         = useState(false)
     const [alasanHapus, setAlasanHapus]   = useState('')
 
+    const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+    const [selesaiTarget, setSelesaiTarget]       = useState<PerawatanArmadaWithArmada | null>(null)
+    const [batalTarget, setBatalTarget]           = useState<PerawatanArmadaWithArmada | null>(null)
+    const [alasanBatal, setAlasanBatal]           = useState('')
+    const [membatalkan, setMembatalkan]           = useState(false)
+
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
             const res = await perawatanArmadaService.listAll({
                 page: currentPage, limit: pageSize,
                 id_armada: armadaFilter || undefined,
-                status: mode === 'riwayat' ? 'selesai' : (statusFilter || STATUS_AKTIF),
+                status: mode === 'riwayat' ? (statusFilter || STATUS_RIWAYAT) : (statusFilter || STATUS_AKTIF),
                 jatuh_tempo: jatuhTempoOnly ? '1' : undefined,
                 search: search || undefined,
                 tanggal_dari: tanggalDari ? dayjs(tanggalDari).format('YYYY-MM-DD') : undefined,
@@ -110,6 +132,37 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setDeleting(false)
+        }
+    }
+
+    const ubahStatus = async (p: PerawatanArmadaWithArmada, status: StatusPerawatan) => {
+        if (status === p.status) return
+        setUpdatingStatusId(p.id_perawatan)
+        try {
+            await perawatanArmadaService.update(p.id_armada, p.id_perawatan, { status })
+            const label = STATUS_UBAH.find(s => s.value === status)?.label ?? status
+            toast.push(<Notification type="success" title={`Status diubah ke ${label}`} />)
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setUpdatingStatusId(null)
+        }
+    }
+
+    const handleBatal = async () => {
+        if (!batalTarget || !alasanBatal.trim()) return
+        setMembatalkan(true)
+        try {
+            await perawatanArmadaService.batal(batalTarget.id_armada, batalTarget.id_perawatan, alasanBatal.trim())
+            toast.push(<Notification type="success" title="Perawatan dibatalkan, stok sparepart dikembalikan" />)
+            setBatalTarget(null)
+            setAlasanBatal('')
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMembatalkan(false)
         }
     }
 
@@ -161,16 +214,15 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                             onChange={(opt) => { setArmadaFilter((opt as Option | null)?.value ?? ''); setCurrentPage(1) }}
                         />
                     </div>
-                    {mode === 'aktif' && (
-                        <div className="w-full sm:w-44 shrink-0">
-                            <Select
-                                isSearchable={false}
-                                options={STATUS_OPTIONS}
-                                value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
-                                onChange={(opt) => { setStatusFilter((opt as { value: StatusPerawatan | '' }).value); setCurrentPage(1) }}
-                            />
-                        </div>
-                    )}
+                    <div className="w-full sm:w-44 shrink-0">
+                        <Select
+                            isSearchable={false}
+                            options={mode === 'riwayat' ? RIWAYAT_STATUS_OPTIONS : STATUS_OPTIONS}
+                            value={(mode === 'riwayat' ? RIWAYAT_STATUS_OPTIONS : STATUS_OPTIONS).find(o => o.value === statusFilter)
+                                ?? (mode === 'riwayat' ? RIWAYAT_STATUS_OPTIONS : STATUS_OPTIONS)[0]}
+                            onChange={(opt) => { setStatusFilter((opt as { value: StatusPerawatan | '' }).value); setCurrentPage(1) }}
+                        />
+                    </div>
                     <div className="w-full sm:w-40 shrink-0">
                         <DatePicker
                             placeholder="Dari tanggal"
@@ -223,13 +275,14 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                                         <tr className="bg-gray-50 dark:bg-gray-700/40">
                                             <td colSpan={8} className="py-2 px-3">
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <div>
+                                                    <div className="flex items-center gap-2">
                                                         <span
-                                                            className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 font-mono text-sm font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
                                                             onClick={() => router.push(ROUTES.ARMADA_DETAIL(g.idArmada))}>
+                                                            <PiTruckDuotone className="text-base" />
                                                             {g.nopol}
                                                         </span>
-                                                        <span className="text-xs text-gray-400 ml-2">{g.rows.length} perawatan</span>
+                                                        <span className="text-xs text-gray-400">{g.rows.length} perawatan</span>
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <Tooltip title="Unduh laporan Excel unit ini">
@@ -277,13 +330,53 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                                                         ) : <span className="text-gray-400">—</span>}
                                                     </td>
                                                     <td className="py-2.5 px-3">
-                                                        <Tag className={`text-xs font-semibold whitespace-nowrap ${STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                            {p.status.replace(/_/g, ' ')}
-                                                        </Tag>
+                                                        {mode === 'aktif' && p.status !== 'selesai' ? (
+                                                            updatingStatusId === p.id_perawatan ? (
+                                                                <Spinner size={20} />
+                                                            ) : (
+                                                                <Dropdown
+                                                                    placement="bottom-start"
+                                                                    activeKey={p.status}
+                                                                    renderTitle={
+                                                                        <Tag className={`text-xs font-semibold whitespace-nowrap cursor-pointer inline-flex items-center gap-1 ${STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                                            {p.status.replace(/_/g, ' ')}
+                                                                            <HiOutlineChevronDown />
+                                                                        </Tag>
+                                                                    }
+                                                                >
+                                                                    {STATUS_UBAH.map(opt => (
+                                                                        <Dropdown.Item
+                                                                            key={opt.value}
+                                                                            eventKey={opt.value}
+                                                                            onClick={() => {
+                                                                                if (opt.value === p.status) return
+                                                                                if (opt.value === 'selesai') setSelesaiTarget(p)
+                                                                                else if (opt.value === 'dibatalkan') { setBatalTarget(p); setAlasanBatal('') }
+                                                                                else ubahStatus(p, opt.value)
+                                                                            }}
+                                                                        >
+                                                                            <span className="flex items-center gap-2 text-sm">
+                                                                                <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                                                                                {opt.label}
+                                                                            </span>
+                                                                        </Dropdown.Item>
+                                                                    ))}
+                                                                </Dropdown>
+                                                            )
+                                                        ) : (
+                                                            <Tooltip
+                                                                title={`Alasan: ${p.alasan_batal}`}
+                                                                disabled={p.status !== 'dibatalkan' || !p.alasan_batal}
+                                                            >
+                                                                <Tag className={`text-xs font-semibold whitespace-nowrap ${STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                                    {p.status.replace(/_/g, ' ')}
+                                                                </Tag>
+                                                            </Tooltip>
+                                                        )}
                                                     </td>
                                                     <td className="py-2.5 px-3">
                                                         <div className="flex items-center justify-end gap-1">
-                                                            {p.status !== 'selesai' && (
+                                                            {p.status !== 'selesai' && p.status !== 'dibatalkan' && (
                                                                 <Tooltip title="Edit">
                                                                     <span
                                                                         className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -292,13 +385,15 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                                                                     </span>
                                                                 </Tooltip>
                                                             )}
-                                                            <Tooltip title="Hapus">
-                                                                <span
-                                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
-                                                                    onClick={() => setDeleteTarget(p)}>
-                                                                    <HiOutlineTrash className="text-lg" />
-                                                                </span>
-                                                            </Tooltip>
+                                                            {p.status !== 'selesai' && (
+                                                                <Tooltip title="Hapus">
+                                                                    <span
+                                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                                                                        onClick={() => setDeleteTarget(p)}>
+                                                                        <HiOutlineTrash className="text-lg" />
+                                                                    </span>
+                                                                </Tooltip>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -342,6 +437,50 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                     <p className="text-sm font-semibold mb-1">Alasan penghapusan <span className="text-red-500">*</span></p>
                     <Input textArea rows={3} placeholder="Tulis alasan kenapa data ini dihapus..."
                         value={alasanHapus} onChange={e => setAlasanHapus(e.target.value)} />
+                </div>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={!!selesaiTarget}
+                type="warning"
+                title="Tandai Selesai?"
+                confirmText="Ya, Selesai"
+                cancelText="Batal"
+                onClose={() => setSelesaiTarget(null)}
+                onCancel={() => setSelesaiTarget(null)}
+                onConfirm={() => {
+                    if (selesaiTarget) {
+                        ubahStatus(selesaiTarget, 'selesai')
+                        setSelesaiTarget(null)
+                    }
+                }}
+            >
+                <p className="text-sm">
+                    Perawatan &quot;{selesaiTarget?.jenis_perawatan}&quot; armada {selesaiTarget?.armada_nopol} akan
+                    ditandai selesai dan pindah ke tab Riwayat. Setelah selesai, data tidak bisa diedit atau dihapus lagi.
+                </p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={!!batalTarget}
+                type="warning"
+                title="Batalkan Perawatan?"
+                confirmText="Ya, Batalkan"
+                cancelText="Kembali"
+                onClose={() => { setBatalTarget(null); setAlasanBatal('') }}
+                onCancel={() => { setBatalTarget(null); setAlasanBatal('') }}
+                onConfirm={handleBatal}
+                confirmButtonProps={{ loading: membatalkan, disabled: !alasanBatal.trim() }}
+            >
+                <p className="text-sm">
+                    Perawatan &quot;{batalTarget?.jenis_perawatan}&quot; armada {batalTarget?.armada_nopol} akan
+                    dibatalkan. Stok sparepart yang sudah dipotong dikembalikan otomatis, dan data tetap tampil
+                    di tab Riwayat dengan status dibatalkan.
+                </p>
+                <div className="mt-3">
+                    <p className="text-sm font-semibold mb-1">Alasan pembatalan <span className="text-red-500">*</span></p>
+                    <Input textArea rows={3} placeholder="Tulis alasan kenapa perawatan ini dibatalkan..."
+                        value={alasanBatal} onChange={e => setAlasanBatal(e.target.value)} />
                 </div>
             </ConfirmDialog>
         </div>

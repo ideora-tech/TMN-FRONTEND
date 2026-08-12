@@ -1,5 +1,6 @@
 'use client'
 import { use, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, Button, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
@@ -71,7 +72,20 @@ export default function RekonsiliasiDetailPage({ params }: { params: Promise<{ i
                 </div>
                 <div className="flex flex-col gap-0">
                     {[
-                        { label: 'ID Faktur', value: <span className="font-mono text-sm">{rekonsiliasi.id_faktur}</span> },
+                        {
+                            label: 'Faktur',
+                            value: rekonsiliasi.nomor_faktur ? (
+                                <Link
+                                    href={ROUTES.FAKTUR_DETAIL(rekonsiliasi.id_faktur)}
+                                    className="text-primary font-semibold hover:underline"
+                                >
+                                    {rekonsiliasi.nomor_faktur}
+                                </Link>
+                            ) : (
+                                <span className="font-mono text-sm">{rekonsiliasi.id_faktur}</span>
+                            ),
+                        },
+                        ...(rekonsiliasi.dibuat_pada ? [{ label: 'Dibuat', value: dayjs(rekonsiliasi.dibuat_pada).format('DD/MM/YYYY HH:mm') }] : []),
                         ...(rekonsiliasi.diselesaikan_pada ? [{ label: 'Diselesaikan', value: dayjs(rekonsiliasi.diselesaikan_pada).format('DD/MM/YYYY HH:mm') }] : []),
                     ].map(({ label, value }) => (
                         <div key={label} className="flex justify-between py-2 border-b last:border-b-0">

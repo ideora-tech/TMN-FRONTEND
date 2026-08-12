@@ -61,9 +61,11 @@ export default function RekonsiliasiPage() {
                 (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'ID Faktur', accessorKey: 'id_faktur', size: 260,
+            header: 'Faktur', accessorKey: 'nomor_faktur', size: 160,
             cell: ({ row }: CellContext<Rekonsiliasi, unknown>) => (
-                <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{row.original.id_faktur}</span>
+                row.original.nomor_faktur
+                    ? <span className="font-semibold">{row.original.nomor_faktur}</span>
+                    : <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{row.original.id_faktur}</span>
             ),
         },
         {

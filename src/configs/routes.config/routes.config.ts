@@ -43,7 +43,6 @@ export const protectedRoutes: Routes = {
     '/penugasan-vendor/baru': { key: 'penugasan-vendor', authority: [] },
     '/penugasan-vendor/[id]': { key: 'penugasan-vendor', authority: [], dynamicRoute: true },
     ...listRoute('laporan', 'laporan'),
-    '/penagihan-trip': { key: 'penagihan-trip', authority: [] },
     ...listRoute('faktur', 'faktur'),
     ...listRoute('invoice-vendor', 'invoice-vendor'),
     '/konsolidasi-vendor': { key: 'konsolidasi-vendor', authority: [] },

@@ -27,6 +27,7 @@ export interface SparepartMutasi {
     keterangan: string | null
     tanggal: string
     dibuat_pada: string
+    dibuat_oleh_nama?: string | null
 }
 
 export type SparepartPayload = {

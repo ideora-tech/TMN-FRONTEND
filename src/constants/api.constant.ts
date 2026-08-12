@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
     // Perawatan Armada (nested)
     ARMADA_PERAWATAN:       (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan`,
     ARMADA_PERAWATAN_DETAIL:(idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}`,
+    ARMADA_PERAWATAN_BATAL: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/batal`,
     ARMADA_PERAWATAN_BUKTI: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti`,
     ARMADA_PERAWATAN_BUKTI_DETAIL: (idArmada: string, id: string, idBukti: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti/${idBukti}`,
     ARMADA_PREDIKSI_PERAWATAN: (idArmada: string) => `/api/proxy/armada/${idArmada}/prediksi-perawatan`,

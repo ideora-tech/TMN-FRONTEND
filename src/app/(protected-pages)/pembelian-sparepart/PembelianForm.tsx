@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -35,6 +35,7 @@ export default function PembelianForm({ mode, initial }: Props) {
     const [idSupplier, setIdSupplier] = useState(initial?.id_supplier ?? '')
     const [tanggalPengajuan, setTanggalPengajuan] = useState(initial?.tanggal_pengajuan ?? dayjs().format('YYYY-MM-DD'))
     const [keterangan, setKeterangan] = useState(initial?.keterangan ?? '')
+    const [lampiran, setLampiran] = useState<File[]>([])
     const [idArmada, setIdArmada] = useState('')
     const [idPerawatan, setIdPerawatan] = useState(initial?.id_perawatan ?? '')
     const [items, setItems] = useState<ItemRow[]>(
@@ -74,7 +75,10 @@ export default function PembelianForm({ mode, initial }: Props) {
             .catch(() => setPerawatanOptions([]))
     }, [idArmada])
 
-    const sparepartOptions: Option[] = sparepartList.map(s => ({ value: s.id_sparepart, label: `${s.kode} — ${s.nama}` }))
+    const sparepartOptions: Option[] = sparepartList.map(s => ({
+        value: s.id_sparepart,
+        label: `${s.kode} — ${s.nama} · stok ${formatNum(s.stok)}${s.satuan ? ` ${s.satuan}` : ''}`,
+    }))
 
     const setRow = (index: number, patch: Partial<ItemRow>) => {
         setItems(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)))
@@ -125,6 +129,13 @@ export default function PembelianForm({ mode, initial }: Props) {
             const hasil = mode === 'edit' && initial
                 ? await pembelianSparepartService.update(initial.id_pembelian, payload)
                 : await pembelianSparepartService.create(payload)
+            if (mode === 'baru' && lampiran.length > 0) {
+                try {
+                    await pembelianSparepartService.uploadBukti(hasil.id_pembelian, lampiran)
+                } catch (err) {
+                    toast.push(<Notification type="warning" title={`Pengajuan tersimpan, tapi lampiran gagal diunggah: ${parseApiError(err)}`} />)
+                }
+            }
             toast.push(<Notification type="success" title={mode === 'edit' ? 'Pengajuan berhasil diperbarui' : 'Pengajuan berhasil dibuat'} />)
             router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(hasil.id_pembelian))
         } catch (err) {
@@ -233,6 +244,48 @@ export default function PembelianForm({ mode, initial }: Props) {
                                 value={keterangan} onChange={e => setKeterangan(e.target.value)} />
                         </FormItem>
                     </div>
+
+                    {mode === 'baru' && (
+                        <div className="mt-1">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                Lampiran (opsional) — penawaran supplier, foto kerusakan, dsb.
+                            </p>
+                            <Upload
+                                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                                multiple
+                                showList={false}
+                                fileList={lampiran}
+                                beforeUpload={(baru) => {
+                                    const daftar = Array.from(baru ?? [])
+                                    if (lampiran.length + daftar.length > 10) return 'Maksimal 10 file lampiran'
+                                    const kebesaran = daftar.find(f => f.size > 5 * 1024 * 1024)
+                                    if (kebesaran) return `File ${kebesaran.name} melebihi 5MB`
+                                    return true
+                                }}
+                                onChange={files => setLampiran(files)}
+                            >
+                                <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
+                                    Pilih file (bisa lebih dari satu, maks. 10 file × 5MB)
+                                </Button>
+                            </Upload>
+                            {lampiran.length > 0 && (
+                                <div className="flex flex-col gap-1.5 mt-3">
+                                    {lampiran.map((file, idx) => (
+                                        <div key={`${file.name}-${idx}`}
+                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                                            <span className="text-sm truncate">{file.name}</span>
+                                            <span
+                                                className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0"
+                                                onClick={() => setLampiran(prev => prev.filter((_, i) => i !== idx))}
+                                            >
+                                                <HiOutlineTrash className="text-sm" />
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>

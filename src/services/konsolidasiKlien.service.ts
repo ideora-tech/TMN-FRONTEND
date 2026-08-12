@@ -3,6 +3,8 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export interface KonsolidasiKlienTrip {
     id_trip: string
+    id_proyek: string | null
+    id_rute: string | null
     tanggal: string
     kode_proyek: string | null
     nama_proyek: string | null
@@ -29,16 +31,16 @@ export interface KonsolidasiKlienRekap {
 }
 
 export const konsolidasiKlienService = {
-    async rekap(idKlien: string, dari?: string, sampai?: string, sumber?: string) {
+    async rekap(idKlien: string, dari?: string, sampai?: string, sumber?: string, idProyek?: string) {
         const { data } = await axios.get(API_ENDPOINTS.KONSOLIDASI_KLIEN, {
-            params: { id_klien: idKlien, dari: dari || undefined, sampai: sampai || undefined, sumber: sumber || undefined },
+            params: { id_klien: idKlien, dari: dari || undefined, sampai: sampai || undefined, sumber: sumber || undefined, id_proyek: idProyek || undefined },
         })
         return data.data as KonsolidasiKlienRekap
     },
-    async exportExcel(idKlien: string, namaKlien: string, dari?: string, sampai?: string, sumber?: string) {
+    async exportExcel(idKlien: string, namaKlien: string, dari?: string, sampai?: string, sumber?: string, idProyek?: string) {
         const res = await axios.get(API_ENDPOINTS.KONSOLIDASI_KLIEN_EXPORT_EXCEL, {
             responseType: 'blob',
-            params: { id_klien: idKlien, dari: dari || undefined, sampai: sampai || undefined, sumber: sumber || undefined },
+            params: { id_klien: idKlien, dari: dari || undefined, sampai: sampai || undefined, sumber: sumber || undefined, id_proyek: idProyek || undefined },
         })
         const href = URL.createObjectURL(res.data)
         const link = document.createElement('a')

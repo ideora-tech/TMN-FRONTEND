@@ -4,10 +4,12 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Rekonsiliasi {
     id_rekonsiliasi: string
     id_faktur: string
+    nomor_faktur?: string
     catatan_klien?: string
     catatan_keuangan?: string
     status: 'pending' | 'selesai'
     diselesaikan_pada?: string
+    dibuat_pada?: string
 }
 
 export const rekonsiliasiService = {

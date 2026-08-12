@@ -33,6 +33,7 @@ const RAWAT_STATUS_CLASS: Record<string, string> = {
     terjadwal:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
     dalam_proses: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     selesai:      'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+    dibatalkan:   'bg-gray-100 text-gray-500 dark:bg-gray-500/20 dark:text-gray-300',
 }
 
 const PENUGASAN_STATUS_CLASS: Record<string, string> = {
@@ -1063,6 +1064,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-1">
+                                                {p.status !== 'selesai' && p.status !== 'dibatalkan' && (
                                                 <Tooltip title="Edit">
                                                     <span
                                                         className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -1095,6 +1097,8 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                         <HiOutlinePencilAlt className="text-lg" />
                                                     </span>
                                                 </Tooltip>
+                                                )}
+                                                {p.status !== 'selesai' && (
                                                 <Tooltip title="Hapus">
                                                     <span
                                                         className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
@@ -1102,6 +1106,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                                         <HiOutlineTrash className="text-lg" />
                                                     </span>
                                                 </Tooltip>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

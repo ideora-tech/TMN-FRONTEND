@@ -45,7 +45,7 @@ export default function PerawatanArmadaPage() {
             <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="armada">Perawatan Armada</Tabs.TabNav>
-                    <Tabs.TabNav value="riwayat">Riwayat Selesai</Tabs.TabNav>
+                    <Tabs.TabNav value="riwayat">Riwayat</Tabs.TabNav>
                     <Tabs.TabNav value="interval">Interval Perawatan</Tabs.TabNav>
                     <Tabs.TabNav value="jenis">Jenis Perawatan</Tabs.TabNav>
                     <Tabs.TabNav value="laporan">Laporan per Unit</Tabs.TabNav>

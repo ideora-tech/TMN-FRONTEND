@@ -280,11 +280,18 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                                         <td className="py-3 text-gray-600 dark:text-gray-400 max-w-[240px] truncate">
                                             {m.id_pembelian ? (
                                                 <Link href={ROUTES.PEMBELIAN_SPAREPART_DETAIL(m.id_pembelian)}
+                                                    target="_blank" rel="noopener noreferrer"
                                                     className="text-blue-500 hover:underline">
                                                     {m.keterangan}
                                                 </Link>
                                             ) : (
                                                 m.keterangan ?? <span className="text-gray-400">—</span>
+                                            )}
+                                            {m.dibuat_pada && (
+                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                    dicatat {dayjs(m.dibuat_pada).format('DD MMM YYYY HH:mm')}
+                                                    {m.dibuat_oleh_nama ? ` oleh ${m.dibuat_oleh_nama}` : ''}
+                                                </p>
                                             )}
                                         </td>
                                     </tr>

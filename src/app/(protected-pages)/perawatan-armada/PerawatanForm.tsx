@@ -245,7 +245,6 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
     }
 
     const totalSparepart = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.harga) || 0), 0)
-    const selectedArmada = armadaList.find(a => a.id_armada === form.id_armada)
 
     const canSubmit = !!form.id_armada && !!form.tanggal && !!form.id_jenis_perawatan
         && items.every(it => it.id_sparepart && Number(it.qty) > 0)
@@ -314,15 +313,12 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Armada" asterisk>
+                        <FormItem label="Armada" asterisk className="sm:col-span-2">
                             <Select placeholder="Pilih armada..."
                                 isDisabled={isEdit}
                                 options={armadaOptions}
                                 value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
                                 onChange={opt => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))} />
-                        </FormItem>
-                        <FormItem label="Tipe Kendaraan">
-                            <Input disabled placeholder="—" value={selectedArmada?.nama_jenis ?? ''} />
                         </FormItem>
                         <FormItem label="Jenis Perawatan" asterisk>
                             <Select placeholder="Pilih jenis perawatan..."

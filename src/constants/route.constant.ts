@@ -64,7 +64,6 @@ export const ROUTES = {
     LAPORAN_BARU:   '/laporan/baru',
     LAPORAN_DETAIL: (id: string) => `/laporan/${id}`,
 
-    PENAGIHAN_TRIP: '/penagihan-trip',
     FAKTUR:        '/faktur',
     FAKTUR_BARU:   '/faktur/baru',
     FAKTUR_DETAIL: (id: string) => `/faktur/${id}`,

@@ -196,13 +196,6 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'penagihan-trip', path: '/penagihan-trip', title: 'Penagihan Trip',
-        translateKey: 'nav.penagihanTrip', icon: 'receipt',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
-    {
         key: 'faktur', path: '/faktur', title: 'Faktur',
         translateKey: 'nav.faktur', icon: 'receipt',
         type: NAV_ITEM_TYPE_ITEM,
