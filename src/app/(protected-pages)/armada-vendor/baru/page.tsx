@@ -12,6 +12,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaVendorService } from '@/services/armadaVendor.service'
 import { Vendor } from '@/services/vendor.service'
+import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 
 export default function ArmadaVendorBaruPage() {
     const router = useRouter()
@@ -19,16 +20,20 @@ export default function ArmadaVendorBaruPage() {
     const initialIdVendor = searchParams.get('id_vendor') ?? ''
 
     const [form, setForm] = useState({
-        id_vendor: initialIdVendor, nopol: '', merk: '', jenis: '', tahun: '',
+        id_vendor: initialIdVendor, nopol: '', merk: '', jenis: '', id_jenis_kendaraan: '', tahun: '',
         kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
     })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([])
+    const [jenisKendaraanOptions, setJenisKendaraanOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 100 } })
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
+            .catch(() => {})
+        jenisKendaraanService.list(1, 100)
+            .then(res => setJenisKendaraanOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
     }, [])
 
@@ -53,6 +58,7 @@ export default function ArmadaVendorBaruPage() {
                 nopol: form.nopol,
                 merk: form.merk || null,
                 jenis: form.jenis || null,
+                id_jenis_kendaraan: form.id_jenis_kendaraan || null,
                 tahun: form.tahun ? Number(form.tahun) : null,
                 kapasitas: form.kapasitas.trim() || null,
                 masa_berlaku_stnk: form.masa_berlaku_stnk || null,
@@ -99,6 +105,12 @@ export default function ArmadaVendorBaruPage() {
                     <FormItem label="Jenis">
                         <Input placeholder="Contoh: Truk Box" value={form.jenis}
                             onChange={e => setForm(p => ({ ...p, jenis: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Jenis Kendaraan (Master)" extra="Diperlukan agar trip armada ini bisa ditagihkan otomatis">
+                        <Select isSearchable isClearable placeholder="Pilih jenis kendaraan..."
+                            options={jenisKendaraanOptions}
+                            value={jenisKendaraanOptions.find(o => o.value === form.id_jenis_kendaraan) ?? null}
+                            onChange={opt => setForm(p => ({ ...p, id_jenis_kendaraan: (opt as { value: string } | null)?.value ?? '' }))} />
                     </FormItem>
                     <FormItem label="Tahun">
                         <Input placeholder="2024" value={form.tahun}

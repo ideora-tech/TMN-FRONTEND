@@ -24,6 +24,7 @@ export default function InvoiceVendorBaruPage() {
         id_vendor: '', id_kontrak_vendor: '',
         nomor_invoice: '', tanggal_invoice: dayjs().format('YYYY-MM-DD'),
         jatuh_tempo: '', no_po: '', no_do: '',
+        periode_dari: '', periode_sampai: '',
         dpp: '', ppn: '', pph: '', keterangan: '',
     })
     const [jatuhTempoManual, setJatuhTempoManual] = useState(false)
@@ -104,6 +105,8 @@ export default function InvoiceVendorBaruPage() {
                 jatuh_tempo: form.jatuh_tempo || null,
                 no_po: form.no_po.trim() || null,
                 no_do: form.no_do.trim() || null,
+                periode_dari: form.periode_dari || null,
+                periode_sampai: form.periode_sampai || null,
                 dpp: Number(form.dpp),
                 ppn: form.ppn ? Number(form.ppn) : 0,
                 pph: form.pph ? Number(form.pph) : 0,
@@ -178,6 +181,16 @@ export default function InvoiceVendorBaruPage() {
                     <FormItem label="No. DO">
                         <Input placeholder="Nomor delivery order" value={form.no_do}
                             onChange={e => setForm(p => ({ ...p, no_do: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Periode Dari" extra="Periode kerja yang ditagihkan — dipakai pencocokan konsolidasi">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.periode_dari ? dayjs(form.periode_dari).toDate() : null}
+                            onChange={date => setForm(p => ({ ...p, periode_dari: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                    </FormItem>
+                    <FormItem label="Periode Sampai">
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={form.periode_sampai ? dayjs(form.periode_sampai).toDate() : null}
+                            onChange={date => setForm(p => ({ ...p, periode_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="DPP" asterisk invalid={!!errors.dpp} errorMessage={errors.dpp}>
                         <Input prefix="Rp" placeholder="0" invalid={!!errors.dpp}

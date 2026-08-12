@@ -4,9 +4,29 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface Laporan {
     id_laporan: string
     id_proyek: string
+    kode_proyek?: string
+    nama_proyek?: string
+    nama_klien?: string | null
     ringkasan?: string
     total_trip: number
+    total_trip_aktual?: number
     diserahkan_pada?: string
+}
+
+export interface LaporanDetail {
+    id_laporan: string
+    id_proyek: string
+    kode_proyek: string
+    nama_proyek: string
+    nama_klien: string | null
+    ringkasan: string | null
+    diserahkan_oleh: string | null
+    diserahkan_pada: string | null
+    statistik: {
+        total_trip: number
+        total_jarak_km: number
+        total_biaya: number
+    }
 }
 
 function cleanParams(params: Record<string, string | number | undefined>) {
@@ -26,7 +46,7 @@ export const laporanService = {
     },
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.LAPORAN_DETAIL(id))
-        return data.data as Laporan
+        return data.data as LaporanDetail
     },
     async create(payload: { id_proyek: string; ringkasan?: string }) {
         const { data } = await axios.post(API_ENDPOINTS.LAPORAN, payload)

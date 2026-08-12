@@ -7,6 +7,8 @@ export interface ArmadaVendor {
     nopol: string
     merk?: string | null
     jenis?: string | null
+    id_jenis_kendaraan?: string | null
+    nama_jenis_kendaraan?: string | null
     tahun?: number | null
     kapasitas?: string | null
     masa_berlaku_stnk?: string | null
@@ -29,7 +31,7 @@ export const armadaVendorService = {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_VENDOR_DETAIL(id))
         return data.data as ArmadaVendor
     },
-    async create(payload: { id_vendor: string; nopol: string; merk?: string | null; jenis?: string | null; tahun?: number | null; kapasitas?: string | null; masa_berlaku_stnk?: string | null; masa_berlaku_kir?: string | null; aktif?: boolean }) {
+    async create(payload: { id_vendor: string; nopol: string; merk?: string | null; jenis?: string | null; id_jenis_kendaraan?: string | null; tahun?: number | null; kapasitas?: string | null; masa_berlaku_stnk?: string | null; masa_berlaku_kir?: string | null; aktif?: boolean }) {
         const { data } = await axios.post(API_ENDPOINTS.ARMADA_VENDOR, payload)
         return data.data as ArmadaVendor
     },

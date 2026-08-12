@@ -58,7 +58,7 @@ const SUMBER_TRIP_TAG: Record<string, string> = {
 
 const RINGKASAN_EMPTY: LaporanTripRingkasan = { jumlah_trip: 0, total_biaya: 0 }
 
-type ExportKey = 'trip-excel' | 'trip-pdf' | 'karyawan-excel' | 'karyawan-pdf' | 'armada-excel' | 'armada-pdf'
+type ExportKey = 'trip-excel' | 'trip-pdf'
 
 export default function LaporanTripTab() {
     const [list, setList]       = useState<LaporanTripRow[]>([])
@@ -169,10 +169,6 @@ export default function LaporanTripTab() {
 
     const handleExportTripExcel = () => downloadFile(API_ENDPOINTS.LAPORAN_TRIP_EXPORT_EXCEL, `laporan-trip-${today}.xlsx`, 'trip-excel', appliedFilter)
     const handleExportTripPdf   = () => downloadFile(API_ENDPOINTS.LAPORAN_TRIP_EXPORT_PDF,   `laporan-trip-${today}.pdf`,  'trip-pdf',   appliedFilter)
-    const handleExportKaryawanExcel = () => downloadFile(API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_EXCEL, `laporan-karyawan-${today}.xlsx`, 'karyawan-excel')
-    const handleExportKaryawanPdf   = () => downloadFile(API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_PDF,   `laporan-karyawan-${today}.pdf`,  'karyawan-pdf')
-    const handleExportArmadaExcel   = () => downloadFile(API_ENDPOINTS.LAPORAN_ARMADA_EXPORT_EXCEL,   `laporan-armada-${today}.xlsx`,   'armada-excel')
-    const handleExportArmadaPdf     = () => downloadFile(API_ENDPOINTS.LAPORAN_ARMADA_EXPORT_PDF,     `laporan-armada-${today}.pdf`,    'armada-pdf')
 
     const columns: ColumnDef<LaporanTripRow>[] = [
         {
@@ -295,14 +291,6 @@ export default function LaporanTripTab() {
                     <Button size="sm" variant="default" loading={downloading === 'trip-excel'} onClick={handleExportTripExcel}>Export Excel</Button>
                     <Button size="sm" variant="default" loading={downloading === 'trip-pdf'} onClick={handleExportTripPdf}>Export PDF</Button>
                 </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
-                <span className="text-xs text-gray-500 mr-1">Export Master:</span>
-                <Button size="sm" variant="default" loading={downloading === 'karyawan-excel'} onClick={handleExportKaryawanExcel}>Karyawan (Excel)</Button>
-                <Button size="sm" variant="default" loading={downloading === 'karyawan-pdf'} onClick={handleExportKaryawanPdf}>Karyawan (PDF)</Button>
-                <Button size="sm" variant="default" loading={downloading === 'armada-excel'} onClick={handleExportArmadaExcel}>Armada (Excel)</Button>
-                <Button size="sm" variant="default" loading={downloading === 'armada-pdf'} onClick={handleExportArmadaPdf}>Armada (PDF)</Button>
             </div>
 
             <DataTable

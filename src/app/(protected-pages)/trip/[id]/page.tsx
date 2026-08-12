@@ -42,6 +42,15 @@ const STATUS_LABEL: Record<string, string> = {
     dibatalkan:  'Dibatalkan',
 }
 
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+}
+const MEKANISME_CLASS: Record<string, string> = {
+    unit_only:   'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+    unit_driver: 'bg-violet-50 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300',
+    full:        'bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
+}
+
 const RIWAYAT_BORDER: Record<string, string> = {
     belum_mulai: 'border-l-blue-400',
     berjalan:    'border-l-emerald-400',
@@ -258,6 +267,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             label: j.harga_per_liter != null ? `${j.nama_bbm} — ${formatRupiah(j.harga_per_liter)}/L` : j.nama_bbm,
         }))
 
+    const mekanisme = trip?.sumber === 'vendor' ? (trip.mekanisme ?? null) : null
+    const sembunyikanUangJalan = mekanisme === 'unit_driver' || mekanisme === 'full'
+    const sembunyikanBiayaOps = mekanisme === 'full'
+
     // --- handlers laporan perjalanan ---
     const recalcBiayaBbm = (idJenisBbm: string, jumlahLiter: string) => {
         const jenis = jenisBbmList.find(j => j.id_jenis_bbm === idJenisBbm)
@@ -328,14 +341,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         setSavingLaporan(true)
         try {
             const payload = {
-                biaya_bbm:       Number(laporanForm.biaya_bbm) || 0,
-                uang_jalan:      Number(laporanForm.uang_jalan) || 0,
-                uang_tol:        Number(laporanForm.uang_tol) || 0,
+                biaya_bbm:       sembunyikanBiayaOps ? 0 : Number(laporanForm.biaya_bbm) || 0,
+                uang_jalan:      sembunyikanUangJalan ? 0 : Number(laporanForm.uang_jalan) || 0,
+                uang_tol:        sembunyikanBiayaOps ? 0 : Number(laporanForm.uang_tol) || 0,
                 jarak_tempuh_km: Number(laporanForm.jarak_tempuh_km) || 0,
                 catatan_insiden: laporanForm.catatan_insiden || null,
-                id_jenis_bbm:    laporanForm.id_jenis_bbm || null,
-                jumlah_liter:    Number(laporanForm.jumlah_liter) || null,
-                biaya_lain: laporanForm.biaya_lain
+                id_jenis_bbm:    sembunyikanBiayaOps ? null : laporanForm.id_jenis_bbm || null,
+                jumlah_liter:    sembunyikanBiayaOps ? null : Number(laporanForm.jumlah_liter) || null,
+                biaya_lain: sembunyikanBiayaOps ? [] : laporanForm.biaya_lain
                     .filter(b => b.nama_biaya.trim())
                     .map(b => ({ nama_biaya: b.nama_biaya, nominal: Number(b.nominal) || 0 })),
             }
@@ -477,7 +490,19 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 ? [{ label: 'Armada', value: trip.armada_nopol as React.ReactNode }]
                                 : []),
                             ...(trip.sumber === 'vendor'
-                                ? [{ label: 'Vendor', value: (trip.vendor_nama ?? '—') as React.ReactNode }]
+                                ? [{
+                                    label: 'Vendor',
+                                    value: (
+                                        <span className="inline-flex items-center gap-2">
+                                            {trip.vendor_nama ?? '—'}
+                                            {trip.mekanisme && (
+                                                <Tag className={`text-xs font-semibold ${MEKANISME_CLASS[trip.mekanisme] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    {MEKANISME_LABEL[trip.mekanisme] ?? trip.mekanisme}
+                                                </Tag>
+                                            )}
+                                        </span>
+                                    ) as React.ReactNode,
+                                }]
                                 : []),
                             ...(trip.waktu_berangkat
                                 ? [{ label: 'Waktu Berangkat', value: dayjs(trip.waktu_berangkat).format('DD MMM YYYY HH:mm') as React.ReactNode }]
@@ -584,59 +609,74 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
                 {showLaporanForm && (
                     <form onSubmit={e => { e.preventDefault(); handleSubmitLaporan() }}>
+                        {(sembunyikanUangJalan || sembunyikanBiayaOps) && (
+                            <div className="rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 text-xs px-3 py-2 mb-3">
+                                {sembunyikanBiayaOps
+                                    ? 'Biaya operasional (BBM, tol, uang jalan, biaya lain) ditanggung vendor sesuai kontrak Full — cukup isi jarak, catatan, dan foto.'
+                                    : 'Uang jalan ditanggung vendor sesuai kontrak Unit + Driver.'}
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Jenis BBM">
-                                <Select
-                                    placeholder="Pilih jenis BBM..."
-                                    options={jenisBbmOptions}
-                                    value={jenisBbmOptions.find(o => o.value === laporanForm.id_jenis_bbm) ?? null}
-                                    onChange={(opt) => {
-                                        const idJenisBbm = opt?.value ?? ''
-                                        setLaporanForm(p => ({ ...p, id_jenis_bbm: idJenisBbm }))
-                                        recalcBiayaBbm(idJenisBbm, laporanForm.jumlah_liter)
-                                    }}
-                                    isClearable
-                                />
-                            </FormItem>
-                            <FormItem label="Jumlah Liter">
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    suffix="L"
-                                    placeholder="0"
-                                    value={laporanForm.jumlah_liter}
-                                    onChange={e => {
-                                        const jumlahLiter = e.target.value
-                                        setLaporanForm(p => ({ ...p, jumlah_liter: jumlahLiter }))
-                                        recalcBiayaBbm(laporanForm.id_jenis_bbm, jumlahLiter)
-                                    }}
-                                />
-                            </FormItem>
-                            <FormItem label="Biaya BBM (Rp)">
-                                <Input
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    value={laporanForm.biaya_bbm ? formatNum(Number(laporanForm.biaya_bbm)) : ''}
-                                    onChange={e => setLaporanForm(p => ({ ...p, biaya_bbm: e.target.value.replace(/\D/g, '') }))}
-                                />
-                            </FormItem>
-                            <FormItem label="Uang Jalan (Rp)">
-                                <Input
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    value={laporanForm.uang_jalan ? formatNum(Number(laporanForm.uang_jalan)) : ''}
-                                    onChange={e => setLaporanForm(p => ({ ...p, uang_jalan: e.target.value.replace(/\D/g, '') }))}
-                                />
-                            </FormItem>
-                            <FormItem label="Uang Tol (Rp)">
-                                <Input
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    value={laporanForm.uang_tol ? formatNum(Number(laporanForm.uang_tol)) : ''}
-                                    onChange={e => setLaporanForm(p => ({ ...p, uang_tol: e.target.value.replace(/\D/g, '') }))}
-                                />
-                            </FormItem>
+                            {!sembunyikanBiayaOps && (
+                                <>
+                                    <FormItem label="Jenis BBM">
+                                        <Select
+                                            placeholder="Pilih jenis BBM..."
+                                            options={jenisBbmOptions}
+                                            value={jenisBbmOptions.find(o => o.value === laporanForm.id_jenis_bbm) ?? null}
+                                            onChange={(opt) => {
+                                                const idJenisBbm = opt?.value ?? ''
+                                                setLaporanForm(p => ({ ...p, id_jenis_bbm: idJenisBbm }))
+                                                recalcBiayaBbm(idJenisBbm, laporanForm.jumlah_liter)
+                                            }}
+                                            isClearable
+                                        />
+                                    </FormItem>
+                                    <FormItem label="Jumlah Liter">
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            suffix="L"
+                                            placeholder="0"
+                                            value={laporanForm.jumlah_liter}
+                                            onChange={e => {
+                                                const jumlahLiter = e.target.value
+                                                setLaporanForm(p => ({ ...p, jumlah_liter: jumlahLiter }))
+                                                recalcBiayaBbm(laporanForm.id_jenis_bbm, jumlahLiter)
+                                            }}
+                                        />
+                                    </FormItem>
+                                    <FormItem label="Biaya BBM (Rp)">
+                                        <Input
+                                            prefix="Rp"
+                                            placeholder="0"
+                                            value={laporanForm.biaya_bbm ? formatNum(Number(laporanForm.biaya_bbm)) : ''}
+                                            onChange={e => setLaporanForm(p => ({ ...p, biaya_bbm: e.target.value.replace(/\D/g, '') }))}
+                                        />
+                                    </FormItem>
+                                </>
+                            )}
+                            {!sembunyikanUangJalan && (
+                                <FormItem label="Uang Jalan (Rp)">
+                                    <Input
+                                        prefix="Rp"
+                                        placeholder="0"
+                                        value={laporanForm.uang_jalan ? formatNum(Number(laporanForm.uang_jalan)) : ''}
+                                        onChange={e => setLaporanForm(p => ({ ...p, uang_jalan: e.target.value.replace(/\D/g, '') }))}
+                                    />
+                                </FormItem>
+                            )}
+                            {!sembunyikanBiayaOps && (
+                                <FormItem label="Uang Tol (Rp)">
+                                    <Input
+                                        prefix="Rp"
+                                        placeholder="0"
+                                        value={laporanForm.uang_tol ? formatNum(Number(laporanForm.uang_tol)) : ''}
+                                        onChange={e => setLaporanForm(p => ({ ...p, uang_tol: e.target.value.replace(/\D/g, '') }))}
+                                    />
+                                </FormItem>
+                            )}
                             <FormItem label="Jarak Tempuh (km)">
                                 <Input
                                     type="number"
@@ -691,42 +731,46 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             )}
                         </div>
 
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
-                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Lain</p>
-                            <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addBiayaLainRow}>
-                                Tambah Biaya
-                            </Button>
-                        </div>
-                        {laporanForm.biaya_lain.length === 0 ? (
-                            <p className="text-gray-400 text-xs py-2">Belum ada biaya lain ditambahkan.</p>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                {laporanForm.biaya_lain.map((row, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                        <Input
-                                            size="sm"
-                                            placeholder="Nama biaya"
-                                            value={row.nama_biaya}
-                                            onChange={e => updateBiayaLainRow(idx, 'nama_biaya', e.target.value)}
-                                            className="flex-1"
-                                        />
-                                        <Input
-                                            size="sm"
-                                            prefix="Rp"
-                                            placeholder="0"
-                                            value={row.nominal ? formatNum(Number(row.nominal)) : ''}
-                                            onChange={e => updateBiayaLainRow(idx, 'nominal', e.target.value.replace(/\D/g, ''))}
-                                            className="w-40"
-                                        />
-                                        <span
-                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0"
-                                            onClick={() => removeBiayaLainRow(idx)}
-                                        >
-                                            <HiOutlineTrash className="text-base" />
-                                        </span>
+                        {!sembunyikanBiayaOps && (
+                            <>
+                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Lain</p>
+                                    <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addBiayaLainRow}>
+                                        Tambah Biaya
+                                    </Button>
+                                </div>
+                                {laporanForm.biaya_lain.length === 0 ? (
+                                    <p className="text-gray-400 text-xs py-2">Belum ada biaya lain ditambahkan.</p>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        {laporanForm.biaya_lain.map((row, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <Input
+                                                    size="sm"
+                                                    placeholder="Nama biaya"
+                                                    value={row.nama_biaya}
+                                                    onChange={e => updateBiayaLainRow(idx, 'nama_biaya', e.target.value)}
+                                                    className="flex-1"
+                                                />
+                                                <Input
+                                                    size="sm"
+                                                    prefix="Rp"
+                                                    placeholder="0"
+                                                    value={row.nominal ? formatNum(Number(row.nominal)) : ''}
+                                                    onChange={e => updateBiayaLainRow(idx, 'nominal', e.target.value.replace(/\D/g, ''))}
+                                                    className="w-40"
+                                                />
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0"
+                                                    onClick={() => removeBiayaLainRow(idx)}
+                                                >
+                                                    <HiOutlineTrash className="text-base" />
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            </>
                         )}
 
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">

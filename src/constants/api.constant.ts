@@ -146,6 +146,8 @@ export const API_ENDPOINTS = {
     LAPORAN_DETAIL: (id: string) => `/api/proxy/laporan/${id}`,
 
     // Faktur
+    PENAGIHAN_TRIP:        '/api/proxy/penagihan-trip',
+    PENAGIHAN_TRIP_FAKTUR: '/api/proxy/penagihan-trip/faktur',
     FAKTUR:        '/api/proxy/faktur',
     FAKTUR_DETAIL: (id: string) => `/api/proxy/faktur/${id}`,
     FAKTUR_STATUS: (id: string) => `/api/proxy/faktur/${id}/status`,
@@ -155,6 +157,10 @@ export const API_ENDPOINTS = {
     REKONSILIASI_DETAIL: (id: string) => `/api/proxy/rekonsiliasi/${id}`,
 
     // Invoice Vendor
+    KONSOLIDASI_KLIEN:               '/api/proxy/konsolidasi-klien',
+    KONSOLIDASI_KLIEN_EXPORT_EXCEL:  '/api/proxy/konsolidasi-klien/export/excel',
+    KONSOLIDASI_VENDOR:              '/api/proxy/konsolidasi-vendor',
+    KONSOLIDASI_VENDOR_EXPORT_EXCEL: '/api/proxy/konsolidasi-vendor/export/excel',
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
     INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,

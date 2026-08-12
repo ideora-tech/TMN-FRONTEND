@@ -189,6 +189,20 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
+        key: 'konsolidasi-klien', path: '/konsolidasi-klien', title: 'Konsolidasi Klien',
+        translateKey: 'nav.konsolidasiKlien', icon: 'handshake',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'penagihan-trip', path: '/penagihan-trip', title: 'Penagihan Trip',
+        translateKey: 'nav.penagihanTrip', icon: 'receipt',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
         key: 'faktur', path: '/faktur', title: 'Faktur',
         translateKey: 'nav.faktur', icon: 'receipt',
         type: NAV_ITEM_TYPE_ITEM,
@@ -198,6 +212,13 @@ const navigationConfig: NavigationTree[] = [
     {
         key: 'invoice-vendor', path: '/invoice-vendor', title: 'Invoice Vendor',
         translateKey: 'nav.invoiceVendor', icon: 'fileText',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'konsolidasi-vendor', path: '/konsolidasi-vendor', title: 'Konsolidasi Vendor',
+        translateKey: 'nav.konsolidasiVendor', icon: 'repeat',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],

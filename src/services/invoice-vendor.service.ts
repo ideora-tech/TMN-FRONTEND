@@ -21,6 +21,8 @@ export interface InvoiceVendor {
     jatuh_tempo: string | null
     no_po: string | null
     no_do: string | null
+    periode_dari: string | null
+    periode_sampai: string | null
     dpp: number
     ppn: number
     pph: number
@@ -80,6 +82,8 @@ export type InvoiceVendorPayload = {
     jatuh_tempo?: string | null
     no_po?: string | null
     no_do?: string | null
+    periode_dari?: string | null
+    periode_sampai?: string | null
     dpp: number
     ppn?: number
     pph?: number

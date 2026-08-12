@@ -2,9 +2,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
-import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
@@ -113,12 +113,6 @@ export default function ArmadaVendorTab() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-end">
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.ARMADA_VENDOR_BARU)}>
-                    Tambah Armada Vendor
-                </Button>
-            </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input

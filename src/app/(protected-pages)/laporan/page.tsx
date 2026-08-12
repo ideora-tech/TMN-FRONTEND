@@ -75,15 +75,25 @@ export default function LaporanPage() {
                 (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'ID Proyek', accessorKey: 'id_proyek', size: 260,
+            header: 'Proyek', accessorKey: 'nama_proyek', size: 260,
             cell: ({ row }: CellContext<Laporan, unknown>) => (
-                <span className="font-mono text-xs text-gray-600 dark:text-gray-400">{row.original.id_proyek}</span>
+                <span
+                    className="font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    onClick={() => router.push(ROUTES.PROYEK_DETAIL(row.original.id_proyek))}
+                >
+                    {row.original.kode_proyek ? `${row.original.kode_proyek} — ` : ''}{row.original.nama_proyek ?? row.original.id_proyek}
+                </span>
             ),
         },
         {
-            header: 'Total Trip', accessorKey: 'total_trip', size: 120,
+            header: 'Klien', accessorKey: 'nama_klien', size: 200,
+            cell: ({ row }: CellContext<Laporan, unknown>) =>
+                row.original.nama_klien ?? <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Total Trip', accessorKey: 'total_trip_aktual', size: 120,
             cell: ({ row }: CellContext<Laporan, unknown>) => (
-                <span className="font-semibold">{row.original.total_trip}</span>
+                <span className="font-semibold">{row.original.total_trip_aktual ?? row.original.total_trip}</span>
             ),
         },
         {
@@ -173,7 +183,7 @@ export default function LaporanPage() {
                         <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                             <Input
                                 className="flex-1 min-w-60"
-                                placeholder="Cari ID proyek... (tekan Enter)"
+                                placeholder="Cari nama atau kode proyek... (tekan Enter)"
                                 suffix={
                                     searchInput
                                         ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />

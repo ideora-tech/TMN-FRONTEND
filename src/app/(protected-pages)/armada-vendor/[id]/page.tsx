@@ -9,6 +9,7 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
+import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -38,11 +39,16 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [saving, setSaving]   = useState(false)
 
+    const [jenisKendaraanOptions, setJenisKendaraanOptions] = useState<{ value: string; label: string }[]>([])
+
     useEffect(() => {
         armadaVendorService.get(id)
             .then(d => { setData(d); setForm({ ...d, tahun_str: d.tahun ? String(d.tahun) : '' }) })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
+        jenisKendaraanService.list(1, 100)
+            .then(res => setJenisKendaraanOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
+            .catch(() => {})
     }, [id])
 
     const validate = () => {
@@ -64,6 +70,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                 nopol: form.nopol,
                 merk:  form.merk || null,
                 jenis: form.jenis || null,
+                id_jenis_kendaraan: form.id_jenis_kendaraan || null,
                 tahun: form.tahun_str ? Number(form.tahun_str) : null,
                 kapasitas: form.kapasitas?.trim() || null,
                 masa_berlaku_stnk: form.masa_berlaku_stnk || null,
@@ -126,6 +133,11 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                                 { label: 'Nopol',             value: data.nopol },
                                 { label: 'Merk',              value: data.merk ?? <span className="text-gray-400">—</span> },
                                 { label: 'Jenis',             value: data.jenis ?? <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Jenis Kendaraan (Master)',
+                                    value: data.nama_jenis_kendaraan
+                                        ?? <span className="text-gray-400">— belum diatur, trip armada ini belum bisa ditagihkan otomatis</span>,
+                                },
                                 { label: 'Tahun',             value: data.tahun ?? <span className="text-gray-400">—</span> },
                                 { label: 'Kapasitas',         value: data.kapasitas ?? <span className="text-gray-400">—</span> },
                                 { label: 'Masa Berlaku STNK', value: renderMasaBerlaku(data.masa_berlaku_stnk) },
@@ -160,6 +172,12 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                             </FormItem>
                             <FormItem label="Jenis">
                                 <Input value={form.jenis ?? ''} onChange={e => setForm(p => ({ ...p, jenis: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Jenis Kendaraan (Master)" extra="Diperlukan agar trip armada ini bisa ditagihkan otomatis">
+                                <Select isSearchable isClearable placeholder="Pilih jenis kendaraan..."
+                                    options={jenisKendaraanOptions}
+                                    value={jenisKendaraanOptions.find(o => o.value === form.id_jenis_kendaraan) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_jenis_kendaraan: (opt as { value: string } | null)?.value ?? '' }))} />
                             </FormItem>
                             <FormItem label="Tahun">
                                 <Input value={form.tahun_str ?? ''}

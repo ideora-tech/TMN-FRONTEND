@@ -117,6 +117,28 @@ export default function ArmadaPage() {
         }
     }
 
+    const [downloadingExport, setDownloadingExport] = useState<'excel' | 'pdf' | null>(null)
+
+    const handleExport = async (format: 'excel' | 'pdf') => {
+        setDownloadingExport(format)
+        try {
+            const url = format === 'excel' ? API_ENDPOINTS.LAPORAN_ARMADA_EXPORT_EXCEL : API_ENDPOINTS.LAPORAN_ARMADA_EXPORT_PDF
+            const res = await axios.get(url, { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `data-armada-${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingExport(null)
+        }
+    }
+
     const handleImportFile = async (files: File[]) => {
         const file = files[0]
         if (!file) return
@@ -254,7 +276,23 @@ export default function ArmadaPage() {
                     <h3 className="font-bold">Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master armada</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        size="sm" variant="default"
+                        icon={<HiOutlineDownload />}
+                        loading={downloadingExport === 'excel'}
+                        onClick={() => handleExport('excel')}
+                    >
+                        Export Excel
+                    </Button>
+                    <Button
+                        size="sm" variant="default"
+                        icon={<HiOutlineDownload />}
+                        loading={downloadingExport === 'pdf'}
+                        onClick={() => handleExport('pdf')}
+                    >
+                        Export PDF
+                    </Button>
                     <Button
                         size="sm" variant="default"
                         icon={<HiOutlineDownload />}

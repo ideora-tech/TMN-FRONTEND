@@ -76,6 +76,7 @@ export default function PenugasanPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
+    const [klienMap, setKlienMap]           = useState<Record<string, string | null>>({})
     const [armadaMap, setArmadaMap]         = useState<Record<string, Armada>>({})
     const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [supirList, setSupirList]         = useState<Supir[]>([])
@@ -170,9 +171,10 @@ export default function PenugasanPage() {
     }, [])
 
     useEffect(() => {
-        projectService.list(1).then(res =>
+        projectService.list(1).then(res => {
             setProyekOptions(res.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
-        ).catch(() => {})
+            setKlienMap(Object.fromEntries(res.data.map((p: Project) => [p.id_proyek, p.nama_klien ?? null])))
+        }).catch(() => {})
         fetchArmadaSupir()
     }, [fetchArmadaSupir])
 
@@ -497,6 +499,12 @@ export default function PenugasanPage() {
                     </div>
                 ) : <span className="text-gray-400">—</span>
             },
+        },
+        {
+            header: 'Klien', id: 'klien', size: 180,
+            cell: () => klienMap[selectedProyek]
+                ? <span>{klienMap[selectedProyek]}</span>
+                : <span className="text-gray-400">—</span>,
         },
         {
             header: 'Uang Jalan', accessorKey: 'estimasi_biaya', size: 150,

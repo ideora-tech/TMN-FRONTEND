@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -203,12 +203,6 @@ export default function DaftarInvoiceTab() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-end">
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.INVOICE_VENDOR_BARU)}>
-                    Tambah Invoice
-                </Button>
-            </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input

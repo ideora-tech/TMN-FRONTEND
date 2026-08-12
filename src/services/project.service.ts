@@ -5,6 +5,7 @@ import { ProyekRutePayload } from '@/services/proyekRute.service'
 export interface Project {
     id_proyek: string
     id_klien: string
+    nama_klien?: string | null
     kode_proyek: string
     nama_proyek: string
     tanggal_mulai?: string

@@ -1,7 +1,8 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Spinner } from '@/components/ui'
+import { Button, Spinner } from '@/components/ui'
+import { HiPlusCircle } from 'react-icons/hi'
 import { ROUTES } from '@/constants/route.constant'
 import VendorTab from './VendorTab'
 
@@ -37,9 +38,18 @@ export default function VendorPage() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div>
-                <h3 className="font-bold">Data Vendor</h3>
-                <p className="text-gray-500 text-sm mt-0.5">Kelola data master vendor mitra transportasi</p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 className="font-bold">Data Vendor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola data master vendor mitra transportasi</p>
+                </div>
+                <Button
+                    variant="solid" size="sm"
+                    icon={<HiPlusCircle />}
+                    onClick={() => router.push(ROUTES.VENDOR_BARU)}
+                >
+                    Tambah Vendor
+                </Button>
             </div>
             <VendorTab />
         </div>

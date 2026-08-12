@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Input, DatePicker, Checkbox, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -65,8 +65,20 @@ type HasilGagal = { supir: string; armada: string; alasan: string }
 
 export default function PenugasanVendorTab() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
-    const [selectedProyek, setSelectedProyek] = useState('')
+    const [selectedProyek, setSelectedProyek] = useState<string>(() =>
+        searchParams.get('proyek')
+        ?? (typeof window !== 'undefined' ? localStorage.getItem('penugasan-vendor.proyek') ?? '' : ''))
+
+    const gantiProyek = (id: string) => {
+        setSelectedProyek(id)
+        if (typeof window !== 'undefined') {
+            if (id) localStorage.setItem('penugasan-vendor.proyek', id)
+            else localStorage.removeItem('penugasan-vendor.proyek')
+        }
+        router.replace(id ? `${ROUTES.PENUGASAN_VENDOR}?proyek=${id}` : ROUTES.PENUGASAN_VENDOR, { scroll: false })
+    }
     const [list, setList]             = useState<Penugasan[]>([])
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -658,7 +670,11 @@ export default function PenugasanVendorTab() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 className="font-bold">Penugasan Vendor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola penugasan armada dan supir vendor ke project</p>
+                </div>
                 <Tooltip title="Pilih proyek terlebih dahulu" disabled={!!selectedProyek}>
                     <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                         disabled={!selectedProyek}
@@ -675,7 +691,7 @@ export default function PenugasanVendorTab() {
                         options={proyekOptions}
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}
                         onChange={(opt) => {
-                            setSelectedProyek((opt as { value: string } | null)?.value ?? '')
+                            gantiProyek((opt as { value: string } | null)?.value ?? '')
                             setCurrentPage(1)
                             clearBulkSelection()
                         }}

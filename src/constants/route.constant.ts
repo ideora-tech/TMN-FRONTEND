@@ -64,6 +64,7 @@ export const ROUTES = {
     LAPORAN_BARU:   '/laporan/baru',
     LAPORAN_DETAIL: (id: string) => `/laporan/${id}`,
 
+    PENAGIHAN_TRIP: '/penagihan-trip',
     FAKTUR:        '/faktur',
     FAKTUR_BARU:   '/faktur/baru',
     FAKTUR_DETAIL: (id: string) => `/faktur/${id}`,
@@ -72,6 +73,8 @@ export const ROUTES = {
     REKONSILIASI_BARU:   '/rekonsiliasi/baru',
     REKONSILIASI_DETAIL: (id: string) => `/rekonsiliasi/${id}`,
 
+    KONSOLIDASI_KLIEN:     '/konsolidasi-klien',
+    KONSOLIDASI_VENDOR:    '/konsolidasi-vendor',
     INVOICE_VENDOR:        '/invoice-vendor',
     INVOICE_VENDOR_BARU:   '/invoice-vendor/baru',
     INVOICE_VENDOR_DETAIL: (id: string) => `/invoice-vendor/${id}`,

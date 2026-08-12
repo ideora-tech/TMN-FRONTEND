@@ -22,6 +22,7 @@ export interface Trip {
     catatan_settlement?: string | null
     sumber?: 'internal' | 'vendor'
     vendor_nama?: string | null
+    mekanisme?: 'unit_only' | 'unit_driver' | 'full' | null
 }
 
 export interface SettlementTrip {

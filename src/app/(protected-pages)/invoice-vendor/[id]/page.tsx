@@ -10,6 +10,7 @@ import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiPlusCircle, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
+import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -45,11 +46,14 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState({
         id_kontrak_vendor: '', nomor_invoice: '', tanggal_invoice: '', jatuh_tempo: '',
-        no_po: '', no_do: '', dpp: '', ppn: '', pph: '', keterangan: '',
+        no_po: '', no_do: '', periode_dari: '', periode_sampai: '',
+        dpp: '', ppn: '', pph: '', keterangan: '',
     })
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
     const [saving, setSaving]         = useState(false)
     const [kontrakList, setKontrakList] = useState<KontrakVendor[]>([])
+
+    const [rekapKonsolidasi, setRekapKonsolidasi] = useState<KonsolidasiRekap | null>(null)
 
     const [showVerifikasi, setShowVerifikasi] = useState(false)
     const [verifying, setVerifying]           = useState(false)
@@ -73,6 +77,8 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         jatuh_tempo:       d.jatuh_tempo ?? '',
         no_po:             d.no_po ?? '',
         no_do:             d.no_do ?? '',
+        periode_dari:      d.periode_dari ?? '',
+        periode_sampai:    d.periode_sampai ?? '',
         dpp:               String(d.dpp ?? ''),
         ppn:               d.ppn ? String(d.ppn) : '',
         pph:               d.pph ? String(d.pph) : '',
@@ -92,6 +98,16 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     }, [id])
 
     useEffect(() => { fetchDetail() }, [fetchDetail])
+
+    useEffect(() => {
+        if (!data?.id_vendor || !data.periode_dari || !data.periode_sampai) {
+            setRekapKonsolidasi(null)
+            return
+        }
+        konsolidasiVendorService.rekap(data.id_vendor, data.periode_dari, data.periode_sampai)
+            .then(setRekapKonsolidasi)
+            .catch(() => setRekapKonsolidasi(null))
+    }, [data?.id_vendor, data?.periode_dari, data?.periode_sampai])
 
     useEffect(() => {
         if (!editing || !data?.id_vendor) return
@@ -130,6 +146,8 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 jatuh_tempo: form.jatuh_tempo || null,
                 no_po: form.no_po.trim() || null,
                 no_do: form.no_do.trim() || null,
+                periode_dari: form.periode_dari || null,
+                periode_sampai: form.periode_sampai || null,
                 dpp: Number(form.dpp),
                 ppn: form.ppn ? Number(form.ppn) : 0,
                 pph: form.pph ? Number(form.pph) : 0,
@@ -310,6 +328,12 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                             },
                             { label: 'No. PO', value: data.no_po ?? <span className="text-gray-400">—</span> },
                             { label: 'No. DO', value: data.no_do ?? <span className="text-gray-400">—</span> },
+                            {
+                                label: 'Periode',
+                                value: data.periode_dari && data.periode_sampai
+                                    ? `${dayjs(data.periode_dari).format('DD MMM YYYY')} — ${dayjs(data.periode_sampai).format('DD MMM YYYY')}`
+                                    : <span className="text-gray-400">—</span>,
+                            },
                             { label: 'DPP',    value: formatRupiah(data.dpp) },
                             { label: 'PPN',    value: formatRupiah(data.ppn) },
                             { label: 'PPh',    value: formatRupiah(data.pph) },
@@ -365,6 +389,16 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                             <FormItem label="No. DO">
                                 <Input value={form.no_do} onChange={e => setForm(p => ({ ...p, no_do: e.target.value }))} />
                             </FormItem>
+                            <FormItem label="Periode Dari">
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.periode_dari ? dayjs(form.periode_dari).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, periode_dari: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                            </FormItem>
+                            <FormItem label="Periode Sampai">
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.periode_sampai ? dayjs(form.periode_sampai).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, periode_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                            </FormItem>
                             <FormItem label="DPP" asterisk invalid={!!formErrors.dpp} errorMessage={formErrors.dpp}>
                                 <Input prefix="Rp" placeholder="0" invalid={!!formErrors.dpp}
                                     value={form.dpp ? formatNum(Number(form.dpp)) : ''}
@@ -403,6 +437,56 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </>
                 )}
             </Card>
+
+            {data.periode_dari && data.periode_sampai && rekapKonsolidasi && (() => {
+                const kontrakOtomatis = rekapKonsolidasi.ringkasan.kontrak.filter(k => k.nilai_seharusnya != null)
+                const nilaiSeharusnya = kontrakOtomatis.reduce((acc, k) => acc + (k.nilai_seharusnya ?? 0), 0)
+                const adaOtomatis = kontrakOtomatis.length > 0
+                const selisih = data.total - nilaiSeharusnya
+                const cocok = adaOtomatis && Math.abs(selisih) < 1
+                return (
+                    <Card>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Pencocokan Konsolidasi</p>
+                        <p className="text-xs text-gray-400 mb-4">
+                            Rekap trip vendor selesai ber-laporan periode {dayjs(data.periode_dari).format('DD MMM YYYY')} — {dayjs(data.periode_sampai).format('DD MMM YYYY')}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Total Rit</p>
+                                <p className="text-sm font-bold">{formatNum(rekapKonsolidasi.ringkasan.total_rit)} rit</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Nilai Seharusnya</p>
+                                {adaOtomatis ? (
+                                    <p className="text-sm font-bold">{formatRupiah(nilaiSeharusnya)}</p>
+                                ) : (
+                                    <p className="text-sm text-gray-500">
+                                        hitung manual — {rekapKonsolidasi.ringkasan.kontrak.map(k => k.satuan ?? 'satuan belum diatur').join(', ') || 'tanpa trip'}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Total Invoice</p>
+                                <p className="text-sm font-bold">{formatRupiah(data.total)}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Selisih</p>
+                                {adaOtomatis ? (
+                                    <p className={`text-sm font-bold ${cocok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                                        {cocok ? 'Cocok' : formatRupiah(selisih)}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-gray-400">—</p>
+                                )}
+                            </div>
+                        </div>
+                        <Link href={`${ROUTES.KONSOLIDASI_VENDOR}?vendor=${data.id_vendor}`}
+                            className="inline-block text-blue-500 hover:underline text-xs mt-4">
+                            Lihat rincian di Konsolidasi Vendor
+                        </Link>
+                    </Card>
+                )
+            })()}
 
             <Card>
                 <div className="flex items-center justify-between mb-4">

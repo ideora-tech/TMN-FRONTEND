@@ -2,7 +2,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineDownload } from 'react-icons/hi'
+import axios from 'axios'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -28,6 +30,27 @@ export default function KaryawanPage() {
     const router = useRouter()
     const [list, setList]               = useState<Karyawan[]>([])
     const [loading, setLoading]         = useState(false)
+    const [downloading, setDownloading] = useState<'excel' | 'pdf' | null>(null)
+
+    const handleExport = async (format: 'excel' | 'pdf') => {
+        setDownloading(format)
+        try {
+            const url = format === 'excel' ? API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_EXCEL : API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_PDF
+            const res = await axios.get(url, { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `data-karyawan-${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloading(null)
+        }
+    }
     const [submitting, setSubmitting]   = useState(false)
     const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
@@ -150,10 +173,20 @@ export default function KaryawanPage() {
                     <h3 className="font-bold">Karyawan</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master karyawan</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>
-                    Tambah Karyawan
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                        loading={downloading === 'excel'} onClick={() => handleExport('excel')}>
+                        Export Excel
+                    </Button>
+                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                        loading={downloading === 'pdf'} onClick={() => handleExport('pdf')}>
+                        Export PDF
+                    </Button>
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>
+                        Tambah Karyawan
+                    </Button>
+                </div>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
