@@ -60,7 +60,7 @@ const FEATURES = [
         color: 'text-amber-600',
         bg: 'bg-amber-50',
         title: 'Laporan & Faktur',
-        desc: 'Rekonsiliasi otomatis, pembuatan faktur klien, dan laporan keuangan perjalanan yang lengkap dan akurat.',
+        desc: 'Pembuatan faktur klien dan laporan keuangan perjalanan yang lengkap dan akurat.',
     },
 ]
 
@@ -89,8 +89,8 @@ const STEPS = [
         accentBg: '#F59E0B',
         ring: 'ring-amber-100',
         title: 'Verifikasi & Penagihan',
-        desc: 'Keuangan memverifikasi laporan trip, membuat faktur untuk klien, dan melakukan rekonsiliasi pembayaran.',
-        checks: ['Verifikasi laporan trip', 'Buat faktur klien', 'Rekonsiliasi pembayaran'],
+        desc: 'Keuangan memverifikasi laporan trip dan membuat faktur untuk klien.',
+        checks: ['Verifikasi laporan trip', 'Buat faktur klien', 'Penagihan trip otomatis'],
     },
 ]
 

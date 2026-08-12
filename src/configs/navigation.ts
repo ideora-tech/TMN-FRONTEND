@@ -19,7 +19,6 @@ export const NAV_ITEMS: Record<UserRole, { label: string; href: string }[]> = {
         { label: 'Dashboard', href: ROUTES.HOME },
         { label: 'Laporan', href: ROUTES.LAPORAN },
         { label: 'Faktur', href: ROUTES.FAKTUR },
-        { label: 'Rekonsiliasi', href: ROUTES.REKONSILIASI },
     ],
     manager: [
         { label: 'Dashboard', href: ROUTES.HOME },
@@ -30,6 +29,5 @@ export const NAV_ITEMS: Record<UserRole, { label: string; href: string }[]> = {
         { label: 'Trip', href: ROUTES.TRIP },
         { label: 'Laporan', href: ROUTES.LAPORAN },
         { label: 'Faktur', href: ROUTES.FAKTUR },
-        { label: 'Rekonsiliasi', href: ROUTES.REKONSILIASI },
     ],
 }

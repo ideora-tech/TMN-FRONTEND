@@ -47,7 +47,6 @@ export const protectedRoutes: Routes = {
     ...listRoute('invoice-vendor', 'invoice-vendor'),
     '/konsolidasi-vendor': { key: 'konsolidasi-vendor', authority: [] },
     '/konsolidasi-klien': { key: 'konsolidasi-klien', authority: [] },
-    ...listRoute('rekonsiliasi', 'rekonsiliasi'),
     ...listRoute('pengguna', 'pengguna', ADMIN_ONLY),
     ...listRoute('peran', 'peran', ADMIN_ONLY),
     ...listRoute('jenis-kendaraan', 'jenis-kendaraan'),

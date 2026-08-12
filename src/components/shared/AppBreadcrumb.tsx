@@ -16,7 +16,6 @@ const SEGMENT_LABELS: Record<string, string> = {
     penugasan:        'Penugasan',
     laporan:          'Laporan',
     faktur:           'Faktur',
-    rekonsiliasi:     'Rekonsiliasi',
     penawaran:        'Penawaran',
     pengguna:         'Pengguna',
     peran:            'Peran',

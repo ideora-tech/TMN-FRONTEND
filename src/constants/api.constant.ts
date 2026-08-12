@@ -153,9 +153,6 @@ export const API_ENDPOINTS = {
     FAKTUR_DETAIL: (id: string) => `/api/proxy/faktur/${id}`,
     FAKTUR_STATUS: (id: string) => `/api/proxy/faktur/${id}/status`,
 
-    // Rekonsiliasi
-    REKONSILIASI:        '/api/proxy/rekonsiliasi',
-    REKONSILIASI_DETAIL: (id: string) => `/api/proxy/rekonsiliasi/${id}`,
 
     // Invoice Vendor
     KONSOLIDASI_KLIEN:               '/api/proxy/konsolidasi-klien',

@@ -216,13 +216,6 @@ const navigationConfig: NavigationTree[] = [
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
-    {
-        key: 'rekonsiliasi', path: '/rekonsiliasi', title: 'Rekonsiliasi',
-        translateKey: 'nav.rekonsiliasi', icon: 'repeat',
-        type: NAV_ITEM_TYPE_ITEM,
-        authority: ['keuangan', 'manager', 'superadmin', 'admin'],
-        subMenu: [],
-    },
 
     // === PENGATURAN ===
     {
