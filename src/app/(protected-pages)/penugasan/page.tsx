@@ -97,7 +97,7 @@ export default function PenugasanPage() {
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]                    = useState(15)
+    const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Penugasan | null>(null)
 
@@ -246,7 +246,7 @@ export default function PenugasanPage() {
         if (!selectedProyek) return
         setLoading(true)
         try {
-            const res = await penugasanService.list(selectedProyek, currentPage, 'internal')
+            const res = await penugasanService.list(selectedProyek, currentPage, 'internal', pageSize)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -254,7 +254,7 @@ export default function PenugasanPage() {
         } finally {
             setLoading(false)
         }
-    }, [selectedProyek, currentPage])
+    }, [selectedProyek, currentPage, pageSize])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -694,8 +694,9 @@ export default function PenugasanPage() {
                         columns={columns}
                         data={list as unknown[]}
                         loading={loading}
-                        pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
+                        pagingData={{ total, pageIndex: currentPage, pageSize }}
                         onPaginationChange={handlePageChange}
+                        onSelectChange={(size) => { setSelectedIds([]); setPageSize(size); setCurrentPage(1) }}
                         onCheckBoxChange={handleRowCheck}
                         onIndeterminateCheckBoxChange={handleAllRowCheck}
                         checkboxChecked={(row: Penugasan) => selectedIds.includes(row.id_penugasan)}

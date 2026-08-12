@@ -23,13 +23,13 @@ export default function LogErrorPage() {
     const [list, setList]         = useState<LogError[]>([])
     const [loading, setLoading]   = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]              = useState(20)
+    const [pageSize, setPageSize] = useState(10)
     const [total, setTotal]       = useState(0)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await logErrorService.list(currentPage)
+            const res = await logErrorService.list(currentPage, pageSize)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -37,7 +37,7 @@ export default function LogErrorPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -93,8 +93,9 @@ export default function LogErrorPage() {
             </div>
             <Card>
                 <DataTable columns={columns} data={list} loading={loading}
-                    pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
-                    onPaginationChange={setCurrentPage} />
+                    pagingData={{ total, pageIndex: currentPage, pageSize }}
+                    onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }} />
             </Card>
         </div>
     )

@@ -83,7 +83,7 @@ export default function PenugasanVendorTab() {
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]                    = useState(15)
+    const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Penugasan | null>(null)
 
@@ -340,7 +340,7 @@ export default function PenugasanVendorTab() {
         if (!selectedProyek) return
         setLoading(true)
         try {
-            const res = await penugasanService.list(selectedProyek, currentPage, 'vendor')
+            const res = await penugasanService.list(selectedProyek, currentPage, 'vendor', pageSize)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -348,7 +348,7 @@ export default function PenugasanVendorTab() {
         } finally {
             setLoading(false)
         }
-    }, [selectedProyek, currentPage])
+    }, [selectedProyek, currentPage, pageSize])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -746,6 +746,7 @@ export default function PenugasanVendorTab() {
                         loading={loading}
                         pagingData={{ total, pageIndex: currentPage, pageSize }}
                         onPaginationChange={handlePageChange}
+                        onSelectChange={(size) => { setSelectedIds([]); setPageSize(size); setCurrentPage(1) }}
                         onCheckBoxChange={handleRowCheck}
                         onIndeterminateCheckBoxChange={handleAllRowCheck}
                         checkboxChecked={(row: Penugasan) => selectedIds.includes(row.id_penugasan)}

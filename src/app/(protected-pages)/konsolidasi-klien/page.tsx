@@ -6,14 +6,14 @@ import dayjs from 'dayjs'
 import { Card, Button, Tag, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
+import DataTable from '@/components/shared/DataTable'
+import type { ColumnDef } from '@/components/shared/DataTable'
 import { HiOutlineDownload } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { klienService, Klien } from '@/services/klien.service'
-import { konsolidasiKlienService, KonsolidasiKlienRekap } from '@/services/konsolidasiKlien.service'
-
-const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
+import { konsolidasiKlienService, KonsolidasiKlienRekap, KonsolidasiKlienTrip } from '@/services/konsolidasiKlien.service'
 
 const SUMBER_OPTIONS = [
     { value: '',         label: 'Semua Sumber' },
@@ -41,6 +41,8 @@ export default function KonsolidasiKlienPage() {
     const [rekap, setRekap]     = useState<KonsolidasiKlienRekap | null>(null)
     const [loading, setLoading] = useState(false)
     const [exporting, setExporting] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize]       = useState(10)
 
     const gantiKlien = (id: string) => {
         setSelectedKlien(id)
@@ -66,6 +68,7 @@ export default function KonsolidasiKlienPage() {
             const data = await konsolidasiKlienService.rekap(selectedKlien, dari, sampai, sumber)
             if (reqRef.current !== reqId) return
             setRekap(data)
+            setCurrentPage(1)
         } catch (err) {
             if (reqRef.current !== reqId) return
             setRekap(null)
@@ -91,6 +94,84 @@ export default function KonsolidasiKlienPage() {
             setExporting(false)
         }
     }
+
+    const tripColumns: ColumnDef<KonsolidasiKlienTrip>[] = [
+        {
+            header: 'No', id: 'no', size: 60,
+            cell: ({ row }) => (currentPage - 1) * pageSize + row.index + 1,
+        },
+        {
+            header: 'Tanggal', accessorKey: 'tanggal', size: 130,
+            cell: ({ row }) => <span className="whitespace-nowrap">{dayjs(row.original.tanggal).format('DD MMM YYYY')}</span>,
+        },
+        {
+            header: 'Proyek', accessorKey: 'nama_proyek', size: 200,
+            cell: ({ row }) => {
+                const t = row.original
+                return t.kode_proyek || t.nama_proyek
+                    ? `${t.kode_proyek ?? ''}${t.kode_proyek && t.nama_proyek ? ' — ' : ''}${t.nama_proyek ?? ''}`
+                    : '—'
+            },
+        },
+        {
+            header: 'Rute', accessorKey: 'rute', size: 130,
+            cell: ({ row }) => row.original.rute ?? '—',
+        },
+        {
+            header: 'Asal', accessorKey: 'asal', size: 110,
+            cell: ({ row }) => row.original.asal ?? '—',
+        },
+        {
+            header: 'Tujuan', accessorKey: 'tujuan', size: 110,
+            cell: ({ row }) => row.original.tujuan ?? '—',
+        },
+        {
+            header: 'Nopol', accessorKey: 'nopol', size: 120,
+            cell: ({ row }) => <span className="whitespace-nowrap font-mono text-xs">{row.original.nopol ?? '—'}</span>,
+        },
+        {
+            header: 'Supir', accessorKey: 'supir_nama', size: 160,
+            cell: ({ row }) => (
+                <span className="inline-flex items-center gap-2">
+                    {row.original.supir_nama ?? '—'}
+                    {row.original.sumber === 'vendor' && (
+                        <Tag className="text-xs bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">vendor</Tag>
+                    )}
+                </span>
+            ),
+        },
+        {
+            header: 'Jarak', accessorKey: 'jarak_tempuh_km', size: 100,
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    {row.original.jarak_tempuh_km != null ? `${formatNum(row.original.jarak_tempuh_km)} km` : '—'}
+                </span>
+            ),
+        },
+        {
+            header: 'Tarif', id: 'tarif', size: 130,
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    {row.original.tarif
+                        ? formatRupiah(row.original.tarif.harga)
+                        : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
+                </span>
+            ),
+        },
+        {
+            header: 'Status Tagihan', accessorKey: 'sudah_difakturkan', size: 150,
+            cell: ({ row }) => (
+                <Tag className={`text-xs font-semibold ${row.original.sudah_difakturkan
+                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300'}`}>
+                    {row.original.sudah_difakturkan ? 'Sudah difakturkan' : 'Belum'}
+                </Tag>
+            ),
+        },
+    ]
+
+    const trips = rekap?.trips ?? []
+    const pagedTrips = trips.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     return (
         <div className="flex flex-col gap-4">
@@ -120,7 +201,7 @@ export default function KonsolidasiKlienPage() {
                             onChange={date => setSampai(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </div>
                     <Select
-                        className="w-40"
+                        className="w-48"
                         isSearchable={false}
                         options={SUMBER_OPTIONS}
                         value={SUMBER_OPTIONS.find(o => o.value === sumber) ?? SUMBER_OPTIONS[0]}
@@ -161,63 +242,14 @@ export default function KonsolidasiKlienPage() {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                    <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className={TH_CLASS}>Tanggal</th>
-                                        <th className={TH_CLASS}>Proyek</th>
-                                        <th className={TH_CLASS}>Rute</th>
-                                        <th className={TH_CLASS}>Asal</th>
-                                        <th className={TH_CLASS}>Tujuan</th>
-                                        <th className={TH_CLASS}>Nopol</th>
-                                        <th className={TH_CLASS}>Supir</th>
-                                        <th className={`${TH_CLASS} text-right`}>Jarak</th>
-                                        <th className={`${TH_CLASS} text-right`}>Tarif</th>
-                                        <th className={TH_CLASS}>Status Tagihan</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {rekap.trips.map(t => (
-                                        <tr key={t.id_trip}>
-                                            <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(t.tanggal).format('DD MMM YYYY')}</td>
-                                            <td className="py-2.5 px-3">
-                                                {t.kode_proyek || t.nama_proyek
-                                                    ? `${t.kode_proyek ?? ''}${t.kode_proyek && t.nama_proyek ? ' — ' : ''}${t.nama_proyek ?? ''}`
-                                                    : '—'}
-                                            </td>
-                                            <td className="py-2.5 px-3">{t.rute ?? '—'}</td>
-                                            <td className="py-2.5 px-3">{t.asal ?? '—'}</td>
-                                            <td className="py-2.5 px-3">{t.tujuan ?? '—'}</td>
-                                            <td className="py-2.5 px-3 whitespace-nowrap font-mono text-xs">{t.nopol ?? '—'}</td>
-                                            <td className="py-2.5 px-3">
-                                                <span className="inline-flex items-center gap-2">
-                                                    {t.supir_nama ?? '—'}
-                                                    {t.sumber === 'vendor' && (
-                                                        <Tag className="text-xs bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">vendor</Tag>
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                                {t.jarak_tempuh_km != null ? `${formatNum(t.jarak_tempuh_km)} km` : '—'}
-                                            </td>
-                                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                                {t.tarif
-                                                    ? formatRupiah(t.tarif.harga)
-                                                    : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                                <Tag className={`text-xs font-semibold ${t.sudah_difakturkan
-                                                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300'}`}>
-                                                    {t.sudah_difakturkan ? 'Sudah difakturkan' : 'Belum'}
-                                                </Tag>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <DataTable
+                            columns={tripColumns}
+                            data={pagedTrips as unknown[]}
+                            loading={loading}
+                            pagingData={{ total: trips.length, pageIndex: currentPage, pageSize }}
+                            onPaginationChange={setCurrentPage}
+                            onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                        />
                     </>
                 )}
             </Card>

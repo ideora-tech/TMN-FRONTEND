@@ -14,8 +14,8 @@ export interface LogError {
 }
 
 export const logErrorService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.LOG_ERROR, { params: { page, limit: 20 } })
+    async list(page = 1, limit = 10) {
+        const { data } = await axios.get(API_ENDPOINTS.LOG_ERROR, { params: { page, limit } })
         return data as { data: LogError[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

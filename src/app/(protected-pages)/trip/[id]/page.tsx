@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, Checkbox, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import EvaluasiPenugasanCard from '@/components/shared/EvaluasiPenugasanCard'
 import {
     HiArrowLeft,
     HiOutlineMap,
@@ -195,17 +196,23 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     const handleAksiTrip = async () => {
         if (!aksiTrip) return
+        const aksi = aksiTrip
         setAksiLoading(true)
         try {
-            if (aksiTrip === 'mulai') await tripService.checkin(id)
-            else if (aksiTrip === 'selesai') await tripService.checkout(id, selesaikanPenugasan)
+            if (aksi === 'mulai') await tripService.checkin(id)
+            else if (aksi === 'selesai') await tripService.checkout(id, selesaikanPenugasan)
             else await tripService.batalkan(id)
-            toast.push(<Notification type="success" title={`${AKSI_TITLE[aksiTrip]} berhasil`} />)
+            toast.push(<Notification type="success" title={`${AKSI_TITLE[aksi]} berhasil`} />)
             setAksiTrip(null)
             setSelesaikanPenugasan(false)
             const t = await tripService.get(id)
             setTrip(t)
             tripService.getStatus(id).then(setStatuses).catch(() => {})
+            if (aksi === 'selesai' && t.status === 'selesai') {
+                setTimeout(() => {
+                    document.getElementById('evaluasi-penugasan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }, 300)
+            }
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -1012,6 +1019,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                 )}
             </Card>
+
+            {trip.status === 'selesai' && trip.id_penugasan && (
+                <div id="evaluasi-penugasan-card">
+                    <EvaluasiPenugasanCard idPenugasan={trip.id_penugasan} sumber={trip.sumber ?? 'internal'} />
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={!!deleteFotoTarget}

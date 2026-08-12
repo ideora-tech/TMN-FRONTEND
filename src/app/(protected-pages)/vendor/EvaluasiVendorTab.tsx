@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Card, Dialog, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Dialog, Input, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineEye, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
@@ -32,8 +32,10 @@ const KRITERIA_DETAIL: { key: keyof EvaluasiVendorItem; label: string }[] = [
 export default function EvaluasiVendorTab() {
     const [list, setList]       = useState<RekapEvaluasiVendor[]>([])
     const [loading, setLoading] = useState(false)
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch]           = useState('')
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]                    = useState(15)
+    const [pageSize, setPageSize]       = useState(10)
 
     const [detailTarget, setDetailTarget]   = useState<RekapEvaluasiVendor | null>(null)
     const [detailList, setDetailList]       = useState<EvaluasiVendorItem[]>([])
@@ -65,10 +67,27 @@ export default function EvaluasiVendorTab() {
         setDetailList([])
     }
 
+    const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
     const columns: ColumnDef<RekapEvaluasiVendor>[] = [
         {
+            header: 'No', id: 'no', size: 60,
+            cell: ({ row }) => (currentPage - 1) * pageSize + row.index + 1,
+        },
+        {
             header: 'Vendor', accessorKey: 'nama_vendor',
-            cell: ({ row }) => <span className="font-semibold">{row.original.nama_vendor}</span>,
+            cell: ({ row }) => {
+                const initials = row.original.nama_vendor.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
+                return (
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-primary/20 flex items-center justify-center text-xs font-bold">
+                            {initials}
+                        </div>
+                        <span className="font-semibold">{row.original.nama_vendor}</span>
+                    </div>
+                )
+            },
         },
         {
             header: 'Jumlah Evaluasi', accessorKey: 'jumlah_evaluasi', size: 140,
@@ -119,24 +138,37 @@ export default function EvaluasiVendorTab() {
         },
     ]
 
-    const pagedList = list.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    const filteredList = search
+        ? list.filter(v => v.nama_vendor.toLowerCase().includes(search.toLowerCase()))
+        : list
+    const pagedList = filteredList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     return (
         <div className="flex flex-col gap-4">
             <Card bodyClass="p-0">
-                {!loading && list.length === 0 ? (
-                    <div className="py-12 text-center text-gray-400 text-sm">
-                        Belum ada evaluasi vendor.
-                    </div>
-                ) : (
-                    <DataTable
-                        columns={columns}
-                        data={pagedList as unknown[]}
-                        loading={loading}
-                        pagingData={{ total: list.length, pageIndex: currentPage, pageSize }}
-                        onPaginationChange={setCurrentPage}
+                <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <Input
+                        className="flex-1 min-w-60"
+                        placeholder="Cari nama vendor... (tekan Enter)"
+                        suffix={
+                            searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                        }
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit() }}
                     />
-                )}
+                </div>
+                <DataTable
+                    columns={columns}
+                    data={pagedList as unknown[]}
+                    loading={loading}
+                    noData={!loading && filteredList.length === 0}
+                    pagingData={{ total: filteredList.length, pageIndex: currentPage, pageSize }}
+                    onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                />
             </Card>
 
             <Dialog isOpen={!!detailTarget} onRequestClose={handleCloseDetail} onClose={handleCloseDetail} width={640}>

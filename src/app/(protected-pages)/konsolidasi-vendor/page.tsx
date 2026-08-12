@@ -6,15 +6,15 @@ import axios from 'axios'
 import { Card, Button, Tag, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
+import DataTable from '@/components/shared/DataTable'
+import type { ColumnDef } from '@/components/shared/DataTable'
 import { HiOutlineDownload } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { Vendor } from '@/services/vendor.service'
-import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
-
-const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
+import { konsolidasiVendorService, KonsolidasiRekap, KonsolidasiTrip } from '@/services/konsolidasiVendor.service'
 
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
@@ -39,6 +39,8 @@ export default function KonsolidasiVendorPage() {
     const [rekap, setRekap]     = useState<KonsolidasiRekap | null>(null)
     const [loading, setLoading] = useState(false)
     const [exporting, setExporting] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize]       = useState(10)
 
     const gantiVendor = (id: string) => {
         setSelectedVendor(id)
@@ -64,6 +66,7 @@ export default function KonsolidasiVendorPage() {
             const data = await konsolidasiVendorService.rekap(selectedVendor, dari, sampai)
             if (reqRef.current !== reqId) return
             setRekap(data)
+            setCurrentPage(1)
         } catch (err) {
             if (reqRef.current !== reqId) return
             setRekap(null)
@@ -89,6 +92,48 @@ export default function KonsolidasiVendorPage() {
             setExporting(false)
         }
     }
+
+    const tripColumns: ColumnDef<KonsolidasiTrip>[] = [
+        {
+            header: 'No', id: 'no', size: 60,
+            cell: ({ row }) => (currentPage - 1) * pageSize + row.index + 1,
+        },
+        {
+            header: 'Tanggal', accessorKey: 'tanggal', size: 130,
+            cell: ({ row }) => <span className="whitespace-nowrap">{dayjs(row.original.tanggal).format('DD MMM YYYY')}</span>,
+        },
+        {
+            header: 'Nopol', accessorKey: 'nopol', size: 130,
+            cell: ({ row }) => <span className="whitespace-nowrap">{row.original.nopol ?? '—'}</span>,
+        },
+        {
+            header: 'Supir', accessorKey: 'supir_nama', size: 170,
+            cell: ({ row }) => row.original.supir_nama ?? '—',
+        },
+        {
+            header: 'Rute', accessorKey: 'rute', size: 170,
+            cell: ({ row }) => row.original.rute ?? '—',
+        },
+        {
+            header: 'Jarak', accessorKey: 'jarak_tempuh_km', size: 100,
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    {row.original.jarak_tempuh_km != null ? `${formatNum(row.original.jarak_tempuh_km)} km` : '—'}
+                </span>
+            ),
+        },
+        {
+            header: 'Mekanisme', accessorKey: 'mekanisme', size: 130,
+            cell: ({ row }) => (
+                <Tag className="text-xs bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
+                    {MEKANISME_LABEL[row.original.mekanisme] ?? row.original.mekanisme}
+                </Tag>
+            ),
+        },
+    ]
+
+    const trips = rekap?.trips ?? []
+    const pagedTrips = trips.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     return (
         <div className="flex flex-col gap-4">
@@ -157,38 +202,14 @@ export default function KonsolidasiVendorPage() {
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                    <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className={TH_CLASS}>Tanggal</th>
-                                        <th className={TH_CLASS}>Nopol</th>
-                                        <th className={TH_CLASS}>Supir</th>
-                                        <th className={TH_CLASS}>Rute</th>
-                                        <th className={`${TH_CLASS} text-right`}>Jarak</th>
-                                        <th className={TH_CLASS}>Mekanisme</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {rekap.trips.map(t => (
-                                        <tr key={t.id_trip}>
-                                            <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(t.tanggal).format('DD MMM YYYY')}</td>
-                                            <td className="py-2.5 px-3 whitespace-nowrap">{t.nopol ?? '—'}</td>
-                                            <td className="py-2.5 px-3">{t.supir_nama ?? '—'}</td>
-                                            <td className="py-2.5 px-3">{t.rute ?? '—'}</td>
-                                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                                {t.jarak_tempuh_km != null ? `${formatNum(t.jarak_tempuh_km)} km` : '—'}
-                                            </td>
-                                            <td className="py-2.5 px-3">
-                                                <Tag className="text-xs bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
-                                                    {MEKANISME_LABEL[t.mekanisme] ?? t.mekanisme}
-                                                </Tag>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <DataTable
+                            columns={tripColumns}
+                            data={pagedTrips as unknown[]}
+                            loading={loading}
+                            pagingData={{ total: trips.length, pageIndex: currentPage, pageSize }}
+                            onPaginationChange={setCurrentPage}
+                            onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                        />
                     </>
                 )}
             </Card>

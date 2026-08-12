@@ -14,8 +14,8 @@ export interface Perusahaan {
 }
 
 export const perusahaanService = {
-    async list(page = 1) {
-        const { data } = await axios.get(API_ENDPOINTS.PERUSAHAAN, { params: { page, limit: 15 } })
+    async list(page = 1, limit = 10) {
+        const { data } = await axios.get(API_ENDPOINTS.PERUSAHAAN, { params: { page, limit } })
         return data as { data: Perusahaan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {

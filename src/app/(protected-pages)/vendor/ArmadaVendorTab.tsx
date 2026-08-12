@@ -26,7 +26,7 @@ export default function ArmadaVendorTab() {
     const [search, setSearch]           = useState('')
     const [idVendorFilter, setIdVendorFilter] = useState(initialIdVendor)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]                    = useState(15)
+    const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [vendorOptions, setVendorOptions] = useState<VendorOption[]>([])
 
@@ -145,6 +145,7 @@ export default function ArmadaVendorTab() {
                     noData={!loading && list.length === 0}
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
         </div>

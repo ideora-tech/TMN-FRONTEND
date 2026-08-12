@@ -16,14 +16,14 @@ export default function PerusahaanPage() {
     const [loading, setLoading]   = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]              = useState(15)
+    const [pageSize, setPageSize] = useState(10)
     const [total, setTotal]       = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<Perusahaan | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await perusahaanService.list(currentPage)
+            const res = await perusahaanService.list(currentPage, pageSize)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -31,7 +31,7 @@ export default function PerusahaanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage])
+    }, [currentPage, pageSize])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -104,8 +104,9 @@ export default function PerusahaanPage() {
             </div>
             <Card>
                 <DataTable columns={columns} data={list} loading={loading}
-                    pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
-                    onPaginationChange={setCurrentPage} />
+                    pagingData={{ total, pageIndex: currentPage, pageSize }}
+                    onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }} />
             </Card>
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Perusahaan"
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}

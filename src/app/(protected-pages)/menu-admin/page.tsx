@@ -30,7 +30,7 @@ export default function MenuAdminPage() {
     const [loading, setLoading]   = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize]              = useState(50)
+    const [pageSize, setPageSize] = useState(50)
     const [total, setTotal]       = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null)
     const [movingId, setMovingId] = useState<string | null>(null)
@@ -213,8 +213,9 @@ export default function MenuAdminPage() {
                 </div>
                 <DataTable columns={columns} data={filteredList} loading={loading}
                     noData={!loading && filteredList.length === 0}
-                    pagingData={{ total, pageIndex: currentPage - 1, pageSize }}
-                    onPaginationChange={setCurrentPage} />
+                    pagingData={{ total, pageIndex: currentPage, pageSize }}
+                    onPaginationChange={setCurrentPage}
+                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }} />
             </Card>
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Menu"
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
