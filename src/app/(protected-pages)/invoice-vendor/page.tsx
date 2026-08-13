@@ -35,7 +35,7 @@ export default function InvoiceVendorPage() {
                     <Tabs.TabNav value="daftar">Daftar Invoice</Tabs.TabNav>
                     <Tabs.TabNav value="monitoring">Monitoring Pembayaran</Tabs.TabNav>
                 </Tabs.TabList>
-                <div className="mt-4">
+                <div>
                     <Tabs.TabContent value="daftar"><DaftarInvoiceTab /></Tabs.TabContent>
                     <Tabs.TabContent value="monitoring"><MonitoringPembayaranTab /></Tabs.TabContent>
                 </div>
