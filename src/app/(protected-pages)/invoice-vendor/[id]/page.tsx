@@ -2,12 +2,13 @@
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Button, Dialog, FormItem, Input, Upload, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import UploadBerkas from '@/components/shared/UploadBerkas'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiPlusCircle, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -639,16 +640,12 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 onChange={e => setBayarForm(p => ({ ...p, no_referensi: e.target.value }))} />
                         </FormItem>
                         <FormItem label="Bukti Pembayaran">
-                            <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                                onChange={files => setBuktiFile(files[0] ?? null)}>
-                                <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                    {buktiFile ? buktiFile.name : 'Pilih file (PDF/JPG/PNG)'}
-                                </Button>
-                            </Upload>
-                            {buktiFile && (
-                                <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
-                                    onClick={() => setBuktiFile(null)}>Hapus pilihan</button>
-                            )}
+                            <UploadBerkas
+                                file={buktiFile}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                hint="PDF/JPG/PNG"
+                                onChange={setBuktiFile}
+                            />
                         </FormItem>
                         <div className="sm:col-span-2">
                             <FormItem label="Catatan">

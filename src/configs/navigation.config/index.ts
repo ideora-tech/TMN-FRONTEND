@@ -216,6 +216,13 @@ const navigationConfig: NavigationTree[] = [
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
+    {
+        key: 'arus-kas', path: '/arus-kas', title: 'Arus Kas',
+        translateKey: 'nav.arusKas', icon: 'wallet',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
 
     // === PENGATURAN ===
     {

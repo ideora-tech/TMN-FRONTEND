@@ -69,6 +69,8 @@ export const ROUTES = {
     FAKTUR_DETAIL: (id: string) => `/faktur/${id}`,
 
 
+    ARUS_KAS: '/arus-kas',
+
     KONSOLIDASI_KLIEN:     '/konsolidasi-klien',
     KONSOLIDASI_VENDOR:    '/konsolidasi-vendor',
     INVOICE_VENDOR:        '/invoice-vendor',

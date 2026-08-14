@@ -7,6 +7,12 @@ export interface BiayaLain {
     nominal: number
 }
 
+export interface BiayaTagihan {
+    id_biaya_tagihan: string
+    nama_biaya: string
+    nominal: number
+}
+
 export interface FotoLaporan {
     id_foto: string
     url_file: string
@@ -24,6 +30,7 @@ export interface LaporanPerjalanan {
     id_jenis_bbm: string | null
     jumlah_liter: number | null
     biaya_lain: BiayaLain[]
+    biaya_tagihan: BiayaTagihan[]
     foto: FotoLaporan[]
 }
 
@@ -36,6 +43,7 @@ export type LaporanPerjalananPayload = {
     id_jenis_bbm?: string | null
     jumlah_liter?: number | null
     biaya_lain: { nama_biaya: string; nominal: number }[]
+    biaya_tagihan?: { nama_biaya: string; nominal: number }[]
 }
 
 function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[]): FormData {
@@ -50,6 +58,10 @@ function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[]):
     payload.biaya_lain.forEach((b, i) => {
         fd.append(`biaya_lain[${i}][nama_biaya]`, b.nama_biaya)
         fd.append(`biaya_lain[${i}][nominal]`, String(b.nominal))
+    })
+    payload.biaya_tagihan?.forEach((b, i) => {
+        fd.append(`biaya_tagihan[${i}][nama_biaya]`, b.nama_biaya)
+        fd.append(`biaya_tagihan[${i}][nominal]`, String(b.nominal))
     })
     files.forEach(file => fd.append('foto[]', file))
     return fd

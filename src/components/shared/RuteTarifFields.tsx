@@ -1,11 +1,11 @@
 'use client'
-import { useState, type ReactNode } from 'react'
+import { useState, useRef, type ReactNode } from 'react'
 import { FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import { HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
 import dayjs from 'dayjs'
-import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import { formatNum } from '@/utils/formatNumber'
 import { tarifRuteService, TarifRutePayload, TarifRute } from '@/services/tarifRute.service'
 import { parseApiError } from '@/utils/error.util'
 
@@ -89,6 +89,7 @@ function formatDurasi(menit: number): string {
 
 export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, idKlien, ritaseSlot }: Props) {
     const [showDetailBiaya, setShowDetailBiaya] = useState(false)
+    const ruteAktifRef = useRef('')
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
     const adaDetailRute = !!ruteTerpilih && (
         (!!ruteTerpilih.asal && !!ruteTerpilih.tujuan)
@@ -145,14 +146,50 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
         }
     }
 
+    const pilihRute = async (idRute: string) => {
+        ruteAktifRef.current = idRute
+        if (!idRute || value.id_jenis_kendaraan) {
+            return resolve(idRute, value.id_jenis_kendaraan)
+        }
+        onChange({ ...EMPTY_RUTE_TARIF_STATE, id_rute: idRute })
+        try {
+            const res = await tarifRuteService.list({ id_rute: idRute, berlaku: '1', limit: 100 })
+            if (ruteAktifRef.current !== idRute) return
+            const daftarTarif: TarifRute[] = res?.data ?? []
+            const jenisIds = [...new Set(daftarTarif.map(t => t.id_jenis_kendaraan))]
+                .filter(idJenis => jenisOptions.some(o => o.value === idJenis))
+            if (jenisIds.length === 1) {
+                await resolve(idRute, jenisIds[0])
+            }
+        } catch {
+            /* gagal ambil daftar tarif — biarkan pilih jenis kendaraan manual */
+        }
+    }
+
+    const KOMPONEN_UANG_JALAN = ['estimasi_tol', 'estimasi_bbm', 'estimasi_uang_jalan', 'estimasi_biaya_lain'] as const
+
+    const totalUangJalan = (d: Pick<DetailBiayaForm, typeof KOMPONEN_UANG_JALAN[number]>) =>
+        KOMPONEN_UANG_JALAN.reduce((sum, k) => sum + (Number(d[k]) || 0), 0)
+
     const setTarifBaru = (patch: Partial<TarifBaruForm>) => {
         if (!value.tarifBaru) return
-        onChange({ ...value, tarifBaru: { ...value.tarifBaru, ...patch } })
+        const next = { ...value.tarifBaru, ...patch }
+        if (KOMPONEN_UANG_JALAN.some(k => k in patch)) {
+            const total = totalUangJalan(next)
+            next.harga = total > 0 ? String(total) : ''
+        }
+        onChange({ ...value, tarifBaru: next })
     }
 
     const setDetailBiaya = (patch: Partial<DetailBiayaForm>) => {
         if (!value.detailBiaya) return
-        onChange({ ...value, detailBiaya: { ...value.detailBiaya, ...patch } })
+        const next = { ...value.detailBiaya, ...patch }
+        if (KOMPONEN_UANG_JALAN.some(k => k in patch)) {
+            const total = totalUangJalan(next)
+            onChange({ ...value, detailBiaya: next, harga_penawaran: total > 0 ? String(total) : '' })
+            return
+        }
+        onChange({ ...value, detailBiaya: next })
     }
 
     return (
@@ -161,7 +198,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 <FormItem label="Rute" asterisk>
                     <Select<Option> placeholder="Pilih rute..." options={ruteOptions}
                         value={ruteOptions.find(o => o.value === value.id_rute) ?? null}
-                        onChange={opt => resolve(opt?.value ?? '', value.id_jenis_kendaraan)} />
+                        onChange={opt => pilihRute(opt?.value ?? '')} />
                 </FormItem>
                 <FormItem label="Jenis Kendaraan" asterisk>
                     <Select<Option> placeholder="Pilih jenis kendaraan..." options={jenisOptions}
@@ -198,9 +235,9 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
             {value.id_rute && value.id_jenis_kendaraan && value.tarifBaru === null && (
                 <div className="mt-2">
                     <p className="text-xs text-gray-400">
-                        Tarif ditemukan{value.estimasiBiaya != null ? ` — uang jalan ${formatRupiah(value.estimasiBiaya)}` : ''}
+                        Tarif ditemukan — otomatis terisi dari tarif rute
                     </p>
-                    <FormItem label="Harga Penawaran" asterisk className="mt-1">
+                    <FormItem label="Uang Jalan" asterisk className="mt-1">
                         <Input prefix="Rp" placeholder="0"
                             value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
                             onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
@@ -213,7 +250,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                 className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                                 onClick={() => setShowDetailBiaya(s => !s)}>
                                 {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                                Uang Jalan (opsional)
+                                Rincian Uang Jalan (opsional)
                             </button>
                             {showDetailBiaya && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
@@ -262,7 +299,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 <div className="mt-2 border-t border-gray-100 dark:border-gray-700 pt-3">
                     <p className="text-xs text-amber-500 mb-2">Tarif belum tersedia untuk kombinasi ini — isi untuk membuat tarif baru</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Harga Penawaran" asterisk>
+                        <FormItem label="Uang Jalan" asterisk>
                             <Input prefix="Rp" placeholder="0"
                                 value={value.tarifBaru.harga ? formatNum(Number(value.tarifBaru.harga)) : ''}
                                 onChange={e => setTarifBaru({ harga: e.target.value.replace(/\D/g, '') })} />
@@ -279,7 +316,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
                         onClick={() => setShowDetailBiaya(s => !s)}>
                         {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                        Uang Jalan (opsional)
+                        Rincian Uang Jalan (opsional)
                     </button>
                     {showDetailBiaya && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">

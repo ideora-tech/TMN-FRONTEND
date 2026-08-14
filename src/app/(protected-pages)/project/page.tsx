@@ -107,6 +107,13 @@ export default function ProjectPage() {
             },
         },
         {
+            header: 'Klien', id: 'klien', size: 180,
+            cell: ({ row }: CellContext<Project, unknown>) =>
+                row.original.nama_klien
+                    ? <span>{row.original.nama_klien}</span>
+                    : <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Status', accessorKey: 'status', size: 120,
             cell: ({ row }: CellContext<Project, unknown>) => (
                 <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
@@ -123,6 +130,13 @@ export default function ProjectPage() {
             header: 'Tgl Selesai', accessorKey: 'tanggal_selesai', size: 130,
             cell: ({ row }: CellContext<Project, unknown>) =>
                 row.original.tanggal_selesai ? dayjs(row.original.tanggal_selesai).format('DD MMM YYYY') : '-',
+        },
+        {
+            header: 'Tanggal Dibuat', accessorKey: 'dibuat_pada', size: 160,
+            cell: ({ row }: CellContext<Project, unknown>) =>
+                row.original.dibuat_pada
+                    ? <span className="whitespace-nowrap">{dayjs(row.original.dibuat_pada).format('DD MMM YYYY HH:mm')}</span>
+                    : <span className="text-gray-400">—</span>,
         },
         {
             header: '', id: 'action', size: 100,

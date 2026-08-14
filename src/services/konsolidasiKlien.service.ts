@@ -17,6 +17,8 @@ export interface KonsolidasiKlienTrip {
     jarak_tempuh_km: number | null
     tarif: { id_tarif_rute: string; harga: number } | null
     sudah_difakturkan: boolean
+    titik_drop: string[]
+    biaya_tambahan: number
 }
 
 export interface KonsolidasiKlienRekap {

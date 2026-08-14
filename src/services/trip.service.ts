@@ -24,6 +24,8 @@ export interface Trip {
     vendor_nama?: string | null
     mekanisme?: 'unit_only' | 'unit_driver' | 'full' | null
     id_penugasan?: string | null
+    titik_drop?: string[]
+    sudah_difakturkan?: boolean
 }
 
 export interface SettlementTrip {
@@ -117,5 +119,9 @@ export const tripService = {
     async batalkan(id: string) {
         const { data } = await axios.post(API_ENDPOINTS.TRIP_BATALKAN(id))
         return data.data as Trip
+    },
+    async updateTitikDrop(idTrip: string, titikDrop: string[]) {
+        const { data } = await axios.put(API_ENDPOINTS.TRIP_TITIK_DROP(idTrip), { titik_drop: titikDrop })
+        return data.data as { titik_drop: string[] }
     },
 }

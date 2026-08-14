@@ -5,6 +5,7 @@ import { toast, Notification } from '@/components/ui'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
+import { bolehDiubahAtauDihapus } from '../../status'
 import PembelianForm from '../../PembelianForm'
 
 export default function PembelianEditPage() {
@@ -15,7 +16,7 @@ export default function PembelianEditPage() {
     useEffect(() => {
         pembelianSparepartService.get(id)
             .then(data => {
-                if (data.status !== 'diajukan') {
+                if (!bolehDiubahAtauDihapus(data.status, data.id_perawatan)) {
                     toast.push(<Notification type="warning" title="Pengajuan sudah diproses, tidak bisa diedit" />)
                     router.replace(ROUTES.PEMBELIAN_SPAREPART_DETAIL(id))
                     return

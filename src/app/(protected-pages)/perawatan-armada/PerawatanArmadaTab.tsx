@@ -1,16 +1,16 @@
 'use client'
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
+import { Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown } from 'react-icons/hi'
 import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { perawatanArmadaService, PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
+import { perawatanArmadaService, PerawatanArmada, PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
 import { armadaService, Armada } from '@/services/armada.service'
 
 type Option = { value: string; label: string }
@@ -60,7 +60,7 @@ function getServisBadge(tanggal: string | null): { label: string; className: str
     return null
 }
 
-export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' | 'riwayat' }) {
+export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { mode?: 'aktif' | 'riwayat'; initialDetail?: PerawatanArmadaWithArmada | null }) {
     const router = useRouter()
     const [list, setList]       = useState<PerawatanArmadaWithArmada[]>([])
     const [loading, setLoading] = useState(false)
@@ -78,6 +78,26 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
     const [total, setTotal]               = useState(0)
 
     const [deleteTarget, setDeleteTarget] = useState<PerawatanArmadaWithArmada | null>(null)
+    const [detailTarget, setDetailTarget] = useState<PerawatanArmadaWithArmada | null>(null)
+    const [detailData, setDetailData]     = useState<PerawatanArmada | null>(null)
+    const [detailLoading, setDetailLoading] = useState(false)
+
+    const openDetail = (p: PerawatanArmadaWithArmada) => {
+        setDetailTarget(p)
+        setDetailData(null)
+        setDetailLoading(true)
+        perawatanArmadaService.get(p.id_armada, p.id_perawatan)
+            .then(setDetailData)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => setDetailLoading(false))
+    }
+
+    useEffect(() => {
+        if (initialDetail) {
+            setDetailTarget(initialDetail)
+            setDetailData(initialDetail)
+        }
+    }, [initialDetail])
     const [deleting, setDeleting]         = useState(false)
     const [alasanHapus, setAlasanHapus]   = useState('')
 
@@ -376,6 +396,13 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                                                     </td>
                                                     <td className="py-2.5 px-3">
                                                         <div className="flex items-center justify-end gap-1">
+                                                            <Tooltip title="Lihat Detail">
+                                                                <span
+                                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                                    onClick={() => openDetail(p)}>
+                                                                    <HiOutlineEye className="text-lg" />
+                                                                </span>
+                                                            </Tooltip>
                                                             {p.status !== 'selesai' && p.status !== 'dibatalkan' && (
                                                                 <Tooltip title="Edit">
                                                                     <span
@@ -420,6 +447,108 @@ export default function PerawatanArmadaTab({ mode = 'aktif' }: { mode?: 'aktif' 
                     </div>
                 </div>
             </Card>
+
+            <Dialog isOpen={!!detailTarget} onRequestClose={() => setDetailTarget(null)} onClose={() => setDetailTarget(null)} width={640}>
+                <h5 className="text-base font-semibold mb-1">Detail Perawatan</h5>
+                <p className="text-xs text-gray-400 mb-4">{detailTarget?.armada_nopol ?? '—'}{detailTarget?.armada_merk ? ` · ${detailTarget.armada_merk}` : ''}</p>
+                {detailLoading ? (
+                    <div className="flex justify-center py-8"><Spinner size={28} /></div>
+                ) : (
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Tanggal</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget ? dayjs(detailTarget.tanggal).format('DD MMM YYYY') : '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                                {detailTarget && (
+                                    <Tag className={`text-xs font-semibold ${STATUS_CLASS[detailTarget.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                        {detailTarget.status.replace(/_/g, ' ')}
+                                    </Tag>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Jenis Perawatan</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget?.jenis_perawatan ?? '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Biaya Jasa</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget ? formatRupiah(detailTarget.biaya) : '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">KM Odometer</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget?.km_odometer != null ? `${formatNum(detailTarget.km_odometer)} km` : '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Servis Berikutnya</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget?.jadwal_servis_berikutnya ? dayjs(detailTarget.jadwal_servis_berikutnya).format('DD MMM YYYY') : '—'}</p>
+                            </div>
+                        </div>
+
+                        {detailTarget?.keterangan && (
+                            <div className="mt-4">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Keterangan</p>
+                                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{detailTarget.keterangan}</p>
+                            </div>
+                        )}
+                        {detailTarget?.status === 'dibatalkan' && detailTarget.alasan_batal && (
+                            <div className="mt-4">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Alasan Dibatalkan</p>
+                                <p className="text-sm text-red-500 dark:text-red-400">{detailTarget.alasan_batal}</p>
+                            </div>
+                        )}
+
+                        {(detailData?.sparepart?.length ?? 0) > 0 && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Sparepart Digunakan</p>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Nama</th>
+                                                <th className="py-2 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Qty</th>
+                                                <th className="py-2 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Harga</th>
+                                                <th className="py-2 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                            {detailData?.sparepart?.map(s => (
+                                                <tr key={s.id_perawatan_sparepart}>
+                                                    <td className="py-2 px-3">{s.nama_sparepart}</td>
+                                                    <td className="py-2 px-3 text-right">{formatNum(s.qty)}</td>
+                                                    <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(s.harga)}</td>
+                                                    <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(s.subtotal)}</td>
+                                                </tr>
+                                            ))}
+                                            <tr className="border-t border-gray-200 dark:border-gray-600">
+                                                <td colSpan={3} className="py-2 px-3 text-right font-semibold text-gray-800 dark:text-gray-100">Total Biaya (jasa + sparepart)</td>
+                                                <td className="py-2 px-3 text-right font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                                    {formatRupiah((detailTarget?.biaya ?? 0) + (detailData?.sparepart?.reduce((acc, s) => acc + s.subtotal, 0) ?? 0))}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {(detailData?.bukti?.length ?? 0) > 0 && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Bukti</p>
+                                <ul className="space-y-1">
+                                    {detailData?.bukti?.map(b => (
+                                        <li key={b.id_bukti}>
+                                            <a href={b.url_file} target="_blank" rel="noreferrer"
+                                                className="text-sm text-blue-600 dark:text-blue-400 hover:underline">{b.nama_asli}</a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Dialog>
 
             <ConfirmDialog
                 isOpen={!!deleteTarget}

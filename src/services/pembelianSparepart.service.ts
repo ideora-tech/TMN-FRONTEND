@@ -19,6 +19,13 @@ export interface PembelianBukti {
     nama_asli: string
 }
 
+export interface PembayaranPembelian {
+    nominal_ditransfer: number
+    tanggal_transfer: string
+    total_aktual: number | null
+    selisih: number | null
+}
+
 export interface PembelianSparepart {
     id_pembelian: string
     nomor_pengajuan: string
@@ -39,6 +46,7 @@ export interface PembelianSparepart {
     keterangan: string | null
     items: PembelianItem[]
     bukti: PembelianBukti[]
+    pembayaran: PembayaranPembelian | null
     dibuat_pada: string
 }
 
@@ -79,24 +87,8 @@ export const pembelianSparepartService = {
     async remove(id: string) {
         await axios.delete(API_ENDPOINTS.PEMBELIAN_SPAREPART_DETAIL(id))
     },
-    async approveManager(id: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_APPROVE_MANAGER(id))
-        return data.data as PembelianSparepart
-    },
-    async approveFinance(id: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_APPROVE_FINANCE(id))
-        return data.data as PembelianSparepart
-    },
-    async tolak(id: string, alasan: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_TOLAK(id), { alasan })
-        return data.data as PembelianSparepart
-    },
     async realisasi(id: string, payload: { tanggal_pembelian: string; items: { id_item: string; harga_aktual: number }[] }) {
         const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_REALISASI(id), payload)
-        return data.data as PembelianSparepart
-    },
-    async lunas(id: string, tanggal_pembayaran: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_LUNAS(id), { tanggal_pembayaran })
         return data.data as PembelianSparepart
     },
     async uploadBukti(id: string, files: File[]) {

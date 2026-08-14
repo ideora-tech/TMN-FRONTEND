@@ -14,7 +14,7 @@ import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
 import { supplierService } from '@/services/supplier.service'
-import { STATUS_TAG, STATUS_LABEL } from './status'
+import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from './status'
 
 type Option = { value: string; label: string }
 
@@ -155,7 +155,7 @@ export default function DaftarPembelianTab() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
-                    {row.original.status === 'diajukan' && (
+                    {bolehDiubahAtauDihapus(row.original.status, row.original.id_perawatan) && (
                         <Tooltip title="Hapus">
                             <span
                                 className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"

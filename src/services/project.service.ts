@@ -12,6 +12,9 @@ export interface Project {
     tanggal_selesai?: string
     status: 'draft' | 'aktif' | 'selesai' | 'batal'
     keterangan?: string
+    harga_penawaran?: number | null
+    harga_proyek?: number | null
+    dibuat_pada?: string | null
 }
 
 export const projectService = {

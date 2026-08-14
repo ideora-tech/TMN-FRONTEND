@@ -1,10 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui'
+import { Button, toast, Notification } from '@/components/ui'
 import { HiPlusCircle } from 'react-icons/hi'
 import Tabs from '@/components/ui/Tabs'
 import { ROUTES } from '@/constants/route.constant'
+import { parseApiError } from '@/utils/error.util'
+import { perawatanArmadaService, PerawatanArmadaWithArmada } from '@/services/perawatanArmada.service'
+import { armadaService } from '@/services/armada.service'
 import PerawatanArmadaTab from './PerawatanArmadaTab'
 import IntervalPerawatanTab from './IntervalPerawatanTab'
 import JenisPerawatanTab from './JenisPerawatanTab'
@@ -27,6 +30,24 @@ export default function PerawatanArmadaPage() {
     const tabParam = searchParams.get('tab')
     const initialTab: TabValue = TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'armada'
     const [activeTab, setActiveTab] = useState<TabValue>(initialTab)
+    const detailParam = searchParams.get('detail')
+    const armadaParam = searchParams.get('armada')
+    const [initialDetail, setInitialDetail] = useState<PerawatanArmadaWithArmada | null>(null)
+
+    useEffect(() => {
+        if (!detailParam || !armadaParam) return
+        Promise.all([
+            perawatanArmadaService.get(armadaParam, detailParam),
+            armadaService.get(armadaParam),
+        ])
+            .then(([perawatan, armada]) => {
+                setActiveTab(perawatan.status === 'selesai' || perawatan.status === 'dibatalkan' ? 'riwayat' : 'armada')
+                setInitialDetail({ ...perawatan, armada_nopol: armada.nopol, armada_merk: armada.merk })
+            })
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+    }, [detailParam, armadaParam])
+
+    const detailRiwayat = initialDetail ? initialDetail.status === 'selesai' || initialDetail.status === 'dibatalkan' : false
 
     return (
         <div className="flex flex-col gap-4">
@@ -51,8 +72,8 @@ export default function PerawatanArmadaPage() {
                     <Tabs.TabNav value="laporan">Laporan per Unit</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
-                    <Tabs.TabContent value="armada"><PerawatanArmadaTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" /></Tabs.TabContent>
+                    <Tabs.TabContent value="armada"><PerawatanArmadaTab initialDetail={!detailRiwayat ? initialDetail : null} /></Tabs.TabContent>
+                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" initialDetail={detailRiwayat ? initialDetail : null} /></Tabs.TabContent>
                     <Tabs.TabContent value="interval"><IntervalPerawatanTab /></Tabs.TabContent>
                     <Tabs.TabContent value="jenis"><JenisPerawatanTab /></Tabs.TabContent>
                     <Tabs.TabContent value="laporan"><LaporanPerUnitTab /></Tabs.TabContent>

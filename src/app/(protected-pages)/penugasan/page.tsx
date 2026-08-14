@@ -8,7 +8,7 @@ import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import PapanShift from './PapanShift'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
@@ -115,6 +115,10 @@ export default function PenugasanPage() {
     const [createFormErrors, setCreateFormErrors]       = useState<Partial<Record<'pasangan', string>>>({})
     const [createSubmitting, setCreateSubmitting]       = useState(false)
     const [estimasiManual, setEstimasiManual]           = useState(false)
+    const [titikDropCreate, setTitikDropCreate] = useState<string[]>([])
+    const tambahDropCreate = () => setTitikDropCreate(prev => (prev.length < 10 ? [...prev, ''] : prev))
+    const ubahDropCreate   = (i: number, v: string) => setTitikDropCreate(prev => prev.map((d, idx) => (idx === i ? v : d)))
+    const hapusDropCreate  = (i: number) => setTitikDropCreate(prev => prev.filter((_, idx) => idx !== i))
     const {
         itemOptions: ruteOptions,
         selectedItemId: ruteItemId,
@@ -134,6 +138,10 @@ export default function PenugasanPage() {
     const [editForm, setEditForm]                 = useState<EditFormState>(EMPTY_EDIT_FORM)
     const [editFormErrors, setEditFormErrors]     = useState<Partial<Record<'id_armada' | 'id_supir', string>>>({})
     const [editSubmitting, setEditSubmitting]     = useState(false)
+    const [titikDropEdit, setTitikDropEdit] = useState<string[]>([])
+    const tambahDropEdit = () => setTitikDropEdit(prev => (prev.length < 10 ? [...prev, ''] : prev))
+    const ubahDropEdit   = (i: number, v: string) => setTitikDropEdit(prev => prev.map((d, idx) => (idx === i ? v : d)))
+    const hapusDropEdit  = (i: number) => setTitikDropEdit(prev => prev.filter((_, idx) => idx !== i))
 
     const [hasilPenugasan, setHasilPenugasan] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
 
@@ -364,6 +372,7 @@ export default function PenugasanPage() {
         setCheckedIds([])
         setPairSearch('')
         setCreateFormErrors({})
+        setTitikDropCreate([])
         setCreateDialogOpen(true)
         fetchArmadaSupir()
     }
@@ -379,6 +388,7 @@ export default function PenugasanPage() {
             status:         row.status,
         })
         setEditFormErrors({})
+        setTitikDropEdit(row.titik_drop ?? [])
         setEditDialogOpen(true)
         fetchArmadaSupir()
     }
@@ -409,6 +419,7 @@ export default function PenugasanPage() {
         setCreateSubmitting(true)
         try {
             const estimasi = createForm.estimasi_biaya ? Number(createForm.estimasi_biaya) : null
+            const titikDrop = titikDropCreate.map(d => d.trim()).filter(Boolean)
             const pairs = pasanganList.filter(p => checkedIds.includes(p.supir.id_supir))
             const results = await Promise.allSettled(pairs.map(p =>
                 penugasanService.create({
@@ -416,6 +427,7 @@ export default function PenugasanPage() {
                     id_supir:       p.supir.id_supir,
                     id_armada:      p.supir.id_armada_default ?? undefined,
                     estimasi_biaya: estimasi,
+                    titik_drop:     titikDrop,
                 })
             ))
             const gagal: HasilGagal[] = []
@@ -459,6 +471,7 @@ export default function PenugasanPage() {
                 id_supir:       editForm.id_supir,
                 estimasi_biaya: estimasi,
                 status:         editForm.status,
+                titik_drop:     titikDropEdit.map(d => d.trim()).filter(Boolean),
             })
             toast.push(<Notification type="success" title="Penugasan berhasil diperbarui" />)
             setEditDialogOpen(false)
@@ -868,6 +881,27 @@ export default function PenugasanPage() {
                                     )}
                                 </FormItem>
                             </div>
+
+                            <div className="mt-3">
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-sm font-semibold">Titik Drop (opsional)</p>
+                                    <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                        disabled={titikDropCreate.length >= 10} onClick={tambahDropCreate}>Tambah Titik</Button>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {titikDropCreate.map((lokasi, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                            <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                                onChange={e => ubahDropCreate(i, e.target.value)} />
+                                            <button type="button" onClick={() => hapusDropCreate(i)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                <HiOutlineTrash />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </>
                     )}
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -880,7 +914,7 @@ export default function PenugasanPage() {
                 </form>
             </Dialog>
 
-            <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} onClose={closeEditDialog} width={520}>
+            <Dialog isOpen={editDialogOpen} onRequestClose={closeEditDialog} onClose={closeEditDialog} width={700}>
                 <h5 className="text-base font-semibold mb-1">Edit Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     Ubah armada, supir, uang jalan, atau status penugasan ini.
@@ -895,7 +929,7 @@ export default function PenugasanPage() {
                             <p className="text-red-500 text-sm">Gagal memuat data armada/supir — coba buka ulang</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                             <FormItem label="Armada" invalid={!!editFormErrors.id_armada} errorMessage={editFormErrors.id_armada}>
                                 <Select
                                     isClearable
@@ -940,6 +974,27 @@ export default function PenugasanPage() {
                                     onChange={opt => setEditForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))}
                                 />
                             </FormItem>
+
+                            <div className="mt-1 sm:col-span-2">
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-sm font-semibold">Titik Drop (opsional)</p>
+                                    <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                        disabled={titikDropEdit.length >= 10} onClick={tambahDropEdit}>Tambah Titik</Button>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {titikDropEdit.map((lokasi, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                            <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                                onChange={e => ubahDropEdit(i, e.target.value)} />
+                                            <button type="button" onClick={() => hapusDropEdit(i)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                <HiOutlineTrash />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

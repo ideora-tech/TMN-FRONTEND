@@ -85,11 +85,7 @@ export const API_ENDPOINTS = {
     PEMBELIAN_SPAREPART_LAPORAN:         '/api/proxy/pembelian-sparepart/laporan',
     PEMBELIAN_SPAREPART_LAPORAN_EXPORT:  (format: 'excel' | 'pdf') => `/api/proxy/pembelian-sparepart/laporan/export/${format}`,
     PEMBELIAN_SPAREPART_DETAIL:          (id: string) => `/api/proxy/pembelian-sparepart/${id}`,
-    PEMBELIAN_SPAREPART_APPROVE_MANAGER: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-manager`,
-    PEMBELIAN_SPAREPART_APPROVE_FINANCE: (id: string) => `/api/proxy/pembelian-sparepart/${id}/approve-finance`,
-    PEMBELIAN_SPAREPART_TOLAK:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/tolak`,
     PEMBELIAN_SPAREPART_REALISASI:       (id: string) => `/api/proxy/pembelian-sparepart/${id}/realisasi`,
-    PEMBELIAN_SPAREPART_LUNAS:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/lunas`,
     PEMBELIAN_SPAREPART_BUKTI:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/bukti`,
     PEMBELIAN_SPAREPART_BUKTI_DETAIL:    (id: string, idBukti: string) => `/api/proxy/pembelian-sparepart/${id}/bukti/${idBukti}`,
 
@@ -141,6 +137,7 @@ export const API_ENDPOINTS = {
     TRIP_CHECKIN:  (id: string) => `/api/proxy/trip/${id}/checkin`,
     TRIP_CHECKOUT: (id: string) => `/api/proxy/trip/${id}/checkout`,
     TRIP_STATUS:   (id: string) => `/api/proxy/trip/${id}/status`,
+    TRIP_TITIK_DROP: (id: string) => `/api/proxy/trip/${id}/titik-drop`,
 
     // Laporan Proyek
     LAPORAN:        '/api/proxy/laporan',
@@ -340,4 +337,14 @@ export const API_ENDPOINTS = {
     EVALUASI_DETAIL:       (id: string) => `/api/proxy/evaluasi/${id}`,
     EVALUASI_VENDOR_REKAP: '/api/proxy/evaluasi-vendor/rekap',
     VENDOR_EVALUASI:       (idVendor: string) => `/api/proxy/vendor/${idVendor}/evaluasi`,
+
+    // Arus Kas
+    ARUS_KAS:                  '/api/proxy/arus-kas',
+    ARUS_KAS_EXPORT_EXCEL:     '/api/proxy/arus-kas/export/excel',
+    ARUS_KAS_PENGAJUAN:        '/api/proxy/arus-kas/pengajuan',
+    ARUS_KAS_PENGAJUAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}`,
+    ARUS_KAS_PENGAJUAN_CEK:      (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/cek`,
+    ARUS_KAS_PENGAJUAN_SETUJUI:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/setujui`,
+    ARUS_KAS_PENGAJUAN_TOLAK:    (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/tolak`,
+    ARUS_KAS_PENGAJUAN_TRANSFER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/transfer`,
 } as const

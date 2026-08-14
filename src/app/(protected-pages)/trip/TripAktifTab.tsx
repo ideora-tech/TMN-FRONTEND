@@ -338,6 +338,9 @@ export default function TripAktifTab() {
                                                                                                         )}
                                                                                                     </p>
                                                                                                 )}
+                                                                                                {trip.titik_drop?.length ? (
+                                                                                                    <p className="text-xs text-gray-400">{trip.titik_drop.join(' → ')}</p>
+                                                                                                ) : null}
                                                                                             </div>
                                                                                             <Tag className={`shrink-0 ${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-600'}`}>
                                                                                                 {STATUS_LABEL[trip.status] ?? trip.status}

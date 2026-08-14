@@ -123,7 +123,7 @@ export default function KonsolidasiKlienPage() {
     )
     const semuaTerpilih = bisaDipilih.length > 0 && selectedIds.length === bisaDipilih.length
     const totalEstimasi = useMemo(
-        () => trips.filter(t => selectedIds.includes(t.id_trip)).reduce((acc, t) => acc + (t.tarif?.harga ?? 0), 0),
+        () => trips.filter(t => selectedIds.includes(t.id_trip)).reduce((acc, t) => acc + (t.tarif?.harga ?? 0) + (t.biaya_tambahan ?? 0), 0),
         [trips, selectedIds],
     )
     const toggleSemua = () => setSelectedIds(semuaTerpilih ? [] : bisaDipilih.map(t => t.id_trip))
@@ -197,7 +197,9 @@ export default function KonsolidasiKlienPage() {
         },
         {
             header: 'Tujuan', accessorKey: 'tujuan', size: 110,
-            cell: ({ row }) => row.original.tujuan ?? '—',
+            cell: ({ row }) => row.original.titik_drop?.length
+                ? row.original.titik_drop.join(' → ')
+                : (row.original.tujuan ?? '—'),
         },
         {
             header: 'Nopol', accessorKey: 'nopol', size: 120,
@@ -229,6 +231,14 @@ export default function KonsolidasiKlienPage() {
                     {row.original.tarif
                         ? formatRupiah(row.original.tarif.harga)
                         : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
+                </span>
+            ),
+        },
+        {
+            header: 'Biaya Tambahan', accessorKey: 'biaya_tambahan', size: 130,
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap">
+                    {row.original.biaya_tambahan ? formatRupiah(row.original.biaya_tambahan) : '—'}
                 </span>
             ),
         },

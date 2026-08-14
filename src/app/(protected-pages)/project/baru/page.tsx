@@ -9,7 +9,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { projectService } from '@/services/project.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { penawaranService, Penawaran } from '@/services/penawaran.service'
-import { formatRupiah } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ruteService, Rute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
@@ -40,6 +40,8 @@ export default function ProjectBaruPage() {
         nama_proyek:       searchParams.get('nama_proyek') ?? '',
         tanggal_mulai:     '',
         tanggal_selesai:   '',
+        harga_penawaran:   '',
+        harga_proyek:      '',
         status:            'draft',
         keterangan:        '',
     })
@@ -151,6 +153,8 @@ export default function ProjectBaruPage() {
             await projectService.create({
                 id_klien: form.id_klien, kode_proyek: form.kode_proyek, nama_proyek: form.nama_proyek,
                 tanggal_mulai: form.tanggal_mulai || undefined, tanggal_selesai: form.tanggal_selesai || undefined,
+                harga_penawaran: form.harga_penawaran ? Number(form.harga_penawaran) : undefined,
+                harga_proyek: form.harga_proyek ? Number(form.harga_proyek) : undefined,
                 status: form.status || undefined, keterangan: form.keterangan || undefined,
                 id_penawaran: fromPenawaran || undefined,
                 rute: rute.length > 0 ? rute : undefined,
@@ -221,6 +225,16 @@ export default function ProjectBaruPage() {
                         <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
                             onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
+                    <FormItem label="Harga Penawaran (opsional)">
+                        <Input prefix="Rp" placeholder="0"
+                            value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
+                            onChange={(e) => setForm(p => ({ ...p, harga_penawaran: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Harga Proyek (opsional)">
+                        <Input prefix="Rp" placeholder="0"
+                            value={form.harga_proyek ? formatNum(Number(form.harga_proyek)) : ''}
+                            onChange={(e) => setForm(p => ({ ...p, harga_proyek: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
                     <FormItem label="Status">
                         <Select options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
@@ -290,7 +304,7 @@ export default function ProjectBaruPage() {
                                         <tr className="border-b border-gray-100 dark:border-gray-700">
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
                                             <th className="py-2.5" />
@@ -325,7 +339,7 @@ export default function ProjectBaruPage() {
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t border-gray-200 dark:border-gray-600">
-                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Proyek</td>
+                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Uang Jalan</td>
                                             <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
                                                 {formatRupiah(manualRuteList.reduce((sum, s) =>
                                                     sum + (hargaPenawaranEfektif(s.tarif)

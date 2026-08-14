@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Upload, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePhotograph } from 'react-icons/hi'
+import UploadBerkas from '@/components/shared/UploadBerkas'
+import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
@@ -194,16 +195,13 @@ export default function ArmadaBaruPage() {
 
                     <SectionTitle>Lainnya</SectionTitle>
                     <FormItem label="Foto Armada">
-                        <Upload accept=".jpg,.jpeg,.png,.webp" showList={false} uploadLimit={1}
-                            onChange={files => setFoto(files[0] ?? null)}>
-                            <Button type="button" variant="default" size="sm" icon={<HiOutlinePhotograph />}>
-                                {foto ? foto.name : 'Pilih foto (JPG/PNG/WEBP, maks 5 MB)'}
-                            </Button>
-                        </Upload>
-                        {foto && (
-                            <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
-                                onClick={() => setFoto(null)}>Hapus pilihan</button>
-                        )}
+                        <UploadBerkas
+                            file={foto}
+                            accept=".jpg,.jpeg,.png,.webp"
+                            label="Pilih foto"
+                            hint="JPG/PNG/WEBP · maksimal 5 MB"
+                            onChange={setFoto}
+                        />
                     </FormItem>
                     <FormItem label="Keterangan">
                         <Input textArea placeholder="Catatan tambahan..." value={form.keterangan}

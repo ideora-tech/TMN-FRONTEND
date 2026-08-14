@@ -2,10 +2,11 @@
 import { use, useEffect, useState, useCallback, useRef } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiPlusCircle, HiOutlineTrash, HiOutlineX, HiOutlineDocumentText, HiOutlineExclamationCircle, HiOutlineEye, HiOutlinePhotograph } from 'react-icons/hi'
+import UploadBerkas from '@/components/shared/UploadBerkas'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiPlusCircle, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -694,16 +695,15 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                         onChange={opt => setForm(p => ({ ...p, kondisi_beli: opt?.value ?? '' }))} />
                                 </FormItem>
                                 <FormItem label="Ganti Foto (opsional)">
-                                    <Upload accept=".jpg,.jpeg,.png,.webp" showList={false} uploadLimit={1}
-                                        onChange={files => setEditFoto(files[0] ?? null)}>
-                                        <Button type="button" variant="default" size="sm" icon={<HiOutlinePhotograph />}>
-                                            {editFoto ? editFoto.name : 'Pilih foto baru...'}
-                                        </Button>
-                                    </Upload>
-                                    {editFoto && (
-                                        <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
-                                            onClick={() => setEditFoto(null)}>Hapus pilihan</button>
-                                    )}
+                                    <UploadBerkas
+                                        file={editFoto}
+                                        accept=".jpg,.jpeg,.png,.webp"
+                                        label="Pilih foto baru"
+                                        hint="JPG/PNG/WEBP"
+                                        existingUrl={armada.url_foto ?? null}
+                                        existingLabel="Foto saat ini"
+                                        onChange={setEditFoto}
+                                    />
                                 </FormItem>
                                 <div className="sm:col-span-2">
                                     <FormItem label="Keterangan">
@@ -753,16 +753,13 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                     onChange={date => setDocForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
                             <FormItem label="File Dokumen" asterisk>
-                                <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                                    onChange={files => setDocFile(files[0] ?? null)}>
-                                    <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                        {docFile ? docFile.name : 'Pilih file (PDF/JPG/PNG)'}
-                                    </Button>
-                                </Upload>
-                                {docFile && (
-                                    <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
-                                        onClick={() => setDocFile(null)}>Hapus pilihan</button>
-                                )}
+                                <UploadBerkas
+                                    file={docFile}
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    label="Pilih file"
+                                    hint="PDF/JPG/PNG"
+                                    onChange={setDocFile}
+                                />
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -1203,20 +1200,15 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                             onChange={date => setEditDocForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="Ganti File (opsional)">
-                        <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                            onChange={files => setEditDocFile(files[0] ?? null)}>
-                            <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                {editDocFile ? editDocFile.name : 'Pilih file baru...'}
-                            </Button>
-                        </Upload>
-                        {editDocTarget?.url_file && !editDocFile && (
-                            <a href={editDocTarget.url_file} target="_blank" rel="noreferrer"
-                                className="text-xs text-blue-500 hover:underline mt-1 block">File saat ini</a>
-                        )}
-                        {editDocFile && (
-                            <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1.5 block"
-                                onClick={() => setEditDocFile(null)}>Hapus pilihan</button>
-                        )}
+                        <UploadBerkas
+                            file={editDocFile}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            label="Pilih file baru"
+                            hint="PDF/JPG/PNG"
+                            existingUrl={editDocTarget?.url_file ?? null}
+                            existingLabel="File saat ini"
+                            onChange={setEditDocFile}
+                        />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

@@ -1,11 +1,12 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
+import UploadBerkas from '@/components/shared/UploadBerkas'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { dokumenArmadaService, DokumenArmadaWithArmada } from '@/services/dokumenArmada.service'
@@ -293,34 +294,21 @@ export default function DokumenArmadaPage() {
                             onChange={date => setForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label="File Dokumen" asterisk={!editTarget}>
-                        <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                            onChange={files => {
-                                const f = files[0] ?? null
+                        <UploadBerkas
+                            file={file}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
+                            hint="PDF/JPG/PNG · maksimal 5 MB"
+                            existingUrl={editTarget?.url_file ?? null}
+                            existingLabel="File saat ini"
+                            onChange={f => {
                                 if (f && f.size > MAX_FILE_SIZE) {
                                     toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
                                     return
                                 }
                                 setFile(f)
-                            }}>
-                            <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}
-                                className="max-w-full">
-                                <span className="inline-block max-w-[180px] truncate align-bottom">
-                                    {file ? file.name : (editTarget ? 'Ganti file (opsional)' : 'Pilih file')}
-                                </span>
-                            </Button>
-                        </Upload>
-                        <p className="text-xs text-gray-400 mt-1.5">PDF/JPG/PNG · maksimal 5 MB</p>
-                        {file && (
-                            <button type="button" className="text-xs text-red-400 hover:text-red-600 mt-1 block"
-                                onClick={() => setFile(null)}>Hapus pilihan</button>
-                        )}
-                        {editTarget?.url_file && !file && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                File saat ini:{' '}
-                                <a href={editTarget.url_file} target="_blank" rel="noreferrer"
-                                    className="text-blue-500 hover:underline">Lihat dokumen</a>
-                            </p>
-                        )}
+                            }}
+                        />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

@@ -1,9 +1,10 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Select, Dialog, Switcher, Tooltip, Upload, toast, Notification, Tag } from '@/components/ui'
+import { Card, Button, FormItem, Input, Select, Dialog, Switcher, Tooltip, toast, Notification, Tag } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import UploadBerkas from '@/components/shared/UploadBerkas'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -397,6 +398,14 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
         } finally {
             setDokumenDeleting(false)
         }
+    }
+
+    const validasiFile = (f: File | null, set: (f: File | null) => void) => {
+        if (f && f.size > MAX_FILE_SIZE) {
+            toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
+            return
+        }
+        set(f)
     }
 
     const handleExit = async () => {
@@ -946,25 +955,15 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             onChange={date => setDokumenForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     <FormItem label={dokumenEdit ? 'File (ganti, opsional)' : 'File'} asterisk={!dokumenEdit}>
-                        <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                            onChange={files => {
-                                const f = files[0] ?? null
-                                if (f && f.size > MAX_FILE_SIZE) {
-                                    toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
-                                    return
-                                }
-                                setDokumenFile(f)
-                            }}>
-                            <Button type="button" variant="default" className="w-full">
-                                {dokumenFile ? dokumenFile.name : (dokumenEdit ? 'Ganti file (opsional)' : 'Pilih file')}
-                            </Button>
-                        </Upload>
-                        {dokumenEdit?.url_file && !dokumenFile && (
-                            <a href={dokumenEdit.url_file} target="_blank" rel="noreferrer"
-                                className="text-blue-500 hover:underline text-xs mt-1 inline-block">
-                                Lihat dokumen saat ini
-                            </a>
-                        )}
+                        <UploadBerkas
+                            file={dokumenFile}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            label={dokumenEdit ? 'Ganti file (opsional)' : 'Pilih file'}
+                            existingUrl={dokumenEdit?.url_file ?? null}
+                            existingLabel="Dokumen saat ini"
+                            emptyText={dokumenEdit ? 'Belum ada dokumen tersimpan' : null}
+                            onChange={f => validasiFile(f, setDokumenFile)}
+                        />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -1027,25 +1026,15 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="sm:col-span-2">
                         <FormItem label="File Kontrak">
-                            <Upload accept=".pdf,.jpg,.jpeg,.png" showList={false} uploadLimit={1}
-                                onChange={files => {
-                                    const f = files[0] ?? null
-                                    if (f && f.size > MAX_FILE_SIZE) {
-                                        toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
-                                        return
-                                    }
-                                    setKontrakFile(f)
-                                }}>
-                                <Button type="button" variant="default" className="w-full">
-                                    {kontrakFile ? kontrakFile.name : (kontrakForm.id_kontrak ? 'Ganti file (opsional)' : 'Pilih file (opsional)')}
-                                </Button>
-                            </Upload>
-                            {kontrakForm.url_file && !kontrakFile && (
-                                <a href={kontrakForm.url_file} target="_blank" rel="noreferrer"
-                                    className="text-blue-500 hover:underline text-xs mt-1 inline-block">
-                                    Lihat dokumen saat ini
-                                </a>
-                            )}
+                            <UploadBerkas
+                                file={kontrakFile}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                label={kontrakForm.id_kontrak ? 'Ganti file (opsional)' : 'Pilih file (opsional)'}
+                                existingUrl={kontrakForm.url_file ?? null}
+                                existingLabel="Dokumen saat ini"
+                                emptyText={kontrakForm.id_kontrak ? 'Belum ada dokumen tersimpan' : null}
+                                onChange={f => validasiFile(f, setKontrakFile)}
+                            />
                         </FormItem>
                     </div>
                 </div>

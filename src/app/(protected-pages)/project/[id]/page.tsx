@@ -416,6 +416,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 kode_proyek:     form.kode_proyek,
                 tanggal_mulai:   form.tanggal_mulai || undefined,
                 tanggal_selesai: form.tanggal_selesai || undefined,
+                harga_penawaran: form.harga_penawaran ?? null,
+                harga_proyek:    form.harga_proyek ?? null,
                 status:          form.status,
                 keterangan:      form.keterangan || undefined,
             })
@@ -656,8 +658,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
                                 { label: 'Kode Proyek',     value: project.kode_proyek },
+                                { label: 'Klien',           value: project.nama_klien ?? <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Mulai',   value: project.tanggal_mulai ? dayjs(project.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Selesai', value: project.tanggal_selesai ? dayjs(project.tanggal_selesai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
+                                { label: 'Harga Penawaran', value: project.harga_penawaran != null ? formatRupiah(project.harga_penawaran) : <span className="text-gray-400">—</span> },
+                                { label: 'Harga Proyek',    value: project.harga_proyek != null ? formatRupiah(project.harga_proyek) : <span className="text-gray-400">—</span> },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -703,6 +708,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <FormItem label="Tanggal Selesai">
                                     <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
                                         onChange={date => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                                </FormItem>
+                                <FormItem label="Harga Penawaran (opsional)">
+                                    <Input prefix="Rp" placeholder="0"
+                                        value={form.harga_penawaran != null && form.harga_penawaran !== 0 ? formatNum(form.harga_penawaran) : ''}
+                                        onChange={e => {
+                                            const angka = e.target.value.replace(/\D/g, '')
+                                            setForm(p => ({ ...p, harga_penawaran: angka ? Number(angka) : null }))
+                                        }} />
+                                </FormItem>
+                                <FormItem label="Harga Proyek (opsional)">
+                                    <Input prefix="Rp" placeholder="0"
+                                        value={form.harga_proyek != null && form.harga_proyek !== 0 ? formatNum(form.harga_proyek) : ''}
+                                        onChange={e => {
+                                            const angka = e.target.value.replace(/\D/g, '')
+                                            setForm(p => ({ ...p, harga_proyek: angka ? Number(angka) : null }))
+                                        }} />
                                 </FormItem>
                                 <FormItem label="Status">
                                     <Select isSearchable={false} options={STATUS_OPTIONS}
@@ -782,10 +803,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -798,20 +818,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{r.nama_jenis ?? '—'}</td>
                                         <td className="py-3 pr-4">
-                                            {r.harga_penawaran != null
-                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.harga_penawaran)}</span>
-                                                : <Tag className="text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Belum diisi</Tag>}
+                                            {(r.harga_penawaran ?? r.uang_jalan) != null
+                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah((r.harga_penawaran ?? r.uang_jalan) as number)}</span>
+                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Belum ada tarif</Tag>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{r.estimasi_ritase}</td>
                                         <td className="py-3 pr-4">
-                                            {r.subtotal != null
-                                                ? <span className="font-semibold text-gray-800 dark:text-gray-100">{formatRupiah(r.subtotal)}</span>
+                                            {(r.harga_penawaran ?? r.uang_jalan) != null
+                                                ? <span className="font-semibold text-gray-800 dark:text-gray-100">{formatRupiah(((r.harga_penawaran ?? r.uang_jalan) as number) * (r.estimasi_ritase || 1))}</span>
                                                 : <span className="text-gray-400">—</span>}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            {r.uang_jalan != null
-                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.uang_jalan)}</span>
-                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Belum ada tarif</Tag>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
@@ -838,11 +853,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </tbody>
                             <tfoot>
                                 <tr className="border-t border-gray-200 dark:border-gray-600">
-                                    <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Proyek</td>
+                                    <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Uang Jalan</td>
                                     <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                        {formatRupiah(ruteProyekList.reduce((sum, r) => sum + (r.subtotal ?? 0), 0))}
+                                        {formatRupiah(ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? r.uang_jalan ?? 0) * (r.estimasi_ritase || 1)), 0))}
                                     </td>
-                                    <td colSpan={2} />
+                                    <td />
                                 </tr>
                             </tfoot>
                         </table>

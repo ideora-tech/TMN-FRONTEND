@@ -38,7 +38,7 @@ type FormState = {
 
 const emptyForm = (): FormState => ({
     id_armada: '', id_jenis_perawatan: null, tanggal: '', biaya: '', km_odometer: '',
-    status: 'selesai', jadwal_servis_berikutnya: '', keterangan: '',
+    status: 'dalam_proses', jadwal_servis_berikutnya: '', keterangan: '',
 })
 
 const MAX_BUKTI = 10

@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, Checkbox, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
+import { Card, Button, Checkbox, Dialog, FormItem, Input, Tag, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import EvaluasiPenugasanCard from '@/components/shared/EvaluasiPenugasanCard'
@@ -135,6 +135,7 @@ type RekapBiaya = {
 }
 
 type BiayaLainRow = { nama_biaya: string; nominal: string }
+type BiayaTagihanRow = { nama_biaya: string; nominal: string }
 
 const emptyLaporanForm = () => ({
     biaya_bbm:        '',
@@ -145,6 +146,7 @@ const emptyLaporanForm = () => ({
     id_jenis_bbm:     '',
     jumlah_liter:     '',
     biaya_lain:       [] as BiayaLainRow[],
+    biaya_tagihan:    [] as BiayaTagihanRow[],
 })
 
 type AksiTrip = 'mulai' | 'selesai' | 'batalkan'
@@ -188,6 +190,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     // jenis BBM (untuk auto-hitung biaya BBM)
     const [jenisBbmList, setJenisBbmList] = useState<JenisBbm[]>([])
+
+    const [titikDropDialogOpen, setTitikDropDialogOpen] = useState(false)
+    const [titikDropForm, setTitikDropForm]           = useState<string[]>([])
+    const [savingTitikDrop, setSavingTitikDrop]       = useState(false)
 
     // aksi lifecycle trip
     const [aksiTrip, setAksiTrip]         = useState<AksiTrip | null>(null)
@@ -306,6 +312,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             id_jenis_bbm:    laporan.id_jenis_bbm ?? '',
             jumlah_liter:    laporan.jumlah_liter != null ? String(laporan.jumlah_liter) : '',
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
+            biaya_tagihan:   laporan.biaya_tagihan.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
         })
         setLaporanFotoFiles([])
         setShowLaporanForm(true)
@@ -344,6 +351,48 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         })
     }
 
+    const addBiayaTagihanRow = () => {
+        setLaporanForm(p => (p.biaya_tagihan.length >= 10 ? p : { ...p, biaya_tagihan: [...p.biaya_tagihan, { nama_biaya: '', nominal: '' }] }))
+    }
+
+    const removeBiayaTagihanRow = (idx: number) => {
+        setLaporanForm(p => ({ ...p, biaya_tagihan: p.biaya_tagihan.filter((_, i) => i !== idx) }))
+    }
+
+    const updateBiayaTagihanRow = (idx: number, field: keyof BiayaTagihanRow, value: string) => {
+        setLaporanForm(p => {
+            const next = [...p.biaya_tagihan]
+            next[idx] = { ...next[idx], [field]: value }
+            return { ...p, biaya_tagihan: next }
+        })
+    }
+
+    const tambahTitikDrop = () => setTitikDropForm(prev => (prev.length < 10 ? [...prev, ''] : prev))
+    const ubahTitikDrop   = (i: number, v: string) => setTitikDropForm(prev => prev.map((d, idx) => (idx === i ? v : d)))
+    const hapusTitikDrop  = (i: number) => setTitikDropForm(prev => prev.filter((_, idx) => idx !== i))
+
+    const openTitikDropDialog = () => {
+        setTitikDropForm(trip?.titik_drop ?? [])
+        setTitikDropDialogOpen(true)
+    }
+    const closeTitikDropDialog = () => setTitikDropDialogOpen(false)
+
+    const handleSubmitTitikDrop = async () => {
+        setSavingTitikDrop(true)
+        try {
+            const titikDrop = titikDropForm.map(d => d.trim()).filter(Boolean)
+            await tripService.updateTitikDrop(id, titikDrop)
+            toast.push(<Notification type="success" title="Titik drop berhasil diperbarui" />)
+            setTitikDropDialogOpen(false)
+            const t = await tripService.get(id)
+            setTrip(t)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSavingTitikDrop(false)
+        }
+    }
+
     const handleSubmitLaporan = async () => {
         setSavingLaporan(true)
         try {
@@ -358,6 +407,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 biaya_lain: sembunyikanBiayaOps ? [] : laporanForm.biaya_lain
                     .filter(b => b.nama_biaya.trim())
                     .map(b => ({ nama_biaya: b.nama_biaya, nominal: Number(b.nominal) || 0 })),
+                ...(trip?.sudah_difakturkan ? {} : {
+                    biaya_tagihan: laporanForm.biaya_tagihan
+                        .filter(b => b.nama_biaya.trim())
+                        .map(b => ({ nama_biaya: b.nama_biaya, nominal: Number(b.nominal) || 0 })),
+                }),
             }
             if (laporan) {
                 await laporanPerjalananService.update(laporan.id_laporan, payload, laporanFotoFiles)
@@ -488,7 +542,26 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 ? [{ label: 'Klien', value: trip.nama_klien as React.ReactNode }]
                                 : []),
                             ...(trip.rute
-                                ? [{ label: 'Rute', value: trip.rute as React.ReactNode }]
+                                ? [{
+                                    label: 'Rute',
+                                    value: (
+                                        trip.titik_drop?.length ? (
+                                            <span className="inline-flex flex-wrap items-center gap-1">
+                                                <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border-0">
+                                                    {trip.rute}
+                                                </Tag>
+                                                {trip.titik_drop.map((d, i) => (
+                                                    <span key={i} className="inline-flex items-center gap-1">
+                                                        <span className="text-gray-400">→</span>
+                                                        <Tag className="bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border-0">
+                                                            {d}
+                                                        </Tag>
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        ) : (trip.rute as React.ReactNode)
+                                    ),
+                                }]
                                 : []),
                             ...(trip.supir_nama
                                 ? [{ label: 'Supir', value: trip.supir_nama as React.ReactNode }]
@@ -535,6 +608,24 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
                         </div>
                     ))}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Titik Drop</p>
+                        {trip.sudah_difakturkan && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah difakturkan</p>
+                        )}
+                    </div>
+                    <Button
+                        size="sm"
+                        variant="default"
+                        icon={<HiOutlinePencilAlt />}
+                        disabled={trip.sudah_difakturkan}
+                        onClick={openTitikDropDialog}
+                    >
+                        Ubah Titik Drop
+                    </Button>
                 </div>
             </Card>
 
@@ -780,6 +871,60 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </>
                         )}
 
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Tagihan Klien</p>
+                                {trip.sudah_difakturkan && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah difakturkan</p>
+                                )}
+                            </div>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="plain"
+                                icon={<HiOutlinePlus />}
+                                disabled={trip.sudah_difakturkan || laporanForm.biaya_tagihan.length >= 10}
+                                onClick={addBiayaTagihanRow}
+                            >
+                                Tambah Biaya
+                            </Button>
+                        </div>
+                        {laporanForm.biaya_tagihan.length === 0 ? (
+                            <p className="text-gray-400 text-xs py-2">Belum ada biaya tagihan ditambahkan.</p>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {laporanForm.biaya_tagihan.map((row, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                        <Input
+                                            size="sm"
+                                            placeholder="Nama biaya"
+                                            value={row.nama_biaya}
+                                            disabled={trip.sudah_difakturkan}
+                                            onChange={e => updateBiayaTagihanRow(idx, 'nama_biaya', e.target.value)}
+                                            className="flex-1"
+                                        />
+                                        <Input
+                                            size="sm"
+                                            prefix="Rp"
+                                            placeholder="0"
+                                            value={row.nominal ? formatNum(Number(row.nominal)) : ''}
+                                            disabled={trip.sudah_difakturkan}
+                                            onChange={e => updateBiayaTagihanRow(idx, 'nominal', e.target.value.replace(/\D/g, ''))}
+                                            className="w-40"
+                                        />
+                                        <span
+                                            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 dark:bg-red-500/10 transition-colors flex-shrink-0 ${
+                                                trip.sudah_difakturkan ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-red-100 dark:hover:bg-red-500/20'
+                                            }`}
+                                            onClick={() => { if (!trip.sudah_difakturkan) removeBiayaTagihanRow(idx) }}
+                                        >
+                                            <HiOutlineTrash className="text-base" />
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>
                                 Batal
@@ -838,6 +983,30 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </div>
                         )}
 
+                        {laporan.biaya_tagihan.length > 0 && (
+                            <div className="mt-4">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Biaya Tagihan Klien</p>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                                                <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
+                                                <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                            {laporan.biaya_tagihan.map(b => (
+                                                <tr key={b.id_biaya_tagihan}>
+                                                    <td className="py-2 pr-4">{b.nama_biaya}</td>
+                                                    <td className="py-2 text-right">{formatRupiah(b.nominal)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Dokumentasi Foto</p>
 
@@ -876,6 +1045,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 </FormItem>
                                 <FormItem label="File" asterisk className="mb-0">
                                     <Upload accept=".jpg,.jpeg,.png" showList={false} multiple
+                                        fileList={fotoFiles}
                                         beforeUpload={validasiUkuranFoto}
                                         onChange={files => setFotoFiles(files)}>
                                         <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
@@ -894,6 +1064,24 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     Upload
                                 </Button>
                             </div>
+
+                            {fotoFiles.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                                    {fotoFiles.map((file, idx) => (
+                                        <div key={`${file.name}-${idx}`} className="relative group">
+                                            <LocalFotoPreview file={file} />
+                                            <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
+                                            <button
+                                                type="button"
+                                                className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
+                                                onClick={() => setFotoFiles(prev => prev.filter((_, i) => i !== idx))}
+                                            >
+                                                <HiOutlineTrash className="text-xs" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
@@ -1025,6 +1213,39 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     <EvaluasiPenugasanCard idPenugasan={trip.id_penugasan} sumber={trip.sumber ?? 'internal'} />
                 </div>
             )}
+
+            <Dialog isOpen={titikDropDialogOpen} onRequestClose={closeTitikDropDialog} onClose={closeTitikDropDialog} width={520}>
+                <h5 className="text-base font-semibold mb-1">Ubah Titik Drop</h5>
+                <p className="text-xs text-gray-400 mb-4">Atur urutan titik drop untuk trip ini (maksimal 10 titik).</p>
+                <form onSubmit={e => { e.preventDefault(); handleSubmitTitikDrop() }}>
+                    <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold">Titik Drop</p>
+                        <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            disabled={titikDropForm.length >= 10} onClick={tambahTitikDrop}>Tambah Titik</Button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {titikDropForm.length === 0 ? (
+                            <p className="text-gray-400 text-xs py-2">Belum ada titik drop ditambahkan.</p>
+                        ) : (
+                            titikDropForm.map((lokasi, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                        onChange={e => ubahTitikDrop(i, e.target.value)} />
+                                    <button type="button" onClick={() => hapusTitikDrop(i)}
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                        <HiOutlineTrash />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={closeTitikDropDialog}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={savingTitikDrop}>Simpan</Button>
+                    </div>
+                </form>
+            </Dialog>
 
             <ConfirmDialog
                 isOpen={!!deleteFotoTarget}

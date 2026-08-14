@@ -17,6 +17,7 @@ export interface Penugasan {
     id_kontrak_vendor: string | null
     id_armada_vendor: string | null
     id_supir_vendor: string | null
+    titik_drop?: string[]
     dibuat_pada: string
     diubah_pada: string
 }
@@ -52,6 +53,7 @@ export const penugasanService = {
         id_kontrak_vendor?: string
         id_armada_vendor?: string
         id_supir_vendor?: string | null
+        titik_drop?: string[]
     }) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN, payload)
         return data.data as Penugasan

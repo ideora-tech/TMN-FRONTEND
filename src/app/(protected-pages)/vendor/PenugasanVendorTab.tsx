@@ -7,7 +7,7 @@ import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -97,6 +97,10 @@ export default function PenugasanVendorTab() {
     const [editTarget, setEditTarget]         = useState<Penugasan | null>(null)
     const [editForm, setEditForm]             = useState({ id_supir: '', id_supir_vendor: '', tanggal_tugas: '', estimasi_biaya: '', status: 'pending' as StatusPenugasan })
     const [editSubmitting, setEditSubmitting] = useState(false)
+    const [titikDropEdit, setTitikDropEdit] = useState<string[]>([])
+    const tambahDropEdit = () => setTitikDropEdit(prev => (prev.length < 10 ? [...prev, ''] : prev))
+    const ubahDropEdit   = (i: number, v: string) => setTitikDropEdit(prev => prev.map((d, idx) => (idx === i ? v : d)))
+    const hapusDropEdit  = (i: number) => setTitikDropEdit(prev => prev.filter((_, idx) => idx !== i))
 
     const [kontrakMap, setKontrakMap]           = useState<Record<string, KontrakVendor>>({})
     const [vendorMap, setVendorMap]             = useState<Record<string, Vendor>>({})
@@ -119,6 +123,10 @@ export default function PenugasanVendorTab() {
     const [dlgForm, setDlgForm]                       = useState<DialogFormState>(EMPTY_DIALOG_FORM)
     const [dlgErrors, setDlgErrors]                   = useState<DialogErrors>({})
     const [createSubmitting, setCreateSubmitting]     = useState(false)
+    const [titikDropCreate, setTitikDropCreate] = useState<string[]>([])
+    const tambahDropCreate = () => setTitikDropCreate(prev => (prev.length < 10 ? [...prev, ''] : prev))
+    const ubahDropCreate   = (i: number, v: string) => setTitikDropCreate(prev => prev.map((d, idx) => (idx === i ? v : d)))
+    const hapusDropCreate  = (i: number) => setTitikDropCreate(prev => prev.filter((_, idx) => idx !== i))
 
     useEffect(() => {
         projectService.list(1).then(res =>
@@ -251,6 +259,7 @@ export default function PenugasanVendorTab() {
         setUnitSearch('')
         setDlgForm(EMPTY_DIALOG_FORM)
         setDlgErrors({})
+        setTitikDropCreate([])
     }
 
     const openCreateDialog = () => {
@@ -297,6 +306,7 @@ export default function PenugasanVendorTab() {
         setCreateSubmitting(true)
         try {
             const estimasi = dlgForm.estimasi_biaya ? Number(dlgForm.estimasi_biaya) : undefined
+            const titikDrop = titikDropCreate.map(d => d.trim()).filter(Boolean)
             const targets = dlgArmadaList.filter(a => checkedIds.includes(a.id_armada_vendor))
             const results = await Promise.allSettled(targets.map(a =>
                 penugasanService.create({
@@ -308,6 +318,7 @@ export default function PenugasanVendorTab() {
                     id_supir_vendor:   mekanisme === 'unit_only' ? null : rowSupir[a.id_armada_vendor],
                     tanggal_tugas:     dlgForm.tanggal_tugas || undefined,
                     estimasi_biaya:    estimasi,
+                    titik_drop:        titikDrop,
                 })
             ))
             const gagalIds: string[] = []
@@ -457,6 +468,7 @@ export default function PenugasanVendorTab() {
             estimasi_biaya:  row.estimasi_biaya != null ? String(row.estimasi_biaya) : '',
             status:          row.status,
         })
+        setTitikDropEdit(row.titik_drop ?? [])
     }
 
     const handleSubmitEdit = async () => {
@@ -470,6 +482,7 @@ export default function PenugasanVendorTab() {
                 tanggal_tugas:  editForm.tanggal_tugas || null,
                 estimasi_biaya: editForm.estimasi_biaya ? Number(editForm.estimasi_biaya) : null,
                 status:         editForm.status,
+                titik_drop:     titikDropEdit.map(d => d.trim()).filter(Boolean),
             })
             toast.push(<Notification type="success" title="Penugasan vendor berhasil diperbarui" />)
             setEditTarget(null)
@@ -802,6 +815,28 @@ export default function PenugasanVendorTab() {
                             onChange={opt => setEditForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))}
                         />
                     </FormItem>
+
+                    <div className="mt-1">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-semibold">Titik Drop (opsional)</p>
+                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                disabled={titikDropEdit.length >= 10} onClick={tambahDropEdit}>Tambah Titik</Button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {titikDropEdit.map((lokasi, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                        onChange={e => ubahDropEdit(i, e.target.value)} />
+                                    <button type="button" onClick={() => hapusDropEdit(i)}
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                        <HiOutlineTrash />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={editSubmitting}>Simpan</Button>
@@ -994,6 +1029,27 @@ export default function PenugasanVendorTab() {
                                 onChange={e => setDlgForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
                             />
                         </FormItem>
+                    </div>
+
+                    <div className="mt-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-semibold">Titik Drop (opsional)</p>
+                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                disabled={titikDropCreate.length >= 10} onClick={tambahDropCreate}>Tambah Titik</Button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {titikDropCreate.map((lokasi, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                        onChange={e => ubahDropCreate(i, e.target.value)} />
+                                    <button type="button" onClick={() => hapusDropCreate(i)}
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                        <HiOutlineTrash />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

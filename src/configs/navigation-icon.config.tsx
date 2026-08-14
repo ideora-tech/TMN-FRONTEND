@@ -32,6 +32,7 @@ import {
     PiGasPumpDuotone,
     PiWrenchDuotone,
     PiFileTextDuotone,
+    PiWalletDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -71,6 +72,7 @@ const navigationIcon: NavigationIcons = {
     gasPump:       <PiGasPumpDuotone />,
     wrench:        <PiWrenchDuotone />,
     fileText:      <PiFileTextDuotone />,
+    wallet:        <PiWalletDuotone />,
 }
 
 export default navigationIcon

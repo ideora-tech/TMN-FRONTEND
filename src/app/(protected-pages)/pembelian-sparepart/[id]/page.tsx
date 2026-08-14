@@ -1,35 +1,30 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Dialog, toast, Notification } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import UploadBerkas from '@/components/shared/UploadBerkas'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencil, HiOutlineTrash, HiOutlineUpload, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineCash, HiOutlineShoppingCart } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencil, HiOutlineTrash, HiOutlineShoppingCart } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
-import { STATUS_TAG, STATUS_LABEL } from '../status'
+import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
 
 export default function PembelianDetailPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
     const { session } = useCurrentSession()
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const [data, setData] = useState<PembelianSparepart | null>(null)
     const [submitting, setSubmitting] = useState(false)
-    const [tolakOpen, setTolakOpen] = useState(false)
-    const [alasan, setAlasan] = useState('')
-    const [errAlasan, setErrAlasan] = useState('')
     const [realisasiOpen, setRealisasiOpen] = useState(false)
     const [tanggalBeli, setTanggalBeli] = useState(dayjs().format('YYYY-MM-DD'))
     const [hargaAktual, setHargaAktual] = useState<Record<string, string>>({})
     const [errRealisasi, setErrRealisasi] = useState('')
-    const [lunasOpen, setLunasOpen] = useState(false)
-    const [tanggalBayar, setTanggalBayar] = useState(dayjs().format('YYYY-MM-DD'))
     const [hapusOpen, setHapusOpen] = useState(false)
     const [hapusBuktiTarget, setHapusBuktiTarget] = useState<string | null>(null)
 
@@ -60,11 +55,6 @@ export default function PembelianDetailPage() {
         }
     }
 
-    const handleTolak = () => {
-        if (!alasan.trim()) { setErrAlasan('Alasan penolakan wajib diisi'); return }
-        jalankan(() => pembelianSparepartService.tolak(id, alasan.trim()), 'Pengajuan ditolak', () => { setTolakOpen(false); setAlasan('') })
-    }
-
     const bukaRealisasi = () => {
         if (!data) return
         const awal: Record<string, string> = {}
@@ -88,10 +78,9 @@ export default function PembelianDetailPage() {
         }), 'Realisasi tersimpan, stok diperbarui', () => setRealisasiOpen(false))
     }
 
-    const handleUpload = (files: FileList | null) => {
-        if (!files || files.length === 0) return
-        jalankan(() => pembelianSparepartService.uploadBukti(id, Array.from(files)), 'Bukti berhasil diunggah')
-        if (fileInputRef.current) fileInputRef.current.value = ''
+    const handleUpload = (f: File | null) => {
+        if (!f) return
+        jalankan(() => pembelianSparepartService.uploadBukti(id, [f]), 'Bukti berhasil diunggah')
     }
 
     const handleHapus = () => {
@@ -108,8 +97,6 @@ export default function PembelianDetailPage() {
     if (!data) return null
 
     const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
-    const bolehManager = punyaPeran('manager', 'admin', 'superadmin')
-    const bolehFinance = punyaPeran('keuangan', 'admin', 'superadmin')
     const bolehUploadBukti = bolehKelola && (data.status === 'disetujui_finance' || data.status === 'dibeli')
 
     return (
@@ -133,7 +120,7 @@ export default function PembelianDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    {data.status === 'diajukan' && bolehKelola && (
+                    {bolehDiubahAtauDihapus(data.status, data.id_perawatan) && bolehKelola && (
                         <>
                             <Button size="sm" icon={<HiOutlinePencil />}
                                 onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_EDIT(id))}>Edit</Button>
@@ -141,49 +128,27 @@ export default function PembelianDetailPage() {
                                 icon={<HiOutlineTrash />} onClick={() => setHapusOpen(true)}>Hapus</Button>
                         </>
                     )}
-                    {data.status === 'diajukan' && bolehManager && (
-                        <>
-                            <Button variant="solid" size="sm" icon={<HiOutlineCheckCircle />} loading={submitting}
-                                onClick={() => jalankan(() => pembelianSparepartService.approveManager(id), 'Pengajuan disetujui manager')}>
-                                Setujui (Manager)
-                            </Button>
-                            <Button size="sm" icon={<HiOutlineXCircle />} onClick={() => setTolakOpen(true)}>Tolak</Button>
-                        </>
-                    )}
-                    {data.status === 'disetujui_manager' && bolehFinance && (
-                        <>
-                            <Button variant="solid" size="sm" icon={<HiOutlineCheckCircle />} loading={submitting}
-                                onClick={() => jalankan(() => pembelianSparepartService.approveFinance(id), 'Pengajuan disetujui finance')}>
-                                Setujui (Finance)
-                            </Button>
-                            <Button size="sm" icon={<HiOutlineXCircle />} onClick={() => setTolakOpen(true)}>Tolak</Button>
-                        </>
-                    )}
                     {data.status === 'disetujui_finance' && bolehKelola && (
                         <>
-                            <Button size="sm" icon={<HiOutlineUpload />} loading={submitting}
-                                onClick={() => fileInputRef.current?.click()}>Upload Nota</Button>
+                            <UploadBerkas file={null} label="Upload Nota" hint={null}
+                                accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleUpload} />
                             <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
                                 Realisasi
                             </Button>
                         </>
                     )}
                     {data.status === 'dibeli' && bolehKelola && (
-                        <Button size="sm" icon={<HiOutlineUpload />} loading={submitting}
-                            onClick={() => fileInputRef.current?.click()}>Upload Nota</Button>
-                    )}
-                    {data.status === 'dibeli' && bolehFinance && (
-                        <Button variant="solid" size="sm" icon={<HiOutlineCash />}
-                            onClick={() => { setTanggalBayar(dayjs().format('YYYY-MM-DD')); setLunasOpen(true) }}>
-                            Tandai Lunas
-                        </Button>
+                        <UploadBerkas file={null} label="Upload Nota" hint={null}
+                            accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleUpload} />
                     )}
                 </div>
             </div>
 
-            <input ref={fileInputRef} type="file" multiple hidden
-                accept=".jpg,.jpeg,.png,.webp,.pdf"
-                onChange={e => handleUpload(e.target.files)} />
+            <p className="text-xs text-gray-400">
+                {data.id_perawatan
+                    ? 'Biaya pembelian ini termasuk dalam pengajuan perawatan terkait'
+                    : 'Approval & pembayaran dilakukan di menu Keuangan → Arus Kas'}
+            </p>
 
             {data.status === 'ditolak' && data.alasan_ditolak && (
                 <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-4 py-3">
@@ -232,6 +197,38 @@ export default function PembelianDetailPage() {
                     </div>
                 </div>
             </Card>
+
+            {data.pembayaran && (
+                <Card>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Pembayaran</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Ditransfer</p>
+                            <p className="text-sm font-bold tabular-nums">{formatRupiah(data.pembayaran.nominal_ditransfer)}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {dayjs(data.pembayaran.tanggal_transfer).format('DD MMM YYYY')}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Aktual</p>
+                            <p className="text-sm font-bold tabular-nums">
+                                {data.pembayaran.total_aktual !== null ? formatRupiah(data.pembayaran.total_aktual) : '—'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Selisih</p>
+                            <p className={`text-sm font-bold tabular-nums ${
+                                data.pembayaran.selisih === null ? 'text-gray-400'
+                                : data.pembayaran.selisih > 0 ? 'text-red-500'
+                                : data.pembayaran.selisih < 0 ? 'text-emerald-600'
+                                : ''
+                            }`}>
+                                {data.pembayaran.selisih !== null ? formatRupiah(data.pembayaran.selisih) : '—'}
+                            </p>
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             <Card bodyClass="p-0">
                 <p className="font-semibold px-4 pt-4 pb-3">Item Sparepart</p>
@@ -320,20 +317,6 @@ export default function PembelianDetailPage() {
                 )}
             </Card>
 
-            <Dialog isOpen={tolakOpen} onClose={() => setTolakOpen(false)} onRequestClose={() => setTolakOpen(false)}>
-                <h5 className="mb-4">Tolak Pengajuan</h5>
-                <form onSubmit={e => { e.preventDefault(); handleTolak() }}>
-                    <FormItem label="Alasan Penolakan" asterisk invalid={!!errAlasan} errorMessage={errAlasan}>
-                        <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
-                            value={alasan} onChange={e => { setAlasan(e.target.value); setErrAlasan('') }} />
-                    </FormItem>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" onClick={() => setTolakOpen(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={submitting}>Tolak Pengajuan</Button>
-                    </div>
-                </form>
-            </Dialog>
-
             <Dialog isOpen={realisasiOpen} onClose={() => setRealisasiOpen(false)} onRequestClose={() => setRealisasiOpen(false)}>
                 <h5 className="mb-4">Realisasi Pembelian</h5>
                 <form onSubmit={e => { e.preventDefault(); handleRealisasi() }}>
@@ -365,25 +348,6 @@ export default function PembelianDetailPage() {
                     <div className="flex justify-end gap-2 mt-4">
                         <Button type="button" onClick={() => setRealisasiOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={submitting}>Simpan Realisasi</Button>
-                    </div>
-                </form>
-            </Dialog>
-
-            <Dialog isOpen={lunasOpen} onClose={() => setLunasOpen(false)} onRequestClose={() => setLunasOpen(false)}>
-                <h5 className="mb-4">Tandai Lunas</h5>
-                <form onSubmit={e => {
-                    e.preventDefault()
-                    if (!tanggalBayar) return
-                    jalankan(() => pembelianSparepartService.lunas(id, tanggalBayar), 'Pembelian ditandai lunas', () => setLunasOpen(false))
-                }}>
-                    <FormItem label="Tanggal Pembayaran" asterisk>
-                        <DatePicker inputFormat="DD/MM/YYYY"
-                            value={tanggalBayar ? dayjs(tanggalBayar).toDate() : null}
-                            onChange={date => setTanggalBayar(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
-                    </FormItem>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" onClick={() => setLunasOpen(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={submitting}>Tandai Lunas</Button>
                     </div>
                 </form>
             </Dialog>
