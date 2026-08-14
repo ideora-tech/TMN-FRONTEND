@@ -5,7 +5,10 @@ import { HiOutlinePaperClip, HiOutlineDocumentText, HiOutlineTrash } from 'react
 
 type UploadBerkasProps = {
     file: File | null
-    onChange: (f: File | null) => void
+    onChange?: (f: File | null) => void
+    multiple?: boolean
+    onFiles?: (files: File[]) => void
+    loading?: boolean
     accept?: string
     label?: string
     hint?: string | null
@@ -45,6 +48,9 @@ function PratinjauGambar({ file, onRemove }: { file: File; onRemove: () => void 
 export default function UploadBerkas({
     file,
     onChange,
+    multiple = false,
+    onFiles,
+    loading = false,
     accept = '.jpg,.jpeg,.png,.pdf',
     label = 'Pilih file',
     hint = 'JPG/PNG/PDF · maksimal 5 MB',
@@ -56,13 +62,21 @@ export default function UploadBerkas({
 
     return (
         <div>
-            <Upload accept={accept} showList={false} uploadLimit={1}
-                onChange={files => onChange(files[0] ?? null)}>
-                <Button type="button" variant="default" size="sm" icon={<HiOutlinePaperClip />}>{label}</Button>
+            <Upload accept={accept} showList={false} disabled={loading}
+                multiple={multiple} uploadLimit={multiple ? undefined : 1}
+                onChange={(semua, sebelumnya) => {
+                    if (multiple) {
+                        const baru = semua.slice(sebelumnya.length)
+                        if (baru.length > 0) onFiles?.(baru)
+                    } else {
+                        onChange?.(semua[0] ?? null)
+                    }
+                }}>
+                <Button type="button" variant="default" size="sm" icon={<HiOutlinePaperClip />} loading={loading}>{label}</Button>
             </Upload>
             {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
             {file && file.type.startsWith('image/') && (
-                <PratinjauGambar file={file} onRemove={() => onChange(null)} />
+                <PratinjauGambar file={file} onRemove={() => onChange?.(null)} />
             )}
             {file && !file.type.startsWith('image/') && (
                 <div className="flex items-center gap-2 mt-2">
@@ -70,7 +84,7 @@ export default function UploadBerkas({
                     <p className="text-xs text-gray-400 truncate">{file.name} · {ukuranMb(file)} MB</p>
                     <span
                         className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors shrink-0"
-                        onClick={() => onChange(null)}>
+                        onClick={() => onChange?.(null)}>
                         <HiOutlineTrash className="text-sm" />
                     </span>
                 </div>

@@ -310,7 +310,7 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
                     <div className="flex items-center justify-end gap-1">
                         <Tooltip title="Lihat Detail">
                             <span
-                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-gray-500/20 dark:text-gray-300 dark:hover:bg-gray-500/30 transition-colors"
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                                 onClick={() => setDetailTarget(p)}>
                                 <HiOutlineEye className="text-lg" />
                             </span>

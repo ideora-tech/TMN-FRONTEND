@@ -42,6 +42,7 @@ export default function PembelianDetailPage() {
     useEffect(() => { fetchData() }, [fetchData])
 
     const jalankan = async (aksi: () => Promise<unknown>, pesanSukses: string, tutup?: () => void) => {
+        if (submitting) return
         setSubmitting(true)
         try {
             await aksi()
@@ -78,9 +79,9 @@ export default function PembelianDetailPage() {
         }), 'Realisasi tersimpan, stok diperbarui', () => setRealisasiOpen(false))
     }
 
-    const handleUpload = (f: File | null) => {
-        if (!f) return
-        jalankan(() => pembelianSparepartService.uploadBukti(id, [f]), 'Bukti berhasil diunggah')
+    const handleUpload = (files: File[]) => {
+        if (files.length === 0) return
+        jalankan(() => pembelianSparepartService.uploadBukti(id, files), 'Bukti berhasil diunggah')
     }
 
     const handleHapus = () => {
@@ -130,16 +131,16 @@ export default function PembelianDetailPage() {
                     )}
                     {data.status === 'disetujui_finance' && bolehKelola && (
                         <>
-                            <UploadBerkas file={null} label="Upload Nota" hint={null}
-                                accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleUpload} />
+                            <UploadBerkas file={null} multiple loading={submitting} label="Upload Nota" hint={null}
+                                accept=".jpg,.jpeg,.png,.webp,.pdf" onFiles={handleUpload} />
                             <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
                                 Realisasi
                             </Button>
                         </>
                     )}
                     {data.status === 'dibeli' && bolehKelola && (
-                        <UploadBerkas file={null} label="Upload Nota" hint={null}
-                            accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleUpload} />
+                        <UploadBerkas file={null} multiple loading={submitting} label="Upload Nota" hint={null}
+                            accept=".jpg,.jpeg,.png,.webp,.pdf" onFiles={handleUpload} />
                     )}
                 </div>
             </div>
