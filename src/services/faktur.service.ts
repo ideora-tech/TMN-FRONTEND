@@ -16,6 +16,18 @@ export interface Faktur {
     tanggal_faktur?: string
     jatuh_tempo?: string
     items?: FakturItem[]
+    dibuat_pada?: string
+    diubah_pada?: string | null
+    dibuat_oleh_nama?: string | null
+    diubah_oleh_nama?: string | null
+    riwayat_status?: RiwayatFaktur[] | null
+}
+
+export interface RiwayatFaktur {
+    status: string
+    keterangan: string | null
+    waktu: string | null
+    oleh: string | null
 }
 
 export const fakturService = {
@@ -40,6 +52,14 @@ export const fakturService = {
         items: FakturItem[]
     }) {
         const { data } = await axios.post(API_ENDPOINTS.FAKTUR, payload)
+        return data.data as Faktur
+    },
+    async update(id: string, payload: {
+        tanggal_faktur?: string | null
+        jatuh_tempo?: string | null
+        items?: { deskripsi: string; qty: number; harga_satuan: number }[]
+    }) {
+        const { data } = await axios.put(API_ENDPOINTS.FAKTUR_DETAIL(id), payload)
         return data.data as Faktur
     },
     async updateStatus(id: string, status: string) {

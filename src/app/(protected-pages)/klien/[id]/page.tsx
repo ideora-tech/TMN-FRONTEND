@@ -341,20 +341,20 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
             {/* Riwayat Faktur */}
             <Card>
                 <div className="mb-1">
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Faktur</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Semua faktur yang pernah dibuat untuk klien ini</p>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Invoice</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Semua invoice yang pernah dibuat untuk klien ini</p>
                 </div>
 
                 {fakturLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
                 ) : fakturList.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada faktur untuk klien ini</p>
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada invoice untuk klien ini</p>
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">No. Faktur</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">No. Invoice</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jatuh Tempo</th>
                                     <th className="py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Total</th>

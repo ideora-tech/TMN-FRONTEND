@@ -239,7 +239,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                             terapkanDefaultUangJalan(row?.uang_jalan ?? defaultUangJalanPenugasan)
                         }} />
                 </FormItem>
-                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Terisi otomatis dari uang jalan penugasan/tarif rute — bisa diubah. Dasar settlement setelah trip selesai</span>}>
+                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Terisi otomatis dari uang jalan penugasan/tarif rute — bisa diubah. Menjadi dasar pengajuan uang jalan ke Keuangan</span>}>
                     <Input prefix="Rp" placeholder="0"
                         value={uangJalan ? formatNum(Number(uangJalan)) : ''}
                         onChange={e => { uangJalanManual.current = true; setUangJalan(e.target.value.replace(/\D/g, '')) }} />

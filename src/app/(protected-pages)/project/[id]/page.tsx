@@ -329,6 +329,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
                         estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
                         estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
+                        tanggal_mulai: tarif.tanggal_mulai ?? '',
                         tanggal_berakhir: tarif.tanggal_berakhir ?? '',
                         keterangan: tarif.keterangan ?? '',
                     },
@@ -530,7 +531,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {p.armada ? (
                         <div>
                             <p className="font-semibold text-gray-800 dark:text-gray-200">{p.armada.nopol}</p>
-                            <p className="text-xs text-gray-400">{p.armada.merk}</p>
+                            <p className="text-xs text-gray-400">{[p.armada.nama_jenis, p.armada.merk].filter(Boolean).join(' · ')}</p>
                         </div>
                     ) : (
                         <span className="font-mono text-xs text-gray-500">
@@ -769,12 +770,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
                             ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
                             ritaseSlot={
-                                <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                    <FormItem label="Ritase">
-                                        <Input type="number" min="1" value={ruteRitase}
-                                            onChange={e => setRuteRitase(e.target.value)} />
-                                    </FormItem>
-                                </div>
+                                <FormItem label="Ritase">
+                                    <Input type="number" min="1" value={ruteRitase}
+                                        onChange={e => setRuteRitase(e.target.value)} />
+                                </FormItem>
                             } />
                         <div className="mt-3">
                             <FormItem label="Keterangan">
@@ -879,18 +878,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }} />
 
             {/* Dialog Edit Rute Proyek */}
-            <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={520}>
+            <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={800}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <div className="max-h-[65vh] overflow-y-auto pr-1">
                     <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
                         ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
                         ritaseSlot={
-                            <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                <FormItem label="Ritase">
-                                    <Input type="number" min="1" value={editRuteRitase}
-                                        onChange={e => setEditRuteRitase(e.target.value)} />
-                                </FormItem>
-                            </div>
+                            <FormItem label="Ritase">
+                                <Input type="number" min="1" value={editRuteRitase}
+                                    onChange={e => setEditRuteRitase(e.target.value)} />
+                            </FormItem>
                         } />
                     <div className="mt-3">
                         <FormItem label="Keterangan">
@@ -954,9 +951,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                 ?? <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
-                                            {p.id_armada
-                                                ? (armadaMap[p.id_armada]?.nopol ?? p.id_armada.slice(0, 8))
-                                                : <span className="text-gray-400">—</span>}
+                                            {p.id_armada ? (
+                                                armadaMap[p.id_armada] ? (
+                                                    <div>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">{armadaMap[p.id_armada].nopol}</p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {[armadaMap[p.id_armada].nama_jenis, armadaMap[p.id_armada].merk].filter(Boolean).join(' · ')}
+                                                        </p>
+                                                    </div>
+                                                ) : p.id_armada.slice(0, 8)
+                                            ) : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
                                             {p.estimasi_biaya != null

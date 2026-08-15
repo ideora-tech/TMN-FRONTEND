@@ -129,9 +129,6 @@ export const API_ENDPOINTS = {
     TRIP:                 '/api/proxy/trip',
     TRIP_RINGKASAN_PROYEK: '/api/proxy/trip/ringkasan-proyek',
     TRIP_MULAI:    '/api/proxy/trip/mulai',
-    TRIP_SETTLEMENT:       '/api/proxy/trip/settlement',
-    TRIP_SETTLEMENT_LUNAS: (id: string) => `/api/proxy/trip/${id}/settlement/lunas`,
-    TRIP_SETTLEMENT_BATAL: (id: string) => `/api/proxy/trip/${id}/settlement/batal`,
     TRIP_UANG_JALAN:       (id: string) => `/api/proxy/trip/${id}/uang-jalan`,
     TRIP_DETAIL:   (id: string) => `/api/proxy/trip/${id}`,
     TRIP_CHECKIN:  (id: string) => `/api/proxy/trip/${id}/checkin`,
@@ -347,4 +344,8 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PENGAJUAN_SETUJUI:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/setujui`,
     ARUS_KAS_PENGAJUAN_TOLAK:    (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/tolak`,
     ARUS_KAS_PENGAJUAN_TRANSFER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/transfer`,
+
+    // Pemasukan
+    ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',
+    ARUS_KAS_PEMASUKAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pemasukan/${id}`,
 } as const

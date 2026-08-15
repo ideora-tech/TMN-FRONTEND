@@ -25,6 +25,7 @@ export type DetailBiayaForm = {
     estimasi_bbm: string
     estimasi_uang_jalan: string
     estimasi_biaya_lain: string
+    tanggal_mulai: string
     tanggal_berakhir: string
     keterangan: string
 }
@@ -117,6 +118,7 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
                         estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
                         estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
+                        tanggal_mulai: tarif.tanggal_mulai ?? '',
                         tanggal_berakhir: tarif.tanggal_berakhir ?? '',
                         keterangan: tarif.keterangan ?? '',
                     },
@@ -237,12 +239,31 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                     <p className="text-xs text-gray-400">
                         Tarif ditemukan — otomatis terisi dari tarif rute
                     </p>
-                    <FormItem label="Uang Jalan" asterisk className="mt-1">
-                        <Input prefix="Rp" placeholder="0"
-                            value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
-                            onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
-                    </FormItem>
-                    {ritaseSlot}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-1">
+                        <FormItem label="Uang Jalan" asterisk>
+                            <Input prefix="Rp" placeholder="0"
+                                value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
+                                onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
+                        </FormItem>
+                        {ritaseSlot}
+                        {value.detailBiaya && (
+                            <>
+                                <FormItem label="Tanggal Mulai Berlaku">
+                                    <DatePicker inputFormat="DD/MM/YYYY"
+                                        value={value.detailBiaya.tanggal_mulai ? dayjs(value.detailBiaya.tanggal_mulai).toDate() : null}
+                                        onChange={date => setDetailBiaya({ tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
+                                </FormItem>
+                                <FormItem label="Tanggal Berakhir">
+                                    <DatePicker inputFormat="DD/MM/YYYY"
+                                        value={value.detailBiaya.tanggal_berakhir ? dayjs(value.detailBiaya.tanggal_berakhir).toDate() : null}
+                                        onChange={date => setDetailBiaya({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
+                                </FormItem>
+                                <p className="text-xs text-gray-400 sm:col-span-2 -mt-1">
+                                    Tarif hanya berlaku untuk trip bertanggal dalam rentang ini — mundurkan tanggal mulai bila ada trip lama yang belum bertarif. Perubahan ikut berlaku di proyek lain yang memakai tarif ini.
+                                </p>
+                            </>
+                        )}
+                    </div>
 
                     {value.detailBiaya && (
                         <>
@@ -277,11 +298,6 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                             value={value.detailBiaya.estimasi_biaya_lain ? formatNum(Number(value.detailBiaya.estimasi_biaya_lain)) : ''}
                                             onChange={e => setDetailBiaya({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
                                     </FormItem>
-                                    <FormItem label="Tanggal Berakhir">
-                                        <DatePicker inputFormat="DD/MM/YYYY"
-                                            value={value.detailBiaya.tanggal_berakhir ? dayjs(value.detailBiaya.tanggal_berakhir).toDate() : null}
-                                            onChange={date => setDetailBiaya({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                                    </FormItem>
                                     <div className="sm:col-span-2">
                                         <FormItem label="Keterangan Tarif">
                                             <Input textArea value={value.detailBiaya.keterangan}
@@ -304,13 +320,21 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                 value={value.tarifBaru.harga ? formatNum(Number(value.tarifBaru.harga)) : ''}
                                 onChange={e => setTarifBaru({ harga: e.target.value.replace(/\D/g, '') })} />
                         </FormItem>
-                        <FormItem label="Tanggal Mulai" asterisk>
+                        {ritaseSlot}
+                        <FormItem label="Tanggal Mulai Berlaku" asterisk>
                             <DatePicker inputFormat="DD/MM/YYYY"
                                 value={value.tarifBaru.tanggal_mulai ? dayjs(value.tarifBaru.tanggal_mulai).toDate() : null}
                                 onChange={date => setTarifBaru({ tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
                         </FormItem>
+                        <FormItem label="Tanggal Berakhir">
+                            <DatePicker inputFormat="DD/MM/YYYY"
+                                value={value.tarifBaru.tanggal_berakhir ? dayjs(value.tarifBaru.tanggal_berakhir).toDate() : null}
+                                onChange={date => setTarifBaru({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
+                        </FormItem>
+                        <p className="text-xs text-gray-400 sm:col-span-2 -mt-1">
+                            Tarif hanya berlaku untuk trip bertanggal dalam rentang ini — mundurkan tanggal mulai bila ada trip lama yang belum bertarif.
+                        </p>
                     </div>
-                    {ritaseSlot}
 
                     <button type="button"
                         className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
@@ -340,11 +364,6 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                                     value={value.tarifBaru.estimasi_biaya_lain ? formatNum(Number(value.tarifBaru.estimasi_biaya_lain)) : ''}
                                     onChange={e => setTarifBaru({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
                             </FormItem>
-                            <FormItem label="Tanggal Berakhir">
-                                <DatePicker inputFormat="DD/MM/YYYY"
-                                    value={value.tarifBaru.tanggal_berakhir ? dayjs(value.tarifBaru.tanggal_berakhir).toDate() : null}
-                                    onChange={date => setTarifBaru({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                            </FormItem>
                             <div className="sm:col-span-2">
                                 <FormItem label="Keterangan Tarif">
                                     <Input textArea value={value.tarifBaru.keterangan}
@@ -367,6 +386,7 @@ export async function resolveTarifId(state: RuteTarifState, idKlien: string): Pr
                 estimasi_bbm: state.detailBiaya.estimasi_bbm === '' ? null : Number(state.detailBiaya.estimasi_bbm),
                 estimasi_uang_jalan: state.detailBiaya.estimasi_uang_jalan === '' ? null : Number(state.detailBiaya.estimasi_uang_jalan),
                 estimasi_biaya_lain: state.detailBiaya.estimasi_biaya_lain === '' ? null : Number(state.detailBiaya.estimasi_biaya_lain),
+                ...(state.detailBiaya.tanggal_mulai ? { tanggal_mulai: state.detailBiaya.tanggal_mulai } : {}),
                 tanggal_berakhir: state.detailBiaya.tanggal_berakhir || null,
                 keterangan: state.detailBiaya.keterangan || null,
             })
@@ -409,6 +429,7 @@ export function stateDariTarifBaru(idRute: string, t: TarifRute): RuteTarifState
             estimasi_bbm: t.estimasi_bbm != null ? String(t.estimasi_bbm) : '',
             estimasi_uang_jalan: t.estimasi_uang_jalan != null ? String(t.estimasi_uang_jalan) : '',
             estimasi_biaya_lain: t.estimasi_biaya_lain != null ? String(t.estimasi_biaya_lain) : '',
+            tanggal_mulai: t.tanggal_mulai ?? '',
             tanggal_berakhir: t.tanggal_berakhir ?? '',
             keterangan: t.keterangan ?? '',
         },

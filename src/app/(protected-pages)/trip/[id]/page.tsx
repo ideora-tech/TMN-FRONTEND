@@ -52,6 +52,30 @@ const MEKANISME_CLASS: Record<string, string> = {
     full:        'bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
 }
 
+const PENGAJUAN_LABEL: Record<string, string> = {
+    diajukan:   'Diajukan',
+    dicek:      'Dicek Keuangan',
+    disetujui:  'Disetujui',
+    ditolak:    'Ditolak',
+    ditransfer: 'Sudah Ditransfer',
+}
+
+const PENGAJUAN_TAG: Record<string, string> = {
+    diajukan:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
+    dicek:      'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    disetujui:  'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
+    ditolak:    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',
+    ditransfer: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+}
+
+const PENGAJUAN_BORDER: Record<string, string> = {
+    diajukan:   'border-l-yellow-400',
+    dicek:      'border-l-blue-400',
+    disetujui:  'border-l-indigo-400',
+    ditolak:    'border-l-red-400',
+    ditransfer: 'border-l-emerald-400',
+}
+
 const RIWAYAT_BORDER: Record<string, string> = {
     belum_mulai: 'border-l-blue-400',
     berjalan:    'border-l-emerald-400',
@@ -614,7 +638,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Titik Drop</p>
                         {trip.sudah_difakturkan && (
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah difakturkan</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah masuk invoice</p>
                         )}
                     </div>
                     <Button
@@ -684,6 +708,37 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                 )}
             </Card>
+
+            {trip?.pengajuan_uang_jalan && (
+                <Card>
+                    <div className="flex justify-between items-center mb-4">
+                        <div>
+                            <h5>Status Uang Jalan (Keuangan)</h5>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {trip.pengajuan_uang_jalan.nomor_pengajuan} — {formatRupiah(trip.pengajuan_uang_jalan.nominal)}
+                            </p>
+                        </div>
+                        <Tag className={`${PENGAJUAN_TAG[trip.pengajuan_uang_jalan.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0 font-semibold`}>
+                            {PENGAJUAN_LABEL[trip.pengajuan_uang_jalan.status] ?? trip.pengajuan_uang_jalan.status}
+                        </Tag>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        {trip.pengajuan_uang_jalan.riwayat.map((r, i) => (
+                            <div key={i}
+                                className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${PENGAJUAN_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
+                                <div className="flex justify-between items-start">
+                                    <Tag className={`${PENGAJUAN_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0`}>
+                                        {PENGAJUAN_LABEL[r.status] ?? r.status}
+                                    </Tag>
+                                    <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
+                                </div>
+                                {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
+                                {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
 
             <Card id="laporan-perjalanan-card">
                 <div className="flex justify-between items-center mb-4">
@@ -875,7 +930,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Tagihan Klien</p>
                                 {trip.sudah_difakturkan && (
-                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah difakturkan</p>
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Terkunci — trip sudah masuk invoice</p>
                                 )}
                             </div>
                             <Button
@@ -1175,7 +1230,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 )}
 
                 {trip.uang_jalan_alokasi != null && (
-                    <div className="grid grid-cols-1 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 sm:grid-cols-2">
                         <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
                             <div className="text-xs mb-1 text-gray-500">Uang Jalan (Alokasi)</div>
                             <div className="font-semibold text-sm">{formatRupiah(trip.uang_jalan_alokasi)}</div>
@@ -1196,14 +1251,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 </div>
                             )
                         })()}
-                        <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                            <div className="text-xs mb-1 text-gray-500">Settlement</div>
-                            <Tag className={trip.status_settlement === 'lunas'
-                                ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
-                                : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100'}>
-                                {trip.status_settlement === 'lunas' ? 'Lunas' : 'Belum Settle'}
-                            </Tag>
-                        </div>
                     </div>
                 )}
             </Card>
@@ -1218,27 +1265,29 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 <h5 className="text-base font-semibold mb-1">Ubah Titik Drop</h5>
                 <p className="text-xs text-gray-400 mb-4">Atur urutan titik drop untuk trip ini (maksimal 10 titik).</p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitTitikDrop() }}>
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-semibold">Titik Drop</p>
-                        <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
-                            disabled={titikDropForm.length >= 10} onClick={tambahTitikDrop}>Tambah Titik</Button>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        {titikDropForm.length === 0 ? (
-                            <p className="text-gray-400 text-xs py-2">Belum ada titik drop ditambahkan.</p>
-                        ) : (
-                            titikDropForm.map((lokasi, i) => (
-                                <div key={i} className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
-                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
-                                        onChange={e => ubahTitikDrop(i, e.target.value)} />
-                                    <button type="button" onClick={() => hapusTitikDrop(i)}
-                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
-                                        <HiOutlineTrash />
-                                    </button>
-                                </div>
-                            ))
-                        )}
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-semibold">Titik Drop</p>
+                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                disabled={titikDropForm.length >= 10} onClick={tambahTitikDrop}>Tambah Titik</Button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {titikDropForm.length === 0 ? (
+                                <p className="text-gray-400 text-xs py-2">Belum ada titik drop ditambahkan.</p>
+                            ) : (
+                                titikDropForm.map((lokasi, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                        <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                            onChange={e => ubahTitikDrop(i, e.target.value)} />
+                                        <button type="button" onClick={() => hapusTitikDrop(i)}
+                                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                            <HiOutlineTrash />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeTitikDropDialog}>Batal</Button>

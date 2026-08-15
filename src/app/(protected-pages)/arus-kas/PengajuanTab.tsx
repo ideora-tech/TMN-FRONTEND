@@ -403,51 +403,53 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
             <Dialog isOpen={isFormOpen} onRequestClose={closeForm} onClose={closeForm} width={640}>
                 <h5 className="text-base font-semibold mb-5">{editTarget ? 'Edit Pengajuan' : 'Tambah Pengajuan'}</h5>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitForm() }}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                        <FormItem label="Kategori" asterisk>
-                            <Select
-                                isSearchable={false}
-                                isDisabled={editOtomatis}
-                                placeholder="Pilih kategori..."
-                                options={kategoriFormOptions}
-                                value={kategoriFormOptions.find(o => o.value === form.kategori) ?? null}
-                                onChange={opt => setForm(p => ({ ...p, kategori: ((opt as { value: KategoriPengajuan } | null)?.value) ?? '' }))}
-                            />
-                            {editOtomatis && (
-                                <p className="text-xs text-gray-400 mt-1">Kategori pengajuan otomatis tidak dapat diubah</p>
-                            )}
-                        </FormItem>
-                        <FormItem label="Nominal" asterisk>
-                            <Input prefix="Rp" placeholder="0"
-                                value={form.nominal ? formatNum(Number(form.nominal)) : ''}
-                                onChange={e => setForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
-                        </FormItem>
-                        <FormItem label="Tanggal Pengajuan" asterisk>
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={form.tanggal_pengajuan ? dayjs(form.tanggal_pengajuan).toDate() : null}
-                                onChange={date => setForm(p => ({ ...p, tanggal_pengajuan: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                        </FormItem>
-                        <FormItem label="Penerima" asterisk>
-                            <Input placeholder="Nama penerima dana" value={form.penerima}
-                                onChange={e => setForm(p => ({ ...p, penerima: e.target.value }))} />
-                        </FormItem>
-                        <div className="sm:col-span-2">
-                            <FormItem label="Keterangan (opsional)">
-                                <Input textArea rows={3} placeholder="Catatan tambahan..." value={form.keterangan}
-                                    onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))} />
-                            </FormItem>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <FormItem label="Bukti (opsional)">
-                                <UploadBerkas
-                                    file={file}
-                                    label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
-                                    existingUrl={editTarget?.url_bukti ?? null}
-                                    existingLabel="Bukti saat ini"
-                                    emptyText={editTarget ? 'Belum ada bukti tersimpan' : null}
-                                    onChange={f => validasiFile(f, setFile)}
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                            <FormItem label="Kategori" asterisk>
+                                <Select
+                                    isSearchable={false}
+                                    isDisabled={editOtomatis}
+                                    placeholder="Pilih kategori..."
+                                    options={kategoriFormOptions}
+                                    value={kategoriFormOptions.find(o => o.value === form.kategori) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, kategori: ((opt as { value: KategoriPengajuan } | null)?.value) ?? '' }))}
                                 />
+                                {editOtomatis && (
+                                    <p className="text-xs text-gray-400 mt-1">Kategori pengajuan otomatis tidak dapat diubah</p>
+                                )}
                             </FormItem>
+                            <FormItem label="Nominal" asterisk>
+                                <Input prefix="Rp" placeholder="0"
+                                    value={form.nominal ? formatNum(Number(form.nominal)) : ''}
+                                    onChange={e => setForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Tanggal Pengajuan" asterisk>
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={form.tanggal_pengajuan ? dayjs(form.tanggal_pengajuan).toDate() : null}
+                                    onChange={date => setForm(p => ({ ...p, tanggal_pengajuan: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                            </FormItem>
+                            <FormItem label="Penerima" asterisk>
+                                <Input placeholder="Nama penerima dana" value={form.penerima}
+                                    onChange={e => setForm(p => ({ ...p, penerima: e.target.value }))} />
+                            </FormItem>
+                            <div className="sm:col-span-2">
+                                <FormItem label="Keterangan (opsional)">
+                                    <Input textArea rows={3} placeholder="Catatan tambahan..." value={form.keterangan}
+                                        onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))} />
+                                </FormItem>
+                            </div>
+                            <div className="sm:col-span-2">
+                                <FormItem label="Bukti (opsional)">
+                                    <UploadBerkas
+                                        file={file}
+                                        label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
+                                        existingUrl={editTarget?.url_bukti ?? null}
+                                        existingLabel="Bukti saat ini"
+                                        emptyText={editTarget ? 'Belum ada bukti tersimpan' : null}
+                                        onChange={f => validasiFile(f, setFile)}
+                                    />
+                                </FormItem>
+                            </div>
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">

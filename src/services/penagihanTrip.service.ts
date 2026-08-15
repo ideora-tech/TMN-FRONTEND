@@ -19,6 +19,7 @@ export interface BuatFakturPayload {
     trip_ids: string[]
     tanggal_faktur: string
     jatuh_tempo?: string | null
+    keterangan?: string | null
 }
 
 export const penagihanTripService = {

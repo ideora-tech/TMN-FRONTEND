@@ -138,6 +138,11 @@ export default function RiwayatTripTab() {
             ),
         },
         {
+            header: 'Klien', accessorKey: 'nama_klien', size: 150,
+            cell: ({ row }: CellContext<Trip, unknown>) =>
+                row.original.nama_klien ?? <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Rute', accessorKey: 'rute', size: 150,
             cell: ({ row }: CellContext<Trip, unknown>) =>
                 row.original.rute ?? <span className="text-gray-400">—</span>,

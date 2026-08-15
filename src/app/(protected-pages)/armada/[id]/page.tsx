@@ -1220,87 +1220,89 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             {/* Dialog Edit Perawatan */}
             <Dialog isOpen={!!editRawatTarget} onRequestClose={() => setEditRawatTarget(null)} onClose={() => setEditRawatTarget(null)} width={600}>
                 <h5 className="text-base font-semibold mb-5">Edit Perawatan</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Tanggal" asterisk>
-                        <DatePicker
-                            value={editRawatForm.tanggal ? new Date(editRawatForm.tanggal) : null}
-                            onChange={date => setEditRawatForm(p => ({ ...p, tanggal: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                    </FormItem>
-                    <FormItem label="Jenis Perawatan" asterisk>
-                        <Select isSearchable placeholder="Pilih jenis perawatan..."
-                            options={jenisPerawatanOptions}
-                            value={jenisPerawatanOptions.find(o => o.value === editRawatForm.id_jenis_perawatan) ?? null}
-                            onChange={opt => setEditRawatForm(p => ({ ...p, id_jenis_perawatan: opt?.value ?? '' }))} />
-                    </FormItem>
-                    <FormItem label="Biaya (Rp)">
-                        <Input prefix="Rp" placeholder="0"
-                            value={editRawatForm.biaya ? formatNum(Number(editRawatForm.biaya)) : ''}
-                            onChange={e => setEditRawatForm(p => ({ ...p, biaya: e.target.value.replace(/\D/g, '') }))} />
-                    </FormItem>
-                    <FormItem label="KM Odometer">
-                        <Input suffix="km" placeholder="0"
-                            value={editRawatForm.km_odometer}
-                            onChange={e => setEditRawatForm(p => ({ ...p, km_odometer: e.target.value.replace(/\D/g, '') }))} />
-                    </FormItem>
-                    <FormItem label="Status">
-                        <Select isSearchable={false}
-                            value={RAWAT_STATUS_OPTIONS.find(o => o.value === editRawatForm.status) ?? null}
-                            options={RAWAT_STATUS_OPTIONS}
-                            onChange={opt => opt && setEditRawatForm(p => ({ ...p, status: opt.value }))} />
-                    </FormItem>
-                    <FormItem label="Jadwal Servis Berikutnya">
-                        <DatePicker
-                            value={editRawatForm.jadwal_servis_berikutnya ? new Date(editRawatForm.jadwal_servis_berikutnya) : null}
-                            onChange={date => setEditRawatForm(p => ({ ...p, jadwal_servis_berikutnya: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                    </FormItem>
-                    <div className="sm:col-span-2">
-                        <FormItem label="Keterangan">
-                            <Input textArea value={editRawatForm.keterangan}
-                                onChange={e => setEditRawatForm(p => ({ ...p, keterangan: e.target.value }))} />
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                        <FormItem label="Tanggal" asterisk>
+                            <DatePicker
+                                value={editRawatForm.tanggal ? new Date(editRawatForm.tanggal) : null}
+                                onChange={date => setEditRawatForm(p => ({ ...p, tanggal: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                         </FormItem>
-                    </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
-                        <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={() => addItem(setEditRawatItems)}>Tambah Part</Button>
-                    </div>
-                    {editRawatLoading ? (
-                        <div className="flex justify-center py-4"><Spinner /></div>
-                    ) : editRawatItems.length === 0 ? (
-                        <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            {editRawatItems.map((it, idx) => (
-                                <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                    <div className="flex-1 min-w-0">
-                                        <Select placeholder="Pilih spare part..."
-                                            options={sparepartOptions}
-                                            value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
-                                            onChange={opt => pilihSparepart(setEditRawatItems, idx, opt?.value ?? '')} />
-                                    </div>
-                                    <Input className="w-full sm:w-24" type="number" min={1} placeholder="Qty"
-                                        value={it.qty}
-                                        onChange={e => updateItem(setEditRawatItems, idx, 'qty', e.target.value.replace(/\D/g, ''))} />
-                                    <Input className="w-full sm:w-40" prefix="Rp" placeholder="Harga/unit"
-                                        value={it.harga ? formatNum(Number(it.harga)) : ''}
-                                        onChange={e => updateItem(setEditRawatItems, idx, 'harga', e.target.value.replace(/\D/g, ''))} />
-                                    <div className="w-full sm:w-32 text-right text-sm font-medium whitespace-nowrap self-center">
-                                        {formatRupiah((Number(it.qty) || 0) * (Number(it.harga) || 0))}
-                                    </div>
-                                    <span
-                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0 self-center"
-                                        onClick={() => removeItem(setEditRawatItems, idx)}>
-                                        <HiOutlineTrash className="text-base" />
-                                    </span>
-                                </div>
-                            ))}
-                            <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
-                                <p className="text-sm">Total Spare Part: <span className="font-bold">{formatRupiah(totalSparepart(editRawatItems))}</span></p>
-                            </div>
+                        <FormItem label="Jenis Perawatan" asterisk>
+                            <Select isSearchable placeholder="Pilih jenis perawatan..."
+                                options={jenisPerawatanOptions}
+                                value={jenisPerawatanOptions.find(o => o.value === editRawatForm.id_jenis_perawatan) ?? null}
+                                onChange={opt => setEditRawatForm(p => ({ ...p, id_jenis_perawatan: opt?.value ?? '' }))} />
+                        </FormItem>
+                        <FormItem label="Biaya (Rp)">
+                            <Input prefix="Rp" placeholder="0"
+                                value={editRawatForm.biaya ? formatNum(Number(editRawatForm.biaya)) : ''}
+                                onChange={e => setEditRawatForm(p => ({ ...p, biaya: e.target.value.replace(/\D/g, '') }))} />
+                        </FormItem>
+                        <FormItem label="KM Odometer">
+                            <Input suffix="km" placeholder="0"
+                                value={editRawatForm.km_odometer}
+                                onChange={e => setEditRawatForm(p => ({ ...p, km_odometer: e.target.value.replace(/\D/g, '') }))} />
+                        </FormItem>
+                        <FormItem label="Status">
+                            <Select isSearchable={false}
+                                value={RAWAT_STATUS_OPTIONS.find(o => o.value === editRawatForm.status) ?? null}
+                                options={RAWAT_STATUS_OPTIONS}
+                                onChange={opt => opt && setEditRawatForm(p => ({ ...p, status: opt.value }))} />
+                        </FormItem>
+                        <FormItem label="Jadwal Servis Berikutnya">
+                            <DatePicker
+                                value={editRawatForm.jadwal_servis_berikutnya ? new Date(editRawatForm.jadwal_servis_berikutnya) : null}
+                                onChange={date => setEditRawatForm(p => ({ ...p, jadwal_servis_berikutnya: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                        </FormItem>
+                        <div className="sm:col-span-2">
+                            <FormItem label="Keterangan">
+                                <Input textArea value={editRawatForm.keterangan}
+                                    onChange={e => setEditRawatForm(p => ({ ...p, keterangan: e.target.value }))} />
+                            </FormItem>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
+                            <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={() => addItem(setEditRawatItems)}>Tambah Part</Button>
+                        </div>
+                        {editRawatLoading ? (
+                            <div className="flex justify-center py-4"><Spinner /></div>
+                        ) : editRawatItems.length === 0 ? (
+                            <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {editRawatItems.map((it, idx) => (
+                                    <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <Select placeholder="Pilih spare part..."
+                                                options={sparepartOptions}
+                                                value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
+                                                onChange={opt => pilihSparepart(setEditRawatItems, idx, opt?.value ?? '')} />
+                                        </div>
+                                        <Input className="w-full sm:w-24" type="number" min={1} placeholder="Qty"
+                                            value={it.qty}
+                                            onChange={e => updateItem(setEditRawatItems, idx, 'qty', e.target.value.replace(/\D/g, ''))} />
+                                        <Input className="w-full sm:w-40" prefix="Rp" placeholder="Harga/unit"
+                                            value={it.harga ? formatNum(Number(it.harga)) : ''}
+                                            onChange={e => updateItem(setEditRawatItems, idx, 'harga', e.target.value.replace(/\D/g, ''))} />
+                                        <div className="w-full sm:w-32 text-right text-sm font-medium whitespace-nowrap self-center">
+                                            {formatRupiah((Number(it.qty) || 0) * (Number(it.harga) || 0))}
+                                        </div>
+                                        <span
+                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors flex-shrink-0 self-center"
+                                            onClick={() => removeItem(setEditRawatItems, idx)}>
+                                            <HiOutlineTrash className="text-base" />
+                                        </span>
+                                    </div>
+                                ))}
+                                <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+                                    <p className="text-sm">Total Spare Part: <span className="font-bold">{formatRupiah(totalSparepart(editRawatItems))}</span></p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

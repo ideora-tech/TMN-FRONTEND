@@ -496,7 +496,9 @@ export default function PenugasanPage() {
                 return arm ? (
                     <div>
                         <p className="font-semibold">{arm.nopol}</p>
-                        <p className="text-xs text-gray-400">{arm.merk} {arm.model ?? ''}</p>
+                        <p className="text-xs text-gray-400">
+                            {[arm.nama_jenis, `${arm.merk ?? ''} ${arm.model ?? ''}`.trim()].filter(Boolean).join(' · ')}
+                        </p>
                     </div>
                 ) : <span className="text-gray-400">—</span>
             },
@@ -593,7 +595,7 @@ export default function PenugasanPage() {
                     {p.armada ? (
                         <div>
                             <p className="font-semibold text-gray-800 dark:text-gray-200">{p.armada.nopol}</p>
-                            <p className="text-xs text-gray-400">{p.armada.merk}</p>
+                            <p className="text-xs text-gray-400">{[p.armada.nama_jenis, p.armada.merk].filter(Boolean).join(' · ')}</p>
                         </div>
                     ) : (
                         <span className="font-mono text-xs text-gray-500">
@@ -740,7 +742,7 @@ export default function PenugasanPage() {
                             {hasilUbahStatus.sukses} berhasil, {hasilUbahStatus.gagal.length} gagal.
                             {hasilUbahStatus.sukses > 0 && ' Perubahan yang berhasil tetap tersimpan.'}
                         </p>
-                        <div className="overflow-x-auto">
+                        <div className="max-h-[65vh] overflow-x-auto overflow-y-auto pr-1">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
@@ -774,6 +776,7 @@ export default function PenugasanPage() {
                     Jadwal harian per tanggal diatur belakangan di tab Papan Jadwal.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitCreate() }}>
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
                     {pasanganLoading ? (
                         <div className="py-12 flex items-center justify-center">
                             <Spinner size={32} />
@@ -904,6 +907,7 @@ export default function PenugasanPage() {
                             </div>
                         </>
                     )}
+                    </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeCreateDialog}>Batal</Button>
                         <Button type="submit" variant="solid" loading={createSubmitting}
@@ -920,6 +924,7 @@ export default function PenugasanPage() {
                     Ubah armada, supir, uang jalan, atau status penugasan ini.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitEdit() }}>
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
                     {pasanganLoading ? (
                         <div className="py-12 flex items-center justify-center">
                             <Spinner size={32} />
@@ -997,6 +1002,7 @@ export default function PenugasanPage() {
                             </div>
                         </div>
                     )}
+                    </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={closeEditDialog}>Batal</Button>
                         <Button type="submit" variant="solid" loading={editSubmitting}
@@ -1015,7 +1021,7 @@ export default function PenugasanPage() {
                             {hasilPenugasan.sukses} berhasil, {hasilPenugasan.gagal.length} gagal.
                             {hasilPenugasan.sukses > 0 && ' Penugasan yang berhasil tetap tersimpan.'}
                         </p>
-                        <div className="overflow-x-auto">
+                        <div className="max-h-[65vh] overflow-x-auto overflow-y-auto pr-1">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">

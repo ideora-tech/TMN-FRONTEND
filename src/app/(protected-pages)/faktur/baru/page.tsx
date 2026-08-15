@@ -61,7 +61,7 @@ export default function FakturBaruPage() {
 
     const validate = () => {
         const e: Partial<typeof form> = {}
-        if (!form.nomor_faktur.trim()) e.nomor_faktur = 'Nomor faktur wajib diisi'
+        if (!form.nomor_faktur.trim()) e.nomor_faktur = 'Nomor invoice wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -99,7 +99,7 @@ export default function FakturBaruPage() {
                 id_proyek:      form.id_proyek || undefined,
                 items,
             })
-            toast.push(<Notification type="success" title="Faktur berhasil dibuat" />)
+            toast.push(<Notification type="success" title="Invoice berhasil dibuat" />)
             router.push(ROUTES.FAKTUR)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -120,15 +120,15 @@ export default function FakturBaruPage() {
                         <PiReceiptDuotone />
                     </span>
                     <div>
-                        <h3 className="font-bold">Buat Faktur</h3>
-                        <p className="text-gray-500 text-sm mt-0.5">Buat faktur baru untuk klien</p>
+                        <h3 className="font-bold">Buat Invoice</h3>
+                        <p className="text-gray-500 text-sm mt-0.5">Buat invoice baru untuk klien</p>
                     </div>
                 </div>
             </div>
 
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }} className="flex flex-col gap-6">
                 {/* Header faktur */}
-                <Card header={{ content: 'Informasi Faktur' }}>
+                <Card header={{ content: 'Informasi Invoice' }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1 mb-4">
                         <FormItem label="Klien">
                             <Select placeholder="Pilih klien (opsional)..." options={klienOptions}
@@ -154,11 +154,11 @@ export default function FakturBaruPage() {
                         </FormItem>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-1">
-                        <FormItem label="Nomor Faktur" asterisk invalid={!!errors.nomor_faktur} errorMessage={errors.nomor_faktur}>
+                        <FormItem label="Nomor Invoice" asterisk invalid={!!errors.nomor_faktur} errorMessage={errors.nomor_faktur}>
                             <Input placeholder="INV-001" value={form.nomor_faktur} invalid={!!errors.nomor_faktur}
                                 onChange={e => setForm(p => ({ ...p, nomor_faktur: e.target.value }))} />
                         </FormItem>
-                        <FormItem label="Tanggal Faktur">
+                        <FormItem label="Tanggal Invoice">
                             <DatePicker
                                 value={form.tanggal_faktur ? new Date(form.tanggal_faktur) : null}
                                 onChange={date => setForm(p => ({ ...p, tanggal_faktur: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
@@ -174,7 +174,7 @@ export default function FakturBaruPage() {
                 {/* Item faktur */}
                 <Card
                     header={{
-                        content: 'Item Faktur',
+                        content: 'Item Invoice',
                         extra: (
                             <Button type="button" variant="plain" size="sm" icon={<HiPlusCircle />}
                                 onClick={() => setItems(p => [...p, emptyItem()])}>
@@ -235,7 +235,7 @@ export default function FakturBaruPage() {
 
                     <div className="flex justify-end gap-2 px-5 pb-5">
                         <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={loading}>Simpan Faktur</Button>
+                        <Button type="submit" variant="solid" loading={loading}>Simpan Invoice</Button>
                     </div>
                 </Card>
             </form>

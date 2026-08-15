@@ -8,6 +8,14 @@ export type SumberArusKas =
     | 'faktur'
     | 'pengajuan_pengeluaran'
     | 'pembayaran_vendor'
+    | 'pemasukan_manual'
+
+export type KategoriPemasukan =
+    | 'pendapatan_jasa'
+    | 'penjualan_aset'
+    | 'pengembalian_dana'
+    | 'modal_pinjaman'
+    | 'lainnya'
 
 export interface PengajuanPengeluaran {
     id_pengajuan: string
@@ -54,7 +62,7 @@ export interface TransaksiArusKas {
     tanggal: string
     arah: ArahArusKas
     sumber: SumberArusKas
-    kategori: KategoriPengajuan | null
+    kategori: KategoriPengajuan | KategoriPemasukan | null
     nominal: number
     referensi: ReferensiTransaksi
     keterangan: string | null
@@ -73,12 +81,58 @@ export interface ArusKasRekap {
     transaksi: TransaksiArusKas[]
 }
 
+export interface PemasukanRow {
+    jenis: 'invoice' | 'manual'
+    id: string
+    nomor: string
+    kategori: KategoriPemasukan | null
+    tanggal: string
+    nominal: number
+    sumber_dana: string | null
+    keterangan: string | null
+    url_bukti: string | null
+    dapat_diubah: boolean
+}
+
+export interface Pemasukan {
+    id_pemasukan: string
+    id_perusahaan: string
+    nomor_pemasukan: string
+    kategori: KategoriPemasukan
+    tanggal: string
+    nominal: number
+    sumber_dana: string
+    keterangan: string | null
+    url_bukti: string | null
+    dibuat_pada: string
+    diubah_pada: string | null
+}
+
+export type PemasukanPayload = {
+    kategori: KategoriPemasukan
+    nominal: number
+    tanggal: string
+    sumber_dana: string
+    keterangan?: string | null
+}
+
 function buildPengajuanFormData(payload: Partial<PengajuanPayload>, bukti?: File | null): FormData {
     const fd = new FormData()
     if (payload.kategori !== undefined) fd.append('kategori', payload.kategori)
     if (payload.nominal !== undefined) fd.append('nominal', String(payload.nominal))
     if (payload.tanggal_pengajuan !== undefined) fd.append('tanggal_pengajuan', payload.tanggal_pengajuan)
     if (payload.penerima !== undefined) fd.append('penerima', payload.penerima)
+    if (payload.keterangan) fd.append('keterangan', payload.keterangan)
+    if (bukti) fd.append('bukti', bukti)
+    return fd
+}
+
+function buildPemasukanFormData(payload: Partial<PemasukanPayload>, bukti?: File | null): FormData {
+    const fd = new FormData()
+    if (payload.kategori !== undefined) fd.append('kategori', payload.kategori)
+    if (payload.nominal !== undefined) fd.append('nominal', String(payload.nominal))
+    if (payload.tanggal !== undefined) fd.append('tanggal', payload.tanggal)
+    if (payload.sumber_dana !== undefined) fd.append('sumber_dana', payload.sumber_dana)
     if (payload.keterangan) fd.append('keterangan', payload.keterangan)
     if (bukti) fd.append('bukti', bukti)
     return fd
@@ -176,5 +230,38 @@ export const arusKasService = {
         }
         const { data } = await axios.patch(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_TRANSFER(id), { tanggal_transfer })
         return data.data as PengajuanPengeluaran
+    },
+
+    async listPemasukan(params?: { dari?: string; sampai?: string; jenis?: 'invoice' | 'manual'; kategori?: KategoriPemasukan }) {
+        const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PEMASUKAN, {
+            params: {
+                dari: params?.dari || undefined,
+                sampai: params?.sampai || undefined,
+                jenis: params?.jenis || undefined,
+                kategori: params?.kategori || undefined,
+            },
+        })
+        return data.data as PemasukanRow[]
+    },
+
+    async createPemasukan(payload: PemasukanPayload, bukti?: File | null) {
+        const body = bukti ? buildPemasukanFormData(payload, bukti) : payload
+        const { data } = await axios.post(API_ENDPOINTS.ARUS_KAS_PEMASUKAN, body)
+        return data.data as Pemasukan
+    },
+
+    async updatePemasukan(id: string, payload: Partial<PemasukanPayload>, bukti?: File | null) {
+        if (bukti) {
+            const fd = buildPemasukanFormData(payload, bukti)
+            fd.append('_method', 'PUT')
+            const { data } = await axios.post(API_ENDPOINTS.ARUS_KAS_PEMASUKAN_DETAIL(id), fd)
+            return data.data as Pemasukan
+        }
+        const { data } = await axios.put(API_ENDPOINTS.ARUS_KAS_PEMASUKAN_DETAIL(id), payload)
+        return data.data as Pemasukan
+    },
+
+    async deletePemasukan(id: string) {
+        await axios.delete(API_ENDPOINTS.ARUS_KAS_PEMASUKAN_DETAIL(id))
     },
 }

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import dayjs from 'dayjs'
-import { Card, Button, Tag, Checkbox, Dialog, FormItem, Spinner, toast, Notification } from '@/components/ui'
+import { Card, Button, Tag, Checkbox, Dialog, FormItem, Input, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
@@ -46,6 +46,7 @@ export default function KonsolidasiKlienPage() {
     const [dialogOpen, setDialogOpen]       = useState(false)
     const [tanggalFaktur, setTanggalFaktur] = useState(dayjs().format('YYYY-MM-DD'))
     const [jatuhTempo, setJatuhTempo]       = useState('')
+    const [keteranganInvoice, setKeteranganInvoice] = useState('')
     const [submitting, setSubmitting]       = useState(false)
 
     const [rekap, setRekap]     = useState<KonsolidasiKlienRekap | null>(null)
@@ -138,8 +139,9 @@ export default function KonsolidasiKlienPage() {
                 trip_ids:       selectedIds,
                 tanggal_faktur: tanggalFaktur,
                 jatuh_tempo:    jatuhTempo || null,
+                keterangan:     keteranganInvoice.trim() || null,
             })
-            toast.push(<Notification type="success" title="Draft faktur berhasil dibuat" />)
+            toast.push(<Notification type="success" title="Draft invoice berhasil dibuat" />)
             router.push(ROUTES.FAKTUR_DETAIL(faktur.id_faktur))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -248,7 +250,7 @@ export default function KonsolidasiKlienPage() {
                 <Tag className={`text-xs font-semibold ${row.original.sudah_difakturkan
                     ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
                     : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300'}`}>
-                    {row.original.sudah_difakturkan ? 'Sudah difakturkan' : 'Belum'}
+                    {row.original.sudah_difakturkan ? 'Sudah masuk invoice' : 'Belum'}
                 </Tag>
             ),
         },
@@ -261,7 +263,7 @@ export default function KonsolidasiKlienPage() {
             <div>
                 <h3 className="font-bold">Konsolidasi Klien</h3>
                 <p className="text-gray-500 text-sm mt-0.5">
-                    Rekap laporan perjalanan per klien — cocokkan dengan klien, lalu pilih trip untuk dibuat draft faktur
+                    Rekap laporan perjalanan per klien — cocokkan dengan klien, lalu pilih trip untuk dibuat draft invoice
                 </p>
             </div>
 
@@ -286,7 +288,14 @@ export default function KonsolidasiKlienPage() {
                     <div className="flex items-center gap-2">
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={dari ? dayjs(dari).toDate() : null}
-                            onChange={date => setDari(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                            onChange={date => {
+                                if (date) {
+                                    setDari(dayjs(date).format('YYYY-MM-DD'))
+                                    setSampai(dayjs(date).endOf('month').format('YYYY-MM-DD'))
+                                } else {
+                                    setDari('')
+                                }
+                            }} />
                         <span className="text-gray-400 text-sm">s/d</span>
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={sampai ? dayjs(sampai).toDate() : null}
@@ -356,32 +365,45 @@ export default function KonsolidasiKlienPage() {
                             <span className="font-semibold">{formatRupiah(totalEstimasi)}</span>
                         </p>
                         <Button size="sm" variant="solid" icon={<HiPlusCircle />}
-                            onClick={() => { setTanggalFaktur(dayjs().format('YYYY-MM-DD')); setJatuhTempo(''); setDialogOpen(true) }}>
-                            Buat Draft Faktur
+                            onClick={() => { setTanggalFaktur(dayjs().format('YYYY-MM-DD')); setJatuhTempo(''); setKeteranganInvoice(''); setDialogOpen(true) }}>
+                            Buat Draft Invoice
                         </Button>
                     </div>
                 )}
             </Card>
 
-            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={440}>
-                <h5 className="text-base font-semibold mb-2">Buat Draft Faktur</h5>
+            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={800}>
+                <h5 className="text-base font-semibold mb-2">Buat Draft Invoice</h5>
                 <p className="text-xs text-gray-500 mb-5">
-                    {selectedIds.length} trip akan dimasukkan ke draft faktur — item digrup per rute dan masih bisa diedit sebelum dikirim.
+                    {selectedIds.length} trip senilai {formatRupiah(totalEstimasi)} akan dijadikan satu item total di draft invoice.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleBuatFaktur() }}>
-                    <FormItem label="Tanggal Faktur" asterisk>
-                        <DatePicker inputFormat="DD/MM/YYYY"
-                            value={tanggalFaktur ? dayjs(tanggalFaktur).toDate() : null}
-                            onChange={date => setTanggalFaktur(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
-                    </FormItem>
-                    <FormItem label="Jatuh Tempo (opsional)">
-                        <DatePicker inputFormat="DD/MM/YYYY"
-                            value={jatuhTempo ? dayjs(jatuhTempo).toDate() : null}
-                            onChange={date => setJatuhTempo(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
-                    </FormItem>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                        <FormItem label="Tanggal Invoice" asterisk>
+                            <DatePicker inputFormat="DD/MM/YYYY"
+                                value={tanggalFaktur ? dayjs(tanggalFaktur).toDate() : null}
+                                onChange={date => setTanggalFaktur(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                        </FormItem>
+                        <FormItem label="Jatuh Tempo (opsional)">
+                            <DatePicker inputFormat="DD/MM/YYYY"
+                                value={jatuhTempo ? dayjs(jatuhTempo).toDate() : null}
+                                onChange={date => setJatuhTempo(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                        </FormItem>
+                        <div className="sm:col-span-2">
+                            <FormItem label="Uraian Invoice (opsional)">
+                                <Input textArea rows={3} maxLength={300}
+                                    placeholder="Contoh: Jasa Angkutan Unit Dedicated Project Astro Cibitung Periode Juli 2026"
+                                    value={keteranganInvoice}
+                                    onChange={e => setKeteranganInvoice(e.target.value)} />
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Tampil sebagai deskripsi item di invoice — kosongkan untuk memakai teks otomatis.
+                                </p>
+                            </FormItem>
+                        </div>
+                    </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={submitting} disabled={!tanggalFaktur}>Buat Faktur</Button>
+                        <Button type="submit" variant="solid" loading={submitting} disabled={!tanggalFaktur}>Buat Invoice</Button>
                     </div>
                 </form>
             </Dialog>

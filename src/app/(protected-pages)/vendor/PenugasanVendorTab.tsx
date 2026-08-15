@@ -778,6 +778,7 @@ export default function PenugasanVendorTab() {
                     {mekanismeEdit ? ` — ${MEKANISME_LABEL[mekanismeEdit] ?? mekanismeEdit}` : ''}
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitEdit() }}>
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
                     <FormItem label={mekanismeEdit === 'unit_only' ? 'Supir (internal)' : 'Supir Vendor'}>
                         <Select<Option>
                             placeholder="Pilih supir..."
@@ -836,6 +837,7 @@ export default function PenugasanVendorTab() {
                             ))}
                         </div>
                     </div>
+                    </div>
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>
@@ -865,7 +867,7 @@ export default function PenugasanVendorTab() {
                             {hasilUbahStatus.sukses} berhasil, {hasilUbahStatus.gagal.length} gagal.
                             {hasilUbahStatus.sukses > 0 && ' Perubahan yang berhasil tetap tersimpan.'}
                         </p>
-                        <div className="overflow-x-auto">
+                        <div className="max-h-[65vh] overflow-x-auto overflow-y-auto pr-1">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr className="border-b border-gray-100 dark:border-gray-700">
@@ -898,6 +900,7 @@ export default function PenugasanVendorTab() {
                     Pilih kontrak, centang unit vendor, lalu tentukan tanggal tugas.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitCreate() }}>
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                         <FormItem label="Vendor" asterisk invalid={!!dlgErrors.id_vendor} errorMessage={dlgErrors.id_vendor}>
                             <Select<Option>
@@ -1050,6 +1053,7 @@ export default function PenugasanVendorTab() {
                                 </div>
                             ))}
                         </div>
+                    </div>
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

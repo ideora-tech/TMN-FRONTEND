@@ -308,6 +308,7 @@ export default function PengajuanTab() {
             <Dialog isOpen={formOpen} onRequestClose={() => setFormOpen(false)} onClose={() => setFormOpen(false)}>
                 <h5 className="font-bold mb-4">Ajukan Cuti</h5>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Untuk" asterisk>
                         <Select isSearchable={false}
@@ -358,6 +359,7 @@ export default function PengajuanTab() {
                                 onChange={e => setForm(p => ({ ...p, alasan: e.target.value }))} />
                         </FormItem>
                     </div>
+                </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Batal</Button>

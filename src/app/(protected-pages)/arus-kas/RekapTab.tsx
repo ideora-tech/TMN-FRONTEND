@@ -1,12 +1,12 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dayjs from 'dayjs'
-import { Card, Button, Tag, Spinner, toast, Notification } from '@/components/ui'
+import { Card, Button, Tag, Tooltip, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlineDownload, HiOutlineEye } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -14,16 +14,21 @@ import {
     arusKasService,
     ArahArusKas,
     ArusKasRekap,
+    KategoriPemasukan,
     KategoriPengajuan,
+    PengajuanPengeluaran,
     SumberArusKas,
     TransaksiArusKas,
 } from '@/services/arusKas.service'
+import DetailPengajuanDialog from './DetailPengajuanDialog'
+import DetailTransaksiDialog, { DetailTransaksi } from './DetailTransaksiDialog'
+import { KATEGORI_PEMASUKAN_META, PEMASUKAN_MANUAL_TAG } from './pemasukanMeta'
 
 type Option = { value: string; label: string }
 
 const SUMBER_META: Record<SumberArusKas, { label: string; tag: string; route?: (id: string) => string }> = {
     faktur: {
-        label: 'Faktur',
+        label: 'Invoice',
         tag: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300',
         route: id => ROUTES.FAKTUR_DETAIL(id),
     },
@@ -36,6 +41,11 @@ const SUMBER_META: Record<SumberArusKas, { label: string; tag: string; route?: (
         label: 'Vendor',
         tag: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300',
         route: id => ROUTES.INVOICE_VENDOR_DETAIL(id),
+    },
+    pemasukan_manual: {
+        label: 'Pemasukan Manual',
+        tag: PEMASUKAN_MANUAL_TAG,
+        route: () => `${ROUTES.ARUS_KAS}?tab=pemasukan`,
     },
 }
 
@@ -88,6 +98,40 @@ export default function RekapTab() {
     const [exporting, setExporting] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
+    const [detailPengajuan, setDetailPengajuan] = useState<PengajuanPengeluaran | null>(null)
+    const [detailTransaksi, setDetailTransaksi] = useState<DetailTransaksi | null>(null)
+    const [logLoadingId, setLogLoadingId] = useState<string | null>(null)
+
+    const bukaLog = async (t: TransaksiArusKas) => {
+        if (t.sumber === 'pengajuan_pengeluaran' && t.referensi.id) {
+            setLogLoadingId(t.referensi.id)
+            try {
+                setDetailPengajuan(await arusKasService.getPengajuan(t.referensi.id))
+            } catch (err) {
+                toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            } finally {
+                setLogLoadingId(null)
+            }
+            return
+        }
+        const meta = SUMBER_META[t.sumber]
+        const kategoriLabel = t.sumber === 'pemasukan_manual' && t.kategori
+            ? KATEGORI_PEMASUKAN_META[t.kategori as KategoriPemasukan].label
+            : null
+        setDetailTransaksi({
+            tanggal: t.tanggal,
+            arah: t.arah,
+            sumberLabel: meta.label,
+            sumberTagClass: meta.tag,
+            kategoriLabel,
+            nomor: t.referensi.label ?? null,
+            referensiHref: t.referensi.id && meta.route ? meta.route(t.referensi.id) : null,
+            sumberDana: null,
+            keterangan: t.keterangan,
+            nominal: t.nominal,
+            url_bukti: t.url_bukti,
+        })
+    }
 
     const reqRef = useRef(0)
     const fetchRekap = useCallback(async () => {
@@ -147,7 +191,11 @@ export default function RekapTab() {
             cell: ({ row }) => {
                 const t = row.original
                 if (t.sumber === 'pengajuan_pengeluaran' && t.kategori) {
-                    const km = KATEGORI_TAG_META[t.kategori]
+                    const km = KATEGORI_TAG_META[t.kategori as KategoriPengajuan]
+                    return <Tag className={`text-xs font-semibold ${km.tag}`}>{km.label}</Tag>
+                }
+                if (t.sumber === 'pemasukan_manual' && t.kategori) {
+                    const km = KATEGORI_PEMASUKAN_META[t.kategori as KategoriPemasukan]
                     return <Tag className={`text-xs font-semibold ${km.tag}`}>{km.label}</Tag>
                 }
                 const meta = SUMBER_META[t.sumber]
@@ -182,6 +230,24 @@ export default function RekapTab() {
                     }`}>
                         {masuk ? '+ ' : '- '}{formatRupiah(t.nominal)}
                     </span>
+                )
+            },
+        },
+        {
+            header: '', id: 'aksi', size: 70,
+            cell: ({ row }) => {
+                const t = row.original
+                const loadingLog = logLoadingId !== null && logLoadingId === t.referensi.id
+                return (
+                    <div className="flex items-center justify-end">
+                        <Tooltip title="Lihat Detail">
+                            <span
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                onClick={() => bukaLog(t)}>
+                                {loadingLog ? <Spinner size={16} /> : <HiOutlineEye className="text-lg" />}
+                            </span>
+                        </Tooltip>
+                    </div>
                 )
             },
         },
@@ -267,6 +333,8 @@ export default function RekapTab() {
                     </>
                 )}
             </Card>
+            <DetailPengajuanDialog pengajuan={detailPengajuan} onClose={() => setDetailPengajuan(null)} />
+            <DetailTransaksiDialog transaksi={detailTransaksi} onClose={() => setDetailTransaksi(null)} />
         </div>
     )
 }

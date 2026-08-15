@@ -93,7 +93,7 @@ export default function FakturPage() {
                 (currentPage - 1) * pageSize + row.index + 1,
         },
         {
-            header: 'Nomor Faktur', accessorKey: 'nomor_faktur', size: 200,
+            header: 'Nomor Invoice', accessorKey: 'nomor_faktur', size: 200,
             cell: ({ row }: CellContext<Faktur, unknown>) => (
                 <span className="font-mono font-semibold">{row.original.nomor_faktur}</span>
             ),
@@ -151,22 +151,22 @@ export default function FakturPage() {
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h3 className="font-bold">Faktur</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Kelola faktur dan penagihan klien</p>
+                    <h3 className="font-bold">Invoice</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola invoice dan penagihan klien</p>
                 </div>
                 <Button
                     variant="solid" size="sm"
                     icon={<HiPlusCircle />}
                     onClick={() => router.push(ROUTES.FAKTUR_BARU)}
                 >
-                    Buat Faktur
+                    Buat Invoice
                 </Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
-                        placeholder="Cari nomor faktur... (tekan Enter)"
+                        placeholder="Cari nomor invoice... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />

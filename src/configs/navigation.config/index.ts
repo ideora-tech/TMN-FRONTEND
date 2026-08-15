@@ -196,7 +196,7 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'faktur', path: '/faktur', title: 'Faktur',
+        key: 'faktur', path: '/faktur', title: 'Invoice',
         translateKey: 'nav.faktur', icon: 'receipt',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],

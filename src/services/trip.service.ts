@@ -17,33 +17,28 @@ export interface Trip {
     status: 'belum_mulai' | 'berjalan' | 'selesai' | 'dibatalkan'
     catatan?: string
     uang_jalan_alokasi?: number | null
-    status_settlement?: 'belum' | 'lunas'
-    settlement_pada?: string | null
-    catatan_settlement?: string | null
     sumber?: 'internal' | 'vendor'
     vendor_nama?: string | null
     mekanisme?: 'unit_only' | 'unit_driver' | 'full' | null
     id_penugasan?: string | null
     titik_drop?: string[]
     sudah_difakturkan?: boolean
+    pengajuan_uang_jalan?: PengajuanUangJalanTrip | null
 }
 
-export interface SettlementTrip {
-    id_trip: string
-    rute: string | null
-    waktu_berangkat: string | null
-    waktu_checkout: string | null
-    nama_proyek: string
-    kode_proyek: string | null
-    supir_nama: string | null
-    armada_nopol: string | null
-    uang_jalan_alokasi: number | null
-    total_realisasi: number
-    selisih: number | null
-    ada_laporan: boolean
-    status_settlement: 'belum' | 'lunas'
-    settlement_pada: string | null
-    catatan_settlement: string | null
+export interface RiwayatPengajuanUangJalan {
+    status: string
+    waktu: string | null
+    oleh: string | null
+    keterangan: string | null
+}
+
+export interface PengajuanUangJalanTrip {
+    id_pengajuan: string
+    nomor_pengajuan: string
+    status: string
+    nominal: number
+    riwayat: RiwayatPengajuanUangJalan[]
 }
 
 export interface StatusTrip {
@@ -75,18 +70,6 @@ export const tripService = {
     },
     async mulai(payload: { id_penugasan: string; id_rute?: string | null; catatan?: string | null; uang_jalan_alokasi?: number | null }) {
         const { data } = await axios.post(API_ENDPOINTS.TRIP_MULAI, payload)
-        return data.data as Trip
-    },
-    async settlementList(params: { page?: number; limit?: number; id_supir?: string; status_settlement?: string; tanggal_dari?: string; tanggal_sampai?: string; search?: string } = {}) {
-        const { data } = await axios.get(API_ENDPOINTS.TRIP_SETTLEMENT, { params: { page: 1, limit: 10, ...params } })
-        return data as { data: SettlementTrip[]; meta: { page: number; total: number; totalPages: number; limit: number } }
-    },
-    async tandaiLunas(id: string, catatan?: string | null) {
-        const { data } = await axios.post(API_ENDPOINTS.TRIP_SETTLEMENT_LUNAS(id), catatan ? { catatan } : {})
-        return data.data as Trip
-    },
-    async batalkanLunas(id: string) {
-        const { data } = await axios.post(API_ENDPOINTS.TRIP_SETTLEMENT_BATAL(id))
         return data.data as Trip
     },
     async updateUangJalan(id: string, alokasi: number | null) {

@@ -266,50 +266,52 @@ export default function DokumenArmadaPage() {
 
             <Dialog isOpen={isFormOpen} onRequestClose={closeForm} onClose={closeForm} width={600}>
                 <h5 className="text-base font-semibold mb-5">{editTarget ? 'Edit Dokumen' : 'Tambah Dokumen'}</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <div className="sm:col-span-2">
-                        <FormItem label="Armada" asterisk>
-                            <Select
-                                placeholder="Pilih armada..."
-                                isDisabled={!!editTarget}
-                                options={armadaOptions}
-                                value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                onChange={(opt) => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))}
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                        <div className="sm:col-span-2">
+                            <FormItem label="Armada" asterisk>
+                                <Select
+                                    placeholder="Pilih armada..."
+                                    isDisabled={!!editTarget}
+                                    options={armadaOptions}
+                                    value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
+                                    onChange={(opt) => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))}
+                                />
+                            </FormItem>
+                        </div>
+                        <FormItem label="Jenis Dokumen" asterisk>
+                            <Select isSearchable={false} placeholder="Pilih jenis..."
+                                options={JENIS_DOKUMEN_OPTIONS}
+                                value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === form.jenis_dokumen) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, jenis_dokumen: (opt as Option | null)?.value ?? '' }))} />
+                        </FormItem>
+                        <FormItem label="Nomor Dokumen">
+                            <Input placeholder="Contoh: B 1234 XYZ" value={form.nomor}
+                                onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Berlaku Sampai">
+                            <DatePicker
+                                value={form.berlaku_sampai ? new Date(form.berlaku_sampai) : null}
+                                onChange={date => setForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                        </FormItem>
+                        <FormItem label="File Dokumen" asterisk={!editTarget}>
+                            <UploadBerkas
+                                file={file}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
+                                hint="PDF/JPG/PNG · maksimal 5 MB"
+                                existingUrl={editTarget?.url_file ?? null}
+                                existingLabel="File saat ini"
+                                onChange={f => {
+                                    if (f && f.size > MAX_FILE_SIZE) {
+                                        toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
+                                        return
+                                    }
+                                    setFile(f)
+                                }}
                             />
                         </FormItem>
                     </div>
-                    <FormItem label="Jenis Dokumen" asterisk>
-                        <Select isSearchable={false} placeholder="Pilih jenis..."
-                            options={JENIS_DOKUMEN_OPTIONS}
-                            value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === form.jenis_dokumen) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, jenis_dokumen: (opt as Option | null)?.value ?? '' }))} />
-                    </FormItem>
-                    <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Contoh: B 1234 XYZ" value={form.nomor}
-                            onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Berlaku Sampai">
-                        <DatePicker
-                            value={form.berlaku_sampai ? new Date(form.berlaku_sampai) : null}
-                            onChange={date => setForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                    </FormItem>
-                    <FormItem label="File Dokumen" asterisk={!editTarget}>
-                        <UploadBerkas
-                            file={file}
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
-                            hint="PDF/JPG/PNG · maksimal 5 MB"
-                            existingUrl={editTarget?.url_file ?? null}
-                            existingLabel="File saat ini"
-                            onChange={f => {
-                                if (f && f.size > MAX_FILE_SIZE) {
-                                    toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
-                                    return
-                                }
-                                setFile(f)
-                            }}
-                        />
-                    </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button variant="plain" onClick={closeForm}>Batal</Button>

@@ -59,8 +59,8 @@ const FEATURES = [
         Icon: HiOutlineDocumentText,
         color: 'text-amber-600',
         bg: 'bg-amber-50',
-        title: 'Laporan & Faktur',
-        desc: 'Pembuatan faktur klien dan laporan keuangan perjalanan yang lengkap dan akurat.',
+        title: 'Laporan & Invoice',
+        desc: 'Pembuatan invoice klien dan laporan keuangan perjalanan yang lengkap dan akurat.',
     },
 ]
 
@@ -89,8 +89,8 @@ const STEPS = [
         accentBg: '#F59E0B',
         ring: 'ring-amber-100',
         title: 'Verifikasi & Penagihan',
-        desc: 'Keuangan memverifikasi laporan trip dan membuat faktur untuk klien.',
-        checks: ['Verifikasi laporan trip', 'Buat faktur klien', 'Penagihan trip otomatis'],
+        desc: 'Keuangan memverifikasi laporan trip dan membuat invoice untuk klien.',
+        checks: ['Verifikasi laporan trip', 'Buat invoice klien', 'Penagihan trip otomatis'],
     },
 ]
 
@@ -305,7 +305,7 @@ export default function LandingPage() {
                             </div>
 
                             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3">
-                                {['Manajemen Armada', 'HR Supir', 'Monitoring Trip', 'Laporan & Faktur'].map(f => (
+                                {['Manajemen Armada', 'HR Supir', 'Monitoring Trip', 'Laporan & Invoice'].map(f => (
                                     <span key={f} className="flex items-center gap-1.5 text-white/50 text-sm">
                                         <HiCheckCircle className="shrink-0 text-base" style={{ color: CYAN }} />
                                         {f}
@@ -622,7 +622,7 @@ export default function LandingPage() {
                                 Modul
                             </div>
                             <ul className="space-y-3 text-sm text-white/40">
-                                {['Manajemen Armada', 'HR & Supir', 'Monitoring Trip', 'Laporan & Faktur'].map(l => (
+                                {['Manajemen Armada', 'HR & Supir', 'Monitoring Trip', 'Laporan & Invoice'].map(l => (
                                     <li key={l}>
                                         <a href="#fitur" className="hover:text-white transition-colors">{l}</a>
                                     </li>

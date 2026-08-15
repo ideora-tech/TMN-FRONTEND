@@ -938,6 +938,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             <Dialog isOpen={dokumenOpen} onRequestClose={() => setDokumenOpen(false)} onClose={() => setDokumenOpen(false)}>
                 <h5 className="font-bold mb-4">{dokumenEdit ? 'Edit Dokumen' : 'Tambah Dokumen'}</h5>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanDokumen() }}>
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Jenis Dokumen" asterisk>
                         <Select isSearchable={false} placeholder="Pilih jenis..."
@@ -965,6 +966,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             onChange={f => validasiFile(f, setDokumenFile)}
                         />
                     </FormItem>
+                </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => setDokumenOpen(false)}>Batal</Button>
@@ -995,6 +997,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             <Dialog isOpen={kontrakOpen} onRequestClose={() => setKontrakOpen(false)} onClose={() => setKontrakOpen(false)}>
                 <h5 className="font-bold mb-4">{kontrakForm.id_kontrak ? 'Edit Kontrak' : 'Tambah Kontrak'}</h5>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanKontrak() }}>
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Jenis Kontrak" asterisk invalid={!!kontrakErrors.jenis_kontrak} errorMessage={kontrakErrors.jenis_kontrak}>
                         <Select isSearchable={false} placeholder="Pilih jenis..."
@@ -1037,6 +1040,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             />
                         </FormItem>
                     </div>
+                </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => setKontrakOpen(false)}>Batal</Button>

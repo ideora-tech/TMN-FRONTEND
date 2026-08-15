@@ -330,31 +330,33 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     Gaji pokok, lembur, potongan absen & BPJS dihitung otomatis (generate ulang untuk menyegarkan). Di sini hanya komponen manual.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanEdit() }}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Tunjangan Lain (Rp)">
-                        <Input type="number" min={0} value={editForm.tunjangan_lain}
-                            onChange={e => setEditForm(p => ({ ...p, tunjangan_lain: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Keterangan Tunjangan">
-                        <Input placeholder="Bonus, uang makan..." value={editForm.keterangan_tunjangan}
-                            onChange={e => setEditForm(p => ({ ...p, keterangan_tunjangan: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Potongan Lain (Rp)">
-                        <Input type="number" min={0} value={editForm.potongan_lain}
-                            onChange={e => setEditForm(p => ({ ...p, potongan_lain: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Keterangan Potongan">
-                        <Input placeholder="Kasbon, cicilan..." value={editForm.keterangan_potongan}
-                            onChange={e => setEditForm(p => ({ ...p, keterangan_potongan: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="PPh21 (Rp)" extra={<span className="text-xs text-gray-400">Boleh dikoreksi manual bila perlu</span>}>
-                        <Input type="number" min={0} value={editForm.pph21}
-                            onChange={e => setEditForm(p => ({ ...p, pph21: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Catatan">
-                        <Input value={editForm.catatan}
-                            onChange={e => setEditForm(p => ({ ...p, catatan: e.target.value }))} />
-                    </FormItem>
+                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                        <FormItem label="Tunjangan Lain (Rp)">
+                            <Input type="number" min={0} value={editForm.tunjangan_lain}
+                                onChange={e => setEditForm(p => ({ ...p, tunjangan_lain: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Keterangan Tunjangan">
+                            <Input placeholder="Bonus, uang makan..." value={editForm.keterangan_tunjangan}
+                                onChange={e => setEditForm(p => ({ ...p, keterangan_tunjangan: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Potongan Lain (Rp)">
+                            <Input type="number" min={0} value={editForm.potongan_lain}
+                                onChange={e => setEditForm(p => ({ ...p, potongan_lain: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Keterangan Potongan">
+                            <Input placeholder="Kasbon, cicilan..." value={editForm.keterangan_potongan}
+                                onChange={e => setEditForm(p => ({ ...p, keterangan_potongan: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="PPh21 (Rp)" extra={<span className="text-xs text-gray-400">Boleh dikoreksi manual bila perlu</span>}>
+                            <Input type="number" min={0} value={editForm.pph21}
+                                onChange={e => setEditForm(p => ({ ...p, pph21: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Catatan">
+                            <Input value={editForm.catatan}
+                                onChange={e => setEditForm(p => ({ ...p, catatan: e.target.value }))} />
+                        </FormItem>
+                    </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>

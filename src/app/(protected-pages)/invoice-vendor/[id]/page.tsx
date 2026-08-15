@@ -613,46 +613,48 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 <h5 className="font-bold mb-1">Catat Pembayaran</h5>
                 <p className="text-sm text-gray-500 mb-4">{data.nomor_invoice} · Sisa tagihan {formatRupiah(sisa)}</p>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanBayar() }}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Tanggal Bayar" asterisk invalid={!!bayarErrors.tanggal_bayar} errorMessage={bayarErrors.tanggal_bayar}>
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={bayarForm.tanggal_bayar ? dayjs(bayarForm.tanggal_bayar).toDate() : null}
-                                onChange={date => setBayarForm(p => ({ ...p, tanggal_bayar: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                        </FormItem>
-                        <FormItem label="Nominal" asterisk invalid={!!bayarErrors.nominal} errorMessage={bayarErrors.nominal}
-                            extra={<span className="text-xs text-gray-400">Sisa tagihan {formatRupiah(sisa)}</span>}>
-                            <Input prefix="Rp" placeholder="0" invalid={!!bayarErrors.nominal}
-                                value={bayarForm.nominal ? formatNum(Number(bayarForm.nominal)) : ''}
-                                onChange={e => setBayarForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
-                        </FormItem>
-                        <FormItem label="Metode" asterisk invalid={!!bayarErrors.metode} errorMessage={bayarErrors.metode}>
-                            <Select isSearchable={false} placeholder="Pilih metode..."
-                                options={METODE_OPTIONS}
-                                value={METODE_OPTIONS.find(o => o.value === bayarForm.metode) ?? null}
-                                onChange={opt => setBayarForm(p => ({ ...p, metode: opt?.value ?? '' }))} />
-                        </FormItem>
-                        <FormItem label="Bank Pengirim">
-                            <Input placeholder="Contoh: BCA" value={bayarForm.bank_pengirim}
-                                onChange={e => setBayarForm(p => ({ ...p, bank_pengirim: e.target.value }))} />
-                        </FormItem>
-                        <FormItem label="No. Referensi">
-                            <Input placeholder="Nomor referensi transfer" value={bayarForm.no_referensi}
-                                onChange={e => setBayarForm(p => ({ ...p, no_referensi: e.target.value }))} />
-                        </FormItem>
-                        <FormItem label="Bukti Pembayaran">
-                            <UploadBerkas
-                                file={buktiFile}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                hint="PDF/JPG/PNG"
-                                onChange={setBuktiFile}
-                            />
-                        </FormItem>
-                        <div className="sm:col-span-2">
-                            <FormItem label="Catatan">
-                                <Input textArea rows={2} placeholder="Catatan pembayaran..."
-                                    value={bayarForm.catatan}
-                                    onChange={e => setBayarForm(p => ({ ...p, catatan: e.target.value }))} />
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="Tanggal Bayar" asterisk invalid={!!bayarErrors.tanggal_bayar} errorMessage={bayarErrors.tanggal_bayar}>
+                                <DatePicker inputFormat="DD/MM/YYYY"
+                                    value={bayarForm.tanggal_bayar ? dayjs(bayarForm.tanggal_bayar).toDate() : null}
+                                    onChange={date => setBayarForm(p => ({ ...p, tanggal_bayar: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
+                            <FormItem label="Nominal" asterisk invalid={!!bayarErrors.nominal} errorMessage={bayarErrors.nominal}
+                                extra={<span className="text-xs text-gray-400">Sisa tagihan {formatRupiah(sisa)}</span>}>
+                                <Input prefix="Rp" placeholder="0" invalid={!!bayarErrors.nominal}
+                                    value={bayarForm.nominal ? formatNum(Number(bayarForm.nominal)) : ''}
+                                    onChange={e => setBayarForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Metode" asterisk invalid={!!bayarErrors.metode} errorMessage={bayarErrors.metode}>
+                                <Select isSearchable={false} placeholder="Pilih metode..."
+                                    options={METODE_OPTIONS}
+                                    value={METODE_OPTIONS.find(o => o.value === bayarForm.metode) ?? null}
+                                    onChange={opt => setBayarForm(p => ({ ...p, metode: opt?.value ?? '' }))} />
+                            </FormItem>
+                            <FormItem label="Bank Pengirim">
+                                <Input placeholder="Contoh: BCA" value={bayarForm.bank_pengirim}
+                                    onChange={e => setBayarForm(p => ({ ...p, bank_pengirim: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="No. Referensi">
+                                <Input placeholder="Nomor referensi transfer" value={bayarForm.no_referensi}
+                                    onChange={e => setBayarForm(p => ({ ...p, no_referensi: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Bukti Pembayaran">
+                                <UploadBerkas
+                                    file={buktiFile}
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    hint="PDF/JPG/PNG"
+                                    onChange={setBuktiFile}
+                                />
+                            </FormItem>
+                            <div className="sm:col-span-2">
+                                <FormItem label="Catatan">
+                                    <Input textArea rows={2} placeholder="Catatan pembayaran..."
+                                        value={bayarForm.catatan}
+                                        onChange={e => setBayarForm(p => ({ ...p, catatan: e.target.value }))} />
+                                </FormItem>
+                            </div>
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">

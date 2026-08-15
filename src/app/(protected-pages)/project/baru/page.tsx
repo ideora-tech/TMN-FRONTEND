@@ -275,12 +275,10 @@ export default function ProjectBaruPage() {
                                 <RuteTarifFields value={manualRuteTarif} onChange={setManualRuteTarif}
                                     ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={form.id_klien}
                                     ritaseSlot={
-                                        <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                                            <FormItem label="Ritase">
-                                                <Input type="number" min="1" value={manualRuteRitase}
-                                                    onChange={e => setManualRuteRitase(e.target.value)} />
-                                            </FormItem>
-                                        </div>
+                                        <FormItem label="Ritase">
+                                            <Input type="number" min="1" value={manualRuteRitase}
+                                                onChange={e => setManualRuteRitase(e.target.value)} />
+                                        </FormItem>
                                     } />
                                 <div className="mt-3">
                                     <FormItem label="Keterangan">

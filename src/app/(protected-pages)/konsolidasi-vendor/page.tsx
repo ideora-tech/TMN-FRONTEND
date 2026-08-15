@@ -156,7 +156,14 @@ export default function KonsolidasiVendorPage() {
                     <div className="flex items-center gap-2">
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={dari ? dayjs(dari).toDate() : null}
-                            onChange={date => setDari(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                            onChange={date => {
+                                if (date) {
+                                    setDari(dayjs(date).format('YYYY-MM-DD'))
+                                    setSampai(dayjs(date).endOf('month').format('YYYY-MM-DD'))
+                                } else {
+                                    setDari('')
+                                }
+                            }} />
                         <span className="text-gray-400 text-sm">s/d</span>
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={sampai ? dayjs(sampai).toDate() : null}
