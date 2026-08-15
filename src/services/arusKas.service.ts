@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type StatusPengajuan = 'diajukan' | 'dicek' | 'disetujui' | 'ditolak' | 'ditransfer'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'lainnya'
+export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'ditolak' | 'ditransfer'
+export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
+export type KeputusanApproval = 'setuju' | 'tolak'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -16,6 +18,19 @@ export type KategoriPemasukan =
     | 'pengembalian_dana'
     | 'modal_pinjaman'
     | 'lainnya'
+
+export interface ApprovalPengajuan {
+    id_pengguna: string
+    nama: string
+    status: StatusApproval
+    catatan: string | null
+    waktu_aksi: string | null
+}
+
+export interface ApprovalProgress {
+    disetujui: number
+    total: number
+}
 
 export interface PengajuanPengeluaran {
     id_pengajuan: string
@@ -43,6 +58,9 @@ export interface PengajuanPengeluaran {
     url_bukti: string | null
     dibuat_pada: string
     diubah_pada: string | null
+    approval: ApprovalPengajuan[]
+    approval_progress: ApprovalProgress | null
+    bisa_approve: boolean
 }
 
 export type PengajuanPayload = {
@@ -206,16 +224,19 @@ export const arusKasService = {
 
     async cek(id: string) {
         const { data } = await axios.patch(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_CEK(id))
-        return data.data as PengajuanPengeluaran
-    },
-
-    async setujui(id: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_SETUJUI(id))
-        return data.data as PengajuanPengeluaran
+        return { data: data.data as PengajuanPengeluaran, message: data.message as string }
     },
 
     async tolak(id: string, alasan: string) {
         const { data } = await axios.patch(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_TOLAK(id), { alasan })
+        return data.data as PengajuanPengeluaran
+    },
+
+    async keputusanApproval(id: string, keputusan: KeputusanApproval, catatan?: string) {
+        const { data } = await axios.patch(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_APPROVAL(id), {
+            keputusan,
+            catatan: catatan || undefined,
+        })
         return data.data as PengajuanPengeluaran
     },
 

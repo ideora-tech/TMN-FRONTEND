@@ -69,6 +69,7 @@ export const ROUTES = {
 
 
     ARUS_KAS: '/arus-kas',
+    APPROVAL_KEUANGAN: '/approval-keuangan',
 
     KONSOLIDASI_KLIEN:     '/konsolidasi-klien',
     KONSOLIDASI_VENDOR:    '/konsolidasi-vendor',

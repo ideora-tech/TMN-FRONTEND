@@ -140,6 +140,34 @@
     }
   }
 
+  .table-sticky-first {
+    > thead {
+      > tr {
+        > th:first-child {
+          @apply sticky left-0 z-10 bg-blue-50 dark:bg-[#22324a] border-r border-gray-200 dark:border-gray-700;
+        }
+      }
+    }
+
+    > tbody {
+      > tr {
+        > td:first-child {
+          @apply sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700;
+        }
+      }
+    }
+  }
+
+  .table-sticky-first.table-hover {
+    > tbody {
+      > tr:hover {
+        > td:first-child {
+          @apply bg-[#f7f7f7] dark:bg-[#2a3441];
+        }
+      }
+    }
+  }
+
   .table-resizer {
     @apply right-0 h-full absolute top-0 z-10 border-r-2 border-gray-200 dark:border-gray-600 w-2;
     touch-action: none;

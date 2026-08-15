@@ -193,6 +193,8 @@ export const API_ENDPOINTS = {
     PAYROLL_PERIODE:           '/api/proxy/payroll/periode',
     PAYROLL_PERIODE_DETAIL:    (id: string) => `/api/proxy/payroll/periode/${id}`,
     PAYROLL_GENERATE:          (id: string) => `/api/proxy/payroll/periode/${id}/generate`,
+    PAYROLL_IMPORT:            (id: string) => `/api/proxy/payroll/periode/${id}/import`,
+    PAYROLL_IMPORT_TEMPLATE:   (id: string) => `/api/proxy/payroll/periode/${id}/import/template`,
     PAYROLL_FINALISASI:        (id: string) => `/api/proxy/payroll/periode/${id}/finalisasi`,
     PAYROLL_BATAL_FINALISASI:  (id: string) => `/api/proxy/payroll/periode/${id}/batal-finalisasi`,
     PAYROLL_SLIP:              (id: string) => `/api/proxy/payroll/slip/${id}`,
@@ -341,11 +343,16 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PENGAJUAN:        '/api/proxy/arus-kas/pengajuan',
     ARUS_KAS_PENGAJUAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}`,
     ARUS_KAS_PENGAJUAN_CEK:      (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/cek`,
-    ARUS_KAS_PENGAJUAN_SETUJUI:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/setujui`,
     ARUS_KAS_PENGAJUAN_TOLAK:    (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/tolak`,
     ARUS_KAS_PENGAJUAN_TRANSFER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/transfer`,
+    ARUS_KAS_PENGAJUAN_APPROVAL: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/approval`,
 
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',
     ARUS_KAS_PEMASUKAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pemasukan/${id}`,
+
+    // Approval Keuangan
+    APPROVER_KEUANGAN:        '/api/proxy/arus-kas/approver',
+    APPROVER_KEUANGAN_DETAIL: (id: string) => `/api/proxy/arus-kas/approver/${id}`,
+    PENGATURAN_APPROVAL:      '/api/proxy/arus-kas/pengaturan-approval',
 } as const

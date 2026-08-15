@@ -39,6 +39,8 @@ const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     perawatan:  'Perawatan',
     sparepart:  'Sparepart',
     penggajian: 'Penggajian',
+    pembelian_aset:      'Pembelian Aset',
+    pembayaran_pinjaman: 'Pembayaran Pinjaman',
     lainnya:    'Lainnya',
 }
 
@@ -46,23 +48,27 @@ const KATEGORI_OPTIONS: { value: KategoriPengajuan; label: string }[] = [
     { value: 'uang_jalan', label: 'Uang Jalan' },
     { value: 'legalitas',  label: 'Legalitas' },
     { value: 'perawatan',  label: 'Perawatan' },
+    { value: 'pembelian_aset',      label: 'Pembelian Aset' },
+    { value: 'pembayaran_pinjaman', label: 'Pembayaran Pinjaman' },
     { value: 'lainnya',    label: 'Lainnya' },
 ]
 
 const STATUS_LABEL: Record<StatusPengajuan, string> = {
-    diajukan:   'Diajukan',
-    dicek:      'Dicek',
-    disetujui:  'Disetujui',
-    ditolak:    'Ditolak',
-    ditransfer: 'Ditransfer',
+    diajukan:          'Diajukan',
+    dicek:             'Dicek',
+    menunggu_approval: 'Menunggu Approval',
+    disetujui:         'Disetujui',
+    ditolak:           'Ditolak',
+    ditransfer:        'Ditransfer',
 }
 
 const STATUS_TAG: Record<StatusPengajuan, string> = {
-    diajukan:   'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    dicek:      'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    disetujui:  'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
-    ditolak:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-    ditransfer: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    diajukan:          'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+    disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
+    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }
 
 const STATUS_OPTIONS: Option[] = [
@@ -132,11 +138,12 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const jalankan = async (aksi: () => Promise<unknown>, pesanSukses: string, tutup?: () => void) => {
+    const jalankan = async (aksi: () => Promise<unknown>, pesanSukses: string | ((hasil: unknown) => string), tutup?: () => void) => {
         setSubmitting(true)
         try {
-            await aksi()
-            toast.push(<Notification type="success" title={pesanSukses} />)
+            const hasil = await aksi()
+            const pesan = typeof pesanSukses === 'function' ? pesanSukses(hasil) : pesanSukses
+            toast.push(<Notification type="success" title={pesan} />)
             tutup?.()
             fetchData()
         } catch (err) {
@@ -299,7 +306,14 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
             cell: ({ row }) => {
                 const p = row.original
                 const tag = <Tag className={`text-xs font-semibold ${STATUS_TAG[p.status]}`}>{STATUS_LABEL[p.status]}</Tag>
-                return p.status === 'ditolak' && p.alasan_ditolak ? <Tooltip title={p.alasan_ditolak}>{tag}</Tooltip> : tag
+                return (
+                    <div className="flex flex-col gap-1">
+                        {p.status === 'ditolak' && p.alasan_ditolak ? <Tooltip title={p.alasan_ditolak}>{tag}</Tooltip> : tag}
+                        {p.approval_progress && (
+                            <span className="text-[10px] text-gray-400">{p.approval_progress.disetujui}/{p.approval_progress.total} approve</span>
+                        )}
+                    </div>
+                )
             },
         },
         {
@@ -319,16 +333,7 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
                             <Tooltip title="Cek">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                                    onClick={() => jalankan(() => arusKasService.cek(p.id_pengajuan), 'Pengajuan ditandai sudah dicek')}>
-                                    <HiOutlineCheckCircle className="text-lg" />
-                                </span>
-                            </Tooltip>
-                        )}
-                        {p.status === 'dicek' && bolehManager && (
-                            <Tooltip title="Setujui">
-                                <span
-                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 transition-colors"
-                                    onClick={() => jalankan(() => arusKasService.setujui(p.id_pengajuan), 'Pengajuan disetujui')}>
+                                    onClick={() => jalankan(() => arusKasService.cek(p.id_pengajuan), hasil => (hasil as { message: string }).message)}>
                                     <HiOutlineCheckCircle className="text-lg" />
                                 </span>
                             </Tooltip>
@@ -504,7 +509,7 @@ export default function PengajuanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
                 </form>
             </Dialog>
 
-            <DetailPengajuanDialog pengajuan={detailTarget} onClose={() => setDetailTarget(null)} />
+            <DetailPengajuanDialog pengajuan={detailTarget} onClose={() => setDetailTarget(null)} onRefresh={fetchData} />
 
             <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Pengajuan"
                 confirmText="Ya, Hapus" cancelText="Batal"

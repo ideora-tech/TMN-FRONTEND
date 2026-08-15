@@ -1,10 +1,19 @@
 'use client'
+import { useState } from 'react'
 import dayjs from 'dayjs'
-import { Dialog, Tag } from '@/components/ui'
+import { Dialog, Tag, Button, Input, toast, Notification } from '@/components/ui'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlineDocumentText, HiOutlineExternalLink } from 'react-icons/hi'
 import { formatRupiah } from '@/utils/formatNumber'
+import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { KategoriPengajuan, PengajuanPengeluaran, StatusPengajuan } from '@/services/arusKas.service'
+import {
+    arusKasService,
+    KategoriPengajuan,
+    PengajuanPengeluaran,
+    StatusApproval,
+    StatusPengajuan,
+} from '@/services/arusKas.service'
 
 const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     uang_jalan: 'Uang Jalan',
@@ -12,23 +21,39 @@ const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     perawatan:  'Perawatan',
     sparepart:  'Sparepart',
     penggajian: 'Penggajian',
+    pembelian_aset:      'Pembelian Aset',
+    pembayaran_pinjaman: 'Pembayaran Pinjaman',
     lainnya:    'Lainnya',
 }
 
 const STATUS_LABEL: Record<StatusPengajuan, string> = {
-    diajukan:   'Diajukan',
-    dicek:      'Dicek',
-    disetujui:  'Disetujui',
-    ditolak:    'Ditolak',
-    ditransfer: 'Ditransfer',
+    diajukan:          'Diajukan',
+    dicek:             'Dicek',
+    menunggu_approval: 'Menunggu Approval',
+    disetujui:         'Disetujui',
+    ditolak:           'Ditolak',
+    ditransfer:        'Ditransfer',
 }
 
 const STATUS_TAG: Record<StatusPengajuan, string> = {
-    diajukan:   'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    dicek:      'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    disetujui:  'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
-    ditolak:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-    ditransfer: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    diajukan:          'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+    disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
+    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+}
+
+const STATUS_APPROVAL_LABEL: Record<StatusApproval, string> = {
+    menunggu:  'Menunggu',
+    disetujui: 'Disetujui',
+    ditolak:   'Ditolak',
+}
+
+const STATUS_APPROVAL_TAG: Record<StatusApproval, string> = {
+    menunggu:  'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    ditolak:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
@@ -78,8 +103,54 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
     return null
 }
 
-export default function DetailPengajuanDialog({ pengajuan, onClose }: { pengajuan: PengajuanPengeluaran | null; onClose: () => void }) {
+export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh }: { pengajuan: PengajuanPengeluaran | null; onClose: () => void; onRefresh?: () => void }) {
     const p = pengajuan
+    const [approveOpen, setApproveOpen] = useState(false)
+    const [tolakOpen, setTolakOpen]     = useState(false)
+    const [catatanTolak, setCatatanTolak] = useState('')
+    const [errCatatanTolak, setErrCatatanTolak] = useState('')
+    const [memproses, setMemproses] = useState(false)
+
+    const tutupAksiApproval = () => {
+        setApproveOpen(false)
+        setTolakOpen(false)
+        setCatatanTolak('')
+        setErrCatatanTolak('')
+    }
+
+    const handleApprove = async () => {
+        if (!p) return
+        setMemproses(true)
+        try {
+            await arusKasService.keputusanApproval(p.id_pengajuan, 'setuju')
+            toast.push(<Notification type="success" title="Pengajuan disetujui" />)
+            tutupAksiApproval()
+            onRefresh?.()
+            onClose()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMemproses(false)
+        }
+    }
+
+    const handleTolakApproval = async () => {
+        if (!p) return
+        if (!catatanTolak.trim()) { setErrCatatanTolak('Catatan penolakan wajib diisi'); return }
+        setMemproses(true)
+        try {
+            await arusKasService.keputusanApproval(p.id_pengajuan, 'tolak', catatanTolak.trim())
+            toast.push(<Notification type="success" title="Pengajuan ditolak" />)
+            tutupAksiApproval()
+            onRefresh?.()
+            onClose()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMemproses(false)
+        }
+    }
+
     const riwayat = p ? [
         { label: 'Diajukan',   waktu: p.dibuat_pada,     keterangan: `Tanggal pengajuan ${dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}` },
         { label: 'Dicek',      waktu: p.dicek_pada,      keterangan: null },
@@ -88,6 +159,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose }: { pengajua
     ].filter(r => r.waktu) : []
 
     return (
+        <>
         <Dialog isOpen={!!p} onRequestClose={onClose} onClose={onClose} width={640}>
             <h5 className="text-base font-semibold mb-1">Detail Pengajuan</h5>
             <p className="text-xs font-mono text-gray-400 mb-4">{p?.nomor_pengajuan}</p>
@@ -147,6 +219,36 @@ export default function DetailPengajuanDialog({ pengajuan, onClose }: { pengajua
                         </div>
                     )}
 
+                    {p.approval.length > 0 && (
+                        <div className="mt-5">
+                            <p className={`${LABEL_CLASS} mb-2`}>Approval BOD</p>
+                            <div className="flex flex-col gap-2">
+                                {p.approval.map(a => (
+                                    <div key={a.id_pengguna}
+                                        className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{a.nama}</span>
+                                            <Tag className={`text-xs font-semibold ${STATUS_APPROVAL_TAG[a.status]}`}>{STATUS_APPROVAL_LABEL[a.status]}</Tag>
+                                        </div>
+                                        {a.waktu_aksi && <p className="text-xs text-gray-400 mt-1">{dayjs(a.waktu_aksi).format('DD/MM/YYYY HH:mm')}</p>}
+                                        {a.catatan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{a.catatan}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                            {p.bisa_approve && (
+                                <div className="flex justify-end gap-2 mt-3">
+                                    <Button size="sm" variant="solid" loading={memproses} onClick={() => setApproveOpen(true)}>
+                                        Approve
+                                    </Button>
+                                    <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
+                                        onClick={() => setTolakOpen(true)}>
+                                        Tolak
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-5">
                         <p className={`${LABEL_CLASS} mb-2`}>Bukti Transfer</p>
                         {p.url_bukti ? (
@@ -171,5 +273,40 @@ export default function DetailPengajuanDialog({ pengajuan, onClose }: { pengajua
                 </div>
             )}
         </Dialog>
+
+        <ConfirmDialog
+            isOpen={approveOpen}
+            type="info"
+            title="Setujui Pengajuan"
+            confirmText="Ya, Setujui"
+            cancelText="Batal"
+            onClose={() => setApproveOpen(false)}
+            onCancel={() => setApproveOpen(false)}
+            onConfirm={handleApprove}
+            confirmButtonProps={{ loading: memproses }}
+        >
+            <p>Setujui pengajuan {p?.nomor_pengajuan}?</p>
+        </ConfirmDialog>
+
+        <ConfirmDialog
+            isOpen={tolakOpen}
+            type="danger"
+            title="Tolak Pengajuan"
+            confirmText="Ya, Tolak"
+            cancelText="Batal"
+            onClose={() => { setTolakOpen(false); setCatatanTolak(''); setErrCatatanTolak('') }}
+            onCancel={() => { setTolakOpen(false); setCatatanTolak(''); setErrCatatanTolak('') }}
+            onConfirm={handleTolakApproval}
+            confirmButtonProps={{ loading: memproses, disabled: !catatanTolak.trim() }}
+        >
+            <p>Tolak pengajuan {p?.nomor_pengajuan}?</p>
+            <div className="mt-3">
+                <p className="text-sm font-semibold mb-1">Catatan penolakan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
+                    value={catatanTolak} onChange={e => { setCatatanTolak(e.target.value); setErrCatatanTolak('') }} />
+                {errCatatanTolak && <p className="text-xs text-red-500 mt-1">{errCatatanTolak}</p>}
+            </div>
+        </ConfirmDialog>
+        </>
     )
 }

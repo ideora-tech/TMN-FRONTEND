@@ -53,27 +53,30 @@ const MEKANISME_CLASS: Record<string, string> = {
 }
 
 const PENGAJUAN_LABEL: Record<string, string> = {
-    diajukan:   'Diajukan',
-    dicek:      'Dicek Keuangan',
-    disetujui:  'Disetujui',
-    ditolak:    'Ditolak',
-    ditransfer: 'Sudah Ditransfer',
+    diajukan:          'Diajukan',
+    dicek:             'Dicek Keuangan',
+    menunggu_approval: 'Menunggu Approval',
+    disetujui:         'Disetujui',
+    ditolak:           'Ditolak',
+    ditransfer:        'Sudah Ditransfer',
 }
 
 const PENGAJUAN_TAG: Record<string, string> = {
-    diajukan:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
-    dicek:      'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    disetujui:  'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
-    ditolak:    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',
-    ditransfer: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    diajukan:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
+    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+    disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
+    ditolak:           'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',
+    ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }
 
 const PENGAJUAN_BORDER: Record<string, string> = {
-    diajukan:   'border-l-yellow-400',
-    dicek:      'border-l-blue-400',
-    disetujui:  'border-l-indigo-400',
-    ditolak:    'border-l-red-400',
-    ditransfer: 'border-l-emerald-400',
+    diajukan:          'border-l-yellow-400',
+    dicek:             'border-l-blue-400',
+    menunggu_approval: 'border-l-amber-400',
+    disetujui:         'border-l-indigo-400',
+    ditolak:           'border-l-red-400',
+    ditransfer:        'border-l-emerald-400',
 }
 
 const RIWAYAT_BORDER: Record<string, string> = {

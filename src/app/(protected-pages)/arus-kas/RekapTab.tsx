@@ -70,6 +70,14 @@ const KATEGORI_TAG_META: Record<KategoriPengajuan, { label: string; tag: string 
         label: 'Penggajian',
         tag: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
     },
+    pembelian_aset: {
+        label: 'Pembelian Aset',
+        tag: 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300',
+    },
+    pembayaran_pinjaman: {
+        label: 'Pembayaran Pinjaman',
+        tag: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300',
+    },
     lainnya: {
         label: 'Lainnya',
         tag: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',

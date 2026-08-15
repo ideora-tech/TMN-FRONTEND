@@ -27,11 +27,19 @@ export interface PayrollSlip {
     id_karyawan: string
     karyawan_nik: string
     nama_karyawan: string
+    proyek: string | null
+    tipe_truck: string | null
+    absen_masuk: string | null
     gaji_pokok: number
     upah_lembur: number
     menit_lembur: number
     tunjangan_lain: number
     keterangan_tunjangan: string | null
+    uang_makan: number
+    uang_makan_mingguan: number
+    kasbon: number
+    uang_jalan_terpakai: number
+    tilangan: number
     jumlah_alpha: number
     potongan_absen: number
     potongan_bpjs_kesehatan: number
@@ -43,6 +51,17 @@ export interface PayrollSlip {
     total_potongan: number
     gaji_bersih: number
     catatan: string | null
+}
+
+export interface ImportGagalPayroll {
+    baris: number
+    nama: string
+    alasan: string
+}
+
+export interface ImportResultPayroll {
+    berhasil: number
+    gagal: ImportGagalPayroll[]
 }
 
 export interface RingkasanPayroll {
@@ -92,9 +111,20 @@ export const payrollService = {
         const { data } = await axios.post(API_ENDPOINTS.PAYROLL_BATAL_FINALISASI(id))
         return data.data as PayrollPeriode
     },
+    async importExcel(id: string, file: File) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const { data } = await axios.post(API_ENDPOINTS.PAYROLL_IMPORT(id), fd)
+        return data.data as ImportResultPayroll
+    },
     async updateSlip(id: string, payload: Partial<{
         tunjangan_lain: number
         keterangan_tunjangan: string | null
+        uang_makan: number
+        uang_makan_mingguan: number
+        kasbon: number
+        uang_jalan_terpakai: number
+        tilangan: number
         potongan_lain: number
         keterangan_potongan: string | null
         pph21: number

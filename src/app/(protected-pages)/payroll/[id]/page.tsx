@@ -1,25 +1,36 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Tag, Tooltip, Dialog, FormItem, Input, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Tag, Tooltip, Dialog, FormItem, Input, toast, Notification, Spinner, Upload } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineRefresh, HiOutlineLockClosed, HiOutlineLockOpen, HiOutlineSearch, HiOutlineX, HiOutlineDownload } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineRefresh, HiOutlineLockClosed, HiOutlineLockOpen, HiOutlineSearch, HiOutlineX, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { payrollService, PayrollPeriode, PayrollSlip, RingkasanPayroll } from '@/services/payroll.service'
+import { payrollService, PayrollPeriode, PayrollSlip, RingkasanPayroll, ImportResultPayroll } from '@/services/payroll.service'
 
 type EditForm = {
     tunjangan_lain: string
     keterangan_tunjangan: string
+    uang_makan: string
+    uang_makan_mingguan: string
+    kasbon: string
+    uang_jalan_terpakai: string
+    tilangan: string
     potongan_lain: string
     keterangan_potongan: string
     pph21: string
     catatan: string
+}
+
+const EDIT_FORM_KOSONG: EditForm = {
+    tunjangan_lain: '', keterangan_tunjangan: '', uang_makan: '', uang_makan_mingguan: '',
+    kasbon: '', uang_jalan_terpakai: '', tilangan: '', potongan_lain: '', keterangan_potongan: '',
+    pph21: '', catatan: '',
 }
 
 export default function PayrollDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,10 +44,14 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
     const [prosesAksi, setProsesAksi] = useState(false)
 
     const [editTarget, setEditTarget] = useState<PayrollSlip | null>(null)
-    const [editForm, setEditForm]     = useState<EditForm>({ tunjangan_lain: '', keterangan_tunjangan: '', potongan_lain: '', keterangan_potongan: '', pph21: '', catatan: '' })
+    const [editForm, setEditForm]     = useState<EditForm>(EDIT_FORM_KOSONG)
     const [savingEdit, setSavingEdit] = useState(false)
 
     const [konfirmasiFinal, setKonfirmasiFinal] = useState(false)
+    const [konfirmasiGenerate, setKonfirmasiGenerate] = useState(false)
+    const [importing, setImporting] = useState(false)
+    const [importResult, setImportResult] = useState<ImportResultPayroll | null>(null)
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false)
 
     const [cari, setCari]               = useState('')
     const [currentPage, setCurrentPage] = useState(1)
@@ -96,6 +111,11 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
         setEditForm({
             tunjangan_lain: String(s.tunjangan_lain || ''),
             keterangan_tunjangan: s.keterangan_tunjangan ?? '',
+            uang_makan: String(s.uang_makan || ''),
+            uang_makan_mingguan: String(s.uang_makan_mingguan || ''),
+            kasbon: String(s.kasbon || ''),
+            uang_jalan_terpakai: String(s.uang_jalan_terpakai || ''),
+            tilangan: String(s.tilangan || ''),
             potongan_lain: String(s.potongan_lain || ''),
             keterangan_potongan: s.keterangan_potongan ?? '',
             pph21: String(s.pph21 || ''),
@@ -110,6 +130,11 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
             await payrollService.updateSlip(editTarget.id_slip, {
                 tunjangan_lain: editForm.tunjangan_lain ? Number(editForm.tunjangan_lain) : 0,
                 keterangan_tunjangan: editForm.keterangan_tunjangan || null,
+                uang_makan: editForm.uang_makan ? Number(editForm.uang_makan) : 0,
+                uang_makan_mingguan: editForm.uang_makan_mingguan ? Number(editForm.uang_makan_mingguan) : 0,
+                kasbon: editForm.kasbon ? Number(editForm.kasbon) : 0,
+                uang_jalan_terpakai: editForm.uang_jalan_terpakai ? Number(editForm.uang_jalan_terpakai) : 0,
+                tilangan: editForm.tilangan ? Number(editForm.tilangan) : 0,
                 potongan_lain: editForm.potongan_lain ? Number(editForm.potongan_lain) : 0,
                 keterangan_potongan: editForm.keterangan_potongan || null,
                 pph21: editForm.pph21 ? Number(editForm.pph21) : 0,
@@ -122,6 +147,48 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setSavingEdit(false)
+        }
+    }
+
+    const handleImportFile = async (files: File[]) => {
+        const file = files[0]
+        if (!file) return
+        setImporting(true)
+        try {
+            const result = await payrollService.importExcel(id, file)
+            setImportResult(result)
+            if (result.berhasil > 0 && result.gagal.length === 0) {
+                toast.push(<Notification type="success" title={`${result.berhasil} slip berhasil diimport`} />)
+            }
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setImporting(false)
+        }
+    }
+
+    const handleCloseImportResult = () => {
+        const berhasil = importResult?.berhasil ?? 0
+        setImportResult(null)
+        if (berhasil > 0) fetchData()
+    }
+
+    const handleDownloadTemplate = async () => {
+        setDownloadingTemplate(true)
+        try {
+            const res = await axios.get(API_ENDPOINTS.PAYROLL_IMPORT_TEMPLATE(id), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `template-gaji-${periode?.nama ?? 'periode'}.xlsx`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingTemplate(false)
         }
     }
 
@@ -146,6 +213,11 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 <div>
                     <p className="font-medium">{row.original.nama_karyawan}</p>
                     <p className="text-xs text-gray-400 font-mono">{row.original.karyawan_nik}</p>
+                    {row.original.proyek && (
+                        <p className="text-xs text-gray-400 truncate max-w-40">
+                            {row.original.proyek}{row.original.tipe_truck ? ` · ${row.original.tipe_truck}` : ''}
+                        </p>
+                    )}
                     {row.original.catatan && (
                         <Tooltip title={row.original.catatan}>
                             <p className="text-xs text-amber-600 dark:text-amber-400 truncate max-w-40">{row.original.catatan}</p>
@@ -176,6 +248,13 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     : strip,
         },
         {
+            header: 'Uang Makan', accessorKey: 'uang_makan', size: 110,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
+                row.original.uang_makan > 0
+                    ? <span className="text-emerald-600">{formatRupiah(row.original.uang_makan)}</span>
+                    : strip,
+        },
+        {
             header: 'Pot. Absen', accessorKey: 'potongan_absen', size: 110,
             cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
                 row.original.potongan_absen > 0 ? (
@@ -201,6 +280,26 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
             header: 'Pot. Lain', accessorKey: 'potongan_lain', size: 100,
             cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
                 row.original.potongan_lain > 0 ? <span className="text-red-500">{formatRupiah(row.original.potongan_lain)}</span> : strip,
+        },
+        {
+            header: 'UM Mingguan', accessorKey: 'uang_makan_mingguan', size: 110,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
+                row.original.uang_makan_mingguan > 0 ? <span className="text-red-500">{formatRupiah(row.original.uang_makan_mingguan)}</span> : strip,
+        },
+        {
+            header: 'Kasbon', accessorKey: 'kasbon', size: 100,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
+                row.original.kasbon > 0 ? <span className="text-red-500">{formatRupiah(row.original.kasbon)}</span> : strip,
+        },
+        {
+            header: 'UJ Terpakai', accessorKey: 'uang_jalan_terpakai', size: 100,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
+                row.original.uang_jalan_terpakai > 0 ? <span className="text-red-500">{formatRupiah(row.original.uang_jalan_terpakai)}</span> : strip,
+        },
+        {
+            header: 'Tilangan', accessorKey: 'tilangan', size: 100,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
+                row.original.tilangan > 0 ? <span className="text-red-500">{formatRupiah(row.original.tilangan)}</span> : strip,
         },
         {
             header: 'Gaji Bersih', accessorKey: 'gaji_bersih', size: 130,
@@ -253,8 +352,24 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 </div>
                 <div className="flex items-center gap-2">
                     {draft && (
+                        <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingTemplate}
+                            onClick={handleDownloadTemplate}>
+                            Unduh Template
+                        </Button>
+                    )}
+                    {draft && (
+                        <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
+                            <Button type="button" variant="default" size="sm" icon={<HiOutlineUpload />} loading={importing}>
+                                Import Excel
+                            </Button>
+                        </Upload>
+                    )}
+                    {draft && (
                         <Button variant="default" size="sm" icon={<HiOutlineRefresh />} loading={prosesAksi}
-                            onClick={() => jalankan(() => payrollService.generate(id), 'Slip berhasil digenerate')}>
+                            onClick={() => {
+                                if (slips.length > 0) setKonfirmasiGenerate(true)
+                                else jalankan(() => payrollService.generate(id), 'Slip berhasil digenerate')
+                            }}>
                             {slips.length > 0 ? 'Generate Ulang' : 'Generate Slip'}
                         </Button>
                     )}
@@ -295,7 +410,8 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     <div className="flex justify-center py-12"><Spinner size={36} /></div>
                 ) : slips.length === 0 ? (
                     <p className="text-gray-400 text-sm text-center py-10">
-                        Belum ada slip — klik <span className="font-semibold">Generate Slip</span> untuk menghitung gaji seluruh karyawan.
+                        Belum ada slip — klik <span className="font-semibold">Generate Slip</span> untuk menghitung dari absensi,
+                        atau <span className="font-semibold">Import Excel</span> untuk memuat dari file gaji.
                     </p>
                 ) : (
                     <>
@@ -311,6 +427,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                             />
                         </div>
                         <DataTable
+                            className="table-sticky-first"
                             columns={columns}
                             data={slipsHalaman as unknown[]}
                             loading={false}
@@ -324,7 +441,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
             </Card>
 
             {/* Dialog Edit Slip */}
-            <Dialog isOpen={!!editTarget} onRequestClose={() => setEditTarget(null)} onClose={() => setEditTarget(null)}>
+            <Dialog isOpen={!!editTarget} width={800} onRequestClose={() => setEditTarget(null)} onClose={() => setEditTarget(null)}>
                 <h5 className="font-bold mb-1">Koreksi Slip — {editTarget?.nama_karyawan}</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     Gaji pokok, lembur, potongan absen & BPJS dihitung otomatis (generate ulang untuk menyegarkan). Di sini hanya komponen manual.
@@ -340,6 +457,26 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                             <Input placeholder="Bonus, uang makan..." value={editForm.keterangan_tunjangan}
                                 onChange={e => setEditForm(p => ({ ...p, keterangan_tunjangan: e.target.value }))} />
                         </FormItem>
+                        <FormItem label="Uang Makan (Rp)">
+                            <Input type="number" min={0} value={editForm.uang_makan}
+                                onChange={e => setEditForm(p => ({ ...p, uang_makan: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Uang Makan Mingguan (Rp)" extra={<span className="text-xs text-gray-400">Potongan</span>}>
+                            <Input type="number" min={0} value={editForm.uang_makan_mingguan}
+                                onChange={e => setEditForm(p => ({ ...p, uang_makan_mingguan: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Kasbon (Rp)">
+                            <Input type="number" min={0} value={editForm.kasbon}
+                                onChange={e => setEditForm(p => ({ ...p, kasbon: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Uang Jalan Terpakai (Rp)">
+                            <Input type="number" min={0} value={editForm.uang_jalan_terpakai}
+                                onChange={e => setEditForm(p => ({ ...p, uang_jalan_terpakai: e.target.value }))} />
+                        </FormItem>
+                        <FormItem label="Tilangan (Rp)">
+                            <Input type="number" min={0} value={editForm.tilangan}
+                                onChange={e => setEditForm(p => ({ ...p, tilangan: e.target.value }))} />
+                        </FormItem>
                         <FormItem label="Potongan Lain (Rp)">
                             <Input type="number" min={0} value={editForm.potongan_lain}
                                 onChange={e => setEditForm(p => ({ ...p, potongan_lain: e.target.value }))} />
@@ -352,7 +489,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                             <Input type="number" min={0} value={editForm.pph21}
                                 onChange={e => setEditForm(p => ({ ...p, pph21: e.target.value }))} />
                         </FormItem>
-                        <FormItem label="Catatan">
+                        <FormItem label="Catatan" className="sm:col-span-2">
                             <Input value={editForm.catatan}
                                 onChange={e => setEditForm(p => ({ ...p, catatan: e.target.value }))} />
                         </FormItem>
@@ -363,6 +500,51 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     <Button type="submit" variant="solid" loading={savingEdit}>Simpan</Button>
                 </div>
                 </form>
+            </Dialog>
+
+            <ConfirmDialog
+                isOpen={konfirmasiGenerate}
+                type="warning"
+                title="Generate Ulang Slip"
+                confirmText="Ya, Generate Ulang"
+                cancelText="Batal"
+                onClose={() => setKonfirmasiGenerate(false)}
+                onCancel={() => setKonfirmasiGenerate(false)}
+                onConfirm={() => { setKonfirmasiGenerate(false); jalankan(() => payrollService.generate(id), 'Slip berhasil digenerate') }}
+            >
+                <p>Semua slip pada periode ini akan dihapus lalu dihitung ulang dari data absensi — termasuk hasil <span className="font-semibold">Import Excel</span> dan koreksi manual. Lanjutkan?</p>
+            </ConfirmDialog>
+
+            <Dialog isOpen={!!importResult} onRequestClose={handleCloseImportResult} onClose={handleCloseImportResult} width={560}>
+                <h5 className="text-base font-semibold mb-4">Hasil Import Gaji</h5>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {importResult?.berhasil ?? 0} slip berhasil diimport
+                </p>
+                {importResult && importResult.gagal.length > 0 && (
+                    <div className="overflow-x-auto mt-4 max-h-80 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg">
+                        <table className="w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Baris</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Nama</th>
+                                    <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {importResult.gagal.map((g, idx) => (
+                                    <tr key={idx}>
+                                        <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{g.baris}</td>
+                                        <td className="py-2.5 px-3 text-xs text-gray-800 dark:text-gray-200">{g.nama || '-'}</td>
+                                        <td className="py-2.5 px-3 text-red-500">{g.alasan}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                <div className="flex justify-end mt-6">
+                    <Button variant="solid" onClick={handleCloseImportResult}>Tutup</Button>
+                </div>
             </Dialog>
 
             <ConfirmDialog
