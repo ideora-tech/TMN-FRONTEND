@@ -22,6 +22,7 @@ export interface PembelianBukti {
 export interface PembayaranPembelian {
     nominal_ditransfer: number
     tanggal_transfer: string
+    url_bukti: string | null
     total_aktual: number | null
     selisih: number | null
 }

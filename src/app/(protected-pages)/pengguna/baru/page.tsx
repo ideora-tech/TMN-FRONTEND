@@ -11,16 +11,18 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { penggunaService } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
 export default function PenggunaBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ username: '', email: '', kata_sandi: '', kode_peran: '', aktif: true, id_supir: '' })
+    const [form, setForm] = useState({ username: '', email: '', kata_sandi: '', kode_peran: '', aktif: true, id_supir: '', id_karyawan: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
     const [supirOptions, setSupirOptions] = useState<{ value: string; label: string }[]>([])
+    const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } })
@@ -30,6 +32,10 @@ export default function PenggunaBaruPage() {
             .then(res => setSupirOptions(res.data
                 .filter((s: Supir) => !s.id_pengguna)
                 .map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — ${s.no_sim ?? 'tanpa SIM'}` }))))
+            .catch(() => {})
+        karyawanService.list(1, 500)
+            .then(res => setKaryawanOptions(res.data
+                .map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nama_karyawan} — ${k.nik}` }))))
             .catch(() => {})
     }, [])
 
@@ -53,7 +59,7 @@ export default function PenggunaBaruPage() {
         try {
             const created = await penggunaService.create({
                 id_perusahaan: null,
-                id_karyawan: null,
+                id_karyawan: form.id_karyawan || null,
                 username: form.username,
                 email: form.email,
                 kata_sandi: form.kata_sandi,
@@ -118,6 +124,14 @@ export default function PenggunaBaruPage() {
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
+                    </FormItem>
+                    <FormItem label="Tautkan ke Karyawan (opsional)"
+                        extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
+                        <Select isClearable isSearchable
+                            placeholder="Pilih karyawan..."
+                            options={karyawanOptions}
+                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                            onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? '' }))} />
                     </FormItem>
                     {form.kode_peran === 'SUPIR' && (
                         <FormItem label="Tautkan ke Supir (opsional)"

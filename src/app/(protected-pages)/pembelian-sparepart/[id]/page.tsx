@@ -14,6 +14,8 @@ import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
 
+const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
+
 export default function PembelianDetailPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
@@ -202,7 +204,7 @@ export default function PembelianDetailPage() {
             {data.pembayaran && (
                 <Card>
                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Pembayaran</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         <div>
                             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Ditransfer</p>
                             <p className="text-sm font-bold tabular-nums">{formatRupiah(data.pembayaran.nominal_ditransfer)}</p>
@@ -226,6 +228,27 @@ export default function PembelianDetailPage() {
                             }`}>
                                 {data.pembayaran.selisih !== null ? formatRupiah(data.pembayaran.selisih) : '—'}
                             </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Bukti Transfer</p>
+                            {data.pembayaran.url_bukti ? (
+                                isGambar(data.pembayaran.url_bukti) ? (
+                                    <div className="w-fit">
+                                        <a href={data.pembayaran.url_bukti} target="_blank" rel="noreferrer">
+                                            <img src={data.pembayaran.url_bukti} alt="Bukti transfer"
+                                                className="h-20 w-32 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
+                                        </a>
+                                        <p className="text-xs text-gray-400 mt-1">Klik untuk membuka</p>
+                                    </div>
+                                ) : (
+                                    <a href={data.pembayaran.url_bukti} target="_blank" rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                        Lihat bukti
+                                    </a>
+                                )
+                            ) : (
+                                <p className="text-xs text-gray-400 italic">Belum ada bukti diunggah.</p>
+                            )}
                         </div>
                     </div>
                 </Card>

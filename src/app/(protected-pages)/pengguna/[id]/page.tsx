@@ -221,7 +221,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
                             <FormItem label="Tautkan ke Karyawan (opsional)"
-                                extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini untuk login aplikasi mobile staff (absensi & cuti)</span>}>
+                                extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
                                 <Select isClearable isSearchable
                                     placeholder="Pilih karyawan..."
                                     options={karyawanOptions}
