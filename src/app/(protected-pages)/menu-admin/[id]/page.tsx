@@ -24,7 +24,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
     const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
-        Promise.all([menuService.get(id), menuService.list(1)]).then(([m, list]) => {
+        Promise.all([menuService.get(id), menuService.list(1, 200)]).then(([m, list]) => {
             setMenu(m)
             setForm(m)
             setIndukOptions(list.data

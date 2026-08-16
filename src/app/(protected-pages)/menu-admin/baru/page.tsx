@@ -22,7 +22,7 @@ export default function MenuAdminBaruPage() {
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
 
     useEffect(() => {
-        menuService.list(1).then(res =>
+        menuService.list(1, 200).then(res =>
             setIndukOptions(res.data
                 .filter((m: MenuItem) => !m.id_menu_induk)
                 .map((m: MenuItem) => ({ value: m.id_menu, label: m.nama_menu })))

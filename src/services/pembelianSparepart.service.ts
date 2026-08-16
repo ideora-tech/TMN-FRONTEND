@@ -27,6 +27,21 @@ export interface PembayaranPembelian {
     selisih: number | null
 }
 
+export interface RiwayatPengajuanKeuangan {
+    status: string
+    waktu: string | null
+    oleh: string | null
+    keterangan: string | null
+}
+
+export interface PengajuanKeuanganInfo {
+    id_pengajuan: string
+    nomor_pengajuan: string
+    status: string
+    nominal: number
+    riwayat: RiwayatPengajuanKeuangan[]
+}
+
 export interface PembelianSparepart {
     id_pembelian: string
     nomor_pengajuan: string
@@ -48,6 +63,7 @@ export interface PembelianSparepart {
     items: PembelianItem[]
     bukti: PembelianBukti[]
     pembayaran: PembayaranPembelian | null
+    pengajuan_keuangan?: PengajuanKeuanganInfo | null
     dibuat_pada: string
 }
 
