@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import type { PengajuanKeuanganInfo } from './arusKas.service'
 
 export interface PengaturanPayroll {
     tanggal_mulai_cutoff: number
@@ -8,6 +9,8 @@ export interface PengaturanPayroll {
     persen_bpjs_jht: number
     persen_bpjs_jp: number
     plafon_gaji_bpjs_kesehatan: number
+    ptkp_dasar: number
+    ptkp_tambahan: number
 }
 
 export interface PayrollPeriode {
@@ -110,6 +113,10 @@ export const payrollService = {
     async batalFinalisasi(id: string) {
         const { data } = await axios.post(API_ENDPOINTS.PAYROLL_BATAL_FINALISASI(id))
         return data.data as PayrollPeriode
+    },
+    async infoPengajuan(id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.PAYROLL_PENGAJUAN(id))
+        return data.data as PengajuanKeuanganInfo | null
     },
     async importExcel(id: string, file: File) {
         const fd = new FormData()

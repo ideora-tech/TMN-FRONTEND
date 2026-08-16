@@ -19,6 +19,21 @@ export type KategoriPemasukan =
     | 'modal_pinjaman'
     | 'lainnya'
 
+export interface RiwayatPengajuanKeuangan {
+    status: string
+    waktu: string | null
+    oleh: string | null
+    keterangan: string | null
+}
+
+export interface PengajuanKeuanganInfo {
+    id_pengajuan: string
+    nomor_pengajuan: string
+    status: string
+    nominal: number
+    riwayat: RiwayatPengajuanKeuangan[]
+}
+
 export interface ApprovalPengajuan {
     id_pengguna: string
     nama: string

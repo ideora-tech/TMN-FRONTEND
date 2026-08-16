@@ -17,6 +17,8 @@ const FORM_DEFAULT: FormPengaturan = {
     persen_bpjs_jht: '2',
     persen_bpjs_jp: '1',
     plafon_gaji_bpjs_kesehatan: '12000000',
+    ptkp_dasar: '54000000',
+    ptkp_tambahan: '4500000',
 }
 
 const ATURAN: { key: keyof PengaturanPayroll; label: string; min: number; max?: number; bulat?: boolean }[] = [
@@ -26,6 +28,8 @@ const ATURAN: { key: keyof PengaturanPayroll; label: string; min: number; max?: 
     { key: 'persen_bpjs_jht', label: 'BPJS JHT', min: 0, max: 100 },
     { key: 'persen_bpjs_jp', label: 'BPJS JP', min: 0, max: 100 },
     { key: 'plafon_gaji_bpjs_kesehatan', label: 'Plafon gaji BPJS Kesehatan', min: 0 },
+    { key: 'ptkp_dasar', label: 'PTKP dasar', min: 0 },
+    { key: 'ptkp_tambahan', label: 'PTKP tambahan', min: 0 },
 ]
 
 const keForm = (p: PengaturanPayroll): FormPengaturan => ({
@@ -35,6 +39,8 @@ const keForm = (p: PengaturanPayroll): FormPengaturan => ({
     persen_bpjs_jht: String(p.persen_bpjs_jht),
     persen_bpjs_jp: String(p.persen_bpjs_jp),
     plafon_gaji_bpjs_kesehatan: String(p.plafon_gaji_bpjs_kesehatan),
+    ptkp_dasar: String(p.ptkp_dasar),
+    ptkp_tambahan: String(p.ptkp_tambahan),
 })
 
 const keAngka = (v: string): number => Number(v.trim().replace(',', '.'))
@@ -89,6 +95,8 @@ export default function PengaturanPayrollPage() {
                 persen_bpjs_jht: keAngka(form.persen_bpjs_jht),
                 persen_bpjs_jp: keAngka(form.persen_bpjs_jp),
                 plafon_gaji_bpjs_kesehatan: keAngka(form.plafon_gaji_bpjs_kesehatan),
+                ptkp_dasar: keAngka(form.ptkp_dasar),
+                ptkp_tambahan: keAngka(form.ptkp_tambahan),
             })
             setForm(keForm(hasil))
             toast.push(<Notification type="success" title="Pengaturan payroll tersimpan" />)
@@ -168,10 +176,25 @@ export default function PengaturanPayrollPage() {
 
                         <div className="mb-2 mt-6">
                             <p className="font-semibold text-sm text-gray-700 dark:text-gray-200">PPh 21</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Tarif progresif pemerintah (metode disetahunkan) berdasarkan status PTKP tiap karyawan. Nilai PTKP mengikuti ketentuan resmi — ubah hanya bila regulasi berubah.</p>
                             <div className="border-t border-gray-100 dark:border-gray-700 mt-2" />
                         </div>
-                        <p className="text-sm text-gray-500">
-                            Dihitung otomatis mengikuti tarif progresif pemerintah (metode disetahunkan) berdasarkan status PTKP tiap karyawan — tidak diatur di sini. Angka hasil hitung tetap bisa dikoreksi manual per slip di halaman detail periode.
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="PTKP Dasar / Tahun (Rp)" asterisk
+                                invalid={!!errors.ptkp_dasar} errorMessage={errors.ptkp_dasar}
+                                extra={<span className="text-xs text-gray-400">Untuk status TK/0 — ketentuan saat ini Rp 54.000.000</span>}>
+                                <Input type="text" value={form.ptkp_dasar} invalid={!!errors.ptkp_dasar}
+                                    onChange={e => ubah('ptkp_dasar', e.target.value)} />
+                            </FormItem>
+                            <FormItem label="PTKP Tambahan / Tahun (Rp)" asterisk
+                                invalid={!!errors.ptkp_tambahan} errorMessage={errors.ptkp_tambahan}
+                                extra={<span className="text-xs text-gray-400">Tambahan bila kawin dan per tanggungan (maks 3) — ketentuan saat ini Rp 4.500.000</span>}>
+                                <Input type="text" value={form.ptkp_tambahan} invalid={!!errors.ptkp_tambahan}
+                                    onChange={e => ubah('ptkp_tambahan', e.target.value)} />
+                            </FormItem>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Angka hasil hitung tetap bisa dikoreksi manual per slip di halaman detail periode.
                         </p>
 
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

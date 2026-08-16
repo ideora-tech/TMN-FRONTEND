@@ -5,13 +5,15 @@ import { Card, Button, Tag, Tooltip, Dialog, FormItem, Input, toast, Notificatio
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
+import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineCog, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineCog, HiOutlineSearch, HiOutlineX, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { payrollService, PayrollPeriode } from '@/services/payroll.service'
+import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
 
 type Option = { value: string; label: string }
 
@@ -50,6 +52,20 @@ export default function PayrollPage() {
 
     const [hapusTarget, setHapusTarget] = useState<PayrollPeriode | null>(null)
     const [deleting, setDeleting]       = useState(false)
+
+    const [logOpen, setLogOpen]       = useState(false)
+    const [logInfo, setLogInfo]       = useState<PengajuanKeuanganInfo | null>(null)
+    const [logLoading, setLogLoading] = useState(false)
+
+    const openLog = (p: PayrollPeriode) => {
+        setLogOpen(true)
+        setLogInfo(null)
+        setLogLoading(true)
+        payrollService.infoPengajuan(p.id_periode)
+            .then(setLogInfo)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => setLogLoading(false))
+    }
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -154,6 +170,13 @@ export default function PayrollPage() {
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                             onClick={() => router.push(ROUTES.PAYROLL_DETAIL(row.original.id_periode))}>
                             <HiOutlineEye className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Log Aktivitas Approval">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                            onClick={() => openLog(row.original)}>
+                            <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
                     {row.original.status === 'draft' && (
@@ -264,6 +287,14 @@ export default function PayrollPage() {
             >
                 <p>Hapus periode {hapusTarget?.nama} beserta seluruh slip draft-nya?</p>
             </ConfirmDialog>
+
+            <LogAktivitasKeuanganDialog
+                isOpen={logOpen}
+                info={logInfo}
+                loading={logLoading}
+                emptyMessage="Belum ada pengajuan keuangan — finalisasi periode untuk membuat pengajuan penggajian."
+                onClose={() => setLogOpen(false)}
+            />
         </div>
     )
 }

@@ -27,20 +27,9 @@ export interface PembayaranPembelian {
     selisih: number | null
 }
 
-export interface RiwayatPengajuanKeuangan {
-    status: string
-    waktu: string | null
-    oleh: string | null
-    keterangan: string | null
-}
+import type { PengajuanKeuanganInfo } from './arusKas.service'
 
-export interface PengajuanKeuanganInfo {
-    id_pengajuan: string
-    nomor_pengajuan: string
-    status: string
-    nominal: number
-    riwayat: RiwayatPengajuanKeuangan[]
-}
+export type { RiwayatPengajuanKeuangan, PengajuanKeuanganInfo } from './arusKas.service'
 
 export interface PembelianSparepart {
     id_pembelian: string

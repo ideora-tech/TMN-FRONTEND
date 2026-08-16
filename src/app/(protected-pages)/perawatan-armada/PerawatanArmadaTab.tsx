@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation'
 import { Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown } from 'react-icons/hi'
+import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown, HiOutlineClipboardList } from 'react-icons/hi'
 import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { perawatanArmadaService, PerawatanArmada, PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
+import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
 import { armadaService, Armada } from '@/services/armada.service'
 
 type Option = { value: string; label: string }
@@ -81,6 +83,19 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
     const [detailTarget, setDetailTarget] = useState<PerawatanArmadaWithArmada | null>(null)
     const [detailData, setDetailData]     = useState<PerawatanArmada | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
+    const [logOpen, setLogOpen]         = useState(false)
+    const [logInfo, setLogInfo]         = useState<PengajuanKeuanganInfo | null>(null)
+    const [logLoading, setLogLoading]   = useState(false)
+
+    const openLog = (p: PerawatanArmadaWithArmada) => {
+        setLogOpen(true)
+        setLogInfo(null)
+        setLogLoading(true)
+        perawatanArmadaService.infoPengajuan(p.id_armada, p.id_perawatan)
+            .then(setLogInfo)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => setLogLoading(false))
+    }
 
     const openDetail = (p: PerawatanArmadaWithArmada) => {
         setDetailTarget(p)
@@ -403,6 +418,13 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                                                     <HiOutlineEye className="text-lg" />
                                                                 </span>
                                                             </Tooltip>
+                                                            <Tooltip title="Log Aktivitas Approval">
+                                                                <span
+                                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                                                    onClick={() => openLog(p)}>
+                                                                    <HiOutlineClipboardList className="text-lg" />
+                                                                </span>
+                                                            </Tooltip>
                                                             {p.status !== 'selesai' && p.status !== 'dibatalkan' && (
                                                                 <Tooltip title="Edit">
                                                                     <span
@@ -546,9 +568,18 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                 </ul>
                             </div>
                         )}
+
                     </div>
                 )}
             </Dialog>
+
+            <LogAktivitasKeuanganDialog
+                isOpen={logOpen}
+                info={logInfo}
+                loading={logLoading}
+                emptyMessage="Belum ada pengajuan keuangan untuk perawatan ini."
+                onClose={() => setLogOpen(false)}
+            />
 
             <ConfirmDialog
                 isOpen={!!deleteTarget}

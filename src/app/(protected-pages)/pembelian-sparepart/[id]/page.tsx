@@ -5,6 +5,7 @@ import { Card, Button, FormItem, Input, Tag, Dialog, toast, Notification } from 
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
+import { PENGAJUAN_LABEL, PENGAJUAN_TAG } from '@/components/shared/LogAktivitasKeuanganDialog'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencil, HiOutlineTrash, HiOutlineShoppingCart } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -15,33 +16,6 @@ import { pembelianSparepartService, PembelianSparepart } from '@/services/pembel
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
 
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
-
-const PENGAJUAN_LABEL: Record<string, string> = {
-    diajukan:          'Diajukan',
-    dicek:             'Dicek Keuangan',
-    menunggu_approval: 'Menunggu Approval',
-    disetujui:         'Disetujui',
-    ditolak:           'Ditolak',
-    ditransfer:        'Sudah Ditransfer',
-}
-
-const PENGAJUAN_TAG: Record<string, string> = {
-    diajukan:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
-    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
-    disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
-    ditolak:           'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',
-    ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-}
-
-const PENGAJUAN_BORDER: Record<string, string> = {
-    diajukan:          'border-l-yellow-400',
-    dicek:             'border-l-blue-400',
-    menunggu_approval: 'border-l-amber-400',
-    disetujui:         'border-l-indigo-400',
-    ditolak:           'border-l-red-400',
-    ditransfer:        'border-l-emerald-400',
-}
 
 export default function PembelianDetailPage() {
     const { id } = useParams<{ id: string }>()
@@ -369,12 +343,18 @@ export default function PembelianDetailPage() {
             </Card>
 
             <Card>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-wrap justify-between items-center gap-3">
                     <div>
-                        <h5>Riwayat Approval Keuangan</h5>
-                        {data.pengajuan_keuangan && (
+                        <h5>Approval Keuangan</h5>
+                        {data.pengajuan_keuangan ? (
                             <p className="text-xs text-gray-400 mt-0.5 font-mono">
                                 {data.pengajuan_keuangan.nomor_pengajuan} — {formatRupiah(data.pengajuan_keuangan.nominal)}
+                            </p>
+                        ) : (
+                            <p className="text-sm text-gray-400 mt-0.5">
+                                {data.id_perawatan
+                                    ? 'Approval keuangan pembelian ini mengikuti pengajuan perawatan terkait.'
+                                    : 'Belum ada pengajuan keuangan.'}
                             </p>
                         )}
                     </div>
@@ -384,29 +364,6 @@ export default function PembelianDetailPage() {
                         </Tag>
                     )}
                 </div>
-                {!data.pengajuan_keuangan ? (
-                    <p className="text-sm text-gray-400">
-                        {data.id_perawatan
-                            ? 'Approval keuangan pembelian ini mengikuti pengajuan perawatan terkait.'
-                            : 'Belum ada pengajuan keuangan.'}
-                    </p>
-                ) : (
-                    <div className="flex flex-col gap-2">
-                        {data.pengajuan_keuangan.riwayat.map((r, i) => (
-                            <div key={i}
-                                className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${PENGAJUAN_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
-                                <div className="flex justify-between items-start">
-                                    <Tag className={`${PENGAJUAN_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0`}>
-                                        {PENGAJUAN_LABEL[r.status] ?? r.status}
-                                    </Tag>
-                                    <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
-                                </div>
-                                {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
-                                {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </Card>
 
             <Dialog isOpen={realisasiOpen} onClose={() => setRealisasiOpen(false)} onRequestClose={() => setRealisasiOpen(false)}>

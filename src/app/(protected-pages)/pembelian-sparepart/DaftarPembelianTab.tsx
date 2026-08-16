@@ -4,15 +4,16 @@ import { useRouter } from 'next/navigation'
 import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
-import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye, HiOutlineClipboardList } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
+import { pembelianSparepartService, PembelianSparepart, PengajuanKeuanganInfo } from '@/services/pembelianSparepart.service'
 import { supplierService } from '@/services/supplier.service'
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from './status'
 
@@ -39,6 +40,21 @@ export default function DaftarPembelianTab() {
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<PembelianSparepart | null>(null)
+    const [logOpen, setLogOpen]       = useState(false)
+    const [logTarget, setLogTarget]   = useState<PembelianSparepart | null>(null)
+    const [logInfo, setLogInfo]       = useState<PengajuanKeuanganInfo | null>(null)
+    const [logLoading, setLogLoading] = useState(false)
+
+    const openLog = (p: PembelianSparepart) => {
+        setLogTarget(p)
+        setLogOpen(true)
+        setLogInfo(null)
+        setLogLoading(true)
+        pembelianSparepartService.get(p.id_pembelian)
+            .then(d => setLogInfo(d.pengajuan_keuangan ?? null))
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => setLogLoading(false))
+    }
 
     useEffect(() => {
         supplierService.list({ limit: 999 })
@@ -155,6 +171,14 @@ export default function DaftarPembelianTab() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
+                    <Tooltip title="Log Aktivitas Approval">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                            onClick={() => openLog(row.original)}
+                        >
+                            <HiOutlineClipboardList className="text-lg" />
+                        </span>
+                    </Tooltip>
                     {bolehDiubahAtauDihapus(row.original.status, row.original.id_perawatan) && (
                         <Tooltip title="Hapus">
                             <span
@@ -230,6 +254,16 @@ export default function DaftarPembelianTab() {
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus pengajuan {deleteTarget?.nomor_pengajuan}? Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
+
+            <LogAktivitasKeuanganDialog
+                isOpen={logOpen}
+                info={logInfo}
+                loading={logLoading}
+                emptyMessage={logTarget?.id_perawatan
+                    ? 'Approval keuangan pembelian ini mengikuti pengajuan perawatan terkait.'
+                    : 'Belum ada pengajuan keuangan.'}
+                onClose={() => setLogOpen(false)}
+            />
         </div>
     )
 }

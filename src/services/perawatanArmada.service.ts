@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import type { PengajuanKeuanganInfo } from './arusKas.service'
 
 export type StatusPerawatan = 'terjadwal' | 'dalam_proses' | 'selesai' | 'dibatalkan'
 
@@ -120,6 +121,10 @@ export const perawatanArmadaService = {
     async get(idArmada: string, id: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN_DETAIL(idArmada, id))
         return data.data as PerawatanArmada
+    },
+    async infoPengajuan(idArmada: string, id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN_PENGAJUAN(idArmada, id))
+        return data.data as PengajuanKeuanganInfo | null
     },
     async list(idArmada: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN(idArmada))
