@@ -64,9 +64,12 @@ export async function getNavigation(): Promise<NavigationTree[]> {
         if (!res.ok) return navigationConfig
 
         const json = await res.json()
-        const items: ApiMenuItem[] = json.data ?? []
 
-        if (items.length === 0) return navigationConfig
+        if (!Array.isArray(json?.data)) return navigationConfig
+
+        const items: ApiMenuItem[] = json.data
+
+        if (items.length === 0) return []
 
         return mapMenuTree(items)
     } catch {

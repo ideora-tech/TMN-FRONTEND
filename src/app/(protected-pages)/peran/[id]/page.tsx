@@ -180,6 +180,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         <div>
                             <h5 className="font-semibold">Izin Akses</h5>
                             <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu</p>
+                            <p className="text-gray-400 text-xs mt-0.5">Centang &quot;Lihat&quot; juga menentukan menu yang tampil di sidebar peran ini.</p>
                         </div>
                         <div className="flex gap-2">
                             <Button type="button" size="sm" variant="plain" icon={<HiOutlineRefresh />} onClick={loadData}>Reset</Button>

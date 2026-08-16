@@ -216,6 +216,19 @@ export const arusKasService = {
         return data.data as PengajuanPengeluaran
     },
 
+    async menungguApprovalSaya() {
+        const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_MENUNGGU_SAYA)
+        return data.data as {
+            pengajuan: PengajuanPengeluaran[]
+            ringkasan: { jumlah: number; total_nominal: number }
+        }
+    },
+
+    async riwayatPengajuan(id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_RIWAYAT(id))
+        return data.data as PengajuanKeuanganInfo
+    },
+
     async createPengajuan(payload: PengajuanPayload, bukti?: File | null) {
         const body = bukti ? buildPengajuanFormData(payload, bukti) : payload
         const { data } = await axios.post(API_ENDPOINTS.ARUS_KAS_PENGAJUAN, body)

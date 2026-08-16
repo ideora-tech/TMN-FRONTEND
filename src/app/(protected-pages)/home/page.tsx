@@ -5,6 +5,7 @@ import Tabs from '@/components/ui/Tabs'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import DashboardOperasionalTab from './DashboardOperasionalTab'
 import DashboardArmadaTab from './DashboardArmadaTab'
+import PanelApprovalSaya from './PanelApprovalSaya'
 
 const ARMADA_AUTHORITY = ['dispatcher', 'manager', 'superadmin', 'admin']
 
@@ -24,6 +25,7 @@ export default function HomePage() {
                 <h4 className="font-bold">Dashboard</h4>
                 <p className="text-sm text-gray-500 mt-0.5">Ringkasan operasional TMN Transport</p>
             </div>
+            <PanelApprovalSaya />
             <Tabs value={activeTab} onChange={val => setActiveTab(val as string)}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="operasional">Operasional</Tabs.TabNav>

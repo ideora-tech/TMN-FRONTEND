@@ -238,8 +238,6 @@ export const API_ENDPOINTS = {
     // Menu
     MENU:        '/api/proxy/menu',
     MENU_DETAIL: (id: string) => `/api/proxy/menu/${id}`,
-    MENU_AKSES_PERAN:        '/api/proxy/menu/akses-peran',
-    MENU_AKSES_PERAN_SIMPAN: (kodePeran: string) => `/api/proxy/menu/akses-peran/${kodePeran}`,
 
     // Log Error
     LOG_ERROR:        '/api/proxy/log-error',
@@ -348,6 +346,8 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PENGAJUAN_TOLAK:    (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/tolak`,
     ARUS_KAS_PENGAJUAN_TRANSFER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/transfer`,
     ARUS_KAS_PENGAJUAN_APPROVAL: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/approval`,
+    ARUS_KAS_PENGAJUAN_MENUNGGU_SAYA: '/api/proxy/arus-kas/pengajuan/menunggu-approval-saya',
+    ARUS_KAS_PENGAJUAN_RIWAYAT:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/riwayat`,
 
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',

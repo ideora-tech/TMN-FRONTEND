@@ -127,8 +127,6 @@ export const ROUTES = {
     MENU_ADMIN_BARU:   '/menu-admin/baru',
     MENU_ADMIN_DETAIL: (id: string) => `/menu-admin/${id}`,
 
-    AKSES_MENU: '/akses-menu',
-
     LOG_ERROR:        '/log-error',
     LOG_ERROR_DETAIL: (id: string) => `/log-error/${id}`,
 
