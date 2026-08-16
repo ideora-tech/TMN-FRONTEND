@@ -58,13 +58,12 @@ export default function KaryawanBaruPage() {
     const [lokasiOptions, setLokasiOptions]   = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
-        Promise.all([
-            axios.get(API_ENDPOINTS.JABATAN, { params: { limit: 999 } }),
-            axios.get(API_ENDPOINTS.LOKASI_KANTOR, { params: { limit: 999 } }),
-        ]).then(([jRes, lRes]) => {
-            setJabatanOptions((jRes.data.data as Jabatan[]).map(j => ({ value: j.id_jabatan, label: j.nama_jabatan })))
-            setLokasiOptions((lRes.data.data as LokasiKantor[]).map(l => ({ value: l.id_lokasi, label: l.nama_lokasi })))
-        }).catch(() => {})
+        axios.get(API_ENDPOINTS.JABATAN, { params: { limit: 999 } })
+            .then(jRes => setJabatanOptions((jRes.data.data as Jabatan[]).map(j => ({ value: j.id_jabatan, label: j.nama_jabatan }))))
+            .catch(() => {})
+        axios.get(API_ENDPOINTS.LOKASI_KANTOR, { params: { limit: 999 } })
+            .then(lRes => setLokasiOptions((lRes.data.data as LokasiKantor[]).map(l => ({ value: l.id_lokasi, label: l.nama_lokasi }))))
+            .catch(() => {})
     }, [])
 
     const validate = () => {
