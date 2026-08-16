@@ -26,6 +26,12 @@ const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     lainnya:    'Lainnya',
 }
 
+const PENERIMA_LABEL: Partial<Record<KategoriPengajuan, string>> = {
+    uang_jalan: 'Supir',
+    sparepart:  'Supplier',
+    perawatan:  'Armada',
+}
+
 const STATUS_LABEL: Record<StatusPengajuan, string> = {
     diajukan:          'Diajukan',
     dicek:             'Dicek',
@@ -182,7 +188,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh }:
                             <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{formatRupiah(p.nominal)}</p>
                         </div>
                         <div>
-                            <p className={LABEL_CLASS}>Penerima</p>
+                            <p className={LABEL_CLASS}>{PENERIMA_LABEL[p.kategori] ?? 'Penerima'}</p>
                             <p className={VALUE_CLASS}>{p.penerima}</p>
                         </div>
                     </div>

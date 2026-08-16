@@ -57,6 +57,7 @@ export default function AksesMenuPage() {
             const nyalakan = !next.has(m.id_menu)
             if (nyalakan) {
                 next.add(m.id_menu)
+                anak.forEach(a => next.add(a.id_menu))
                 if (m.id_menu_induk) next.add(m.id_menu_induk)
             } else {
                 next.delete(m.id_menu)
