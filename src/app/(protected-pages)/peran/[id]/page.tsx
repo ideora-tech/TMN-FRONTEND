@@ -91,6 +91,26 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         })
     }
 
+    const semuaItem = grup.flatMap(g => g.items)
+
+    const toggleKolom = (aksi: string) => {
+        const allOn = semuaItem.every(m => perms[permKey(m.id_menu, aksi)])
+        setPerms(prev => {
+            const next = { ...prev }
+            semuaItem.forEach(m => { next[permKey(m.id_menu, aksi)] = !allOn })
+            return next
+        })
+    }
+
+    const toggleMatrix = () => {
+        const allOn = semuaItem.every(m => AKSI.every(a => perms[permKey(m.id_menu, a)]))
+        setPerms(prev => {
+            const next = { ...prev }
+            semuaItem.forEach(m => AKSI.forEach(a => { next[permKey(m.id_menu, a)] = !allOn }))
+            return next
+        })
+    }
+
     const handleSave = async () => {
         if (!peran) return
         setSaving(true)
@@ -198,9 +218,43 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr>
                                         <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48">Menu</th>
-                                        <th className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">Semua</th>
+                                        <th className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                <span>Semua</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={semuaItem.length > 0 && semuaItem.every(m => AKSI.every(a => perms[permKey(m.id_menu, a)]))}
+                                                    ref={el => {
+                                                        if (el) {
+                                                            const some = semuaItem.some(m => AKSI.some(a => perms[permKey(m.id_menu, a)]))
+                                                            const all = semuaItem.every(m => AKSI.every(a => perms[permKey(m.id_menu, a)]))
+                                                            el.indeterminate = some && !all
+                                                        }
+                                                    }}
+                                                    onChange={toggleMatrix}
+                                                    className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                                />
+                                            </div>
+                                        </th>
                                         {AKSI.map(a => (
-                                            <th key={a} className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">{a}</th>
+                                            <th key={a} className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    <span>{a}</span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={semuaItem.length > 0 && semuaItem.every(m => perms[permKey(m.id_menu, a)])}
+                                                        ref={el => {
+                                                            if (el) {
+                                                                const some = semuaItem.some(m => perms[permKey(m.id_menu, a)])
+                                                                const all = semuaItem.every(m => perms[permKey(m.id_menu, a)])
+                                                                el.indeterminate = some && !all
+                                                            }
+                                                        }}
+                                                        onChange={() => toggleKolom(a)}
+                                                        className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </th>
                                         ))}
                                     </tr>
                                 </thead>

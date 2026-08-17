@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification, Dialog, Upload } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -248,12 +248,12 @@ export default function ArmadaPage() {
             header: '', id: 'action', size: 100,
             cell: ({ row }: CellContext<Armada, unknown>) => (
                 <div className="flex items-center justify-end gap-2">
-                    <Tooltip title="Edit">
+                    <Tooltip title="Lihat Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                             onClick={() => router.push(ROUTES.ARMADA_DETAIL(row.original.id_armada))}
                         >
-                            <HiOutlinePencilAlt className="text-lg" />
+                            <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Hapus">

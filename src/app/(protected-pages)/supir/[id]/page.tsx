@@ -12,6 +12,7 @@ import { tripService, Trip } from '@/services/trip.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
+import DokumenSupirSection from './DokumenSupirSection'
 
 const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
@@ -351,6 +352,8 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                     </>
                 )}
             </Card>
+
+            <DokumenSupirSection idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama} />
 
             {/* Riwayat Armada (Penugasan) */}
             <Card>
