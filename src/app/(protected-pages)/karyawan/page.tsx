@@ -2,10 +2,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineDownload } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
@@ -174,14 +175,11 @@ export default function KaryawanPage() {
                     <p className="text-gray-500 text-sm mt-0.5">Data master karyawan</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                        loading={downloading === 'excel'} onClick={() => handleExport('excel')}>
-                        Export Excel
-                    </Button>
-                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                        loading={downloading === 'pdf'} onClick={() => handleExport('pdf')}>
-                        Export PDF
-                    </Button>
+                    <ExportDropdownButton
+                        loading={downloading}
+                        onExportExcel={() => handleExport('excel')}
+                        onExportPdf={() => handleExport('pdf')}
+                    />
                     <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                         onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>
                         Tambah Karyawan

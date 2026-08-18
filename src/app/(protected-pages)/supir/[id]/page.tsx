@@ -353,6 +353,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                 )}
             </Card>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DokumenSupirSection idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama} />
 
             {/* Riwayat Armada (Penugasan) */}
@@ -421,6 +422,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                 )}
             </Card>
+            </div>
 
             {/* Riwayat Trip */}
             <Card>

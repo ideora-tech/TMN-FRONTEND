@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag, Tooltip } from '@/components/ui'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag, Tooltip, Dropdown } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
@@ -13,8 +13,11 @@ import { proyekRuteService } from '@/services/proyekRute.service'
 import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
 import { shiftService, Shift } from '@/services/shift.service'
 import { penugasanService, Penugasan, StatusPenugasan, OpsiArmadaVendor } from '@/services/penugasan.service'
-import { Armada } from '@/services/armada.service'
-import { Supir } from '@/services/supir.service'
+import { armadaService, Armada } from '@/services/armada.service'
+import { supirService, Supir } from '@/services/supir.service'
+import MulaiTripDialog from '../trip/MulaiTripDialog'
+import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
+import { tripService } from '@/services/trip.service'
 
 type Option = { value: string; label: string }
 
@@ -60,12 +63,13 @@ type Props = {
     onEdit: (p: Penugasan) => void
     onDelete: (p: Penugasan) => void
     refetchPenugasan: () => void
+    refreshSignal?: number
 }
 
 export default function PapanShift({
     idProyek, namaProyek = '',
     penugasanList, armadaMap, supirMap, vendorArmadaMap, loadingPenugasan,
-    onEdit, onDelete, refetchPenugasan,
+    onEdit, onDelete, refetchPenugasan, refreshSignal,
 }: Props) {
     const router = useRouter()
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
@@ -95,6 +99,20 @@ export default function PapanShift({
     const [tanggalMulai, setTanggalMulai]   = useState('')
     const [pilihShift, setPilihShift]       = useState<string | null>(null)
     const [sampaiTanggal, setSampaiTanggal] = useState('') // opsional: rentang assign sampai tanggal ini
+    const [editJadwalPenugasan, setEditJadwalPenugasan] = useState<Penugasan | null>(null)
+    const [pilihSupirPengganti, setPilihSupirPengganti] = useState<string | null>(null)
+    const [pilihArmadaOverride, setPilihArmadaOverride] = useState<string | null>(null)
+    const [pakaiTitikDropOverride, setPakaiTitikDropOverride] = useState(false)
+    const [titikDropOverrideList, setTitikDropOverrideList] = useState<string[]>([])
+    const [showMulaiTripDariSel, setShowMulaiTripDariSel] = useState(false)
+    const [daftarSupirAktif, setDaftarSupirAktif] = useState<Supir[]>([])
+    const [daftarArmada, setDaftarArmada] = useState<Armada[]>([])
+    const [batalTripTarget, setBatalTripTarget] = useState<JadwalShift | null>(null)
+    const [membatalkanTrip, setMembatalkanTrip] = useState(false)
+    const [selesaiTripTarget, setSelesaiTripTarget] = useState<JadwalShift | null>(null)
+    const [selesaikanPenugasanJuga, setSelesaikanPenugasanJuga] = useState(false)
+    const [menyelesaikanTrip, setMenyelesaikanTrip] = useState(false)
+    const [laporanDialogTrip, setLaporanDialogTrip] = useState<string | null>(null)
     const [saving, setSaving]               = useState(false)
     const [hasilGagal, setHasilGagal]       = useState<{ sukses: number; gagal: { tanggal?: string; alasan: string }[] } | null>(null)
 
@@ -143,9 +161,26 @@ export default function PapanShift({
         } finally {
             setLoading(false)
         }
-    }, [idProyek, bulan])
+    }, [idProyek, bulan, refreshSignal])
 
     useEffect(() => { fetchBoard() }, [fetchBoard])
+
+    useEffect(() => {
+        supirService.list(1, 100).then(res => setDaftarSupirAktif(res.data.filter((s: Supir) => s.status === 'aktif'))).catch(() => {})
+        armadaService.list(1, 100).then(res => setDaftarArmada(res.data)).catch(() => {})
+    }, [])
+
+    const armadaDefaultBySupir = useMemo(() => {
+        const m: Record<string, string> = {}
+        daftarSupirAktif.forEach(s => { if (s.id_armada_default) m[s.id_supir] = s.id_armada_default })
+        return m
+    }, [daftarSupirAktif])
+
+    const supirByArmadaDefault = useMemo(() => {
+        const m: Record<string, string> = {}
+        daftarSupirAktif.forEach(s => { if (s.id_armada_default && !(s.id_armada_default in m)) m[s.id_armada_default] = s.id_supir })
+        return m
+    }, [daftarSupirAktif])
 
     const barisSupir = useMemo<BarisSupir[]>(() => {
         const unik = new Map<string, BarisSupir>()
@@ -317,7 +352,12 @@ export default function PapanShift({
     }
 
     const bukaBulkGanti = () => {
+        if (selTerisi.length === 1 && selTerisi[0].jadwal) {
+            bukaGanti(selTerisi[0].supir, selTerisi[0].jadwal)
+            return
+        }
         setEditJadwal(null)
+        setEditJadwalPenugasan(null)
         setBulkMode(true)
         setBulkAksi('ganti')
         setPilihSupirId('')
@@ -329,11 +369,16 @@ export default function PapanShift({
 
     const bukaGanti = (supir: BarisSupir, jadwal: JadwalShift) => {
         setEditJadwal(jadwal)
+        setEditJadwalPenugasan(supir.penugasan)
         setBulkMode(false)
         setPilihSupirId(supir.idSupir)
         setTanggalMulai(jadwal.tanggal)
         setPilihShift(jadwal.id_shift)
         setSampaiTanggal('')
+        setPilihSupirPengganti(jadwal.id_supir_pengganti ?? null)
+        setPilihArmadaOverride(jadwal.id_armada_override ?? null)
+        setPakaiTitikDropOverride(jadwal.titik_drop_override.length > 0)
+        setTitikDropOverrideList(jadwal.titik_drop_override.length > 0 ? jadwal.titik_drop_override : [])
         setDialogOpen(true)
     }
 
@@ -416,7 +461,12 @@ export default function PapanShift({
         setSaving(true)
         try {
             if (editJadwal) {
-                await jadwalShiftService.update(editJadwal.id_jadwal_shift, { id_shift: pilihShift })
+                await jadwalShiftService.update(editJadwal.id_jadwal_shift, {
+                    id_shift: pilihShift,
+                    id_supir_pengganti: pilihSupirPengganti,
+                    id_armada_override: pilihArmadaOverride,
+                    titik_drop_override: pakaiTitikDropOverride ? titikDropOverrideList : null,
+                })
                 toast.push(<Notification type="success" title="Shift berhasil diganti" />)
             } else if (bulkMode && bulkAksi === 'ganti') {
                 let sukses = 0
@@ -500,6 +550,39 @@ export default function PapanShift({
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setDeleting(false)
+        }
+    }
+
+    const handleBatalTrip = async () => {
+        if (!batalTripTarget?.id_trip) return
+        setMembatalkanTrip(true)
+        try {
+            await tripService.batalkan(batalTripTarget.id_trip)
+            toast.push(<Notification type="success" title="Trip berhasil dibatalkan" />)
+            setBatalTripTarget(null)
+            setDialogOpen(false)
+            fetchBoard()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMembatalkanTrip(false)
+        }
+    }
+
+    const handleSelesaikanTrip = async () => {
+        if (!selesaiTripTarget?.id_trip) return
+        setMenyelesaikanTrip(true)
+        try {
+            await tripService.checkout(selesaiTripTarget.id_trip, selesaikanPenugasanJuga)
+            toast.push(<Notification type="success" title="Trip berhasil diselesaikan" />)
+            setSelesaiTripTarget(null)
+            setSelesaikanPenugasanJuga(false)
+            setDialogOpen(false)
+            fetchBoard()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyelesaikanTrip(false)
         }
     }
 
@@ -857,7 +940,37 @@ const handleImportFile = async (file: File | null) => {
                                                             <div className="flex items-center justify-between gap-1">
                                                                 <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{j.shift_nama}</span>
                                                                 <span className="flex items-center shrink-0">
-                                                                    {j.status_trip && j.id_trip && (
+                                                                    {j.trips && j.trips.length > 1 ? (
+                                                                        <Dropdown
+                                                                            placement="bottom-end"
+                                                                            renderTitle={
+                                                                                <span className="relative inline-flex p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 cursor-pointer"
+                                                                                    title={`${j.trips.length} trip hari ini`}
+                                                                                    onClick={e => e.stopPropagation()}>
+                                                                                    <HiOutlineEye className="w-3.5 h-3.5" />
+                                                                                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold leading-none">
+                                                                                        {j.trips.length}
+                                                                                    </span>
+                                                                                </span>
+                                                                            }
+                                                                        >
+                                                                            {j.trips.map((trip, idx) => (
+                                                                                <Dropdown.Item key={trip.id_trip} eventKey={trip.id_trip}
+                                                                                    onClick={() => window.open(ROUTES.TRIP_DETAIL(trip.id_trip), '_blank', 'noopener')}>
+                                                                                    <span className="flex items-center gap-2 text-sm whitespace-nowrap">
+                                                                                        Rit {idx + 1}
+                                                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                                                                                            trip.status === 'berjalan'
+                                                                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                                                                                : 'bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300'
+                                                                                        }`}>
+                                                                                            {trip.status === 'berjalan' ? 'Sedang Jalan' : 'Selesai'}
+                                                                                        </span>
+                                                                                    </span>
+                                                                                </Dropdown.Item>
+                                                                            ))}
+                                                                        </Dropdown>
+                                                                    ) : j.status_trip && j.id_trip && (
                                                                         <button type="button" className="p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
                                                                             title={j.status_trip === 'berjalan' ? 'Lihat trip yang sedang jalan' : 'Lihat trip selesai'}
                                                                             onClick={e => { e.stopPropagation(); window.open(ROUTES.TRIP_DETAIL(j.id_trip!), '_blank', 'noopener') }}>
@@ -900,6 +1013,17 @@ const handleImportFile = async (file: File | null) => {
                                                                     {j.nopol_alokasi}
                                                                 </p>
                                                             )}
+                                                            {j.id_supir_pengganti && (
+                                                                <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-300 truncate">
+                                                                    → {j.nama_supir_pengganti}
+                                                                </p>
+                                                            )}
+                                                            {j.id_armada_override && (
+                                                                <p className="text-[10px] font-mono font-semibold text-purple-600 dark:text-purple-300 truncate"
+                                                                    title="Armada override manual">
+                                                                    {j.nopol_override} · Manual
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     ) : countShift(b.idSupir) > 0 ? (
                                                         <button type="button"
@@ -935,7 +1059,7 @@ const handleImportFile = async (file: File | null) => {
             )}
 
             {/* Dialog assign / ganti shift — dibuka dari sel papan */}
-            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={440}>
+            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={560}>
                 <h5 className="text-base font-semibold mb-1">
                     {editJadwal || (bulkMode && bulkAksi === 'ganti') ? 'Ganti Shift' : 'Assign Shift'}
                 </h5>
@@ -977,8 +1101,88 @@ const handleImportFile = async (file: File | null) => {
                             Belum ada master Shift — klik tombol <strong>Tambah Shift</strong> di kanan atas papan.
                         </p>
                     )}
+                    {editJadwal && (
+                        <>
+                            <FormItem label="Supir Pengganti (opsional)">
+                                <Select isClearable placeholder="Pilih supir pengganti..."
+                                    options={daftarSupirAktif.map(s => ({ value: s.id_supir, label: s.nama }))}
+                                    value={pilihSupirPengganti ? { value: pilihSupirPengganti, label: daftarSupirAktif.find(s => s.id_supir === pilihSupirPengganti)?.nama ?? '' } : null}
+                                    onChange={opt => {
+                                        const idSupir = (opt as Option | null)?.value ?? null
+                                        setPilihSupirPengganti(idSupir)
+                                        const armadaIkut = idSupir ? armadaDefaultBySupir[idSupir] : undefined
+                                        if (armadaIkut) setPilihArmadaOverride(armadaIkut)
+                                    }} />
+                            </FormItem>
+                            <FormItem label="Armada Pengganti (opsional)">
+                                <Select isClearable placeholder="Pilih armada pengganti..."
+                                    options={daftarArmada.map(a => ({ value: a.id_armada, label: a.nopol }))}
+                                    value={pilihArmadaOverride ? { value: pilihArmadaOverride, label: daftarArmada.find(a => a.id_armada === pilihArmadaOverride)?.nopol ?? '' } : null}
+                                    onChange={opt => {
+                                        const idArmada = (opt as Option | null)?.value ?? null
+                                        setPilihArmadaOverride(idArmada)
+                                        const supirIkut = idArmada ? supirByArmadaDefault[idArmada] : undefined
+                                        if (supirIkut) setPilihSupirPengganti(supirIkut)
+                                    }} />
+                            </FormItem>
+                            <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                <Checkbox checked={pakaiTitikDropOverride}
+                                    onChange={checked => { setPakaiTitikDropOverride(checked); if (!checked) setTitikDropOverrideList([]) }}>
+                                    Pakai titik drop khusus untuk hari ini
+                                </Checkbox>
+                                {pakaiTitikDropOverride && (
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        {titikDropOverrideList.map((lokasi, i) => (
+                                            <div key={i} className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                                <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
+                                                    onChange={e => setTitikDropOverrideList(prev => prev.map((d, idx) => (idx === i ? e.target.value : d)))} />
+                                                <button type="button"
+                                                    onClick={() => setTitikDropOverrideList(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                    <HiOutlineTrash />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                                            disabled={titikDropOverrideList.length >= 10}
+                                            onClick={() => setTitikDropOverrideList(prev => [...prev, ''])}>
+                                            Tambah Titik
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Batal</Button>
+                        {editJadwal && (
+                            <>
+                                {editJadwal.id_trip && (
+                                    <Button type="button" variant="default"
+                                        onClick={() => setLaporanDialogTrip(editJadwal.id_trip!)}>
+                                        Isi Laporan
+                                    </Button>
+                                )}
+                                {editJadwal.status_trip === 'berjalan' ? (
+                                    <>
+                                        <Button type="button" variant="solid" className="bg-red-600 hover:bg-red-700"
+                                            onClick={() => setBatalTripTarget(editJadwal)}>
+                                            Batal Trip
+                                        </Button>
+                                        <Button type="button" variant="solid"
+                                            onClick={() => setSelesaiTripTarget(editJadwal)}>
+                                            Selesaikan
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button type="button" variant="solid"
+                                        onClick={() => { setDialogOpen(false); setShowMulaiTripDariSel(true) }}>
+                                        Mulai Trip
+                                    </Button>
+                                )}
+                            </>
+                        )}
                         <Button type="submit" variant="solid" loading={saving}
                             disabled={!pilihShift || (!editJadwal && !bulkMode && !tanggalMulai)}>
                             Simpan
@@ -1114,6 +1318,32 @@ const handleImportFile = async (file: File | null) => {
                 <p>Hapus shift <strong>{deleteTarget?.shift_nama}</strong> tanggal <strong>{deleteTarget ? dayjs(deleteTarget.tanggal).format('DD MMM YYYY') : ''}</strong>?</p>
             </ConfirmDialog>
 
+            <ConfirmDialog isOpen={!!batalTripTarget} type="danger" title="Batalkan Trip"
+                confirmText="Ya, Batalkan" cancelText="Tidak"
+                onClose={() => setBatalTripTarget(null)}
+                onCancel={() => setBatalTripTarget(null)}
+                onConfirm={handleBatalTrip}
+                confirmButtonProps={{ loading: membatalkanTrip }}>
+                <p>Batalkan trip <strong>{batalTripTarget?.shift_nama}</strong> tanggal <strong>{batalTripTarget ? dayjs(batalTripTarget.tanggal).format('DD MMM YYYY') : ''}</strong>? Tindakan ini tidak dapat dibatalkan.</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog isOpen={!!selesaiTripTarget} type="warning" title="Selesaikan Trip"
+                confirmText="Ya, Lanjutkan" cancelText="Batal"
+                onClose={() => { setSelesaiTripTarget(null); setSelesaikanPenugasanJuga(false) }}
+                onCancel={() => { setSelesaiTripTarget(null); setSelesaikanPenugasanJuga(false) }}
+                onConfirm={handleSelesaikanTrip}
+                confirmButtonProps={{ loading: menyelesaikanTrip }}>
+                <p>Selesaikan trip <strong>{selesaiTripTarget?.shift_nama}</strong> tanggal <strong>{selesaiTripTarget ? dayjs(selesaiTripTarget.tanggal).format('DD MMM YYYY') : ''}</strong>? Status akan berubah menjadi selesai.</p>
+                <div className="mt-3">
+                    <Checkbox checked={selesaikanPenugasanJuga} onChange={(checked: boolean) => setSelesaikanPenugasanJuga(checked)}>
+                        Sekalian selesaikan penugasan
+                    </Checkbox>
+                    <p className="text-xs text-gray-400 mt-1 ml-7">
+                        Armada otomatis kembali tersedia setelah checkout. Centang bila ini rit terakhir — penugasan ikut ditutup. Biarkan kosong bila masih ada rit berikutnya.
+                    </p>
+                </div>
+            </ConfirmDialog>
+
             <ConfirmDialog isOpen={bulkDeleteOpen} type="danger" title="Hapus Jadwal Shift Terpilih"
                 confirmText="Ya, Hapus" cancelText="Batal"
                 onClose={() => setBulkDeleteOpen(false)}
@@ -1152,6 +1382,20 @@ const handleImportFile = async (file: File | null) => {
                 <div className="flex justify-end mt-4">
                     <Button size="sm" variant="solid" onClick={() => setHasilUbahStatus(null)}>Tutup</Button>
                 </div>
+            </Dialog>
+
+            <MulaiTripDialog
+                isOpen={showMulaiTripDariSel}
+                onClose={() => setShowMulaiTripDariSel(false)}
+                onSukses={() => { setShowMulaiTripDariSel(false); fetchBoard() }}
+                idPenugasanTerkunci={editJadwalPenugasan?.id_penugasan}
+                idProyekTerkunci={idProyek}
+            />
+
+            <Dialog isOpen={!!laporanDialogTrip} onRequestClose={() => setLaporanDialogTrip(null)} onClose={() => setLaporanDialogTrip(null)} width={900}>
+                {laporanDialogTrip && (
+                    <LaporanPerjalananPanel idTrip={laporanDialogTrip} onSaved={fetchBoard} />
+                )}
             </Dialog>
         </div>
     )

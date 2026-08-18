@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { DatePicker, Button, Tag, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -288,8 +289,11 @@ export default function LaporanTripTab() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button size="sm" variant="default" loading={downloading === 'trip-excel'} onClick={handleExportTripExcel}>Export Excel</Button>
-                    <Button size="sm" variant="default" loading={downloading === 'trip-pdf'} onClick={handleExportTripPdf}>Export PDF</Button>
+                    <ExportDropdownButton
+                        loading={downloading === 'trip-excel' ? 'excel' : downloading === 'trip-pdf' ? 'pdf' : null}
+                        onExportExcel={handleExportTripExcel}
+                        onExportPdf={handleExportTripPdf}
+                    />
                 </div>
             </div>
 

@@ -6,6 +6,7 @@ import { Card, Button, Tag, Tooltip, toast, Notification, Dialog, FormItem, Inpu
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import PapanShift from './PapanShift'
+import MulaiTripDialog from '../trip/MulaiTripDialog'
 import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
@@ -122,6 +123,9 @@ export default function PenugasanPage() {
     const tambahDropEdit = () => setTitikDropEdit(prev => (prev.length < 10 ? [...prev, ''] : prev))
     const ubahDropEdit   = (i: number, v: string) => setTitikDropEdit(prev => prev.map((d, idx) => (idx === i ? v : d)))
     const hapusDropEdit  = (i: number) => setTitikDropEdit(prev => prev.filter((_, idx) => idx !== i))
+
+    const [showMulaiTrip, setShowMulaiTrip] = useState(false)
+    const [refreshSignal, setRefreshSignal] = useState(0)
 
     const [hasilPenugasan, setHasilPenugasan] = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
 
@@ -482,6 +486,7 @@ export default function PenugasanPage() {
                         onEdit={openEditDialog}
                         onDelete={setDeleteTarget}
                         refetchPenugasan={fetchData}
+                        refreshSignal={refreshSignal}
                     />
                 )}
             </Card>
@@ -749,6 +754,17 @@ export default function PenugasanPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            <div className="mt-1 sm:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <p className="text-sm font-semibold mb-2">Trip</p>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                    onClick={() => {
+                                        setEditDialogOpen(false)
+                                        setShowMulaiTrip(true)
+                                    }}>
+                                    Mulai Trip
+                                </Button>
+                            </div>
                         </div>
                     )}
                     </div>
@@ -796,6 +812,14 @@ export default function PenugasanPage() {
                     <Button variant="solid" onClick={() => setHasilPenugasan(null)}>Tutup</Button>
                 </div>
             </Dialog>
+
+            <MulaiTripDialog
+                isOpen={showMulaiTrip}
+                onClose={() => setShowMulaiTrip(false)}
+                onSukses={() => { fetchData(); setRefreshSignal(n => n + 1) }}
+                idPenugasanTerkunci={editTarget?.id_penugasan}
+                idProyekTerkunci={selectedProyek}
+            />
         </div>
     )
 }

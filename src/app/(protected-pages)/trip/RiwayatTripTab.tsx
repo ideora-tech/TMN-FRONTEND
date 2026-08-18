@@ -2,12 +2,13 @@
 import axios from 'axios'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Tag, Tooltip, toast, Notification, Button } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -237,14 +238,11 @@ export default function RiwayatTripTab() {
                         onChange={(opt) => { setSumberFilter((opt as SumberOption | null)?.value ?? ''); setCurrentPage(1) }}
                     />
                 </div>
-                <Button variant="default" size="sm" icon={<HiOutlineDownload />}
-                    loading={downloading === 'excel'} onClick={handleExportExcel}>
-                    Export Excel
-                </Button>
-                <Button variant="default" size="sm" icon={<HiOutlineDownload />}
-                    loading={downloading === 'pdf'} onClick={handleExportPdf}>
-                    Export PDF
-                </Button>
+                <ExportDropdownButton
+                    loading={downloading}
+                    onExportExcel={handleExportExcel}
+                    onExportPdf={handleExportPdf}
+                />
             </div>
             <DataTable
                 columns={columns}

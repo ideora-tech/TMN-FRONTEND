@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tooltip, toast, Notification } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -155,22 +156,11 @@ export default function LaporanPage() {
                                 Laporan Trip
                             </Button>
                             {tab === 'proyek' && (
-                                <>
-                                    <Button
-                                        size="sm" variant="default"
-                                        loading={downloading === 'excel'}
-                                        onClick={handleExcelDownload}
-                                    >
-                                        Export Excel
-                                    </Button>
-                                    <Button
-                                        size="sm" variant="default"
-                                        loading={downloading === 'pdf'}
-                                        onClick={handlePdfDownload}
-                                    >
-                                        Export PDF
-                                    </Button>
-                                </>
+                                <ExportDropdownButton
+                                    loading={downloading}
+                                    onExportExcel={handleExcelDownload}
+                                    onExportPdf={handlePdfDownload}
+                                />
                             )}
                         </div>
                     ),

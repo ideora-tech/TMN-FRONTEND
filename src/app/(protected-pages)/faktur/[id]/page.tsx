@@ -253,67 +253,69 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
 
             </Card>
 
-            {faktur.riwayat_status && faktur.riwayat_status.length > 0 && (
-                <Card>
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Riwayat Invoice</p>
-                    <div className="flex flex-col gap-2">
-                        {faktur.riwayat_status.map((r, i) => (
-                            <div key={i}
-                                className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${RIWAYAT_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
-                                <div className="flex justify-between items-start">
-                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${RIWAYAT_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'}`}>
-                                        {RIWAYAT_LABEL[r.status] ?? r.status}
-                                    </span>
-                                    <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {faktur.riwayat_status && faktur.riwayat_status.length > 0 && (
+                    <Card>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">Riwayat Invoice</p>
+                        <div className="flex flex-col gap-2">
+                            {faktur.riwayat_status.map((r, i) => (
+                                <div key={i}
+                                    className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${RIWAYAT_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
+                                    <div className="flex justify-between items-start">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${RIWAYAT_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'}`}>
+                                            {RIWAYAT_LABEL[r.status] ?? r.status}
+                                        </span>
+                                        <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
+                                    </div>
+                                    {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
+                                    {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
                                 </div>
-                                {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
-                                {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-            )}
+                            ))}
+                        </div>
+                    </Card>
+                )}
 
-            {faktur.items && faktur.items.length > 0 && (
-                <Card>
-                    <div className="flex items-center justify-between mb-4">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Item Invoice</p>
-                        {faktur.status === 'draft' && (
-                            <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={openEdit}>
-                                Edit Invoice
-                            </Button>
-                        )}
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                            <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Deskripsi</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Qty</th>
-                                    <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Harga Satuan</th>
-                                    <th className="py-2.5 text-right text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {faktur.items.map((item, idx) => (
-                                    <tr key={idx}>
-                                        <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{item.deskripsi}</td>
-                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{item.qty}</td>
-                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{formatRupiah(item.harga_satuan)}</td>
-                                        <td className="py-3 text-right font-semibold text-gray-800 dark:text-gray-200">{formatRupiah(item.subtotal)}</td>
+                {faktur.items && faktur.items.length > 0 && (
+                    <Card>
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Item Invoice</p>
+                            {faktur.status === 'draft' && (
+                                <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={openEdit}>
+                                    Edit Invoice
+                                </Button>
+                            )}
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Deskripsi</th>
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Qty</th>
+                                        <th className="py-2.5 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pr-4">Harga Satuan</th>
+                                        <th className="py-2.5 text-right text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Subtotal</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="border-t border-gray-200 dark:border-gray-600">
-                                    <td colSpan={3} className="pt-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</td>
-                                    <td className="pt-3 text-right font-bold text-gray-900 dark:text-gray-100">{formatRupiah(faktur.total)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </Card>
-            )}
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {faktur.items.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{item.deskripsi}</td>
+                                            <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{item.qty}</td>
+                                            <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{formatRupiah(item.harga_satuan)}</td>
+                                            <td className="py-3 text-right font-semibold text-gray-800 dark:text-gray-200">{formatRupiah(item.subtotal)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="border-t border-gray-200 dark:border-gray-600">
+                                        <td colSpan={3} className="pt-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</td>
+                                        <td className="pt-3 text-right font-bold text-gray-900 dark:text-gray-100">{formatRupiah(faktur.total)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </Card>
+                )}
+            </div>
 
             <Dialog isOpen={editOpen} onRequestClose={() => setEditOpen(false)} onClose={() => setEditOpen(false)} width={800}>
                 <h5 className="text-base font-semibold mb-2">Edit Invoice</h5>

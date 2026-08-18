@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import dayjs from 'dayjs'
-import { Card, Button, Tag, Checkbox, Dialog, FormItem, Input, Spinner, toast, Notification } from '@/components/ui'
+import { Card, Button, Tag, Tooltip, Checkbox, Dialog, FormItem, Input, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
@@ -229,9 +229,18 @@ export default function KonsolidasiKlienPage() {
         {
             header: 'Tarif', id: 'tarif', size: 130,
             cell: ({ row }) => (
-                <span className="whitespace-nowrap">
+                <span className="whitespace-nowrap inline-flex items-center gap-1.5">
                     {row.original.tarif
-                        ? formatRupiah(row.original.tarif.harga)
+                        ? (
+                            <>
+                                {formatRupiah(row.original.tarif.harga)}
+                                {row.original.tarif.perkiraan && (
+                                    <Tooltip title="Jenis armada yang di-assign tidak cocok tarif spesifik di rute ini — dipakai tarif termurah di rute itu sebagai perkiraan. Cek/ubah lewat Edit Invoice bila perlu.">
+                                        <Tag className="text-xs bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300">Perkiraan</Tag>
+                                    </Tooltip>
+                                )}
+                            </>
+                        )
                         : row.original.borongan
                             ? <Tag className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">Borongan</Tag>
                             : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}

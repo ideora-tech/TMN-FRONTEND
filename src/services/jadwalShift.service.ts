@@ -14,6 +14,12 @@ export interface JadwalShift {
     sumber_alokasi?: string | null
     status_trip?: 'berjalan' | 'selesai' | null
     id_trip?: string | null
+    trips?: { status: 'berjalan' | 'selesai'; id_trip: string }[]
+    id_supir_pengganti?: string | null
+    nama_supir_pengganti?: string | null
+    id_armada_override?: string | null
+    nopol_override?: string | null
+    titik_drop_override: string[]
 }
 
 export interface HasilBatchShift {
@@ -30,7 +36,12 @@ export const jadwalShiftService = {
         const { data } = await axios.post(API_ENDPOINTS.JADWAL_SHIFT, payload)
         return data.data as HasilBatchShift
     },
-    async update(id: string, payload: { id_shift: string }) {
+    async update(id: string, payload: {
+        id_shift: string
+        id_supir_pengganti?: string | null
+        id_armada_override?: string | null
+        titik_drop_override?: string[] | null
+    }) {
         const { data } = await axios.put(API_ENDPOINTS.JADWAL_SHIFT_DETAIL(id), payload)
         return data.data as JadwalShift
     },

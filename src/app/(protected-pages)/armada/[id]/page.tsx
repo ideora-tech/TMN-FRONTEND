@@ -721,6 +721,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                 )}
             </Card>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Dokumen Kendaraan */}
             <Card>
                 <div className="flex items-center justify-between mb-1">
@@ -909,7 +910,9 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                 )}
             </Card>
+            </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Riwayat Perawatan */}
             <Card>
                 <div className="flex items-center justify-between mb-1">
@@ -1179,6 +1182,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                 )}
             </Card>
+            </div>
 
             {/* Dialog Edit Dokumen */}
             <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} onClose={() => setEditDocTarget(null)} width={520}>

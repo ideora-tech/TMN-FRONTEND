@@ -2,9 +2,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification, Dialog, Upload } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineUpload } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
@@ -277,30 +278,12 @@ export default function ArmadaPage() {
                     <p className="text-gray-500 text-sm mt-0.5">Data master armada</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                        size="sm" variant="default"
-                        icon={<HiOutlineDownload />}
-                        loading={downloadingExport === 'excel'}
-                        onClick={() => handleExport('excel')}
-                    >
-                        Export Excel
-                    </Button>
-                    <Button
-                        size="sm" variant="default"
-                        icon={<HiOutlineDownload />}
-                        loading={downloadingExport === 'pdf'}
-                        onClick={() => handleExport('pdf')}
-                    >
-                        Export PDF
-                    </Button>
-                    <Button
-                        size="sm" variant="default"
-                        icon={<HiOutlineDownload />}
-                        loading={downloadingTemplate}
-                        onClick={handleDownloadTemplate}
-                    >
-                        Unduh Template
-                    </Button>
+                    <ExportDropdownButton
+                        loading={downloadingExport ?? (downloadingTemplate ? 'template' : null)}
+                        onExportExcel={() => handleExport('excel')}
+                        onExportPdf={() => handleExport('pdf')}
+                        onDownloadTemplate={handleDownloadTemplate}
+                    />
                     <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
                         <Button
                             type="button" size="sm" variant="default"

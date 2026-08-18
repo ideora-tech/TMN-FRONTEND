@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Button, DatePicker, Spinner, toast, Notification } from '@/components/ui'
-import { HiOutlineDownload } from 'react-icons/hi'
+import { Card, DatePicker, Spinner, toast, Notification } from '@/components/ui'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -61,14 +61,11 @@ export default function LaporanPerUnitTab() {
                     <DatePicker placeholder="Sampai tanggal" value={tanggalSampai} onChange={setTanggalSampai} />
                 </div>
                 <div className="flex-1" />
-                <Button size="sm" icon={<HiOutlineDownload />} loading={mengunduh === 'excel'}
-                    onClick={() => unduh('excel')}>
-                    Export Excel
-                </Button>
-                <Button size="sm" icon={<HiOutlineDownload />} loading={mengunduh === 'pdf'}
-                    onClick={() => unduh('pdf')}>
-                    Export PDF
-                </Button>
+                <ExportDropdownButton
+                    loading={mengunduh}
+                    onExportExcel={() => unduh('excel')}
+                    onExportPdf={() => unduh('pdf')}
+                />
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
