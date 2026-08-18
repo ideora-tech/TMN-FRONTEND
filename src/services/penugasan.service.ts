@@ -3,6 +3,18 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export type StatusPenugasan = 'pending' | 'aktif' | 'selesai' | 'batal'
 export type SumberPenugasan = 'internal' | 'vendor'
+/** 'operasional' = filter gabungan: internal + vendor unit_only (dipakai daftar Penugasan Operasional). */
+export type SumberFilterPenugasan = SumberPenugasan | 'operasional'
+
+export interface OpsiArmadaVendor {
+    id_armada_vendor: string
+    id_kontrak_vendor: string
+    nopol: string
+    merk: string | null
+    jenis: string | null
+    id_vendor: string
+    nama_vendor: string
+}
 
 export interface Penugasan {
     id_penugasan: string
@@ -23,7 +35,7 @@ export interface Penugasan {
 }
 
 export const penugasanService = {
-    async list(idProyek: string, page = 1, sumber?: SumberPenugasan, limit = 15) {
+    async list(idProyek: string, page = 1, sumber?: SumberFilterPenugasan, limit = 15) {
         const params: Record<string, string | number> = { id_proyek: idProyek, page, limit }
         if (sumber) params.sumber = sumber
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN, { params })
@@ -40,6 +52,10 @@ export const penugasanService = {
     async get(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_DETAIL(id))
         return data.data as Penugasan
+    },
+    async opsiArmadaVendor() {
+        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_OPSI_ARMADA_VENDOR)
+        return data.data as OpsiArmadaVendor[]
     },
     async create(payload: {
         id_proyek: string

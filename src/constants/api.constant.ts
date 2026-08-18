@@ -207,6 +207,7 @@ export const API_ENDPOINTS = {
     // Penugasan
     PENUGASAN:        '/api/proxy/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
+    PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
 
     // Pengguna
     PENGGUNA:                  '/api/proxy/pengguna',

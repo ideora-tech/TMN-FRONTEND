@@ -7,7 +7,7 @@ import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { penugasanService, StatusPenugasan } from '@/services/penugasan.service'
+import { penugasanService, StatusPenugasan, OpsiArmadaVendor } from '@/services/penugasan.service'
 import { projectService, Project } from '@/services/project.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -23,6 +23,8 @@ const STATUS_OPTIONS = [
     { value: 'batal',   label: 'Batal' },
 ]
 
+const VENDOR_PREFIX = 'vendor:'
+
 export default function PenugasanBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
@@ -31,6 +33,7 @@ export default function PenugasanBaruPage() {
     const [proyekOptions, setProyekOptions]     = useState<{ value: string; label: string }[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
+    const [armadaVendorList, setArmadaVendorList] = useState<OpsiArmadaVendor[]>([])
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
     const [supirList, setSupirList]              = useState<Supir[]>([])
     const [supirCutiSet, setSupirCutiSet]       = useState<Set<string>>(new Set())
@@ -54,12 +57,20 @@ export default function PenugasanBaruPage() {
             karyawanService.list(1),
             armadaService.list(1),
             supirService.list(1),
-        ]).then(([proyek, karyawan, armada, supir]) => {
+            penugasanService.opsiArmadaVendor(),
+        ]).then(([proyek, karyawan, armada, supir, armadaVendor]) => {
             setProyekOptions(proyek.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
             setKaryawanOptions(karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
-            setArmadaOptions(armada.data
-                .filter((a: Armada) => a.aktif !== false)
-                .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })))
+            setArmadaVendorList(armadaVendor)
+            setArmadaOptions([
+                ...armada.data
+                    .filter((a: Armada) => a.aktif !== false)
+                    .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })),
+                ...armadaVendor.map((v: OpsiArmadaVendor) => ({
+                    value: VENDOR_PREFIX + v.id_armada_vendor,
+                    label: `${v.nopol}${v.merk ? ' — ' + v.merk : ''} (Vendor — ${v.nama_vendor})`,
+                })),
+            ])
             const supirAktif = supir.data.filter((s: Supir) => s.status === 'aktif')
             setSupirOptions(supirAktif.map((s: Supir) => {
                 const simKadaluarsa = s.tgl_kadaluarsa_sim && new Date(s.tgl_kadaluarsa_sim).getTime() < Date.now()
@@ -87,9 +98,14 @@ export default function PenugasanBaruPage() {
         setEstimasiBiayaStr(String(Math.round(estimasiOtomatis)))
     }, [estimasiOtomatis, estimasiManual])
 
+    const vendorUnitTerpilih = form.id_armada.startsWith(VENDOR_PREFIX)
+        ? armadaVendorList.find(v => v.id_armada_vendor === form.id_armada.slice(VENDOR_PREFIX.length)) ?? null
+        : null
+
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
         if (!form.id_proyek) e.id_proyek = 'Proyek wajib dipilih'
+        if (vendorUnitTerpilih && !form.id_supir) e.id_supir = 'Unit vendor memakai supir internal — wajib dipilih'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -103,13 +119,19 @@ export default function PenugasanBaruPage() {
         setLoading(true)
         try {
             await penugasanService.create({
-                id_proyek:     form.id_proyek,
-                id_armada:     form.id_armada || undefined,
-                id_supir:      form.id_supir || undefined,
-                id_karyawan:   form.id_karyawan || undefined,
-                tanggal_tugas: form.tanggal_tugas || undefined,
-                status:        form.status,
+                id_proyek:      form.id_proyek,
+                id_supir:       form.id_supir || undefined,
+                id_karyawan:    form.id_karyawan || undefined,
+                tanggal_tugas:  form.tanggal_tugas || undefined,
+                status:         form.status,
                 estimasi_biaya: estimasiBiayaStr ? Number(estimasiBiayaStr) : undefined,
+                ...(vendorUnitTerpilih
+                    ? {
+                        sumber:            'vendor',
+                        id_kontrak_vendor: vendorUnitTerpilih.id_kontrak_vendor,
+                        id_armada_vendor:  vendorUnitTerpilih.id_armada_vendor,
+                    }
+                    : { id_armada: form.id_armada || undefined }),
             })
             toast.push(<Notification type="success" title="Penugasan berhasil dibuat" />)
             router.push(ROUTES.PENUGASAN)
@@ -147,7 +169,10 @@ export default function PenugasanBaruPage() {
                             />
                         </FormItem>
                     </div>
-                    <FormItem label="Supir">
+                    <FormItem label="Supir"
+                        asterisk={!!vendorUnitTerpilih}
+                        invalid={!!errors.id_supir}
+                        errorMessage={errors.id_supir}>
                         <Select
                             placeholder="Pilih supir..."
                             options={supirOptions}
@@ -158,10 +183,11 @@ export default function PenugasanBaruPage() {
                                 setForm(p => ({
                                     ...p,
                                     id_supir: selectedId,
-                                    ...(selected?.id_armada_default ? { id_armada: selected.id_armada_default } : {}),
+                                    ...(selected?.id_armada_default && !vendorUnitTerpilih ? { id_armada: selected.id_armada_default } : {}),
                                 }))
                             }}
                             isClearable
+                            invalid={!!errors.id_supir}
                         />
                         {(() => {
                             const dipilih = supirList.find(s => s.id_supir === form.id_supir)
@@ -190,6 +216,11 @@ export default function PenugasanBaruPage() {
                             onChange={(opt) => setForm(p => ({ ...p, id_armada: opt?.value ?? '' }))}
                             isClearable
                         />
+                        {vendorUnitTerpilih && (
+                            <p className="text-xs text-gray-400 mt-1">
+                                Unit vendor — {vendorUnitTerpilih.nama_vendor} · mekanisme Unit Only (memakai supir internal, bukan armada default supir)
+                            </p>
+                        )}
                     </FormItem>
                     <FormItem label="Rute (untuk uang jalan)">
                         <Select isClearable isSearchable placeholder="Pilih rute proyek..."

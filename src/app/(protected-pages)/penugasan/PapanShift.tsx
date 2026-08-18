@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker } from '@/components/ui'
+import { useRouter } from 'next/navigation'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
@@ -11,9 +12,9 @@ import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
 import { proyekRuteService } from '@/services/proyekRute.service'
 import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
 import { shiftService, Shift } from '@/services/shift.service'
-import { penugasanService } from '@/services/penugasan.service'
-import { armadaService, Armada } from '@/services/armada.service'
-import { supirService, Supir } from '@/services/supir.service'
+import { penugasanService, Penugasan, StatusPenugasan, OpsiArmadaVendor } from '@/services/penugasan.service'
+import { Armada } from '@/services/armada.service'
+import { Supir } from '@/services/supir.service'
 
 type Option = { value: string; label: string }
 
@@ -22,13 +23,51 @@ const avatarColor = (nama: string) => AVATAR_COLORS[(nama.charCodeAt(0) || 0) % 
 
 const HARI = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB']
 
+const STATUS_CLASS: Record<string, string> = {
+    pending: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
+    aktif:   'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+    batal:   'bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+    pending: 'Pending', aktif: 'Aktif', selesai: 'Selesai', batal: 'Batal',
+}
+
+const STATUS_BULK_OPTIONS: { value: StatusPenugasan; label: string }[] = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'aktif',   label: 'Aktif' },
+    { value: 'selesai', label: 'Selesai' },
+    { value: 'batal',   label: 'Batal' },
+]
+
 const jam = (t: string) => t.slice(0, 5) // "08:00:00" -> "08:00"
 
-type BarisSupir = { idSupir: string; nama: string; nopol: string | null; jenis: string | null }
+type BarisSupir = { idSupir: string; nama: string; nopol: string | null; jenis: string | null; vendorNama: string | null; status: StatusPenugasan; penugasan: Penugasan }
 
 type PilihanSel = { supir: BarisSupir; tanggal: string; jadwal?: JadwalShift }
 
-export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: string; namaProyek?: string }) {
+type HasilGagalStatus = { supir: string; alasan: string }
+
+type Props = {
+    idProyek: string
+    namaProyek?: string
+    penugasanList: Penugasan[]
+    armadaMap: Record<string, Armada>
+    supirMap: Record<string, Supir>
+    vendorArmadaMap: Record<string, OpsiArmadaVendor>
+    loadingPenugasan: boolean
+    onEdit: (p: Penugasan) => void
+    onDelete: (p: Penugasan) => void
+    refetchPenugasan: () => void
+}
+
+export default function PapanShift({
+    idProyek, namaProyek = '',
+    penugasanList, armadaMap, supirMap, vendorArmadaMap, loadingPenugasan,
+    onEdit, onDelete, refetchPenugasan,
+}: Props) {
+    const router = useRouter()
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
     const [importing, setImporting] = useState(false)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
@@ -36,12 +75,18 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
     const [importDitimpa, setImportDitimpa] = useState<{ baris: number; no_sim: string; tanggal: string; shift_lama: string; shift_baru: string }[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
     const selTerakhir = useRef<{ idSupir: string; tanggal: string } | null>(null)
+    const todayColRef = useRef<HTMLTableCellElement>(null)
     const [loading, setLoading] = useState(false)
 
-    const [barisSupir, setBarisSupir]   = useState<BarisSupir[]>([])
     const [jadwalList, setJadwalList]   = useState<JadwalShift[]>([])
     const [shiftList, setShiftList]     = useState<Shift[]>([])
     const [cariSupir, setCariSupir]     = useState('')
+
+    const [selRows, setSelRows]                       = useState<string[]>([])
+    const [bulkStatusTarget, setBulkStatusTarget]      = useState<StatusPenugasan | null>(null)
+    const [bulkStatusConfirmOpen, setBulkStatusConfirmOpen] = useState(false)
+    const [bulkStatusSubmitting, setBulkStatusSubmitting]   = useState(false)
+    const [hasilUbahStatus, setHasilUbahStatus]        = useState<{ sukses: number; gagal: HasilGagalStatus[] } | null>(null)
 
     // Dialog assign (sel kosong) / ganti shift (ikon pensil) — supir & tanggal ikut sel yang diklik
     const [dialogOpen, setDialogOpen]       = useState(false)
@@ -82,6 +127,8 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
 
     useEffect(() => { fetchShiftList() }, [fetchShiftList])
 
+    useEffect(() => { setSelRows([]); setCariSupir('') }, [idProyek])
+
     const fetchBoard = useCallback(async () => {
         if (!idProyek) return
         setLoading(true)
@@ -89,31 +136,7 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
         try {
             const dari   = bulan.format('YYYY-MM-DD')
             const sampai = bulan.endOf('month').format('YYYY-MM-DD')
-            const [penugasan, jadwal, supirRes, armadaRes] = await Promise.all([
-                penugasanService.list(idProyek, 1, 'internal', 100),
-                jadwalShiftService.list(idProyek, dari, sampai),
-                supirService.list(1, 100),
-                armadaService.list(1, 100),
-            ])
-            const supirMap: Record<string, Supir> = {}
-            supirRes.data.forEach((s: Supir) => { supirMap[s.id_supir] = s })
-            const armadaMap: Record<string, Armada> = {}
-            armadaRes.data.forEach((a: Armada) => { armadaMap[a.id_armada] = a })
-
-            const unik = new Map<string, BarisSupir>()
-            penugasan.data
-                .filter(p => (p.status === 'pending' || p.status === 'aktif') && p.id_supir)
-                .forEach(p => {
-                    if (unik.has(p.id_supir!)) return
-                    const s = supirMap[p.id_supir!]
-                    unik.set(p.id_supir!, {
-                        idSupir: p.id_supir!,
-                        nama: s?.nama ?? p.id_supir!.slice(0, 8),
-                        nopol: p.id_armada ? (armadaMap[p.id_armada]?.nopol ?? null) : null,
-                        jenis: p.id_armada ? (armadaMap[p.id_armada]?.nama_jenis ?? null) : null,
-                    })
-                })
-            setBarisSupir(Array.from(unik.values()).sort((a, b) => a.nama.localeCompare(b.nama)))
+            const jadwal = await jadwalShiftService.list(idProyek, dari, sampai)
             setJadwalList(jadwal)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -123,6 +146,35 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
     }, [idProyek, bulan])
 
     useEffect(() => { fetchBoard() }, [fetchBoard])
+
+    const barisSupir = useMemo<BarisSupir[]>(() => {
+        const unik = new Map<string, BarisSupir>()
+        penugasanList
+            .filter(p => (p.status === 'pending' || p.status === 'aktif') && p.id_supir)
+            .forEach(p => {
+                if (unik.has(p.id_supir!)) return
+                const s = supirMap[p.id_supir!]
+                const unitVendor = !p.id_armada && p.id_armada_vendor ? vendorArmadaMap[p.id_armada_vendor] : null
+                unik.set(p.id_supir!, {
+                    idSupir: p.id_supir!,
+                    nama: s?.nama ?? p.id_supir!.slice(0, 8),
+                    nopol: p.id_armada ? (armadaMap[p.id_armada]?.nopol ?? null) : (unitVendor?.nopol ?? null),
+                    jenis: p.id_armada ? (armadaMap[p.id_armada]?.nama_jenis ?? null) : (unitVendor?.jenis ?? null),
+                    vendorNama: unitVendor?.nama_vendor ?? null,
+                    status: p.status,
+                    penugasan: p,
+                })
+            })
+        return Array.from(unik.values()).sort((a, b) => a.nama.localeCompare(b.nama))
+    }, [penugasanList, supirMap, armadaMap, vendorArmadaMap])
+
+    const memuat = loading || loadingPenugasan
+
+    useEffect(() => {
+        if (!memuat && barisSupir.length > 0 && todayColRef.current) {
+            todayColRef.current.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' })
+        }
+    }, [memuat, bulan, barisSupir.length])
 
     const tanggalList = useMemo(() => {
         const n = bulan.daysInMonth()
@@ -203,6 +255,49 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
             return next
         })
         selTerakhir.current = { idSupir: supir.idSupir, tanggal }
+    }
+
+    const toggleRowSel = (idPenugasan: string) => {
+        setSelRows(prev => prev.includes(idPenugasan) ? prev.filter(x => x !== idPenugasan) : [...prev, idPenugasan])
+    }
+
+    const handleBulkStatusApply = async () => {
+        if (!bulkStatusTarget || selRows.length === 0) return
+        const targets = barisSupir.filter(b => selRows.includes(b.penugasan.id_penugasan)).map(b => b.penugasan)
+        if (targets.length === 0) {
+            setBulkStatusConfirmOpen(false)
+            setBulkStatusTarget(null)
+            setSelRows([])
+            return
+        }
+        setBulkStatusSubmitting(true)
+        try {
+            const results = await Promise.allSettled(
+                targets.map(t => penugasanService.update(t.id_penugasan, { status: bulkStatusTarget }))
+            )
+            const gagal: HasilGagalStatus[] = []
+            results.forEach((r, i) => {
+                if (r.status === 'rejected') {
+                    const t = targets[i]
+                    gagal.push({
+                        supir:  t.id_supir ? (supirMap[t.id_supir]?.nama ?? t.id_supir.slice(0, 8)) : '—',
+                        alasan: parseApiError(r.reason),
+                    })
+                }
+            })
+            const sukses = results.length - gagal.length
+            setBulkStatusConfirmOpen(false)
+            setBulkStatusTarget(null)
+            setSelRows([])
+            refetchPenugasan()
+            if (gagal.length === 0) {
+                toast.push(<Notification type="success" title={`${sukses} penugasan diubah status`} />)
+            } else {
+                setHasilUbahStatus({ sukses, gagal })
+            }
+        } finally {
+            setBulkStatusSubmitting(false)
+        }
     }
 
     const bukaBulkAssign = () => {
@@ -466,7 +561,7 @@ export default function PapanShift({ idProyek, namaProyek = '' }: { idProyek: st
                     { teks: origin, gaya: 'hadir' },
                     { teks: namaRute, gaya: 'hadir' },
                     { teks: b.jenis ?? '-', gaya: 'hadir' },
-                    { teks: 'Internal', gaya: 'hadir' },
+                    { teks: b.vendorNama ?? 'Internal', gaya: 'hadir' },
                     { teks: b.nopol ?? '-', gaya: 'hadir' },
                     { teks: b.nama, gaya: 'nama' },
                     { teks: pertama ? jam(pertama.jam_mulai) : '-', gaya: 'hadir' },
@@ -612,6 +707,28 @@ const handleImportFile = async (file: File | null) => {
                 </div>
             </Dialog>
 
+            {selRows.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
+                    <span className="text-sm font-semibold">{selRows.length} penugasan dipilih</span>
+                    <div className="w-44">
+                        <Select
+                            size="sm"
+                            isSearchable={false}
+                            placeholder="Status tujuan..."
+                            options={STATUS_BULK_OPTIONS}
+                            value={STATUS_BULK_OPTIONS.find(o => o.value === bulkStatusTarget) ?? null}
+                            onChange={opt => setBulkStatusTarget((opt as { value: StatusPenugasan } | null)?.value ?? null)}
+                        />
+                    </div>
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button size="xs" variant="plain" onClick={() => { setSelRows([]); setBulkStatusTarget(null) }}>Batal</Button>
+                        <Button size="xs" variant="solid" disabled={!bulkStatusTarget} onClick={() => setBulkStatusConfirmOpen(true)}>
+                            Terapkan
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {selList.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
                     <span className="text-sm font-semibold">{selList.length} sel terpilih</span>
@@ -638,18 +755,18 @@ const handleImportFile = async (file: File | null) => {
                 </div>
             )}
 
-            {loading ? (
+            {memuat ? (
                 <div className="flex justify-center py-16"><Spinner size={36} /></div>
             ) : barisSupir.length === 0 ? (
                 <p className="text-gray-400 text-sm py-10 text-center">
-                    Belum ada supir ter-assign di proyek ini — buat penugasan dulu di tab Tabel.
+                    Belum ada supir ter-assign di proyek ini — klik &ldquo;Tambah Penugasan&rdquo; di atas.
                 </p>
             ) : (
                 <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg shadow-xs">
                     <table className="border-separate border-spacing-0 min-w-full select-none">
                         <thead className="sticky top-0 z-10">
                             <tr>
-                                <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[220px] border-b border-r border-gray-200 dark:border-gray-600">
+                                <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[280px] border-b border-r border-gray-200 dark:border-gray-600">
                                     <Input size="sm" placeholder="Cari nama supir / nopol..."
                                         prefix={<HiOutlineSearch className="text-gray-400" />}
                                         value={cariSupir}
@@ -658,7 +775,7 @@ const handleImportFile = async (file: File | null) => {
                                 {tanggalList.map(t => {
                                     const isToday = t.format('YYYY-MM-DD') === hariIni
                                     return (
-                                        <th key={t.date()} className="text-center px-2 py-2 min-w-[132px] bg-blue-50 dark:bg-blue-500/10 border-b border-r border-gray-200 dark:border-gray-600">
+                                        <th key={t.date()} ref={isToday ? todayColRef : undefined} className="text-center px-2 py-2 min-w-[132px] bg-blue-50 dark:bg-blue-500/10 border-b border-r border-gray-200 dark:border-gray-600">
                                             <div className={`text-[10px] font-semibold tracking-wide ${isToday ? 'text-blue-600' : 'text-gray-400'}`}>
                                                 {HARI[t.day()]}
                                             </div>
@@ -678,15 +795,47 @@ const handleImportFile = async (file: File | null) => {
                                 return (
                                     <tr key={b.idSupir}>
                                         <td className="sticky left-0 z-10 px-3 py-3 bg-white dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-600 align-top">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2.5">
+                                                <Checkbox checked={selRows.includes(b.penugasan.id_penugasan)}
+                                                    onChange={() => toggleRowSel(b.penugasan.id_penugasan)} />
                                                 <span className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm shrink-0"
                                                     style={{ color: warna, backgroundColor: warna + '15', border: `2px solid ${warna}` }}>
                                                     {b.nama.charAt(0).toUpperCase()}
                                                 </span>
-                                                <div className="min-w-0">
-                                                    <p className="font-semibold text-sm truncate uppercase">{b.nama}</p>
-                                                    <p className="text-xs text-gray-400 font-mono truncate">{b.nopol ?? '—'}</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="font-semibold text-sm truncate uppercase">{b.nama}</p>
+                                                        <Tag className={`text-[10px] shrink-0 ${STATUS_CLASS[b.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                            {STATUS_LABEL[b.status] ?? b.status}
+                                                        </Tag>
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 font-mono truncate">
+                                                        {b.nopol ?? '—'}
+                                                        {b.vendorNama && <span className="ml-1 text-blue-500 font-sans">· {b.vendorNama}</span>}
+                                                    </p>
                                                     <p className="text-[11px] text-gray-400">{countShift(b.idSupir)} shift</p>
+                                                </div>
+                                                <div className="flex items-center shrink-0">
+                                                    <Tooltip title="Detail penugasan">
+                                                        <span className="p-1 text-blue-500 hover:text-blue-700 cursor-pointer"
+                                                            onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(b.penugasan.id_penugasan))}>
+                                                            <HiOutlineEye className="w-4 h-4" />
+                                                        </span>
+                                                    </Tooltip>
+                                                    <Tooltip title="Edit penugasan">
+                                                        <span className="p-1 text-amber-500 hover:text-amber-700 cursor-pointer"
+                                                            onClick={() => onEdit(b.penugasan)}>
+                                                            <HiOutlinePencilAlt className="w-4 h-4" />
+                                                        </span>
+                                                    </Tooltip>
+                                                    {b.status !== 'selesai' && (
+                                                        <Tooltip title="Hapus penugasan">
+                                                            <span className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
+                                                                onClick={() => onDelete(b.penugasan)}>
+                                                                <HiOutlineTrash className="w-4 h-4" />
+                                                            </span>
+                                                        </Tooltip>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -973,6 +1122,37 @@ const handleImportFile = async (file: File | null) => {
                 confirmButtonProps={{ loading: bulkDeleting }}>
                 <p>Hapus <strong>{selTerisi.length}</strong> jadwal shift yang terpilih?</p>
             </ConfirmDialog>
+
+            <ConfirmDialog isOpen={bulkStatusConfirmOpen} type="warning" title="Ubah Status Massal"
+                confirmText="Ya, Ubah" cancelText="Batal"
+                onClose={() => setBulkStatusConfirmOpen(false)}
+                onCancel={() => setBulkStatusConfirmOpen(false)}
+                onConfirm={handleBulkStatusApply}
+                confirmButtonProps={{ loading: bulkStatusSubmitting }}>
+                <p>Ubah status {selRows.length} penugasan menjadi <strong>{STATUS_LABEL[bulkStatusTarget ?? ''] ?? bulkStatusTarget}</strong>?</p>
+            </ConfirmDialog>
+
+            <Dialog isOpen={!!hasilUbahStatus} onRequestClose={() => setHasilUbahStatus(null)} onClose={() => setHasilUbahStatus(null)} width={480}>
+                <h5 className="text-base font-semibold mb-1">Hasil Ubah Status</h5>
+                {hasilUbahStatus && (
+                    <>
+                        <p className="text-sm text-gray-500 mb-4">
+                            {hasilUbahStatus.sukses} berhasil, {hasilUbahStatus.gagal.length} gagal.
+                            {hasilUbahStatus.sukses > 0 && ' Perubahan yang berhasil tetap tersimpan.'}
+                        </p>
+                        <div className="max-h-64 overflow-y-auto flex flex-col gap-2">
+                            {hasilUbahStatus.gagal.map((g, i) => (
+                                <div key={i} className="text-sm px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                                    {g.supir}: {g.alasan}
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+                <div className="flex justify-end mt-4">
+                    <Button size="sm" variant="solid" onClick={() => setHasilUbahStatus(null)}>Tutup</Button>
+                </div>
+            </Dialog>
         </div>
     )
 }
