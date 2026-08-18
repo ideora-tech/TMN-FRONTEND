@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -133,12 +133,12 @@ export default function PenawaranPage() {
                 const row = props.row.original
                 return (
                     <div className="flex items-center justify-end gap-1">
-                        <Tooltip title="Detail / Edit">
+                        <Tooltip title="Lihat Detail">
                             <span
                                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 cursor-pointer transition-colors"
                                 onClick={() => router.push(ROUTES.PENAWARAN_DETAIL(row.id_penawaran))}
                             >
-                                <HiOutlinePencilAlt className="text-base" />
+                                <HiOutlineEye className="text-base" />
                             </span>
                         </Tooltip>
                         {row.status === 'draft' && (

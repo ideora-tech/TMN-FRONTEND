@@ -67,6 +67,7 @@ export const protectedRoutes: Routes = {
     ...listRoute('menu-admin', 'menu-admin', ADMIN_ONLY),
     '/log-error': { key: 'log-error', authority: [] },
     '/log-error/[id]': { key: 'log-error', authority: [], dynamicRoute: true },
+    '/format-kode': { key: 'format-kode', authority: ['superadmin', 'admin'] },
 }
 
 export const publicRoutes: Routes = {

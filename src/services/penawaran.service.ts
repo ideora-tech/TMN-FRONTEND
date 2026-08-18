@@ -2,6 +2,7 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export type PenawaranStatus = 'draft' | 'terkirim' | 'negosiasi' | 'disetujui' | 'ditolak'
+export type TipeHargaPenawaran = 'per_rit' | 'borongan'
 
 export interface Penawaran {
     id_penawaran: string
@@ -9,12 +10,14 @@ export interface Penawaran {
     id_klien: string | null
     nomor_penawaran: string
     judul: string
+    tipe_harga: TipeHargaPenawaran
     nilai_penawaran: number | null
     status: PenawaranStatus
     tanggal_penawaran: string | null
     tanggal_berlaku: string | null
     catatan: string | null
     id_proyek: string | null
+    id_penawaran_induk: string | null
     aktif: boolean
     dibuat_pada: string
     diubah_pada: string
@@ -22,9 +25,10 @@ export interface Penawaran {
 }
 
 export interface PenawaranPayload {
-    nomor_penawaran: string
+    nomor_penawaran?: string
     judul: string
     id_klien?: string | null
+    tipe_harga?: TipeHargaPenawaran
     nilai_penawaran?: number | null
     status?: PenawaranStatus
     tanggal_penawaran?: string | null
@@ -38,7 +42,6 @@ export interface PenawaranItem {
     id_penawaran: string
     id_rute: string
     id_jenis_kendaraan: string
-    id_tarif_rute: string | null
     kode_rute: string | null
     nama_rute: string | null
     asal: string | null
@@ -53,8 +56,7 @@ export interface PenawaranItem {
 export interface PenawaranItemPayload {
     id_rute: string
     id_jenis_kendaraan: string
-    id_tarif_rute?: string | null
-    harga_satuan: number
+    harga_satuan?: number
     estimasi_ritase?: number
     keterangan?: string | null
 }

@@ -18,8 +18,15 @@ export interface Rute {
     diubah_pada: string
 }
 
+export function labelRute(r: Rute): string {
+    const arah = r.asal && r.tujuan ? `${r.asal} → ${r.tujuan}` : null
+    const jarak = r.estimasi_jarak_km ? `${r.estimasi_jarak_km} km` : null
+    const keterangan = [arah, jarak].filter(Boolean).join(', ')
+    return keterangan ? `${r.nama_rute} — ${keterangan}` : r.nama_rute
+}
+
 export interface RutePayload {
-    kode_rute: string
+    kode_rute?: string
     nama_rute: string
     id_lokasi_asal?: string | null
     id_lokasi_tujuan?: string | null
@@ -27,6 +34,24 @@ export interface RutePayload {
     estimasi_durasi_menit?: number | null
     keterangan?: string | null
     aktif?: boolean
+}
+
+export interface EstimasiBok {
+    bok_per_km: number
+    harga_pokok: number
+    saran_harga: number
+    margin_persen_default: number
+    komponen: {
+        biaya_tetap_per_km: number
+        biaya_bbm_per_km: number
+        biaya_ban_per_km: number
+        biaya_servis_per_km: number
+        harga_bbm_per_liter: number
+        konsumsi_km_per_liter: number
+        utilisasi_km_per_bulan: number
+        jarak_km: number
+        estimasi_tol: number | null
+    }
 }
 
 export const ruteService = {
@@ -44,4 +69,11 @@ export const ruteService = {
 
     delete: (id: string): Promise<void> =>
         axios.delete(API_ENDPOINTS.RUTE_DETAIL(id)).then(() => undefined),
+
+    estimasiBok: (params: {
+        id_rute: string
+        id_jenis_kendaraan: string
+        estimasi_tol?: number
+    }): Promise<EstimasiBok | null> =>
+        axios.get(API_ENDPOINTS.RUTE_ESTIMASI_BOK, { params }).then(r => r.data?.data ?? null),
 }

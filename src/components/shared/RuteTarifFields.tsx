@@ -1,64 +1,35 @@
 'use client'
-import { useState, useRef, type ReactNode } from 'react'
-import { FormItem, Input, toast, Notification } from '@/components/ui'
+import { useState } from 'react'
+import { Button, FormItem, Input } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import DatePicker from '@/components/ui/DatePicker'
-import { HiOutlineChevronDown, HiOutlineChevronUp } from 'react-icons/hi'
-import dayjs from 'dayjs'
+import { HiPlusCircle } from 'react-icons/hi'
 import { formatNum } from '@/utils/formatNumber'
-import { tarifRuteService, TarifRutePayload, TarifRute } from '@/services/tarifRute.service'
-import { parseApiError } from '@/utils/error.util'
-
-export type TarifBaruForm = {
-    harga: string
-    tanggal_mulai: string
-    tanggal_berakhir: string
-    estimasi_tol: string
-    estimasi_bbm: string
-    estimasi_uang_jalan: string
-    estimasi_biaya_lain: string
-    keterangan: string
-}
-
-export type DetailBiayaForm = {
-    estimasi_tol: string
-    estimasi_bbm: string
-    estimasi_uang_jalan: string
-    estimasi_biaya_lain: string
-    tanggal_mulai: string
-    tanggal_berakhir: string
-    keterangan: string
-}
+import { ProyekRute, ProyekRutePayload } from '@/services/proyekRute.service'
+import { Rute } from '@/services/rute.service'
+import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
 
 export type RuteTarifState = {
     id_rute: string
     id_jenis_kendaraan: string
-    id_tarif_rute: string | null
     harga_penawaran: string
-    estimasiBiaya: number | null
-    tarifBaru: TarifBaruForm | null
-    detailBiaya: DetailBiayaForm | null
-}
-
-export const EMPTY_TARIF_BARU_FORM: TarifBaruForm = {
-    harga: '',
-    tanggal_mulai: dayjs().format('YYYY-MM-DD'),
-    tanggal_berakhir: '',
-    estimasi_tol: '',
-    estimasi_bbm: '',
-    estimasi_uang_jalan: '',
-    estimasi_biaya_lain: '',
-    keterangan: '',
+    estimasi_ritase: string
+    uang_jalan: string
+    estimasi_tol: string
+    estimasi_bbm: string
+    estimasi_biaya_lain: string
+    keterangan: string
 }
 
 export const EMPTY_RUTE_TARIF_STATE: RuteTarifState = {
     id_rute: '',
     id_jenis_kendaraan: '',
-    id_tarif_rute: null,
     harga_penawaran: '',
-    estimasiBiaya: null,
-    tarifBaru: null,
-    detailBiaya: null,
+    estimasi_ritase: '1',
+    uang_jalan: '',
+    estimasi_tol: '',
+    estimasi_bbm: '',
+    estimasi_biaya_lain: '',
+    keterangan: '',
 }
 
 type Option = { value: string; label: string }
@@ -77,9 +48,11 @@ type Props = {
     onChange: (next: RuteTarifState) => void
     ruteOptions: RuteOption[]
     jenisOptions: Option[]
-    idKlien: string
-    ritaseSlot?: ReactNode
+    onRuteCreated?: (rute: Rute) => void
+    hargaTerkunci?: boolean
 }
+
+const JENIS_SEMUA: Option = { value: '', label: 'Semua jenis' }
 
 function formatDurasi(menit: number): string {
     if (menit < 60) return `${menit} menit`
@@ -88,124 +61,46 @@ function formatDurasi(menit: number): string {
     return sisa > 0 ? `${jam} jam ${sisa} menit` : `${jam} jam`
 }
 
-export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, idKlien, ritaseSlot }: Props) {
-    const [showDetailBiaya, setShowDetailBiaya] = useState(false)
-    const ruteAktifRef = useRef('')
+function angka(v: string): string {
+    return v.replace(/\D/g, '')
+}
+
+function totalUangJalan(state: Pick<RuteTarifState, 'estimasi_tol' | 'estimasi_bbm' | 'estimasi_biaya_lain'>): number {
+    return (Number(state.estimasi_tol) || 0) + (Number(state.estimasi_bbm) || 0) + (Number(state.estimasi_biaya_lain) || 0)
+}
+
+export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, onRuteCreated, hargaTerkunci }: Props) {
+    const [showRuteBaru, setShowRuteBaru] = useState(false)
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
     const adaDetailRute = !!ruteTerpilih && (
         (!!ruteTerpilih.asal && !!ruteTerpilih.tujuan)
         || ruteTerpilih.estimasi_jarak_km != null
         || ruteTerpilih.estimasi_durasi_menit != null
     )
+    const jenisOptionsSemua = [JENIS_SEMUA, ...jenisOptions]
 
-    const resolve = async (idRute: string, idJenis: string) => {
-        if (!idRute || !idJenis) {
-            onChange({ ...EMPTY_RUTE_TARIF_STATE, id_rute: idRute, id_jenis_kendaraan: idJenis })
-            return
-        }
-        try {
-            const tarif = await tarifRuteService.resolusi({ id_rute: idRute, id_jenis_kendaraan: idJenis, id_klien: idKlien || undefined })
-            if (tarif) {
-                onChange({
-                    id_rute: idRute,
-                    id_jenis_kendaraan: idJenis,
-                    id_tarif_rute: tarif.id_tarif_rute,
-                    harga_penawaran: String(tarif.harga),
-                    estimasiBiaya: tarif.harga,
-                    tarifBaru: null,
-                    detailBiaya: {
-                        estimasi_tol: tarif.estimasi_tol != null ? String(tarif.estimasi_tol) : '',
-                        estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
-                        estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
-                        estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
-                        tanggal_mulai: tarif.tanggal_mulai ?? '',
-                        tanggal_berakhir: tarif.tanggal_berakhir ?? '',
-                        keterangan: tarif.keterangan ?? '',
-                    },
-                })
-            } else {
-                onChange({
-                    id_rute: idRute,
-                    id_jenis_kendaraan: idJenis,
-                    id_tarif_rute: null,
-                    harga_penawaran: '',
-                    estimasiBiaya: null,
-                    tarifBaru: EMPTY_TARIF_BARU_FORM,
-                    detailBiaya: null,
-                })
-            }
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-            onChange({
-                id_rute: idRute,
-                id_jenis_kendaraan: idJenis,
-                id_tarif_rute: null,
-                harga_penawaran: '',
-                estimasiBiaya: null,
-                tarifBaru: null,
-                detailBiaya: null,
-            })
-        }
-    }
-
-    const pilihRute = async (idRute: string) => {
-        ruteAktifRef.current = idRute
-        if (!idRute || value.id_jenis_kendaraan) {
-            return resolve(idRute, value.id_jenis_kendaraan)
-        }
-        onChange({ ...EMPTY_RUTE_TARIF_STATE, id_rute: idRute })
-        try {
-            const res = await tarifRuteService.list({ id_rute: idRute, berlaku: '1', limit: 100 })
-            if (ruteAktifRef.current !== idRute) return
-            const daftarTarif: TarifRute[] = res?.data ?? []
-            const jenisIds = [...new Set(daftarTarif.map(t => t.id_jenis_kendaraan))]
-                .filter(idJenis => jenisOptions.some(o => o.value === idJenis))
-            if (jenisIds.length === 1) {
-                await resolve(idRute, jenisIds[0])
-            }
-        } catch {
-            /* gagal ambil daftar tarif — biarkan pilih jenis kendaraan manual */
-        }
-    }
-
-    const KOMPONEN_UANG_JALAN = ['estimasi_tol', 'estimasi_bbm', 'estimasi_uang_jalan', 'estimasi_biaya_lain'] as const
-
-    const totalUangJalan = (d: Pick<DetailBiayaForm, typeof KOMPONEN_UANG_JALAN[number]>) =>
-        KOMPONEN_UANG_JALAN.reduce((sum, k) => sum + (Number(d[k]) || 0), 0)
-
-    const setTarifBaru = (patch: Partial<TarifBaruForm>) => {
-        if (!value.tarifBaru) return
-        const next = { ...value.tarifBaru, ...patch }
-        if (KOMPONEN_UANG_JALAN.some(k => k in patch)) {
-            const total = totalUangJalan(next)
-            next.harga = total > 0 ? String(total) : ''
-        }
-        onChange({ ...value, tarifBaru: next })
-    }
-
-    const setDetailBiaya = (patch: Partial<DetailBiayaForm>) => {
-        if (!value.detailBiaya) return
-        const next = { ...value.detailBiaya, ...patch }
-        if (KOMPONEN_UANG_JALAN.some(k => k in patch)) {
-            const total = totalUangJalan(next)
-            onChange({ ...value, detailBiaya: next, harga_penawaran: total > 0 ? String(total) : '' })
-            return
-        }
-        onChange({ ...value, detailBiaya: next })
-    }
+    const setField = (patch: Partial<RuteTarifState>) => onChange({ ...value, ...patch })
 
     return (
         <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                 <FormItem label="Rute" asterisk>
-                    <Select<Option> placeholder="Pilih rute..." options={ruteOptions}
-                        value={ruteOptions.find(o => o.value === value.id_rute) ?? null}
-                        onChange={opt => pilihRute(opt?.value ?? '')} />
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                            <Select<Option> placeholder="Pilih rute..." options={ruteOptions}
+                                value={ruteOptions.find(o => o.value === value.id_rute) ?? null}
+                                onChange={opt => setField({ id_rute: opt?.value ?? '' })} />
+                        </div>
+                        <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />}
+                            onClick={() => setShowRuteBaru(true)}>
+                            Rute Baru
+                        </Button>
+                    </div>
                 </FormItem>
-                <FormItem label="Jenis Kendaraan" asterisk>
-                    <Select<Option> placeholder="Pilih jenis kendaraan..." options={jenisOptions}
-                        value={jenisOptions.find(o => o.value === value.id_jenis_kendaraan) ?? null}
-                        onChange={opt => resolve(value.id_rute, opt?.value ?? '')} />
+                <FormItem label="Jenis Kendaraan">
+                    <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua}
+                        value={jenisOptionsSemua.find(o => o.value === value.id_jenis_kendaraan) ?? JENIS_SEMUA}
+                        onChange={opt => setField({ id_jenis_kendaraan: opt?.value ?? '' })} />
                 </FormItem>
             </div>
 
@@ -234,204 +129,89 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 </div>
             )}
 
-            {value.id_rute && value.id_jenis_kendaraan && value.tarifBaru === null && (
-                <div className="mt-2">
-                    <p className="text-xs text-gray-400">
-                        Tarif ditemukan — otomatis terisi dari tarif rute
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-1">
-                        <FormItem label="Uang Jalan" asterisk>
-                            <Input prefix="Rp" placeholder="0"
-                                value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
-                                onChange={e => onChange({ ...value, harga_penawaran: e.target.value.replace(/\D/g, '') })} />
-                        </FormItem>
-                        {ritaseSlot}
-                        {value.detailBiaya && (
-                            <>
-                                <FormItem label="Tanggal Mulai Berlaku">
-                                    <DatePicker inputFormat="DD/MM/YYYY"
-                                        value={value.detailBiaya.tanggal_mulai ? dayjs(value.detailBiaya.tanggal_mulai).toDate() : null}
-                                        onChange={date => setDetailBiaya({ tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                                </FormItem>
-                                <FormItem label="Tanggal Berakhir">
-                                    <DatePicker inputFormat="DD/MM/YYYY"
-                                        value={value.detailBiaya.tanggal_berakhir ? dayjs(value.detailBiaya.tanggal_berakhir).toDate() : null}
-                                        onChange={date => setDetailBiaya({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                                </FormItem>
-                                <p className="text-xs text-gray-400 sm:col-span-2 -mt-1">
-                                    Tarif hanya berlaku untuk trip bertanggal dalam rentang ini — mundurkan tanggal mulai bila ada trip lama yang belum bertarif. Perubahan ikut berlaku di proyek lain yang memakai tarif ini.
-                                </p>
-                            </>
-                        )}
-                    </div>
-
-                    {value.detailBiaya && (
-                        <>
-                            <button type="button"
-                                className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
-                                onClick={() => setShowDetailBiaya(s => !s)}>
-                                {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                                Rincian Uang Jalan (opsional)
-                            </button>
-                            {showDetailBiaya && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                    <p className="text-xs text-gray-400 sm:col-span-2 -mt-1 mb-1">
-                                        Mengubah uang jalan di sini akan memperbarui tarif ini untuk semua proyek/penawaran lain yang memakainya.
-                                    </p>
-                                    <FormItem label="Estimasi Tol">
-                                        <Input prefix="Rp" placeholder="0"
-                                            value={value.detailBiaya.estimasi_tol ? formatNum(Number(value.detailBiaya.estimasi_tol)) : ''}
-                                            onChange={e => setDetailBiaya({ estimasi_tol: e.target.value.replace(/\D/g, '') })} />
-                                    </FormItem>
-                                    <FormItem label="Estimasi BBM">
-                                        <Input prefix="Rp" placeholder="0"
-                                            value={value.detailBiaya.estimasi_bbm ? formatNum(Number(value.detailBiaya.estimasi_bbm)) : ''}
-                                            onChange={e => setDetailBiaya({ estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
-                                    </FormItem>
-                                    <FormItem label="Estimasi Uang Jalan">
-                                        <Input prefix="Rp" placeholder="0"
-                                            value={value.detailBiaya.estimasi_uang_jalan ? formatNum(Number(value.detailBiaya.estimasi_uang_jalan)) : ''}
-                                            onChange={e => setDetailBiaya({ estimasi_uang_jalan: e.target.value.replace(/\D/g, '') })} />
-                                    </FormItem>
-                                    <FormItem label="Estimasi Biaya Lain">
-                                        <Input prefix="Rp" placeholder="0"
-                                            value={value.detailBiaya.estimasi_biaya_lain ? formatNum(Number(value.detailBiaya.estimasi_biaya_lain)) : ''}
-                                            onChange={e => setDetailBiaya({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
-                                    </FormItem>
-                                    <div className="sm:col-span-2">
-                                        <FormItem label="Keterangan Tarif">
-                                            <Input textArea value={value.detailBiaya.keterangan}
-                                                onChange={e => setDetailBiaya({ keterangan: e.target.value })} />
-                                        </FormItem>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <FormItem label="Harga Penawaran">
+                    <Input prefix="Rp" placeholder="0" disabled={hargaTerkunci}
+                        value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
+                        onChange={e => setField({ harga_penawaran: angka(e.target.value) })} />
+                    {hargaTerkunci && (
+                        <p className="text-xs text-amber-500 mt-1">Harga terkunci — ubah lewat penawaran revisi</p>
                     )}
-                </div>
-            )}
-
-            {value.tarifBaru !== null && (
-                <div className="mt-2 border-t border-gray-100 dark:border-gray-700 pt-3">
-                    <p className="text-xs text-amber-500 mb-2">Tarif belum tersedia untuk kombinasi ini — isi untuk membuat tarif baru</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Uang Jalan" asterisk>
-                            <Input prefix="Rp" placeholder="0"
-                                value={value.tarifBaru.harga ? formatNum(Number(value.tarifBaru.harga)) : ''}
-                                onChange={e => setTarifBaru({ harga: e.target.value.replace(/\D/g, '') })} />
-                        </FormItem>
-                        {ritaseSlot}
-                        <FormItem label="Tanggal Mulai Berlaku" asterisk>
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={value.tarifBaru.tanggal_mulai ? dayjs(value.tarifBaru.tanggal_mulai).toDate() : null}
-                                onChange={date => setTarifBaru({ tanggal_mulai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                        </FormItem>
-                        <FormItem label="Tanggal Berakhir">
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={value.tarifBaru.tanggal_berakhir ? dayjs(value.tarifBaru.tanggal_berakhir).toDate() : null}
-                                onChange={date => setTarifBaru({ tanggal_berakhir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                        </FormItem>
-                        <p className="text-xs text-gray-400 sm:col-span-2 -mt-1">
-                            Tarif hanya berlaku untuk trip bertanggal dalam rentang ini — mundurkan tanggal mulai bila ada trip lama yang belum bertarif.
-                        </p>
-                    </div>
-
-                    <button type="button"
-                        className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-2"
-                        onClick={() => setShowDetailBiaya(s => !s)}>
-                        {showDetailBiaya ? <HiOutlineChevronUp /> : <HiOutlineChevronDown />}
-                        Rincian Uang Jalan (opsional)
-                    </button>
-                    {showDetailBiaya && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                            <FormItem label="Estimasi Tol">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={value.tarifBaru.estimasi_tol ? formatNum(Number(value.tarifBaru.estimasi_tol)) : ''}
-                                    onChange={e => setTarifBaru({ estimasi_tol: e.target.value.replace(/\D/g, '') })} />
-                            </FormItem>
-                            <FormItem label="Estimasi BBM">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={value.tarifBaru.estimasi_bbm ? formatNum(Number(value.tarifBaru.estimasi_bbm)) : ''}
-                                    onChange={e => setTarifBaru({ estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
-                            </FormItem>
-                            <FormItem label="Estimasi Uang Jalan">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={value.tarifBaru.estimasi_uang_jalan ? formatNum(Number(value.tarifBaru.estimasi_uang_jalan)) : ''}
-                                    onChange={e => setTarifBaru({ estimasi_uang_jalan: e.target.value.replace(/\D/g, '') })} />
-                            </FormItem>
-                            <FormItem label="Estimasi Biaya Lain">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={value.tarifBaru.estimasi_biaya_lain ? formatNum(Number(value.tarifBaru.estimasi_biaya_lain)) : ''}
-                                    onChange={e => setTarifBaru({ estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
-                            </FormItem>
-                            <div className="sm:col-span-2">
-                                <FormItem label="Keterangan Tarif">
-                                    <Input textArea value={value.tarifBaru.keterangan}
-                                        onChange={e => setTarifBaru({ keterangan: e.target.value })} />
-                                </FormItem>
-                            </div>
-                        </div>
+                </FormItem>
+                <FormItem label="Estimasi Ritase">
+                    <Input type="number" min="1" disabled={hargaTerkunci}
+                        value={value.estimasi_ritase}
+                        onChange={e => setField({ estimasi_ritase: e.target.value })} />
+                    {hargaTerkunci && (
+                        <p className="text-xs text-amber-500 mt-1">Ritase terkunci — ubah lewat penawaran revisi</p>
                     )}
+                </FormItem>
+                <FormItem label="Uang Jalan"
+                    extra={<span className="text-xs text-gray-400">Otomatis: Estimasi Tol + BBM + Biaya Lain</span>}>
+                    <Input prefix="Rp" disabled value={formatNum(totalUangJalan(value))} />
+                </FormItem>
+                <FormItem label="Estimasi Tol">
+                    <Input prefix="Rp" placeholder="0"
+                        value={value.estimasi_tol ? formatNum(Number(value.estimasi_tol)) : ''}
+                        onChange={e => setField({ estimasi_tol: angka(e.target.value) })} />
+                </FormItem>
+                <FormItem label="Estimasi BBM">
+                    <Input prefix="Rp" placeholder="0"
+                        value={value.estimasi_bbm ? formatNum(Number(value.estimasi_bbm)) : ''}
+                        onChange={e => setField({ estimasi_bbm: angka(e.target.value) })} />
+                </FormItem>
+                <FormItem label="Estimasi Biaya Lain">
+                    <Input prefix="Rp" placeholder="0"
+                        value={value.estimasi_biaya_lain ? formatNum(Number(value.estimasi_biaya_lain)) : ''}
+                        onChange={e => setField({ estimasi_biaya_lain: angka(e.target.value) })} />
+                </FormItem>
+                <div className="sm:col-span-2">
+                    <FormItem label="Keterangan">
+                        <Input textArea placeholder="Keterangan tambahan (opsional)" value={value.keterangan}
+                            onChange={e => setField({ keterangan: e.target.value })} />
+                    </FormItem>
                 </div>
-            )}
+            </div>
+
+            <RuteBaruDialog isOpen={showRuteBaru} onClose={() => setShowRuteBaru(false)}
+                onSaved={(rute) => {
+                    setShowRuteBaru(false)
+                    onRuteCreated?.(rute)
+                    setField({ id_rute: rute.id_rute })
+                }} />
         </div>
     )
 }
 
-export async function resolveTarifId(state: RuteTarifState, idKlien: string): Promise<string | null> {
-    if (state.id_tarif_rute) {
-        if (state.detailBiaya) {
-            await tarifRuteService.update(state.id_tarif_rute, {
-                estimasi_tol: state.detailBiaya.estimasi_tol === '' ? null : Number(state.detailBiaya.estimasi_tol),
-                estimasi_bbm: state.detailBiaya.estimasi_bbm === '' ? null : Number(state.detailBiaya.estimasi_bbm),
-                estimasi_uang_jalan: state.detailBiaya.estimasi_uang_jalan === '' ? null : Number(state.detailBiaya.estimasi_uang_jalan),
-                estimasi_biaya_lain: state.detailBiaya.estimasi_biaya_lain === '' ? null : Number(state.detailBiaya.estimasi_biaya_lain),
-                ...(state.detailBiaya.tanggal_mulai ? { tanggal_mulai: state.detailBiaya.tanggal_mulai } : {}),
-                tanggal_berakhir: state.detailBiaya.tanggal_berakhir || null,
-                keterangan: state.detailBiaya.keterangan || null,
-            })
-        }
-        return state.id_tarif_rute
-    }
-    if (!state.tarifBaru) return null
-
-    const payload: TarifRutePayload = {
-        id_rute: state.id_rute,
-        id_jenis_kendaraan: state.id_jenis_kendaraan,
-        id_klien: idKlien,
-        harga: Number(state.tarifBaru.harga),
-        tanggal_mulai: state.tarifBaru.tanggal_mulai,
-        tanggal_berakhir: state.tarifBaru.tanggal_berakhir || null,
-        estimasi_tol: state.tarifBaru.estimasi_tol === '' ? null : Number(state.tarifBaru.estimasi_tol),
-        estimasi_bbm: state.tarifBaru.estimasi_bbm === '' ? null : Number(state.tarifBaru.estimasi_bbm),
-        estimasi_uang_jalan: state.tarifBaru.estimasi_uang_jalan === '' ? null : Number(state.tarifBaru.estimasi_uang_jalan),
-        estimasi_biaya_lain: state.tarifBaru.estimasi_biaya_lain === '' ? null : Number(state.tarifBaru.estimasi_biaya_lain),
-        keterangan: state.tarifBaru.keterangan || null,
-    }
-    const created = await tarifRuteService.create(payload)
-    return created.id_tarif_rute
+export function ruteTarifValid(state: RuteTarifState): boolean {
+    return !!state.id_rute
 }
 
-export function hargaPenawaranEfektif(state: RuteTarifState): string {
-    return state.tarifBaru ? state.tarifBaru.harga : state.harga_penawaran
-}
-
-export function stateDariTarifBaru(idRute: string, t: TarifRute): RuteTarifState {
+export function toProyekRutePayload(state: RuteTarifState): ProyekRutePayload {
+    const jumlahUangJalan = totalUangJalan(state)
     return {
-        id_rute: idRute,
-        id_jenis_kendaraan: t.id_jenis_kendaraan,
-        id_tarif_rute: t.id_tarif_rute,
-        harga_penawaran: String(t.harga),
-        estimasiBiaya: t.harga,
-        tarifBaru: null,
-        detailBiaya: {
-            estimasi_tol: t.estimasi_tol != null ? String(t.estimasi_tol) : '',
-            estimasi_bbm: t.estimasi_bbm != null ? String(t.estimasi_bbm) : '',
-            estimasi_uang_jalan: t.estimasi_uang_jalan != null ? String(t.estimasi_uang_jalan) : '',
-            estimasi_biaya_lain: t.estimasi_biaya_lain != null ? String(t.estimasi_biaya_lain) : '',
-            tanggal_mulai: t.tanggal_mulai ?? '',
-            tanggal_berakhir: t.tanggal_berakhir ?? '',
-            keterangan: t.keterangan ?? '',
-        },
+        id_rute: state.id_rute,
+        id_jenis_kendaraan: state.id_jenis_kendaraan || null,
+        harga_penawaran: state.harga_penawaran !== '' ? Number(state.harga_penawaran) : null,
+        estimasi_ritase: state.estimasi_ritase !== '' ? Number(state.estimasi_ritase) : 1,
+        uang_jalan: jumlahUangJalan > 0 ? jumlahUangJalan : null,
+        estimasi_tol: state.estimasi_tol !== '' ? Number(state.estimasi_tol) : null,
+        estimasi_bbm: state.estimasi_bbm !== '' ? Number(state.estimasi_bbm) : null,
+        estimasi_biaya_lain: state.estimasi_biaya_lain !== '' ? Number(state.estimasi_biaya_lain) : null,
+        keterangan: state.keterangan.trim() || null,
+    }
+}
+
+export function stateFromProyekRute(r: ProyekRute): RuteTarifState {
+    return {
+        id_rute: r.id_rute,
+        id_jenis_kendaraan: r.id_jenis_kendaraan ?? '',
+        harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
+        estimasi_ritase: String(r.estimasi_ritase ?? 1),
+        uang_jalan: r.uang_jalan != null ? String(r.uang_jalan) : '',
+        estimasi_tol: r.estimasi_tol != null ? String(r.estimasi_tol) : '',
+        estimasi_bbm: r.estimasi_bbm != null ? String(r.estimasi_bbm) : '',
+        estimasi_biaya_lain: r.estimasi_biaya_lain != null ? String(r.estimasi_biaya_lain) : '',
+        keterangan: r.keterangan ?? '',
     }
 }

@@ -6,15 +6,17 @@ import { HiArrowLeft, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { projectService } from '@/services/project.service'
+import { projectService, TipeHargaProyek } from '@/services/project.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { penawaranService, Penawaran } from '@/services/penawaran.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
-import { ruteService, Rute } from '@/services/rute.service'
+import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
-import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption, stateDariTarifBaru } from '@/components/shared/RuteTarifFields'
-import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
+import RuteTarifFields, {
+    RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
+    ruteTarifValid, toProyekRutePayload,
+} from '@/components/shared/RuteTarifFields'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -23,12 +25,15 @@ const STATUS_OPTIONS = [
     { value: 'batal',   label: 'Batal' },
 ]
 
+const TIPE_HARGA_OPTIONS: { value: TipeHargaProyek; label: string }[] = [
+    { value: 'per_rit',  label: 'Per Rit' },
+    { value: 'borongan', label: 'Borongan' },
+]
+
 type StagedRute = {
     tarif: RuteTarifState
-    keterangan: string
     namaRute: string
     namaJenis: string
-    ritase: string
 }
 
 export default function ProjectBaruPage() {
@@ -36,10 +41,10 @@ export default function ProjectBaruPage() {
     const searchParams = useSearchParams()
     const [form, setForm] = useState({
         id_klien:          searchParams.get('id_klien') ?? '',
-        kode_proyek:       '',
         nama_proyek:       searchParams.get('nama_proyek') ?? '',
         tanggal_mulai:     '',
         tanggal_selesai:   '',
+        tipe_harga:        'per_rit' as TipeHargaProyek,
         harga_penawaran:   '',
         harga_proyek:      '',
         status:            'draft',
@@ -56,10 +61,7 @@ export default function ProjectBaruPage() {
     const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
     const [showManualRuteForm, setShowManualRuteForm] = useState(false)
     const [manualRuteTarif, setManualRuteTarif] = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
-    const [manualRuteKeterangan, setManualRuteKeterangan] = useState('')
-    const [manualRuteRitase, setManualRuteRitase] = useState('1')
     const [manualRuteList, setManualRuteList] = useState<StagedRute[]>([])
-    const [showRuteBaru, setShowRuteBaru] = useState(false)
 
     useEffect(() => {
         klienService.list(1).then(res =>
@@ -78,7 +80,7 @@ export default function ProjectBaruPage() {
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptionsMaster((res.data ?? []).map((r: Rute) => ({
                 value: r.id_rute,
-                label: r.nama_rute,
+                label: labelRute(r),
                 asal: r.asal,
                 tujuan: r.tujuan,
                 estimasi_jarak_km: r.estimasi_jarak_km,
@@ -101,7 +103,6 @@ export default function ProjectBaruPage() {
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
         if (!form.id_klien)           e.id_klien    = 'Klien wajib dipilih'
-        if (!form.kode_proyek.trim()) e.kode_proyek = 'Kode proyek wajib diisi'
         if (!form.nama_proyek.trim()) e.nama_proyek = 'Nama proyek wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -109,19 +110,15 @@ export default function ProjectBaruPage() {
 
     const openAddManualRute = () => {
         setManualRuteTarif(EMPTY_RUTE_TARIF_STATE)
-        setManualRuteKeterangan('')
-        setManualRuteRitase('1')
         setShowManualRuteForm(true)
     }
 
     const tambahKeDaftarRute = () => {
-        if (!manualRuteTarif.id_rute || !manualRuteTarif.id_jenis_kendaraan) return
+        if (!ruteTarifValid(manualRuteTarif)) return
         setManualRuteList(prev => [...prev, {
             tarif: manualRuteTarif,
-            keterangan: manualRuteKeterangan,
             namaRute: ruteOptionsMaster.find(o => o.value === manualRuteTarif.id_rute)?.label ?? 'Rute',
-            namaJenis: jenisOptionsMaster.find(o => o.value === manualRuteTarif.id_jenis_kendaraan)?.label ?? '',
-            ritase: manualRuteRitase,
+            namaJenis: jenisOptionsMaster.find(o => o.value === manualRuteTarif.id_jenis_kendaraan)?.label ?? 'Semua jenis',
         }])
         setShowManualRuteForm(false)
     }
@@ -137,22 +134,12 @@ export default function ProjectBaruPage() {
         }
         setLoading(true)
         try {
-            const rute: ProyekRutePayload[] = []
-            for (const staged of manualRuteList) {
-                const idTarifRute = await resolveTarifId(staged.tarif, form.id_klien)
-                rute.push({
-                    id_rute: staged.tarif.id_rute,
-                    id_jenis_kendaraan: staged.tarif.id_jenis_kendaraan,
-                    id_tarif_rute: idTarifRute ?? undefined,
-                    harga_penawaran: hargaPenawaranEfektif(staged.tarif) ? Number(hargaPenawaranEfektif(staged.tarif)) : undefined,
-                    estimasi_ritase: Number(staged.ritase || 1),
-                    keterangan: staged.keterangan || undefined,
-                })
-            }
+            const rute: ProyekRutePayload[] = manualRuteList.map(staged => toProyekRutePayload(staged.tarif))
 
             await projectService.create({
-                id_klien: form.id_klien, kode_proyek: form.kode_proyek, nama_proyek: form.nama_proyek,
+                id_klien: form.id_klien, nama_proyek: form.nama_proyek,
                 tanggal_mulai: form.tanggal_mulai || undefined, tanggal_selesai: form.tanggal_selesai || undefined,
+                tipe_harga: form.tipe_harga,
                 harga_penawaran: form.harga_penawaran ? Number(form.harga_penawaran) : undefined,
                 harga_proyek: form.harga_proyek ? Number(form.harga_proyek) : undefined,
                 status: form.status || undefined, keterangan: form.keterangan || undefined,
@@ -209,13 +196,14 @@ export default function ProjectBaruPage() {
                                 invalid={!!errors.id_klien} />
                         </FormItem>
                     </div>
-                    <FormItem label="Kode Proyek" asterisk invalid={!!errors.kode_proyek} errorMessage={errors.kode_proyek}>
-                        <Input placeholder="Contoh: PRY-2024-001" value={form.kode_proyek} invalid={!!errors.kode_proyek}
-                            onChange={(e) => setForm(p => ({ ...p, kode_proyek: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Proyek" asterisk invalid={!!errors.nama_proyek} errorMessage={errors.nama_proyek}>
                         <Input placeholder="Nama proyek" value={form.nama_proyek} invalid={!!errors.nama_proyek}
                             onChange={(e) => setForm(p => ({ ...p, nama_proyek: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Tipe Harga" asterisk>
+                        <Select isSearchable={false} options={TIPE_HARGA_OPTIONS}
+                            value={TIPE_HARGA_OPTIONS.find(o => o.value === form.tipe_harga) ?? null}
+                            onChange={(opt) => setForm(p => ({ ...p, tipe_harga: (opt?.value ?? 'per_rit') as TipeHargaProyek }))} />
                     </FormItem>
                     <FormItem label="Tanggal Mulai">
                         <DatePicker value={form.tanggal_mulai ? new Date(form.tanggal_mulai) : null}
@@ -225,7 +213,7 @@ export default function ProjectBaruPage() {
                         <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
                             onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
-                    <FormItem label="Harga Penawaran (opsional)">
+                    <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)'}>
                         <Input prefix="Rp" placeholder="0"
                             value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
                             onChange={(e) => setForm(p => ({ ...p, harga_penawaran: e.target.value.replace(/\D/g, '') }))} />
@@ -257,39 +245,27 @@ export default function ProjectBaruPage() {
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek (opsional)</p>
                                 <p className="text-xs text-gray-400 mt-0.5">{manualRuteList.length} rute akan ditambahkan</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />} onClick={() => setShowRuteBaru(true)}>
-                                    Rute Baru
-                                </Button>
-                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                    disabled={!form.id_klien}
-                                    onClick={openAddManualRute}>
-                                    Tambah Rute
-                                </Button>
-                            </div>
+                            <Tooltip title={form.id_klien ? '' : 'Pilih klien dulu sebelum menambah rute'}>
+                                <span>
+                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                        disabled={!form.id_klien}
+                                        onClick={openAddManualRute}>
+                                        Tambah Rute
+                                    </Button>
+                                </span>
+                            </Tooltip>
                         </div>
                         {!form.id_klien && <p className="text-xs text-amber-500 mt-1">Pilih klien dulu sebelum menambah rute</p>}
 
                         {showManualRuteForm && (
                             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                                 <RuteTarifFields value={manualRuteTarif} onChange={setManualRuteTarif}
-                                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={form.id_klien}
-                                    ritaseSlot={
-                                        <FormItem label="Ritase">
-                                            <Input type="number" min="1" value={manualRuteRitase}
-                                                onChange={e => setManualRuteRitase(e.target.value)} />
-                                        </FormItem>
-                                    } />
-                                <div className="mt-3">
-                                    <FormItem label="Keterangan">
-                                        <Input textArea placeholder="Keterangan tambahan..." value={manualRuteKeterangan}
-                                            onChange={e => setManualRuteKeterangan(e.target.value)} />
-                                    </FormItem>
-                                </div>
+                                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
+                                    onRuteCreated={muatRuteOptions} />
                                 <div className="flex justify-end gap-2 mt-4">
                                     <Button type="button" size="sm" variant="plain" onClick={() => setShowManualRuteForm(false)}>Batal</Button>
                                     <Button type="button" size="sm" variant="solid"
-                                        disabled={!manualRuteTarif.id_rute || !manualRuteTarif.id_jenis_kendaraan}
+                                        disabled={!ruteTarifValid(manualRuteTarif)}
                                         onClick={tambahKeDaftarRute}>Tambah ke daftar</Button>
                                 </div>
                             </div>
@@ -302,47 +278,49 @@ export default function ProjectBaruPage() {
                                         <tr className="border-b border-gray-100 dark:border-gray-700">
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
+                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
                                             <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
                                             <th className="py-2.5" />
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {manualRuteList.map((staged, i) => (
-                                            <tr key={i}>
-                                                <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{staged.namaRute}</td>
-                                                <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{staged.namaJenis}</td>
-                                                <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
-                                                    {hargaPenawaranEfektif(staged.tarif) ? formatRupiah(Number(hargaPenawaranEfektif(staged.tarif))) : '—'}
-                                                </td>
-                                                <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{staged.ritase || '1'}</td>
-                                                <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                                    {hargaPenawaranEfektif(staged.tarif)
-                                                        ? formatRupiah(Number(hargaPenawaranEfektif(staged.tarif)) * Number(staged.ritase || 1))
-                                                        : '—'}
-                                                </td>
-                                                <td className="py-3 text-right">
-                                                    <Tooltip title="Hapus">
-                                                        <span
-                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                            onClick={() => hapusDariDaftarRute(i)}
-                                                        >
-                                                            <HiOutlineTrash className="text-lg" />
-                                                        </span>
-                                                    </Tooltip>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {manualRuteList.map((staged, i) => {
+                                            const payload = toProyekRutePayload(staged.tarif)
+                                            const ritase = payload.estimasi_ritase || 1
+                                            return (
+                                                <tr key={i}>
+                                                    <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{staged.namaRute}</td>
+                                                    <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{staged.namaJenis}</td>
+                                                    <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
+                                                        {payload.harga_penawaran != null ? formatRupiah(payload.harga_penawaran) : '—'}
+                                                    </td>
+                                                    <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{ritase}</td>
+                                                    <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                                        {payload.harga_penawaran != null ? formatRupiah(payload.harga_penawaran * ritase) : '—'}
+                                                    </td>
+                                                    <td className="py-3 text-right">
+                                                        <Tooltip title="Hapus">
+                                                            <span
+                                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                                onClick={() => hapusDariDaftarRute(i)}
+                                                            >
+                                                                <HiOutlineTrash className="text-lg" />
+                                                            </span>
+                                                        </Tooltip>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t border-gray-200 dark:border-gray-600">
-                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Uang Jalan</td>
+                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Penawaran</td>
                                             <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                                {formatRupiah(manualRuteList.reduce((sum, s) =>
-                                                    sum + (hargaPenawaranEfektif(s.tarif)
-                                                        ? Number(hargaPenawaranEfektif(s.tarif)) * Number(s.ritase || 1)
-                                                        : 0), 0))}
+                                                {formatRupiah(manualRuteList.reduce((sum, s) => {
+                                                    const payload = toProyekRutePayload(s.tarif)
+                                                    return sum + (payload.harga_penawaran ?? 0) * (payload.estimasi_ritase || 1)
+                                                }, 0))}
                                             </td>
                                             <td />
                                         </tr>
@@ -359,18 +337,6 @@ export default function ProjectBaruPage() {
                 </div>
                 </form>
             </Card>
-            <RuteBaruDialog isOpen={showRuteBaru} onClose={() => setShowRuteBaru(false)}
-                onSaved={(rute, tarifDibuat) => {
-                    setShowRuteBaru(false)
-                    muatRuteOptions()
-                    setManualRuteTarif(tarifDibuat.length > 0
-                        ? stateDariTarifBaru(rute.id_rute, tarifDibuat[0])
-                        : { ...EMPTY_RUTE_TARIF_STATE, id_rute: rute.id_rute })
-                    setManualRuteRitase('1')
-                    setManualRuteKeterangan('')
-                    setShowManualRuteForm(true)
-                    toast.push(<Notification type="success" title="Rute berhasil dibuat — lengkapi lalu tambah ke daftar" />)
-                }} />
         </div>
     )
 }

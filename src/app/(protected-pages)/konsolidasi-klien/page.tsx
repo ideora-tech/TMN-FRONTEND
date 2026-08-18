@@ -119,7 +119,7 @@ export default function KonsolidasiKlienPage() {
 
     const trips = useMemo(() => rekap?.trips ?? [], [rekap])
     const bisaDipilih = useMemo(
-        () => (proyekFilter ? trips.filter(t => !t.sudah_difakturkan && t.tarif !== null) : []),
+        () => (proyekFilter ? trips.filter(t => !t.sudah_difakturkan && t.tarif !== null && !t.borongan) : []),
         [trips, proyekFilter],
     )
     const semuaTerpilih = bisaDipilih.length > 0 && selectedIds.length === bisaDipilih.length
@@ -161,7 +161,7 @@ export default function KonsolidasiKlienPage() {
                 <Checkbox
                     checked={selectedIds.includes(row.original.id_trip)}
                     onChange={() => toggleSatu(row.original.id_trip)}
-                    disabled={row.original.sudah_difakturkan || row.original.tarif === null}
+                    disabled={row.original.sudah_difakturkan || row.original.tarif === null || row.original.borongan}
                 />
             ),
         }] : []),
@@ -232,7 +232,9 @@ export default function KonsolidasiKlienPage() {
                 <span className="whitespace-nowrap">
                     {row.original.tarif
                         ? formatRupiah(row.original.tarif.harga)
-                        : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
+                        : row.original.borongan
+                            ? <Tag className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">Borongan</Tag>
+                            : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
                 </span>
             ),
         },

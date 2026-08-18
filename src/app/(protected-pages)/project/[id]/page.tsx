@@ -18,12 +18,14 @@ import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
-import { proyekRuteService, ProyekRute, ProyekRutePayload } from '@/services/proyekRute.service'
-import { ruteService, Rute } from '@/services/rute.service'
-import { tarifRuteService } from '@/services/tarifRute.service'
+import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
+import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
-import RuteTarifFields, { RuteTarifState, EMPTY_RUTE_TARIF_STATE, resolveTarifId, hargaPenawaranEfektif, RuteOption, stateDariTarifBaru } from '@/components/shared/RuteTarifFields'
-import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
+import { penawaranService, Penawaran } from '@/services/penawaran.service'
+import RuteTarifFields, {
+    RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
+    ruteTarifValid, toProyekRutePayload, stateFromProyekRute,
+} from '@/components/shared/RuteTarifFields'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -44,6 +46,19 @@ const STATUS_LABEL: Record<string, string> = {
     aktif:   'Aktif',
     selesai: 'Selesai',
     batal:   'Batal',
+}
+
+const TIPE_HARGA_LABEL: Record<string, string> = {
+    per_rit:  'Per Rit',
+    borongan: 'Borongan',
+}
+
+const PENAWARAN_STATUS_CLASS: Record<string, string> = {
+    draft:     'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    terkirim:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    negosiasi: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
+    disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    ditolak:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
 // Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
@@ -91,6 +106,23 @@ const EMPTY_CREATE_FORM: CreateFormState = {
 
 type HasilGagal = { supir: string; armada: string; alasan: string }
 
+type RevisiItemForm = {
+    id_rute: string
+    id_jenis_kendaraan: string
+    harga_satuan: string
+    estimasi_ritase: string
+    keterangan: string
+}
+
+const EMPTY_REVISI_ITEM: RevisiItemForm = {
+    id_rute: '', id_jenis_kendaraan: '', harga_satuan: '', estimasi_ritase: '1', keterangan: '',
+}
+
+type RevisiRowError = { rute?: boolean; harga?: boolean }
+
+type Option = { value: string; label: string }
+const JENIS_SEMUA: Option = { value: '', label: 'Semua jenis' }
+
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router  = useRouter()
@@ -122,19 +154,40 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [ruteProyekLoading, setRuteProyekLoading] = useState(false)
     const [showRuteForm, setShowRuteForm]       = useState(false)
     const [ruteTarif, setRuteTarif]             = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
-    const [ruteKeterangan, setRuteKeterangan]   = useState('')
-    const [ruteRitase, setRuteRitase]           = useState('1')
     const [ruteOptionsMaster, setRuteOptionsMaster] = useState<RuteOption[]>([])
     const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
     const [addingRute, setAddingRute]           = useState(false)
     const [editRuteTarget, setEditRuteTarget]   = useState<ProyekRute | null>(null)
     const [editRuteTarif, setEditRuteTarif]     = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
-    const [editRuteKeterangan, setEditRuteKeterangan] = useState('')
-    const [editRuteRitase, setEditRuteRitase]   = useState('1')
     const [updatingRute, setUpdatingRute]       = useState(false)
     const [deleteRuteTarget, setDeleteRuteTarget] = useState<ProyekRute | null>(null)
     const [deletingRute, setDeletingRute]       = useState(false)
-    const [showRuteBaru, setShowRuteBaru]       = useState(false)
+
+    // Penawaran Proyek
+    const [penawaranList, setPenawaranList]     = useState<Penawaran[]>([])
+    const [penawaranLoading, setPenawaranLoading] = useState(false)
+    const adaPenawaranDisetujui = useMemo(() => penawaranList.some(p => p.status === 'disetujui'), [penawaranList])
+    const hargaTerkunci = useMemo(
+        () => project?.tipe_harga === 'per_rit' && adaPenawaranDisetujui,
+        [project, adaPenawaranDisetujui],
+    )
+
+    // Dialog Buat Penawaran Revisi
+    const [showRevisiDialog, setShowRevisiDialog]   = useState(false)
+    const [revisiRows, setRevisiRows]               = useState<RevisiItemForm[]>([])
+    const [revisiRowErrors, setRevisiRowErrors]     = useState<RevisiRowError[]>([])
+    const [revisiNilaiBorongan, setRevisiNilaiBorongan] = useState('')
+    const [revisiCatatan, setRevisiCatatan]         = useState('')
+    const [revisiError, setRevisiError]             = useState('')
+    const [savingRevisi, setSavingRevisi]           = useState(false)
+
+    // Dialog Buat Faktur (proyek borongan)
+    const [showFakturDialog, setShowFakturDialog]   = useState(false)
+    const [fakturNominal, setFakturNominal]         = useState('')
+    const [fakturUraian, setFakturUraian]           = useState('')
+    const [fakturTanggal, setFakturTanggal]         = useState(dayjs().format('YYYY-MM-DD'))
+    const [fakturErrors, setFakturErrors]           = useState<Partial<Record<'nominal' | 'uraian', string>>>({})
+    const [savingFaktur, setSavingFaktur]           = useState(false)
 
     // Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan)
     const [createDialogOpen, setCreateDialogOpen]   = useState(false)
@@ -180,16 +233,22 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
     }, [])
 
+    const fetchProject = useCallback(async () => {
+        try {
+            const p = await projectService.get(id)
+            setProject(p); setForm(p)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        }
+    }, [id])
+
     useEffect(() => {
-        projectService.get(id)
-            .then(p => { setProject(p); setForm(p) })
-            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
-            .finally(() => setLoading(false))
+        fetchProject().finally(() => setLoading(false))
         karyawanService.list(1)
             .then(res => setKaryawanOptions(res.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))))
             .catch(() => {})
         fetchArmadaSupir()
-    }, [id, fetchArmadaSupir])
+    }, [id, fetchProject, fetchArmadaSupir])
 
     // Pasangan supir–armada: semua supir aktif yang punya armada default.
     const pasanganList = useMemo<Pasangan[]>(() => {
@@ -255,11 +314,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => { fetchRuteProyek() }, [fetchRuteProyek])
 
+    const fetchPenawaran = useCallback(async () => {
+        setPenawaranLoading(true)
+        try {
+            const res = await penawaranService.list({ id_proyek: id, limit: 100 })
+            setPenawaranList(res.data ?? [])
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setPenawaranLoading(false)
+        }
+    }, [id])
+
+    useEffect(() => { fetchPenawaran() }, [fetchPenawaran])
+
     const muatRuteOptions = () =>
         ruteService.list({ limit: 100 })
             .then(res => setRuteOptionsMaster((res.data ?? []).map((r: Rute) => ({
                 value: r.id_rute,
-                label: r.nama_rute,
+                label: labelRute(r),
                 asal: r.asal,
                 tujuan: r.tujuan,
                 estimasi_jarak_km: r.estimasi_jarak_km,
@@ -274,27 +347,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             .catch(() => {})
     }, [])
 
+    const jenisOptionsSemua = useMemo(() => [JENIS_SEMUA, ...jenisOptionsMaster], [jenisOptionsMaster])
+
     const openAddRute = () => {
         setRuteTarif(EMPTY_RUTE_TARIF_STATE)
-        setRuteKeterangan('')
-        setRuteRitase('1')
         setShowRuteForm(true)
     }
 
     const handleAddRute = async () => {
-        if (!ruteTarif.id_rute || !ruteTarif.id_jenis_kendaraan) return
+        if (!ruteTarifValid(ruteTarif)) return
         setAddingRute(true)
         try {
-            const idTarifRute = await resolveTarifId(ruteTarif, project?.id_klien ?? '')
-            const payload: ProyekRutePayload = {
-                id_rute: ruteTarif.id_rute,
-                id_jenis_kendaraan: ruteTarif.id_jenis_kendaraan,
-                id_tarif_rute: idTarifRute ?? undefined,
-                harga_penawaran: hargaPenawaranEfektif(ruteTarif) ? Number(hargaPenawaranEfektif(ruteTarif)) : undefined,
-                estimasi_ritase: Number(ruteRitase || 1),
-                keterangan: ruteKeterangan || undefined,
-            }
-            await proyekRuteService.create(id, payload)
+            await proyekRuteService.create(id, toProyekRutePayload(ruteTarif))
             toast.push(<Notification type="success" title="Rute proyek berhasil ditambahkan" />)
             setShowRuteForm(false)
             fetchRuteProyek()
@@ -305,52 +369,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
     }
 
-    const openEditRute = async (r: ProyekRute) => {
+    const openEditRute = (r: ProyekRute) => {
         setEditRuteTarget(r)
-        setEditRuteTarif({
-            id_rute: r.id_rute,
-            id_jenis_kendaraan: r.id_jenis_kendaraan,
-            id_tarif_rute: r.id_tarif_rute,
-            harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
-            estimasiBiaya: r.uang_jalan,
-            tarifBaru: null,
-            detailBiaya: null,
-        })
-        setEditRuteKeterangan(r.keterangan ?? '')
-        setEditRuteRitase(String(r.estimasi_ritase ?? 1))
-
-        if (r.id_tarif_rute) {
-            try {
-                const tarif = await tarifRuteService.get(r.id_tarif_rute)
-                setEditRuteTarif(p => ({
-                    ...p,
-                    detailBiaya: {
-                        estimasi_tol: tarif.estimasi_tol != null ? String(tarif.estimasi_tol) : '',
-                        estimasi_bbm: tarif.estimasi_bbm != null ? String(tarif.estimasi_bbm) : '',
-                        estimasi_uang_jalan: tarif.estimasi_uang_jalan != null ? String(tarif.estimasi_uang_jalan) : '',
-                        estimasi_biaya_lain: tarif.estimasi_biaya_lain != null ? String(tarif.estimasi_biaya_lain) : '',
-                        tanggal_mulai: tarif.tanggal_mulai ?? '',
-                        tanggal_berakhir: tarif.tanggal_berakhir ?? '',
-                        keterangan: tarif.keterangan ?? '',
-                    },
-                }))
-            } catch { /* tarif mungkin sudah dihapus — biarkan tanpa detail biaya */ }
-        }
+        setEditRuteTarif(stateFromProyekRute(r))
     }
 
     const handleEditRute = async () => {
         if (!editRuteTarget) return
         setUpdatingRute(true)
         try {
-            const idTarifRute = await resolveTarifId(editRuteTarif, project?.id_klien ?? '')
-            await proyekRuteService.update(id, editRuteTarget.id_proyek_rute, {
-                id_rute: editRuteTarif.id_rute,
-                id_jenis_kendaraan: editRuteTarif.id_jenis_kendaraan,
-                id_tarif_rute: idTarifRute ?? undefined,
-                harga_penawaran: hargaPenawaranEfektif(editRuteTarif) ? Number(hargaPenawaranEfektif(editRuteTarif)) : undefined,
-                estimasi_ritase: Number(editRuteRitase || 1),
-                keterangan: editRuteKeterangan || undefined,
-            })
+            await proyekRuteService.update(id, editRuteTarget.id_proyek_rute, toProyekRutePayload(editRuteTarif))
             toast.push(<Notification type="success" title="Rute proyek berhasil diperbarui" />)
             setEditRuteTarget(null)
             fetchRuteProyek()
@@ -373,6 +401,137 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setDeletingRute(false)
+        }
+    }
+
+    const openRevisiDialog = () => {
+        setRevisiError('')
+        setRevisiCatatan('')
+        setRevisiRowErrors([])
+        if (project?.tipe_harga === 'borongan') {
+            setRevisiNilaiBorongan(project.harga_penawaran != null ? String(project.harga_penawaran) : '')
+        } else {
+            setRevisiRows(ruteProyekList.length > 0
+                ? ruteProyekList.map(r => ({
+                    id_rute: r.id_rute,
+                    id_jenis_kendaraan: r.id_jenis_kendaraan ?? '',
+                    harga_satuan: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
+                    estimasi_ritase: String(r.estimasi_ritase ?? 1),
+                    keterangan: r.keterangan ?? '',
+                }))
+                : [EMPTY_REVISI_ITEM])
+        }
+        setShowRevisiDialog(true)
+    }
+
+    const setRevisiRow = (index: number, patch: Partial<RevisiItemForm>) => {
+        setRevisiRows(prev => prev.map((row, i) => i === index ? { ...row, ...patch } : row))
+        setRevisiRowErrors(prev => prev.map((err, i) => {
+            if (i !== index) return err
+            const next = { ...err }
+            if ('id_rute' in patch && patch.id_rute) next.rute = false
+            if ('harga_satuan' in patch && patch.harga_satuan) next.harga = false
+            return next
+        }))
+    }
+
+    const tambahRevisiRow = () => {
+        setRevisiRows(prev => [...prev, EMPTY_REVISI_ITEM])
+        setRevisiRowErrors(prev => [...prev, {}])
+    }
+
+    const hapusRevisiRow = (index: number) => {
+        setRevisiRows(prev => prev.filter((_, i) => i !== index))
+        setRevisiRowErrors(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const totalRevisi = useMemo(
+        () => revisiRows.reduce((sum, r) => sum + (Number(r.harga_satuan) || 0) * (Number(r.estimasi_ritase) || 1), 0),
+        [revisiRows],
+    )
+
+    const handleSubmitRevisi = async () => {
+        const borongan = project?.tipe_harga === 'borongan'
+        if (borongan && !revisiNilaiBorongan) {
+            setRevisiError('Nilai penawaran baru wajib diisi')
+            return
+        }
+        if (!borongan) {
+            if (revisiRows.length === 0) {
+                setRevisiError('Isi minimal satu baris rute')
+                return
+            }
+            const rowErrors: RevisiRowError[] = revisiRows.map(r => ({
+                rute: !r.id_rute,
+                harga: !r.harga_satuan,
+            }))
+            setRevisiRowErrors(rowErrors)
+            if (rowErrors.some(e => e.rute || e.harga)) {
+                setRevisiError('Rute dan harga wajib diisi di setiap baris')
+                return
+            }
+        }
+        setRevisiError('')
+        setSavingRevisi(true)
+        try {
+            if (borongan) {
+                await projectService.penawaranRevisi(id, {
+                    nilai_penawaran: Number(revisiNilaiBorongan),
+                    catatan: revisiCatatan.trim() || undefined,
+                })
+            } else {
+                await projectService.penawaranRevisi(id, {
+                    items: revisiRows.map(r => ({
+                        id_rute: r.id_rute,
+                        id_jenis_kendaraan: r.id_jenis_kendaraan || undefined,
+                        harga_satuan: r.harga_satuan ? Number(r.harga_satuan) : undefined,
+                        estimasi_ritase: r.estimasi_ritase ? Number(r.estimasi_ritase) : undefined,
+                        keterangan: r.keterangan.trim() || undefined,
+                    })),
+                    catatan: revisiCatatan.trim() || undefined,
+                })
+            }
+            toast.push(<Notification type="success" title="Penawaran revisi berhasil dibuat" />)
+            setShowRevisiDialog(false)
+            fetchPenawaran()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSavingRevisi(false)
+        }
+    }
+
+    const openFakturDialog = () => {
+        const sisa = project?.realisasi?.sisa_belum_difakturkan
+        setFakturNominal(sisa != null && sisa > 0 ? String(Math.floor(sisa)) : '')
+        setFakturUraian('')
+        setFakturTanggal(dayjs().format('YYYY-MM-DD'))
+        setFakturErrors({})
+        setShowFakturDialog(true)
+    }
+
+    const handleSubmitFaktur = async () => {
+        const e: typeof fakturErrors = {}
+        if (!fakturNominal) e.nominal = 'Nominal wajib diisi'
+        if (!fakturUraian.trim()) e.uraian = 'Uraian wajib diisi'
+        setFakturErrors(e)
+        if (Object.keys(e).length > 0) return
+
+        setSavingFaktur(true)
+        try {
+            const faktur = await projectService.fakturBorongan(id, {
+                nominal: Number(fakturNominal),
+                uraian: fakturUraian.trim(),
+                tanggal_faktur: fakturTanggal,
+            })
+            toast.push(<Notification type="success" title="Faktur berhasil dibuat" />)
+            setShowFakturDialog(false)
+            fetchProject()
+            router.push(ROUTES.FAKTUR_DETAIL(faktur.id_faktur))
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSavingFaktur(false)
         }
     }
 
@@ -567,6 +726,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     const initial = project.nama_proyek?.charAt(0).toUpperCase() ?? 'P'
     const nextStatuses = NEXT_STATUS[project.status] ?? []
+    const isPerRit = project.tipe_harga !== 'borongan'
+    const totalNilaiRute = ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? 0) * (r.estimasi_ritase || 1)), 0)
 
     return (
         <div className="flex flex-col gap-4">
@@ -660,6 +821,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             {([
                                 { label: 'Kode Proyek',     value: project.kode_proyek },
                                 { label: 'Klien',           value: project.nama_klien ?? <span className="text-gray-400">—</span> },
+                                { label: 'Tipe Harga',      value: TIPE_HARGA_LABEL[project.tipe_harga] ?? project.tipe_harga },
                                 { label: 'Tanggal Mulai',   value: project.tanggal_mulai ? dayjs(project.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Selesai', value: project.tanggal_selesai ? dayjs(project.tanggal_selesai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Harga Penawaran', value: project.harga_penawaran != null ? formatRupiah(project.harga_penawaran) : <span className="text-gray-400">—</span> },
@@ -714,16 +876,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.harga_penawaran != null && form.harga_penawaran !== 0 ? formatNum(form.harga_penawaran) : ''}
                                         onChange={e => {
-                                            const angka = e.target.value.replace(/\D/g, '')
-                                            setForm(p => ({ ...p, harga_penawaran: angka ? Number(angka) : null }))
+                                            const nilai = e.target.value.replace(/\D/g, '')
+                                            setForm(p => ({ ...p, harga_penawaran: nilai ? Number(nilai) : null }))
                                         }} />
                                 </FormItem>
                                 <FormItem label="Harga Proyek (opsional)">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.harga_proyek != null && form.harga_proyek !== 0 ? formatNum(form.harga_proyek) : ''}
                                         onChange={e => {
-                                            const angka = e.target.value.replace(/\D/g, '')
-                                            setForm(p => ({ ...p, harga_proyek: angka ? Number(angka) : null }))
+                                            const nilai = e.target.value.replace(/\D/g, '')
+                                            setForm(p => ({ ...p, harga_proyek: nilai ? Number(nilai) : null }))
                                         }} />
                                 </FormItem>
                                 <FormItem label="Status">
@@ -755,36 +917,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek</p>
                         <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button size="sm" variant="default" icon={<HiPlusCircle />} onClick={() => setShowRuteBaru(true)}>
-                            Rute Baru
-                        </Button>
-                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
-                            Tambah Rute
-                        </Button>
-                    </div>
+                    <Tooltip title={hargaTerkunci ? 'Harga terkunci — tambah rute lewat penawaran revisi' : ''}>
+                        <span>
+                            <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled={hargaTerkunci} onClick={openAddRute}>
+                                Tambah Rute
+                            </Button>
+                        </span>
+                    </Tooltip>
                 </div>
 
                 {showRuteForm && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
-                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
-                            ritaseSlot={
-                                <FormItem label="Ritase">
-                                    <Input type="number" min="1" value={ruteRitase}
-                                        onChange={e => setRuteRitase(e.target.value)} />
-                                </FormItem>
-                            } />
-                        <div className="mt-3">
-                            <FormItem label="Keterangan">
-                                <Input textArea placeholder="Keterangan tambahan..." value={ruteKeterangan}
-                                    onChange={e => setRuteKeterangan(e.target.value)} />
-                            </FormItem>
-                        </div>
+                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
+                            onRuteCreated={muatRuteOptions} />
                         <div className="flex justify-end gap-2 mt-4">
                             <Button size="sm" variant="plain" onClick={() => setShowRuteForm(false)}>Batal</Button>
                             <Button size="sm" variant="solid" loading={addingRute}
-                                disabled={!ruteTarif.id_rute || !ruteTarif.id_jenis_kendaraan}
+                                disabled={!ruteTarifValid(ruteTarif)}
                                 onClick={handleAddRute}>Simpan</Button>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
@@ -802,9 +952,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
+                                    {isPerRit && <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>}
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
+                                    {isPerRit && <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>}
                                     <th className="py-2.5" />
                                 </tr>
                             </thead>
@@ -815,18 +966,25 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                             <p className="font-medium text-gray-800 dark:text-gray-200">{r.nama_rute ?? '—'}</p>
                                             {r.asal && r.tujuan && <p className="text-xs text-gray-400">{r.asal} → {r.tujuan}</p>}
                                         </td>
-                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{r.nama_jenis ?? '—'}</td>
-                                        <td className="py-3 pr-4">
-                                            {(r.harga_penawaran ?? r.uang_jalan) != null
-                                                ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah((r.harga_penawaran ?? r.uang_jalan) as number)}</span>
-                                                : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Belum ada tarif</Tag>}
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{r.nama_jenis ?? 'Semua jenis'}</td>
+                                        {isPerRit && (
+                                            <td className="py-3 pr-4">
+                                                {r.harga_penawaran != null
+                                                    ? <span className="text-gray-700 dark:text-gray-300">{formatRupiah(r.harga_penawaran)}</span>
+                                                    : <Tag className="text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Belum diisi</Tag>}
+                                            </td>
+                                        )}
+                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
+                                            {r.uang_jalan != null ? formatRupiah(r.uang_jalan) : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{r.estimasi_ritase}</td>
-                                        <td className="py-3 pr-4">
-                                            {(r.harga_penawaran ?? r.uang_jalan) != null
-                                                ? <span className="font-semibold text-gray-800 dark:text-gray-100">{formatRupiah(((r.harga_penawaran ?? r.uang_jalan) as number) * (r.estimasi_ritase || 1))}</span>
-                                                : <span className="text-gray-400">—</span>}
-                                        </td>
+                                        {isPerRit && (
+                                            <td className="py-3 pr-4">
+                                                {r.harga_penawaran != null
+                                                    ? <span className="font-semibold text-gray-800 dark:text-gray-100">{formatRupiah(r.harga_penawaran * (r.estimasi_ritase || 1))}</span>
+                                                    : <span className="text-gray-400">—</span>}
+                                            </td>
+                                        )}
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
                                                 <Tooltip title="Edit">
@@ -850,52 +1008,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                     </tr>
                                 ))}
                             </tbody>
-                            <tfoot>
-                                <tr className="border-t border-gray-200 dark:border-gray-600">
-                                    <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Uang Jalan</td>
-                                    <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                        {formatRupiah(ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? r.uang_jalan ?? 0) * (r.estimasi_ritase || 1)), 0))}
-                                    </td>
-                                    <td />
-                                </tr>
-                            </tfoot>
+                            {isPerRit && (
+                                <tfoot>
+                                    <tr className="border-t border-gray-200 dark:border-gray-600">
+                                        <td colSpan={5} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Penawaran</td>
+                                        <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                                            {formatRupiah(totalNilaiRute)}
+                                        </td>
+                                        <td />
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
                 )}
             </Card>
 
-            <RuteBaruDialog isOpen={showRuteBaru} onClose={() => setShowRuteBaru(false)}
-                onSaved={(rute, tarifDibuat) => {
-                    setShowRuteBaru(false)
-                    muatRuteOptions()
-                    setRuteTarif(tarifDibuat.length > 0
-                        ? stateDariTarifBaru(rute.id_rute, tarifDibuat[0])
-                        : { ...EMPTY_RUTE_TARIF_STATE, id_rute: rute.id_rute })
-                    setRuteRitase('1')
-                    setRuteKeterangan('')
-                    setShowRuteForm(true)
-                    toast.push(<Notification type="success" title="Rute berhasil dibuat — lengkapi lalu simpan ke proyek" />)
-                }} />
-
             {/* Dialog Edit Rute Proyek */}
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={800}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
-                <div className="max-h-[65vh] overflow-y-auto pr-1">
-                    <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
-                        ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} idKlien={project?.id_klien ?? ''}
-                        ritaseSlot={
-                            <FormItem label="Ritase">
-                                <Input type="number" min="1" value={editRuteRitase}
-                                    onChange={e => setEditRuteRitase(e.target.value)} />
-                            </FormItem>
-                        } />
-                    <div className="mt-3">
-                        <FormItem label="Keterangan">
-                            <Input textArea value={editRuteKeterangan}
-                                onChange={e => setEditRuteKeterangan(e.target.value)} />
-                        </FormItem>
-                    </div>
-                </div>
+                <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
+                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
+                    onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} />
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Batal</Button>
                     <Button variant="solid" loading={updatingRute} onClick={handleEditRute}>Simpan</Button>
@@ -911,6 +1045,239 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 confirmButtonProps={{ loading: deletingRute }}>
                 <p>Hapus rute <strong>{deleteRuteTarget?.nama_rute}</strong> dari proyek ini?</p>
             </ConfirmDialog>
+
+            {/* Realisasi — disembunyikan utk per_rit selama belum ada rit berjalan; borongan selalu tampil krn tombol Buat Faktur ada di sini */}
+            {(project.tipe_harga === 'borongan' || (project.realisasi?.total_rit ?? 0) > 0) && (
+            <Card>
+                <div className="flex items-center justify-between mb-1">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Realisasi</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Progres realisasi terhadap nilai penawaran</p>
+                    </div>
+                    {project.tipe_harga === 'borongan' && (
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openFakturDialog}>
+                            Buat Faktur
+                        </Button>
+                    )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                    <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total Rit</p>
+                        <p className="font-bold text-base text-gray-800 dark:text-gray-100 mt-1">{formatNum(project.realisasi?.total_rit ?? 0)}</p>
+                    </div>
+                    <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nilai Realisasi</p>
+                        <p className="font-bold text-base text-gray-800 dark:text-gray-100 mt-1">{formatRupiah(project.realisasi?.nilai_realisasi ?? 0)}</p>
+                    </div>
+                    <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30">
+                        <p className="text-xs font-medium text-blue-500 dark:text-blue-400 uppercase tracking-wide">Nilai Penawaran</p>
+                        <p className="font-bold text-base text-blue-600 dark:text-blue-300 mt-1">
+                            {project.realisasi?.nilai_penawaran != null ? formatRupiah(project.realisasi.nilai_penawaran) : '—'}
+                        </p>
+                    </div>
+                </div>
+                {project.tipe_harga === 'borongan' && (
+                    <div className="mt-3 rounded-lg p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
+                        <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Sisa Belum Difakturkan</p>
+                        <p className="font-bold text-base text-amber-700 dark:text-amber-300 mt-1">
+                            {formatRupiah(project.realisasi?.sisa_belum_difakturkan ?? 0)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                            Daftar detail faktur proyek ini ada di menu Faktur.
+                        </p>
+                    </div>
+                )}
+            </Card>
+            )}
+
+            {/* Penawaran Proyek */}
+            <Card>
+                <div className="flex items-center justify-between mb-1">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Penawaran Proyek</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{penawaranList.length} penawaran tercatat</p>
+                    </div>
+                    {adaPenawaranDisetujui ? (
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openRevisiDialog}>
+                            Buat Penawaran Revisi
+                        </Button>
+                    ) : (
+                        <Tooltip title="Buat penawaran revisi setelah proyek punya penawaran yang disetujui">
+                            <span>
+                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled>
+                                    Buat Penawaran Revisi
+                                </Button>
+                            </span>
+                        </Tooltip>
+                    )}
+                </div>
+
+                {penawaranLoading ? (
+                    <div className="flex justify-center py-6"><Spinner /></div>
+                ) : penawaranList.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada penawaran untuk proyek ini</p>
+                ) : (
+                    <div className="overflow-x-auto mt-4">
+                        <table className="w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nomor</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Tanggal</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nilai</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
+                                    <th className="py-2.5" />
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {penawaranList.map(p => (
+                                    <tr key={p.id_penawaran}>
+                                        <td className="py-3 pr-4">
+                                            <span className="inline-flex items-center gap-2">
+                                                <Link href={ROUTES.PENAWARAN_DETAIL(p.id_penawaran)}
+                                                    className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                                    {p.nomor_penawaran}
+                                                </Link>
+                                                {p.id_penawaran_induk && (
+                                                    <Tag className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">Revisi</Tag>
+                                                )}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                            {p.tanggal_penawaran ? dayjs(p.tanggal_penawaran).format('DD MMM YYYY') : dayjs(p.dibuat_pada).format('DD MMM YYYY')}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                            {p.nilai_penawaran != null ? formatRupiah(p.nilai_penawaran) : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            <Tag className={`text-xs font-semibold ${PENAWARAN_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {p.status}
+                                            </Tag>
+                                        </td>
+                                        <td className="py-3 text-right">
+                                            <Tooltip title="Detail">
+                                                <span
+                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                    onClick={() => router.push(ROUTES.PENAWARAN_DETAIL(p.id_penawaran))}
+                                                >
+                                                    <HiOutlineEye className="text-lg" />
+                                                </span>
+                                            </Tooltip>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            {/* Dialog Buat Penawaran Revisi */}
+            <Dialog isOpen={showRevisiDialog} onRequestClose={() => setShowRevisiDialog(false)} onClose={() => setShowRevisiDialog(false)} width={800}>
+                <h5 className="text-base font-semibold mb-1">Buat Penawaran Revisi</h5>
+                <p className="text-xs text-gray-400 mb-4">
+                    Revisi dibuat sebagai penawaran baru berstatus draft — kirim &amp; setujui ulang lewat menu Penawaran.
+                </p>
+                <form onSubmit={e => { e.preventDefault(); handleSubmitRevisi() }}>
+                    {project.tipe_harga === 'borongan' ? (
+                        <FormItem label="Nilai Penawaran Baru" asterisk>
+                            <Input prefix="Rp" placeholder="0"
+                                value={revisiNilaiBorongan ? formatNum(Number(revisiNilaiBorongan)) : ''}
+                                onChange={e => setRevisiNilaiBorongan(e.target.value.replace(/\D/g, ''))} />
+                        </FormItem>
+                    ) : (
+                        <div>
+                            {revisiRows.map((row, i) => (
+                                <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 mb-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Baris {i + 1}</p>
+                                        <button type="button" onClick={() => hapusRevisiRow(i)}
+                                            className="text-red-500 hover:text-red-600">
+                                            <HiOutlineTrash />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                                        <FormItem label="Rute" asterisk invalid={!!revisiRowErrors[i]?.rute} errorMessage="Rute wajib dipilih">
+                                            <Select<RuteOption> placeholder="Pilih rute..." options={ruteOptionsMaster}
+                                                invalid={!!revisiRowErrors[i]?.rute}
+                                                value={ruteOptionsMaster.find(o => o.value === row.id_rute) ?? null}
+                                                onChange={opt => setRevisiRow(i, { id_rute: opt?.value ?? '' })} />
+                                        </FormItem>
+                                        <FormItem label="Jenis Kendaraan">
+                                            <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua}
+                                                value={jenisOptionsSemua.find(o => o.value === row.id_jenis_kendaraan) ?? JENIS_SEMUA}
+                                                onChange={opt => setRevisiRow(i, { id_jenis_kendaraan: opt?.value ?? '' })} />
+                                        </FormItem>
+                                        <FormItem label="Harga Satuan" asterisk invalid={!!revisiRowErrors[i]?.harga} errorMessage="Harga wajib diisi">
+                                            <Input prefix="Rp" placeholder="0"
+                                                invalid={!!revisiRowErrors[i]?.harga}
+                                                value={row.harga_satuan ? formatNum(Number(row.harga_satuan)) : ''}
+                                                onChange={e => setRevisiRow(i, { harga_satuan: e.target.value.replace(/\D/g, '') })} />
+                                        </FormItem>
+                                        <FormItem label="Estimasi Ritase">
+                                            <Input type="number" min="1" value={row.estimasi_ritase}
+                                                onChange={e => setRevisiRow(i, { estimasi_ritase: e.target.value })} />
+                                        </FormItem>
+                                        <div className="sm:col-span-2">
+                                            <FormItem label="Keterangan">
+                                                <Input value={row.keterangan}
+                                                    onChange={e => setRevisiRow(i, { keterangan: e.target.value })} />
+                                            </FormItem>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />} onClick={tambahRevisiRow}>
+                                Tambah Baris
+                            </Button>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">
+                                Total nilai penawaran baru: <span className="font-semibold">{formatRupiah(totalRevisi)}</span>
+                            </p>
+                        </div>
+                    )}
+                    <div className="mt-3">
+                        <FormItem label="Catatan (opsional)">
+                            <Input textArea rows={2} value={revisiCatatan}
+                                onChange={e => setRevisiCatatan(e.target.value)} />
+                        </FormItem>
+                    </div>
+                    {revisiError && <p className="text-red-500 text-sm mt-1">{revisiError}</p>}
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setShowRevisiDialog(false)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={savingRevisi}>Simpan Revisi</Button>
+                    </div>
+                </form>
+            </Dialog>
+
+            {/* Dialog Buat Faktur (proyek borongan) */}
+            <Dialog isOpen={showFakturDialog} onRequestClose={() => setShowFakturDialog(false)} onClose={() => setShowFakturDialog(false)} width={800}>
+                <h5 className="text-base font-semibold mb-4">Buat Faktur</h5>
+                <form onSubmit={e => { e.preventDefault(); handleSubmitFaktur() }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                        <FormItem label="Nominal" asterisk invalid={!!fakturErrors.nominal} errorMessage={fakturErrors.nominal}>
+                            <Input prefix="Rp" placeholder="0" invalid={!!fakturErrors.nominal}
+                                value={fakturNominal ? formatNum(Number(fakturNominal)) : ''}
+                                onChange={e => setFakturNominal(e.target.value.replace(/\D/g, ''))} />
+                        </FormItem>
+                        <FormItem label="Tanggal Faktur" asterisk>
+                            <DatePicker inputFormat="DD/MM/YYYY"
+                                value={fakturTanggal ? dayjs(fakturTanggal).toDate() : null}
+                                onChange={date => setFakturTanggal(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                        </FormItem>
+                        <div className="sm:col-span-2">
+                            <FormItem label="Uraian" asterisk invalid={!!fakturErrors.uraian} errorMessage={fakturErrors.uraian}>
+                                <Input textArea rows={2} invalid={!!fakturErrors.uraian}
+                                    placeholder="Contoh: Termin 1 Jasa Angkutan Proyek..."
+                                    value={fakturUraian}
+                                    onChange={e => setFakturUraian(e.target.value)} />
+                            </FormItem>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setShowFakturDialog(false)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={savingFaktur}>Buat Faktur</Button>
+                    </div>
+                </form>
+            </Dialog>
 
             {/* Daftar Penugasan */}
             <Card>
@@ -1108,10 +1475,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         onChange={e => { setEstimasiManual(true); setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') })) }}
                                     />
                                     {!estimasiManual && estimasiOtomatis != null && namaRuteEstimasi && (
-                                        <p className="text-xs text-gray-400 mt-1">Otomatis dari tarif rute: {namaRuteEstimasi}</p>
+                                        <p className="text-xs text-gray-400 mt-1">Otomatis dari uang jalan rute: {namaRuteEstimasi}</p>
                                     )}
                                     {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
-                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya tarif — isi estimasi manual</p>
+                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya uang jalan — isi estimasi manual</p>
                                     )}
                                 </FormItem>
                             </div>

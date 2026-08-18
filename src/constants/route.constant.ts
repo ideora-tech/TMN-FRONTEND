@@ -163,4 +163,6 @@ export const ROUTES = {
     PARAMETER_BOK:        '/parameter-bok',
     PARAMETER_BOK_BARU:   '/parameter-bok/baru',
     PARAMETER_BOK_DETAIL: (id: string) => `/parameter-bok/${id}`,
+
+    FORMAT_KODE: '/format-kode',
 } as const

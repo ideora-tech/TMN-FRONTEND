@@ -11,13 +11,12 @@ import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugas
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
-import { ruteService, Rute } from '@/services/rute.service'
 import { kontrakVendorService, KontrakVendor } from '@/services/kontrak-vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
-import { tarifRuteService } from '@/services/tarifRute.service'
 import { projectService, Project } from '@/services/project.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
 import MulaiTripDialog from '../../trip/MulaiTripDialog'
 import { tripService, Trip } from '@/services/trip.service'
 import { evaluasiService, EvaluasiTrip, EvaluasiPayload } from '@/services/evaluasi.service'
@@ -98,11 +97,9 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [saving, setSaving]       = useState(false)
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaOptions, setArmadaOptions]     = useState<{ value: string; label: string }[]>([])
-    const [armadaList, setArmadaList]           = useState<Armada[]>([])         // simpan objek utuh utk id_jenis_kendaraan
     const [supirOptions, setSupirOptions]        = useState<{ value: string; label: string }[]>([])
     const [supirList, setSupirList]              = useState<Supir[]>([])
-    const [idRuteEstimasi, setIdRuteEstimasi]   = useState('')
-    // hanya true setelah user benar-benar mengubah armada / rute estimasi — mencegah auto-fill
+    // hanya true setelah user benar-benar mengubah rute estimasi — mencegah auto-fill
     // menimpa estimasi_biaya tersimpan saat efek ini terpicu oleh load awal (hidrasi/fetch), bukan aksi user.
     const bolehAutoFill = useRef(false)
 
@@ -111,8 +108,14 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
     const [armadaVendorInfo, setArmadaVendorInfo]   = useState<ArmadaVendor | null>(null)
     const [supirVendorInfo, setSupirVendorInfo]     = useState<SupirVendor | null>(null)
 
-    const [ruteOptions, setRuteOptions] = useState<{ value: string; label: string }[]>([])
     const [proyek, setProyek] = useState<Project | null>(null)
+    const {
+        itemOptions: ruteOptions,
+        selectedItemId: idRuteEstimasi,
+        setSelectedItemId: setIdRuteEstimasi,
+        estimasi: estimasiOtomatis,
+        dataTidakLengkap: estimasiDataTidakLengkap,
+    } = useEstimasiPenugasan(penugasan?.id_proyek ?? null)
 
     // trip
     const [tripList, setTripList]       = useState<Trip[]>([])
@@ -133,17 +136,14 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
             karyawanService.list(1),
             armadaService.list(1),
             supirService.list(1),
-            ruteService.list({ limit: 100 }),
-        ]).then(async ([p, karyawan, armada, supir, rute]) => {
+        ]).then(async ([p, karyawan, armada, supir]) => {
             setPenugasan(p)
             setForm(p)
             projectService.get(p.id_proyek).then(setProyek).catch(() => {})
             const karyawanOpts = karyawan.data.map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))
             const armadaOpts   = armada.data.map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() }))
             const supirOpts    = supir.data.map((s: Supir) => ({ value: s.id_supir, label: `${s.nama} — SIM ${s.jenis_sim} (${s.no_sim ?? '-'})` }))
-            const ruteOpts     = rute.data.map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))
             let supirData: Supir[] = supir.data
-            let armadaData: Armada[] = armada.data
 
             if (p.id_karyawan && !karyawanOpts.some(o => o.value === p.id_karyawan)) {
                 try {
@@ -155,7 +155,6 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 try {
                     const a = await armadaService.get(p.id_armada)
                     armadaOpts.unshift({ value: a.id_armada, label: `${a.nopol} — ${a.merk} ${a.model ?? ''}`.trim() })
-                    armadaData = [a, ...armadaData]
                 } catch { /* armada sudah dihapus */ }
             }
             if (p.id_supir && !supirOpts.some(o => o.value === p.id_supir)) {
@@ -168,10 +167,8 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
 
             setKaryawanOptions(karyawanOpts)
             setArmadaOptions(armadaOpts)
-            setArmadaList(armadaData)
             setSupirOptions(supirOpts)
             setSupirList(supirData)
-            setRuteOptions(ruteOpts)
 
             if (p.sumber === 'vendor') {
                 if (p.id_kontrak_vendor) kontrakVendorService.get(p.id_kontrak_vendor).then(setKontrakVendorInfo).catch(() => {})
@@ -238,24 +235,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
-    // Auto-fill estimasi biaya dari uang jalan tarif rute (resolusi tarif klien proyek → tarif umum)
-    // saat armada (jenis kendaraan) & rute estimasi terpilih — nilai manual tidak ditimpa selain itu.
+    // Auto-fill estimasi biaya dari uang jalan baris rute proyek terpilih —
+    // hanya saat user benar-benar mengganti rute estimasi, nilai manual tidak ditimpa selain itu.
     useEffect(() => {
-        if (!bolehAutoFill.current) return
-        const armada = armadaList.find(a => a.id_armada === form.id_armada)
-        if (!armada?.id_jenis_kendaraan || !idRuteEstimasi) return
-        let aktif = true
-        tarifRuteService.resolusi({
-            id_rute: idRuteEstimasi,
-            id_jenis_kendaraan: armada.id_jenis_kendaraan,
-            id_klien: proyek?.id_klien || undefined,
-        })
-            .then(tarif => {
-                if (aktif && tarif) setForm(p => ({ ...p, estimasi_biaya: Math.round(tarif.harga) }))
-            })
-            .catch(() => {})
-        return () => { aktif = false }
-    }, [form.id_armada, idRuteEstimasi, armadaList, proyek])
+        if (!bolehAutoFill.current || estimasiOtomatis == null) return
+        setForm(p => ({ ...p, estimasi_biaya: Math.round(estimasiOtomatis) }))
+    }, [estimasiOtomatis])
 
     const handleSave = async () => {
         setSaving(true)
@@ -447,10 +432,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             <Select isClearable placeholder="Pilih armada..."
                                                 options={armadaOptions}
                                                 value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                                onChange={opt => {
-                                                    bolehAutoFill.current = true
-                                                    setForm(p => ({ ...p, id_armada: opt?.value ?? null }))
-                                                }} />
+                                                onChange={opt => setForm(p => ({ ...p, id_armada: opt?.value ?? null }))} />
                                         </FormItem>
                                     </>
                                 )}
@@ -475,7 +457,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                         onChange={opt => setForm(p => ({ ...p, status: (opt?.value ?? 'pending') as StatusPenugasan }))} />
                                 </FormItem>
                                 <FormItem label="Rute (untuk uang jalan)">
-                                    <Select isClearable isSearchable placeholder="Pilih rute..."
+                                    <Select isClearable isSearchable placeholder="Pilih rute proyek..."
                                         options={ruteOptions}
                                         value={ruteOptions.find(o => o.value === idRuteEstimasi) ?? null}
                                         onChange={opt => {
@@ -483,10 +465,13 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             setIdRuteEstimasi(opt?.value ?? '')
                                         }} />
                                 </FormItem>
-                                <FormItem label="Uang Jalan" extra="Terisi otomatis dari tarif rute bila armada & rute dipilih — bisa diubah">
+                                <FormItem label="Uang Jalan" extra="Terisi otomatis dari uang jalan rute proyek — bisa diubah">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.estimasi_biaya ? formatNum(Number(form.estimasi_biaya)) : ''}
                                         onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
+                                    {estimasiDataTidakLengkap && (
+                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya uang jalan — isi manual</p>
+                                    )}
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

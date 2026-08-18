@@ -18,6 +18,8 @@ export const API_ENDPOINTS = {
     PROYEK_RUTE:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/rute`,
     PROYEK_RUTE_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/rute/${id}`,
     PROYEK_PDF:         (id: string) => `/api/proxy/proyek/${id}/pdf`,
+    PROYEK_PENAWARAN_REVISI: (id: string) => `/api/proxy/proyek/${id}/penawaran-revisi`,
+    PROYEK_FAKTUR_BORONGAN:  (id: string) => `/api/proxy/proyek/${id}/faktur-borongan`,
 
     // Armada
     ARMADA:        '/api/proxy/armada',
@@ -249,6 +251,7 @@ export const API_ENDPOINTS = {
     // Rute
     RUTE:        '/api/proxy/rute',
     RUTE_DETAIL: (id: string) => `/api/proxy/rute/${id}`,
+    RUTE_ESTIMASI_BOK: '/api/proxy/rute/estimasi-bok',
 
     // Penawaran
     PENAWARAN:        '/api/proxy/penawaran',
@@ -321,12 +324,6 @@ export const API_ENDPOINTS = {
     JENIS_BBM_DETAIL: (id: string) => `/api/proxy/jenis-bbm/${id}`,
     JENIS_BBM_HARGA:  (id: string) => `/api/proxy/jenis-bbm/${id}/harga`,
 
-    // Tarif Rute
-    TARIF_RUTE:              '/api/proxy/tarif-rute',
-    TARIF_RUTE_DETAIL:       (id: string) => `/api/proxy/tarif-rute/${id}`,
-    TARIF_RUTE_RESOLUSI:     '/api/proxy/tarif-rute/resolusi',
-    TARIF_RUTE_ESTIMASI_BOK: '/api/proxy/tarif-rute/estimasi-bok',
-
     // Parameter BOK
     PARAMETER_BOK:        '/api/proxy/parameter-bok',
     PARAMETER_BOK_DETAIL: (id: string) => `/api/proxy/parameter-bok/${id}`,
@@ -357,4 +354,8 @@ export const API_ENDPOINTS = {
     APPROVER_KEUANGAN:        '/api/proxy/arus-kas/approver',
     APPROVER_KEUANGAN_DETAIL: (id: string) => `/api/proxy/arus-kas/approver/${id}`,
     PENGATURAN_APPROVAL:      '/api/proxy/arus-kas/pengaturan-approval',
+
+    // Pengaturan Kode
+    PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',
+    PENGATURAN_KODE_UPDATE: (entitas: string) => `/api/proxy/pengaturan-kode/${entitas}`,
 } as const

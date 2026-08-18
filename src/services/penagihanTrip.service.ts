@@ -10,7 +10,8 @@ export interface TripSiapTagih {
     supir_nama: string | null
     sumber: 'internal' | 'vendor'
     jarak_tempuh_km: number | null
-    tarif: { id_tarif_rute: string; harga: number } | null
+    tarif: { harga: number } | null
+    borongan: boolean
     bisa_ditagih: boolean
 }
 

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
@@ -7,9 +7,8 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
-import { penawaranService } from '@/services/penawaran.service'
-import { tarifRuteService } from '@/services/tarifRute.service'
-import { ruteService, Rute } from '@/services/rute.service'
+import { penawaranService, TipeHargaPenawaran } from '@/services/penawaran.service'
+import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { ROUTES } from '@/constants/route.constant'
@@ -18,8 +17,8 @@ import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 interface FormState {
     id_klien: string
-    nomor_penawaran: string
     judul: string
+    tipe_harga: TipeHargaPenawaran
     nilai_penawaran_str: string
     tanggal_penawaran: string
     tanggal_berlaku: string
@@ -28,8 +27,8 @@ interface FormState {
 
 const INIT: FormState = {
     id_klien: '',
-    nomor_penawaran: '',
     judul: '',
+    tipe_harga: 'per_rit',
     nilai_penawaran_str: '',
     tanggal_penawaran: '',
     tanggal_berlaku: '',
@@ -39,18 +38,23 @@ const INIT: FormState = {
 interface ItemForm {
     id_rute: string
     id_jenis_kendaraan: string
-    id_tarif_rute: string | null
     harga_satuan_str: string
     estimasi_ritase_str: string
     keterangan: string
 }
 
 type Option = { value: string; label: string }
+type TipeHargaOption = { value: TipeHargaPenawaran; label: string }
 
 const ITEM_KOSONG: ItemForm = {
-    id_rute: '', id_jenis_kendaraan: '', id_tarif_rute: null,
+    id_rute: '', id_jenis_kendaraan: '',
     harga_satuan_str: '', estimasi_ritase_str: '1', keterangan: '',
 }
+
+const TIPE_HARGA_OPTIONS: TipeHargaOption[] = [
+    { value: 'per_rit', label: 'Per Rit' },
+    { value: 'borongan', label: 'Borongan' },
+]
 
 export default function PenawaranBaruPage() {
     const router = useRouter()
@@ -67,7 +71,7 @@ export default function PenawaranBaruPage() {
 
     useEffect(() => {
         ruteService.list({ limit: 100 })
-            .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: r.nama_rute }))))
+            .then(res => setRuteOptions((res.data ?? []).map((r: Rute) => ({ value: r.id_rute, label: labelRute(r) }))))
             .catch(() => { })
         jenisKendaraanService.list(1)
             .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
@@ -82,6 +86,7 @@ export default function PenawaranBaruPage() {
 
     const totalItems = items.reduce(
         (sum, it) => sum + Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1), 0)
+    const nilaiOtomatis = form.tipe_harga === 'per_rit' && items.length > 0
 
     const updateItem = (index: number, patch: Partial<ItemForm>) => {
         setItems(prev => {
@@ -92,69 +97,29 @@ export default function PenawaranBaruPage() {
     }
 
     const tambahItemDariDialog = (pilihan: PilihanItemRute) => {
-        setItems(prev => [...prev, {
-            ...ITEM_KOSONG,
-            id_rute: pilihan.id_rute,
-            id_jenis_kendaraan: pilihan.id_jenis_kendaraan ?? '',
-            id_tarif_rute: pilihan.id_tarif_rute,
-            harga_satuan_str: pilihan.harga_satuan != null ? String(Math.round(pilihan.harga_satuan)) : '',
-        }])
+        setItems(prev => [...prev, { ...ITEM_KOSONG, id_rute: pilihan.id_rute }])
     }
 
     const tambahRuteOption = (r: Rute) =>
         setRuteOptions(prev => prev.some(o => o.value === r.id_rute)
             ? prev
-            : [...prev, { value: r.id_rute, label: r.nama_rute }])
+            : [...prev, { value: r.id_rute, label: labelRute(r) }])
 
-    // Auto-fill harga: kontrak klien menang, fallback harga umum; tetap bisa diedit manual.
-    // Guard stale response: id_rute/id_jenis_kendaraan dicapture saat pemanggilan; hasil hanya
-    // diterapkan bila baris pada index tsb (dibaca via functional setItems) masih punya
-    // kombinasi rute+jenis yang sama saat resolusi selesai — mencegah overwrite oleh respons basi
-    // ketika user re-pilih rute/jenis dengan cepat.
-    const autoFillHarga = async (index: number, idRute: string, idJenis: string) => {
-        if (!idRute || !idJenis) return
-        try {
-            const tarif = await tarifRuteService.resolusi({
-                id_rute: idRute,
-                id_jenis_kendaraan: idJenis,
-                id_klien: form.id_klien || undefined,
-                tanggal: form.tanggal_penawaran || undefined,
-            })
-            if (!tarif) return
-            setItems(prev => {
-                const row = prev[index]
-                if (!row || row.id_rute !== idRute || row.id_jenis_kendaraan !== idJenis) return prev
-                const next = [...prev]
-                next[index] = {
-                    ...row,
-                    id_tarif_rute: tarif.id_tarif_rute,
-                    harga_satuan_str: String(Math.round(tarif.harga)),
-                }
-                return next
-            })
-        } catch { /* tarif tidak ketemu → isi manual */ }
-    }
-
-    const setItemRute = (index: number, value: string) => {
-        updateItem(index, { id_rute: value })
-        autoFillHarga(index, value, items[index].id_jenis_kendaraan)
-    }
-
-    const setItemJenis = (index: number, value: string) => {
-        updateItem(index, { id_jenis_kendaraan: value })
-        autoFillHarga(index, items[index].id_rute, value)
-    }
+    const setItemRute = (index: number, value: string) => updateItem(index, { id_rute: value })
+    const setItemJenis = (index: number, value: string) => updateItem(index, { id_jenis_kendaraan: value })
 
     const validateItems = () => {
         if (items.length === 0) return true
-        const invalid = items.some(it => !it.id_rute || !it.id_jenis_kendaraan || !it.harga_satuan_str)
-        setItemError(invalid ? 'Setiap item wajib punya rute, jenis kendaraan, dan harga' : '')
+        const perRit = form.tipe_harga === 'per_rit'
+        const invalid = items.some(it => !it.id_rute || !it.id_jenis_kendaraan || (perRit && !it.harga_satuan_str))
+        setItemError(invalid
+            ? (perRit ? 'Setiap item wajib punya rute, jenis kendaraan, dan harga' : 'Setiap item wajib punya rute dan jenis kendaraan')
+            : '')
         return !invalid
     }
 
     const validate = () => {
         const e: Partial<Record<keyof FormState, string>> = {}
-        if (!form.nomor_penawaran.trim()) e.nomor_penawaran = 'Nomor penawaran wajib diisi'
         if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -169,11 +134,11 @@ export default function PenawaranBaruPage() {
         }
         setSaving(true)
         try {
-            await penawaranService.create({
-                nomor_penawaran: form.nomor_penawaran.trim(),
+            const created = await penawaranService.create({
                 judul: form.judul.trim(),
                 id_klien: form.id_klien || null,
-                nilai_penawaran: items.length > 0
+                tipe_harga: form.tipe_harga,
+                nilai_penawaran: nilaiOtomatis
                     ? undefined
                     : (form.nilai_penawaran_str
                         ? Number(form.nilai_penawaran_str.replace(/\D/g, ''))
@@ -185,15 +150,14 @@ export default function PenawaranBaruPage() {
                     ? items.map(it => ({
                         id_rute: it.id_rute,
                         id_jenis_kendaraan: it.id_jenis_kendaraan,
-                        id_tarif_rute: it.id_tarif_rute,
-                        harga_satuan: Number(it.harga_satuan_str || 0),
+                        harga_satuan: form.tipe_harga === 'borongan' ? undefined : Number(it.harga_satuan_str || 0),
                         estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                         keterangan: it.keterangan.trim() || null,
                     }))
                     : undefined,
             })
-            toast.push(<Notification type="success" title="Penawaran berhasil dibuat" />)
-            router.push(ROUTES.PENAWARAN)
+            toast.push(<Notification type="success" title={`Penawaran ${created.nomor_penawaran} berhasil dibuat`} />)
+            router.push(ROUTES.PENAWARAN_DETAIL(created.id_penawaran))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -213,21 +177,13 @@ export default function PenawaranBaruPage() {
                 </button>
                 <div>
                     <h4 className="font-bold">Buat Penawaran Baru</h4>
-                    <p className="text-sm text-gray-500 mt-0.5">Isi detail penawaran untuk klien</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Isi detail penawaran untuk klien — nomor penawaran dibuat otomatis</p>
                 </div>
             </div>
 
             <Card>
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Nomor Penawaran" asterisk invalid={!!errors.nomor_penawaran} errorMessage={errors.nomor_penawaran}>
-                            <Input
-                                placeholder="Contoh: PNW-2026-001"
-                                value={form.nomor_penawaran}
-                                invalid={!!errors.nomor_penawaran}
-                                onChange={e => set('nomor_penawaran', e.target.value)}
-                            />
-                        </FormItem>
                         <FormItem label="Judul Penawaran" asterisk invalid={!!errors.judul} errorMessage={errors.judul}>
                             <Input
                                 placeholder="Contoh: Penawaran Jasa Pengiriman Q3 2026"
@@ -236,18 +192,25 @@ export default function PenawaranBaruPage() {
                                 onChange={e => set('judul', e.target.value)}
                             />
                         </FormItem>
+                        <FormItem label="Tipe Harga" asterisk>
+                            <Select<TipeHargaOption> isSearchable={false}
+                                options={TIPE_HARGA_OPTIONS}
+                                value={TIPE_HARGA_OPTIONS.find(o => o.value === form.tipe_harga) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, tipe_harga: opt?.value ?? 'per_rit' }))} />
+                        </FormItem>
                         <FormItem label="Klien">
                             <Select<Option> isClearable isSearchable placeholder="Pilih klien (opsional)"
                                 options={klienOptions}
                                 value={klienOptions.find(o => o.value === form.id_klien) ?? null}
                                 onChange={opt => set('id_klien', opt?.value ?? '')} />
                         </FormItem>
-                        <FormItem label="Nilai Penawaran" extra={items.length > 0 ? <span className="text-xs text-gray-400 ml-2">(otomatis dari item rate card)</span> : undefined}>
+                        <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Borongan' : 'Nilai Penawaran'}
+                            extra={nilaiOtomatis ? <span className="text-xs text-gray-400 ml-2">(otomatis dari item rate card)</span> : undefined}>
                             <Input
                                 prefix="Rp"
                                 placeholder="0"
-                                disabled={items.length > 0}
-                                value={items.length > 0
+                                disabled={nilaiOtomatis}
+                                value={nilaiOtomatis
                                     ? formatNum(totalItems)
                                     : (form.nilai_penawaran_str
                                         ? formatNum(Number(form.nilai_penawaran_str))
@@ -283,8 +246,12 @@ export default function PenawaranBaruPage() {
                     <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-3">
                             <div>
-                                <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute (Rate Card)</p>
-                                <p className="text-xs text-gray-400 mt-0.5">Harga terisi otomatis dari master tarif (kontrak klien menang atas harga umum) — tetap bisa diubah</p>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    {form.tipe_harga === 'borongan'
+                                        ? 'Tambahkan rute cakupan proyek — nilai borongan diisi manual di field Nilai Borongan di atas'
+                                        : 'Isi harga satuan dan ritase untuk tiap rute secara manual'}
+                                </p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button type="button" size="sm" variant="default" icon={<HiOutlineViewList />}
@@ -305,9 +272,13 @@ export default function PenawaranBaruPage() {
                                         <tr className="text-left text-gray-600 dark:text-gray-300">
                                             <th className="px-3 py-2 font-semibold min-w-[200px]">Rute</th>
                                             <th className="px-3 py-2 font-semibold min-w-[150px]">Jenis Kendaraan</th>
-                                            <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
+                                            {form.tipe_harga === 'per_rit' && (
+                                                <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
+                                            )}
                                             <th className="px-3 py-2 font-semibold w-24">Ritase</th>
-                                            <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
+                                            {form.tipe_harga === 'per_rit' && (
+                                                <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
+                                            )}
                                             <th className="px-3 py-2 w-12"></th>
                                         </tr>
                                     </thead>
@@ -330,21 +301,25 @@ export default function PenawaranBaruPage() {
                                                         styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                         onChange={opt => setItemJenis(i, opt?.value ?? '')} />
                                                 </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" placeholder="0"
-                                                        value={it.harga_satuan_str ? formatNum(Number(it.harga_satuan_str)) : ''}
-                                                        onChange={e => updateItem(i, {
-                                                            harga_satuan_str: e.target.value.replace(/\D/g, ''),
-                                                        })} />
-                                                </td>
+                                                {form.tipe_harga === 'per_rit' && (
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" placeholder="0"
+                                                            value={it.harga_satuan_str ? formatNum(Number(it.harga_satuan_str)) : ''}
+                                                            onChange={e => updateItem(i, {
+                                                                harga_satuan_str: e.target.value.replace(/\D/g, ''),
+                                                            })} />
+                                                    </td>
+                                                )}
                                                 <td className="px-3 py-2">
                                                     <Input type="number" min="1"
                                                         value={it.estimasi_ritase_str}
                                                         onChange={e => updateItem(i, { estimasi_ritase_str: e.target.value })} />
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
-                                                    {formatRupiah(Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1))}
-                                                </td>
+                                                {form.tipe_harga === 'per_rit' && (
+                                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
+                                                        {formatRupiah(Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1))}
+                                                    </td>
+                                                )}
                                                 <td className="px-3 py-2 pt-3">
                                                     <span
                                                         className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 cursor-pointer transition-colors"
@@ -355,11 +330,13 @@ export default function PenawaranBaruPage() {
                                         ))}
                                     </tbody>
                                 </table>
-                                <div className="flex justify-end mt-3">
-                                    <p className="text-sm">Total Nilai Penawaran:{' '}
-                                        <span className="font-bold text-base">{formatRupiah(totalItems)}</span>
-                                    </p>
-                                </div>
+                                {form.tipe_harga === 'per_rit' && (
+                                    <div className="flex justify-end mt-3">
+                                        <p className="text-sm">Total Nilai Penawaran:{' '}
+                                            <span className="font-bold text-base">{formatRupiah(totalItems)}</span>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

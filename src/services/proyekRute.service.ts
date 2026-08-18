@@ -9,13 +9,15 @@ export interface ProyekRute {
     nama_rute: string | null
     asal: string | null
     tujuan: string | null
-    id_jenis_kendaraan: string
+    id_jenis_kendaraan: string | null
     nama_jenis: string | null
-    id_tarif_rute: string | null
     harga_penawaran: number | null
     estimasi_ritase: number
     subtotal: number | null
     uang_jalan: number | null
+    estimasi_tol: number | null
+    estimasi_bbm: number | null
+    estimasi_biaya_lain: number | null
     estimasi_biaya: number | null
     keterangan: string | null
     dibuat_pada: string
@@ -24,10 +26,13 @@ export interface ProyekRute {
 
 export interface ProyekRutePayload {
     id_rute: string
-    id_jenis_kendaraan: string
-    id_tarif_rute?: string | null
+    id_jenis_kendaraan?: string | null
     harga_penawaran?: number | null
     estimasi_ritase?: number
+    uang_jalan?: number | null
+    estimasi_tol?: number | null
+    estimasi_bbm?: number | null
+    estimasi_biaya_lain?: number | null
     keterangan?: string | null
 }
 
