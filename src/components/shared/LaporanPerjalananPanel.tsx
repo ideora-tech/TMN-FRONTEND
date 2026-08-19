@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineX, HiOutlineDocumentText, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { tripService, Trip } from '@/services/trip.service'
@@ -92,9 +92,11 @@ const emptyLaporanForm = () => ({
 type Props = {
     idTrip: string
     onSaved?: () => void
+    /** Langsung buka form (tanpa klik "Isi Laporan"/"Edit" dulu) — dipakai saat panel ini ditampilkan di dalam dialog yang sudah dibuka khusus untuk isi laporan. */
+    autoOpenForm?: boolean
 }
 
-export default function LaporanPerjalananPanel({ idTrip, onSaved }: Props) {
+export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }: Props) {
     const searchParams = useSearchParams()
     const [trip, setTrip] = useState<Trip | null>(null)
 
@@ -183,12 +185,14 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved }: Props) {
     }
 
     // Auto-buka form laporan kalau datang dari tombol "Isi Laporan" di list Trip Monitor
-    // (?laporan=1) — hanya sekali per kunjungan, dan cuma kalau statusnya memang boleh diisi laporan.
+    // (?laporan=1), atau kalau panel ini dipakai di dalam dialog yang sudah dibuka khusus
+    // untuk isi laporan (autoOpenForm) — hanya sekali per kunjungan, dan cuma kalau
+    // statusnya memang boleh diisi laporan.
     const autoOpenLaporanRef = useRef(false)
     useEffect(() => {
         if (autoOpenLaporanRef.current) return
         if (!trip || laporanLoading) return
-        if (searchParams.get('laporan') !== '1') return
+        if (!autoOpenForm && searchParams.get('laporan') !== '1') return
         if (!canIsiLaporan) return
 
         autoOpenLaporanRef.current = true
@@ -196,7 +200,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved }: Props) {
         else handleOpenCreateLaporan()
         document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [trip, laporan, laporanLoading, searchParams, canIsiLaporan])
+    }, [trip, laporan, laporanLoading, searchParams, canIsiLaporan, autoOpenForm])
 
     const addBiayaLainRow = () => {
         setLaporanForm(p => ({ ...p, biaya_lain: [...p.biaya_lain, { nama_biaya: '', nominal: '' }] }))
@@ -541,7 +545,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved }: Props) {
                     )}
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button size="sm" variant="plain" icon={<HiOutlineX />} onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>
+                        <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>
                             Batal
                         </Button>
                         <Button type="submit" size="sm" variant="solid" loading={savingLaporan}>

@@ -25,6 +25,7 @@ export function useEstimasiPenugasan(idProyek: string | null) {
     const selected = items.find(i => i.id_proyek_rute === selectedItemId) ?? null
     const estimasi = selected?.uang_jalan ?? null
     const namaRute = selected ? (selected.nama_rute ?? selected.kode_rute ?? '') : ''
+    const idRute = selected?.id_rute ?? null
     const dataTidakLengkap = selected != null && estimasi == null
 
     const itemOptions: EstimasiItemOption[] = items.map(i => ({
@@ -32,5 +33,5 @@ export function useEstimasiPenugasan(idProyek: string | null) {
         label: [i.nama_rute ?? i.kode_rute ?? 'Rute', i.nama_jenis].filter(Boolean).join(' — '),
     }))
 
-    return { itemOptions, selectedItemId, setSelectedItemId, estimasi, namaRute, dataTidakLengkap }
+    return { itemOptions, selectedItemId, setSelectedItemId, estimasi, namaRute, idRute, dataTidakLengkap }
 }

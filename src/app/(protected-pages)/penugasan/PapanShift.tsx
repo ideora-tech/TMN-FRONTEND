@@ -1394,7 +1394,7 @@ const handleImportFile = async (file: File | null) => {
 
             <Dialog isOpen={!!laporanDialogTrip} onRequestClose={() => setLaporanDialogTrip(null)} onClose={() => setLaporanDialogTrip(null)} width={900}>
                 {laporanDialogTrip && (
-                    <LaporanPerjalananPanel idTrip={laporanDialogTrip} onSaved={fetchBoard} />
+                    <LaporanPerjalananPanel idTrip={laporanDialogTrip} onSaved={fetchBoard} autoOpenForm />
                 )}
             </Dialog>
         </div>

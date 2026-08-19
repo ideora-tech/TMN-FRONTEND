@@ -22,6 +22,7 @@ export interface Penugasan {
     id_armada: string | null
     id_supir: string | null
     id_karyawan: string | null
+    id_rute: string | null
     tanggal_tugas: string | null
     status: StatusPenugasan
     estimasi_biaya?: number | null
@@ -62,6 +63,7 @@ export const penugasanService = {
         id_armada?: string
         id_supir?: string | null
         id_karyawan?: string
+        id_rute?: string | null
         tanggal_tugas?: string
         status?: string
         estimasi_biaya?: number | null

@@ -48,6 +48,7 @@ export default function PenugasanBaruPage() {
         setSelectedItemId: setIdRuteEstimasi,
         estimasi: estimasiOtomatis,
         namaRute: namaRuteEstimasi,
+        idRute: idRuteMaster,
         dataTidakLengkap: estimasiDataTidakLengkap,
     } = useEstimasiPenugasan(form.id_proyek || null)
 
@@ -122,6 +123,7 @@ export default function PenugasanBaruPage() {
                 id_proyek:      form.id_proyek,
                 id_supir:       form.id_supir || undefined,
                 id_karyawan:    form.id_karyawan || undefined,
+                id_rute:        idRuteMaster,
                 tanggal_tugas:  form.tanggal_tugas || undefined,
                 status:         form.status,
                 estimasi_biaya: estimasiBiayaStr ? Number(estimasiBiayaStr) : undefined,

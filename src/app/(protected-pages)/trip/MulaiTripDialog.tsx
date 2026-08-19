@@ -39,7 +39,9 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     const [uangJalan, setUangJalan]     = useState('')
     const [penugasanRows, setPenugasanRows] = useState<Penugasan[]>([])
     const [defaultUangJalanPenugasan, setDefaultUangJalanPenugasan] = useState<number | null>(null)
+    const [defaultIdRutePenugasan, setDefaultIdRutePenugasan] = useState<string | null>(null)
     const uangJalanManual = useRef(false)
+    const ruteManual = useRef(false)
     const [memuat, setMemuat] = useState(false)
     const [saving, setSaving] = useState(false)
     const [warnShiftTerkunci, setWarnShiftTerkunci] = useState(false)
@@ -56,7 +58,9 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setPilihRute(null)
         setUangJalan('')
         setDefaultUangJalanPenugasan(null)
+        setDefaultIdRutePenugasan(null)
         uangJalanManual.current = false
+        ruteManual.current = false
         if (!terkunci) {
             projectService.list(1, 100)
                 .then(res => setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: p.nama_proyek }))))
@@ -82,6 +86,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             setWarnShiftTerkunci(jadwal.length > 0 && !!p.id_supir && !punyaShift)
             setDefaultUangJalanPenugasan(p.estimasi_biaya ?? null)
             terapkanDefaultUangJalan(p.estimasi_biaya ?? null)
+            setDefaultIdRutePenugasan(p.id_rute ?? null)
         }).catch(() => setWarnShiftTerkunci(false))
         return () => { dibatalkan = true }
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
@@ -101,6 +106,16 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             })
             .catch(() => { setRutePerProyek([]); setRuteOptions([]) })
     }, [isOpen, idProyekEfektif])
+
+    // Rute sudah ditentukan sejak Tambah Penugasan — default-kan di sini juga
+    // supaya ops tidak perlu pilih ulang, tetap bisa diganti manual bila perlu.
+    useEffect(() => {
+        if (!isOpen || ruteManual.current || !defaultIdRutePenugasan) return
+        if (!ruteOptions.some(o => o.value === defaultIdRutePenugasan)) return
+        setPilihRute(defaultIdRutePenugasan)
+        const row = rutePerProyek.find(r => r.id_rute === defaultIdRutePenugasan)
+        terapkanDefaultUangJalan(row?.uang_jalan ?? defaultUangJalanPenugasan)
+    }, [isOpen, ruteOptions, rutePerProyek, defaultIdRutePenugasan, defaultUangJalanPenugasan])
 
     const muatPenugasan = useCallback(async (idProyek: string) => {
         setMemuat(true)
@@ -176,6 +191,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         const row = penugasanRows.find(p => p.id_penugasan === pilihPenugasan)
         setDefaultUangJalanPenugasan(row?.estimasi_biaya ?? null)
         terapkanDefaultUangJalan(row?.estimasi_biaya ?? null)
+        setDefaultIdRutePenugasan(row?.id_rute ?? null)
     }, [isOpen, terkunci, pilihPenugasan, penugasanRows])
 
     const handleSubmit = async () => {
@@ -233,6 +249,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                         options={ruteOptions}
                         value={ruteOptions.find(o => o.value === pilihRute) ?? null}
                         onChange={opt => {
+                            ruteManual.current = true
                             const idRute = (opt as Option | null)?.value ?? null
                             setPilihRute(idRute)
                             const row = idRute ? rutePerProyek.find(r => r.id_rute === idRute) : null

@@ -204,6 +204,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setSelectedItemId: setRuteItemId,
         estimasi: estimasiOtomatis,
         namaRute: namaRuteEstimasi,
+        idRute: idRuteEstimasi,
         dataTidakLengkap: estimasiDataTidakLengkap,
     } = useEstimasiPenugasan(id)
 
@@ -637,6 +638,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     id_supir:       p.supir.id_supir,
                     id_armada:      p.supir.id_armada_default ?? undefined,
                     estimasi_biaya: estimasi,
+                    id_rute:        idRuteEstimasi,
                 })
             ))
             const gagal: HasilGagal[] = []
