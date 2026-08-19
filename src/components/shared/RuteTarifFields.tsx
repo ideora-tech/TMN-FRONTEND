@@ -65,6 +65,10 @@ function angka(v: string): string {
     return v.replace(/\D/g, '')
 }
 
+function totalUangJalan(state: Pick<RuteTarifState, 'estimasi_tol' | 'estimasi_bbm' | 'estimasi_biaya_lain'>): number {
+    return (Number(state.estimasi_tol) || 0) + (Number(state.estimasi_bbm) || 0) + (Number(state.estimasi_biaya_lain) || 0)
+}
+
 export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, onRuteCreated, hargaTerkunci }: Props) {
     const [showRuteBaru, setShowRuteBaru] = useState(false)
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
@@ -142,10 +146,9 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         <p className="text-xs text-amber-500 mt-1">Ritase terkunci — ubah lewat penawaran revisi</p>
                     )}
                 </FormItem>
-                <FormItem label="Uang Jalan">
-                    <Input prefix="Rp" placeholder="0"
-                        value={value.uang_jalan ? formatNum(Number(value.uang_jalan)) : ''}
-                        onChange={e => setField({ uang_jalan: angka(e.target.value) })} />
+                <FormItem label="Uang Jalan"
+                    extra={<span className="text-xs text-gray-400">Otomatis: Estimasi Tol + BBM + Biaya Lain</span>}>
+                    <Input prefix="Rp" disabled value={formatNum(totalUangJalan(value))} />
                 </FormItem>
                 <FormItem label="Estimasi Tol">
                     <Input prefix="Rp" placeholder="0"
@@ -185,12 +188,13 @@ export function ruteTarifValid(state: RuteTarifState): boolean {
 }
 
 export function toProyekRutePayload(state: RuteTarifState): ProyekRutePayload {
+    const jumlahUangJalan = totalUangJalan(state)
     return {
         id_rute: state.id_rute,
         id_jenis_kendaraan: state.id_jenis_kendaraan || null,
         harga_penawaran: state.harga_penawaran !== '' ? Number(state.harga_penawaran) : null,
         estimasi_ritase: state.estimasi_ritase !== '' ? Number(state.estimasi_ritase) : 1,
-        uang_jalan: state.uang_jalan !== '' ? Number(state.uang_jalan) : null,
+        uang_jalan: jumlahUangJalan > 0 ? jumlahUangJalan : null,
         estimasi_tol: state.estimasi_tol !== '' ? Number(state.estimasi_tol) : null,
         estimasi_bbm: state.estimasi_bbm !== '' ? Number(state.estimasi_bbm) : null,
         estimasi_biaya_lain: state.estimasi_biaya_lain !== '' ? Number(state.estimasi_biaya_lain) : null,
