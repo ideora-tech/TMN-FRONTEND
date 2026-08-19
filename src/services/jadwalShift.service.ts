@@ -25,6 +25,7 @@ export interface JadwalShift {
 export interface HasilBatchShift {
     sukses: number
     gagal: { id_supir: string; tanggal?: string; alasan: string }[]
+    peringatan?: string[]
 }
 
 export const jadwalShiftService = {
@@ -57,6 +58,7 @@ export const jadwalShiftService = {
             sukses: number
             ditimpa: { baris: number; no_sim: string; tanggal: string; shift_lama: string; shift_baru: string }[]
             gagal: { baris: number; no_sim: string; alasan: string }[]
+            peringatan?: string[]
         }
     },
     async downloadTemplate(idProyek: string, dari: string, sampai: string) {

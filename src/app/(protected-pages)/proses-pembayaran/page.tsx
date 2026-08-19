@@ -144,7 +144,7 @@ export default function ProsesPembayaranPage() {
         }
     }
 
-    const editOtomatis = !!(editTarget && (editTarget.id_trip || editTarget.id_perawatan || editTarget.id_pembelian || editTarget.id_periode))
+    const editOtomatis = !!(editTarget && (editTarget.id_trip || editTarget.id_perawatan || editTarget.id_pembelian || editTarget.id_periode || editTarget.periode_dari))
     const kategoriFormOptions = editOtomatis && form.kategori
         ? [{ value: form.kategori, label: KATEGORI_LABEL[form.kategori] }]
         : KATEGORI_OPTIONS_FORM

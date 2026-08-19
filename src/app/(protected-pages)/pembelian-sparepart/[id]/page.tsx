@@ -151,7 +151,7 @@ export default function PembelianDetailPage() {
             <p className="text-xs text-gray-400">
                 {data.id_perawatan
                     ? 'Biaya pembelian ini termasuk dalam pengajuan perawatan terkait'
-                    : 'Approval & pembayaran dilakukan di menu Keuangan → Arus Kas'}
+                    : 'Approval & pembayaran dilakukan di menu Keuangan → Proses Pembayaran'}
             </p>
 
             {data.status === 'ditolak' && data.alasan_ditolak && (

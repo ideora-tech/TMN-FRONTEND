@@ -35,7 +35,7 @@ const SUMBER_META: Record<SumberArusKas, { label: string; tag: string; route?: (
     pengajuan_pengeluaran: {
         label: 'Pengajuan',
         tag: 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300',
-        route: () => `${ROUTES.ARUS_KAS}?tab=pengajuan`,
+        route: () => ROUTES.PROSES_PEMBAYARAN,
     },
     pembayaran_vendor: {
         label: 'Vendor',
@@ -341,7 +341,7 @@ export default function RekapTab() {
                     </>
                 )}
             </Card>
-            <DetailPengajuanDialog pengajuan={detailPengajuan} onClose={() => setDetailPengajuan(null)} />
+            <DetailPengajuanDialog pengajuan={detailPengajuan} onClose={() => setDetailPengajuan(null)} readOnly />
             <DetailTransaksiDialog transaksi={detailTransaksi} onClose={() => setDetailTransaksi(null)} />
         </div>
     )

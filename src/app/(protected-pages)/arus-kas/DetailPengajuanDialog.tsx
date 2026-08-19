@@ -57,6 +57,13 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             </a>
         )
     }
+    if (p.periode_dari) {
+        return (
+            <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
+                Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}
+            </Tag>
+        )
+    }
     return null
 }
 
@@ -138,6 +145,14 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                             <p className={LABEL_CLASS}>Nominal</p>
                             <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{formatRupiah(p.nominal)}</p>
                         </div>
+                        {p.periode_dari && p.tarif_per_hari != null && (
+                            <div>
+                                <p className={LABEL_CLASS}>Rincian Periode</p>
+                                <p className={VALUE_CLASS}>
+                                    {formatRupiah(Number(p.tarif_per_hari))}/hari × {Math.round(Number(p.nominal) / Number(p.tarif_per_hari))} hari
+                                </p>
+                            </div>
+                        )}
                         <div>
                             <p className={LABEL_CLASS}>{PENERIMA_LABEL[p.kategori] ?? 'Penerima'}</p>
                             <p className={VALUE_CLASS}>{p.penerima}</p>

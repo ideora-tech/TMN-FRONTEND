@@ -55,6 +55,11 @@ export interface PengajuanPengeluaran {
     id_armada_perawatan?: string | null
     id_pembelian: string | null
     id_periode: string | null
+    id_supir: string | null
+    id_proyek: string | null
+    periode_dari: string | null
+    periode_sampai: string | null
+    tarif_per_hari: number | string | null
     nomor_pengajuan: string
     kategori: KategoriPengajuan
     nominal: number

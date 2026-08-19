@@ -435,6 +435,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 <p className="text-xs text-gray-400 mt-0.5">
                                     {trip.pengajuan_uang_jalan.nomor_pengajuan} — {formatRupiah(trip.pengajuan_uang_jalan.nominal)}
                                 </p>
+                                {trip.pengajuan_uang_jalan.periode && (
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        {formatRupiah(trip.pengajuan_uang_jalan.periode.tarif_per_hari)}/hari × {trip.pengajuan_uang_jalan.periode.jumlah_hari} hari ({dayjs(trip.pengajuan_uang_jalan.periode.dari).format('DD/MM')}–{dayjs(trip.pengajuan_uang_jalan.periode.sampai).format('DD/MM')})
+                                    </p>
+                                )}
                             </div>
                             <Tag className={`${PENGAJUAN_TAG[trip.pengajuan_uang_jalan.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0 font-semibold`}>
                                 {PENGAJUAN_LABEL[trip.pengajuan_uang_jalan.status] ?? trip.pengajuan_uang_jalan.status}

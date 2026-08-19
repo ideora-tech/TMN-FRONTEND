@@ -1,11 +1,12 @@
 'use client'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, Row, DataTableResetHandle } from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import UploadBerkas from '@/components/shared/UploadBerkas'
 import {
     HiOutlineCheckCircle,
     HiOutlineXCircle,
@@ -38,17 +39,10 @@ type Props = {
 
 type HasilGagalBulk = { nomor: string; alasan: string }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+
 const BULK_LABEL: Record<BulkAction, string> = {
     cek: 'Cek', setuju: 'Setujui', tolak: 'Tolak', transfer: 'Transfer',
-}
-
-function eligibleFor(p: PengajuanPengeluaran, action: BulkAction): boolean {
-    switch (action) {
-        case 'cek':      return p.status === 'diajukan'
-        case 'setuju':   return p.status === 'menunggu_approval' && p.bisa_approve
-        case 'tolak':    return (p.status === 'diajukan' || p.status === 'dicek') || (p.status === 'menunggu_approval' && p.bisa_approve)
-        case 'transfer': return p.status === 'disetujui'
-    }
 }
 
 export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete }: Props) {
@@ -59,6 +53,15 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     const bolehManager  = punyaPeran('manager', 'superadmin')
     const bolehKelola   = punyaPeran('admin', 'manager', 'keuangan', 'superadmin')
 
+    const eligibleFor = (p: PengajuanPengeluaran, action: BulkAction): boolean => {
+        switch (action) {
+            case 'cek':      return p.status === 'diajukan' && bolehKeuangan
+            case 'setuju':   return p.status === 'menunggu_approval' && p.bisa_approve
+            case 'tolak':    return ((p.status === 'diajukan' || p.status === 'dicek') && bolehManager) || (p.status === 'menunggu_approval' && p.bisa_approve)
+            case 'transfer': return p.status === 'disetujui' && bolehKeuangan
+        }
+    }
+
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const pagedList = list.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -66,11 +69,16 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     const tableRef = useRef<DataTableResetHandle | HTMLTableElement | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
 
-    const clearSelection = () => {
+    const clearSelection = useCallback(() => {
         setSelectedIds([])
         const t = tableRef.current
         if (t && 'resetSelected' in t) t.resetSelected()
-    }
+    }, [])
+
+    useEffect(() => {
+        setCurrentPage(1)
+        clearSelection()
+    }, [list, clearSelection])
 
     const handleRowCheck = (checked: boolean, row: PengajuanPengeluaran) => {
         setSelectedIds(prev => checked
@@ -100,6 +108,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
 
     const [transferTarget, setTransferTarget] = useState<PengajuanPengeluaran | null>(null)
     const [tanggalTransferSatuan, setTanggalTransferSatuan] = useState('')
+    const [buktiTransferSatuan, setBuktiTransferSatuan] = useState<File | null>(null)
 
     const [aksiSatuLoading, setAksiSatuLoading] = useState(false)
 
@@ -145,15 +154,24 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
         if (!transferTarget || !tanggalTransferSatuan) return
         setAksiSatuLoading(true)
         try {
-            await arusKasService.transfer(transferTarget.id_pengajuan, tanggalTransferSatuan, null)
+            await arusKasService.transfer(transferTarget.id_pengajuan, tanggalTransferSatuan, buktiTransferSatuan)
             toast.push(<Notification type="success" title="Pengajuan berhasil ditransfer" />)
             setTransferTarget(null)
+            setBuktiTransferSatuan(null)
             onRefresh()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setAksiSatuLoading(false)
         }
+    }
+
+    const validasiFile = (f: File | null, set: (f: File | null) => void) => {
+        if (f && f.size > MAX_FILE_SIZE) {
+            toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
+            return
+        }
+        set(f)
     }
 
     const jalankanKeputusanBulk = async () => {
@@ -296,6 +314,11 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </Tag>
                             </a>
                         )}
+                        {p.periode_dari && (
+                            <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
+                                Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}
+                            </Tag>
+                        )}
                     </div>
                 )
             },
@@ -351,7 +374,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             <Tooltip title="Transfer">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 transition-colors"
-                                    onClick={() => { setTransferTarget(p); setTanggalTransferSatuan(dayjs().format('YYYY-MM-DD')) }}>
+                                    onClick={() => { setTransferTarget(p); setTanggalTransferSatuan(dayjs().format('YYYY-MM-DD')); setBuktiTransferSatuan(null) }}>
                                     <HiOutlineCash className="text-lg" />
                                 </span>
                             </Tooltip>
@@ -458,17 +481,26 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                 </div>
             </ConfirmDialog>
 
-            <Dialog isOpen={!!transferTarget} onRequestClose={() => setTransferTarget(null)} onClose={() => setTransferTarget(null)} width={420}>
+            <Dialog isOpen={!!transferTarget}
+                onRequestClose={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }}
+                onClose={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }} width={420}>
                 <h5 className="text-base font-semibold mb-5">Transfer Pengajuan</h5>
                 <form onSubmit={e => { e.preventDefault(); handleTransferSatuan() }}>
+                    {transferTarget?.id_pembelian && (
+                        <p className="text-xs text-gray-400 mb-4">
+                            Transfer sebelum realisasi = uang muka sebesar nominal saat ini; selisih dengan nota dicatat di detail pembelian.
+                        </p>
+                    )}
                     <FormItem label="Tanggal Transfer" asterisk>
                         <DatePicker inputFormat="DD/MM/YYYY"
                             value={tanggalTransferSatuan ? dayjs(tanggalTransferSatuan).toDate() : null}
                             onChange={date => setTanggalTransferSatuan(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </FormItem>
-                    <p className="text-xs text-gray-400 mt-1">Untuk melampirkan bukti transfer, buka Detail lalu transfer dari sana.</p>
+                    <FormItem label="Bukti Transfer (opsional)">
+                        <UploadBerkas file={buktiTransferSatuan} onChange={f => validasiFile(f, setBuktiTransferSatuan)} />
+                    </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setTransferTarget(null)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }}>Batal</Button>
                         <Button type="submit" variant="solid" loading={aksiSatuLoading} disabled={!tanggalTransferSatuan}>Transfer</Button>
                     </div>
                 </form>
@@ -519,7 +551,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             value={bulkTanggalTransfer ? dayjs(bulkTanggalTransfer).toDate() : null}
                             onChange={date => setBulkTanggalTransfer(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </FormItem>
-                    <p className="text-xs text-gray-400 mt-1">Transfer massal tidak melampirkan bukti — untuk pengajuan yang butuh bukti, transfer satu-satu lewat Detail.</p>
+                    <p className="text-xs text-gray-400 mt-1">Transfer massal tidak melampirkan bukti. Untuk melampirkan bukti transfer, gunakan tombol transfer di baris masing-masing.</p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setBulkTransferOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={bulkSubmitting} disabled={!bulkTanggalTransfer}>Transfer</Button>

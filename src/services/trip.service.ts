@@ -39,6 +39,12 @@ export interface PengajuanUangJalanTrip {
     status: string
     nominal: number
     riwayat: RiwayatPengajuanUangJalan[]
+    periode?: {
+        dari: string
+        sampai: string
+        tarif_per_hari: number
+        jumlah_hari: number
+    } | null
 }
 
 export interface StatusTrip {

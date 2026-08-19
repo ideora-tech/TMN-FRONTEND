@@ -456,6 +456,15 @@ export default function PapanShift({
         }
     }
 
+    const tampilkanPeringatanUangJalan = (peringatan?: string[]) => {
+        if (!peringatan || peringatan.length === 0) return
+        toast.push(
+            <Notification type="warning" title="Pengajuan uang jalan" duration={6000}>
+                {peringatan.join('; ')}
+            </Notification>,
+        )
+    }
+
     const handleSubmit = async () => {
         if (!pilihShift) return
         setSaving(true)
@@ -487,6 +496,7 @@ export default function PapanShift({
             } else if (bulkMode) {
                 let sukses = 0
                 const gagal: { tanggal?: string; alasan: string }[] = []
+                const semuaPeringatan: string[] = []
                 for (const c of selKosong) {
                     try {
                         const hasil = await jadwalShiftService.create({
@@ -500,6 +510,7 @@ export default function PapanShift({
                             hasil.gagal.forEach(g => gagal.push({ tanggal: g.tanggal ?? c.tanggal, alasan: `${c.supir.nama}: ${g.alasan}` }))
                         } else {
                             sukses += hasil.sukses
+                            if (hasil.peringatan) semuaPeringatan.push(...hasil.peringatan)
                         }
                     } catch (err) {
                         gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
@@ -510,6 +521,7 @@ export default function PapanShift({
                 } else {
                     toast.push(<Notification type="success" title={`${sukses} tanggal berhasil dijadwalkan`} />)
                 }
+                tampilkanPeringatanUangJalan(semuaPeringatan)
             } else {
                 if (!pilihSupirId || !tanggalMulai) return
                 const pakaiRentang = !!sampaiTanggal && sampaiTanggal > tanggalMulai
@@ -528,6 +540,7 @@ export default function PapanShift({
                         pakaiRentang ? `${hasil.sukses} hari berhasil dijadwalkan` : 'Shift berhasil dijadwalkan'
                     } />)
                 }
+                tampilkanPeringatanUangJalan(hasil.peringatan)
             }
             setDialogOpen(false)
             fetchBoard()
@@ -713,6 +726,7 @@ const handleImportFile = async (file: File | null) => {
             if (hasil.gagal.length) ringkasan.push(`${hasil.gagal.length} gagal`)
             toast.push(<Notification type={hasil.gagal.length ? 'warning' : 'success'}
                 title={`Import selesai: ${ringkasan.join(', ')}`} />)
+            tampilkanPeringatanUangJalan(hasil.peringatan)
             if (ditimpa.length) setImportDitimpa(ditimpa)
             if (hasil.gagal.length) setImportGagal(hasil.gagal)
             fetchBoard()

@@ -1,9 +1,11 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Spinner } from '@/components/ui'
 import { HiPlusCircle } from 'react-icons/hi'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import VendorTab from './VendorTab'
 
 const TAB_ROUTE_MAP: Record<string, string> = {
@@ -19,6 +21,7 @@ export default function VendorPage() {
     const searchParams = useSearchParams()
     const tabParam = searchParams.get('tab')
     const targetRoute = tabParam ? TAB_ROUTE_MAP[tabParam] : undefined
+    const [refreshKey, setRefreshKey] = useState(0)
 
     useEffect(() => {
         if (!targetRoute) return
@@ -43,15 +46,25 @@ export default function VendorPage() {
                     <h3 className="font-bold">Data Vendor</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola data master vendor mitra transportasi</p>
                 </div>
-                <Button
-                    variant="solid" size="sm"
-                    icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.VENDOR_BARU)}
-                >
-                    Tambah Vendor
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.VENDOR_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.VENDOR_IMPORT}
+                        templateFilename="template-import-vendor.xlsx"
+                        entityLabel="vendor"
+                        kunciLabel="Kode"
+                        onImported={() => setRefreshKey(n => n + 1)}
+                    />
+                    <Button
+                        variant="solid" size="sm"
+                        icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.VENDOR_BARU)}
+                    >
+                        Tambah Vendor
+                    </Button>
+                </div>
             </div>
-            <VendorTab />
+            <VendorTab key={refreshKey} />
         </div>
     )
 }

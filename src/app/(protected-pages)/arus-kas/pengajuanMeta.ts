@@ -11,8 +11,6 @@ export const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     lainnya:    'Lainnya',
 }
 
-/** Kategori yang boleh dipilih manual saat membuat pengajuan baru — sparepart & penggajian
- *  hanya pernah dibuat otomatis oleh modul lain (Pembelian Sparepart, Payroll). */
 export const KATEGORI_OPTIONS_FORM: { value: KategoriPengajuan; label: string }[] = [
     { value: 'uang_jalan', label: 'Uang Jalan' },
     { value: 'legalitas',  label: 'Legalitas' },
@@ -22,7 +20,6 @@ export const KATEGORI_OPTIONS_FORM: { value: KategoriPengajuan; label: string }[
     { value: 'lainnya',    label: 'Lainnya' },
 ]
 
-/** Semua kategori, untuk dropdown filter laporan/approval (termasuk yang otomatis). */
 export const KATEGORI_OPTIONS_FILTER: { value: KategoriPengajuan; label: string }[] =
     Object.entries(KATEGORI_LABEL).map(([value, label]) => ({ value: value as KategoriPengajuan, label }))
 

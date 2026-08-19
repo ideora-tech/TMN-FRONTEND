@@ -123,6 +123,8 @@ export const API_ENDPOINTS = {
     // Vendor
     VENDOR:        '/api/proxy/vendor',
     VENDOR_DETAIL: (id: string) => `/api/proxy/vendor/${id}`,
+    VENDOR_IMPORT_TEMPLATE: '/api/proxy/vendor/import/template',
+    VENDOR_IMPORT:          '/api/proxy/vendor/import',
 
     // Kontrak Vendor
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
@@ -311,10 +313,14 @@ export const API_ENDPOINTS = {
     // Armada Vendor
     ARMADA_VENDOR:        '/api/proxy/armada-vendor',
     ARMADA_VENDOR_DETAIL: (id: string) => `/api/proxy/armada-vendor/${id}`,
+    ARMADA_VENDOR_IMPORT_TEMPLATE: '/api/proxy/armada-vendor/import/template',
+    ARMADA_VENDOR_IMPORT:          '/api/proxy/armada-vendor/import',
 
     // Supir Vendor
     SUPIR_VENDOR:        '/api/proxy/supir-vendor',
     SUPIR_VENDOR_DETAIL: (id: string) => `/api/proxy/supir-vendor/${id}`,
+    SUPIR_VENDOR_IMPORT_TEMPLATE: '/api/proxy/supir-vendor/import/template',
+    SUPIR_VENDOR_IMPORT:          '/api/proxy/supir-vendor/import',
 
     // Lokasi
     LOKASI:        '/api/proxy/lokasi',

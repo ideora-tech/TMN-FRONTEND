@@ -104,8 +104,8 @@ export default function PanelApprovalSaya() {
                         <span className="text-sm text-gray-500">Total {formatRupiah(totalNominal)}</span>
                         <button type="button"
                             className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                            onClick={() => router.push(ROUTES.ARUS_KAS)}>
-                            Lihat semua di Arus Kas <HiOutlineArrowRight />
+                            onClick={() => router.push(ROUTES.PROSES_PEMBAYARAN)}>
+                            Lihat semua di Proses Pembayaran <HiOutlineArrowRight />
                         </button>
                     </div>
                 </div>
