@@ -184,22 +184,22 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
         setShowLaporanForm(true)
     }
 
-    // Auto-buka form laporan kalau datang dari tombol "Isi Laporan" di list Trip Monitor
-    // (?laporan=1), atau kalau panel ini dipakai di dalam dialog yang sudah dibuka khusus
-    // untuk isi laporan (autoOpenForm) — hanya sekali per kunjungan, dan cuma kalau
-    // statusnya memang boleh diisi laporan.
+    // Auto-buka form ISI (create) laporan kalau datang dari tombol "Isi Laporan" di list
+    // Trip Monitor (?laporan=1), atau kalau panel ini dipakai di dalam dialog yang sudah
+    // dibuka khusus untuk isi laporan (autoOpenForm) — hanya sekali per kunjungan, dan
+    // cuma kalau statusnya memang boleh diisi laporan. Kalau laporan SUDAH ada, tidak perlu
+    // auto-buka apa-apa — biarkan tampilan default (lihat data + tombol Edit) yang muncul.
     const autoOpenLaporanRef = useRef(false)
     useEffect(() => {
         if (autoOpenLaporanRef.current) return
         if (!trip || laporanLoading) return
         if (!autoOpenForm && searchParams.get('laporan') !== '1') return
         if (!canIsiLaporan) return
+        if (laporan) return
 
         autoOpenLaporanRef.current = true
-        if (laporan) handleOpenEditLaporan()
-        else handleOpenCreateLaporan()
+        handleOpenCreateLaporan()
         document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trip, laporan, laporanLoading, searchParams, canIsiLaporan, autoOpenForm])
 
     const addBiayaLainRow = () => {

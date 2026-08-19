@@ -9,58 +9,9 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import {
     arusKasService,
-    KategoriPengajuan,
     PengajuanPengeluaran,
-    StatusApproval,
-    StatusPengajuan,
 } from '@/services/arusKas.service'
-
-const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
-    uang_jalan: 'Uang Jalan',
-    legalitas:  'Legalitas',
-    perawatan:  'Perawatan',
-    sparepart:  'Sparepart',
-    penggajian: 'Penggajian',
-    pembelian_aset:      'Pembelian Aset',
-    pembayaran_pinjaman: 'Pembayaran Pinjaman',
-    lainnya:    'Lainnya',
-}
-
-const PENERIMA_LABEL: Partial<Record<KategoriPengajuan, string>> = {
-    uang_jalan: 'Supir',
-    sparepart:  'Supplier',
-    perawatan:  'Armada',
-}
-
-const STATUS_LABEL: Record<StatusPengajuan, string> = {
-    diajukan:          'Diajukan',
-    dicek:             'Dicek',
-    menunggu_approval: 'Menunggu Approval',
-    disetujui:         'Disetujui',
-    ditolak:           'Ditolak',
-    ditransfer:        'Ditransfer',
-}
-
-const STATUS_TAG: Record<StatusPengajuan, string> = {
-    diajukan:          'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
-    disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
-    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-    ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-}
-
-const STATUS_APPROVAL_LABEL: Record<StatusApproval, string> = {
-    menunggu:  'Menunggu',
-    disetujui: 'Disetujui',
-    ditolak:   'Ditolak',
-}
-
-const STATUS_APPROVAL_TAG: Record<StatusApproval, string> = {
-    menunggu:  'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    ditolak:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
-}
+import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG, STATUS_APPROVAL_LABEL, STATUS_APPROVAL_TAG } from './pengajuanMeta'
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
@@ -109,7 +60,7 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
     return null
 }
 
-export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh }: { pengajuan: PengajuanPengeluaran | null; onClose: () => void; onRefresh?: () => void }) {
+export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, readOnly = false }: { pengajuan: PengajuanPengeluaran | null; onClose: () => void; onRefresh?: () => void; readOnly?: boolean }) {
     const p = pengajuan
     const [approveOpen, setApproveOpen] = useState(false)
     const [tolakOpen, setTolakOpen]     = useState(false)
@@ -241,7 +192,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh }:
                                     </div>
                                 ))}
                             </div>
-                            {p.bisa_approve && (
+                            {p.bisa_approve && !readOnly && (
                                 <div className="flex justify-end gap-2 mt-3">
                                     <Button size="sm" variant="solid" loading={memproses} onClick={() => setApproveOpen(true)}>
                                         Approve

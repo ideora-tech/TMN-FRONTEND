@@ -67,7 +67,7 @@ type HasilGagal = { supir: string; armada: string; alasan: string }
 export default function PenugasanPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
+    const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string; namaKlien: string | null }[]>([])
     const [armadaMap, setArmadaMap]         = useState<Record<string, Armada>>({})
     const [supirMap, setSupirMap]           = useState<Record<string, Supir>>({})
     const [supirList, setSupirList]         = useState<Supir[]>([])
@@ -168,7 +168,11 @@ export default function PenugasanPage() {
 
     useEffect(() => {
         projectService.list(1).then(res => {
-            setProyekOptions(res.data.map((p: Project) => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
+            setProyekOptions(res.data.map((p: Project) => ({
+                value: p.id_proyek,
+                label: `${p.kode_proyek} — ${p.nama_proyek}`,
+                namaKlien: p.nama_klien ?? null,
+            })))
         }).catch(() => {})
         fetchArmadaSupir()
     }, [fetchArmadaSupir])
@@ -468,6 +472,13 @@ export default function PenugasanPage() {
                         value={proyekOptions.find(o => o.value === selectedProyek) ?? null}
                         onChange={(opt) => gantiProyek((opt as { value: string } | null)?.value ?? '')}
                     />
+                    {selectedProyek && proyekOptions.find(o => o.value === selectedProyek)?.namaKlien && (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                            Klien: <span className="font-medium text-gray-700 dark:text-gray-200">
+                                {proyekOptions.find(o => o.value === selectedProyek)?.namaKlien}
+                            </span>
+                        </span>
+                    )}
                 </div>
 
                 {!selectedProyek ? (
