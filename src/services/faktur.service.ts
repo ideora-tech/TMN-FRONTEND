@@ -15,6 +15,13 @@ export interface Faktur {
     status: 'draft' | 'terkirim' | 'lunas' | 'batal'
     tanggal_faktur?: string
     jatuh_tempo?: string
+    id_proyek?: string | null
+    id_klien?: string | null
+    id_penawaran?: string | null
+    nama_proyek?: string | null
+    nama_klien?: string | null
+    nomor_penawaran?: string | null
+    nilai_penawaran?: number | null
     items?: FakturItem[]
     dibuat_pada?: string
     diubah_pada?: string | null

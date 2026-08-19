@@ -1,13 +1,16 @@
 ﻿'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import axios from 'axios'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { fakturService, Faktur } from '@/services/faktur.service'
 
 type EditItemRow = { deskripsi: string; qty: string; harga_satuan: string }
@@ -58,6 +61,8 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [loading, setLoading]   = useState(true)
     const [updating, setUpdating] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+
+    const [downloadingExport, setDownloadingExport] = useState<'excel' | 'pdf' | null>(null)
 
     const [editOpen, setEditOpen]           = useState(false)
     const [editTanggal, setEditTanggal]     = useState('')
@@ -130,6 +135,28 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         }
     }
 
+    const handleExport = async (type: 'excel' | 'pdf') => {
+        setDownloadingExport(type)
+        try {
+            const url = type === 'excel'
+                ? API_ENDPOINTS.FAKTUR_EXPORT_EXCEL(id)
+                : API_ENDPOINTS.FAKTUR_EXPORT_PDF(id)
+            const res = await axios.get(url, { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `invoice-${faktur?.nomor_faktur ?? id}.${type === 'excel' ? 'xlsx' : 'pdf'}`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingExport(null)
+        }
+    }
+
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!faktur) return <div className="p-6 text-red-500">Invoice tidak ditemukan.</div>
 
@@ -137,18 +164,25 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={() => router.push(ROUTES.FAKTUR)}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
-                >
-                    <HiArrowLeft className="text-xl" />
-                </button>
-                <div>
-                    <h3 className="font-bold">{faktur.nomor_faktur}</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran invoice</p>
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => router.push(ROUTES.FAKTUR)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
+                    >
+                        <HiArrowLeft className="text-xl" />
+                    </button>
+                    <div>
+                        <h3 className="font-bold">{faktur.nomor_faktur}</h3>
+                        <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran invoice</p>
+                    </div>
                 </div>
+                <ExportDropdownButton
+                    loading={downloadingExport}
+                    onExportExcel={() => handleExport('excel')}
+                    onExportPdf={() => handleExport('pdf')}
+                />
             </div>
 
             {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
@@ -222,6 +256,31 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         { label: 'Total',           value: <span className="font-semibold">{formatRupiah(faktur.total)}</span> },
                         { label: 'Tanggal Invoice', value: faktur.tanggal_faktur ?? <span className="text-gray-400">—</span> },
                         { label: 'Jatuh Tempo',    value: faktur.jatuh_tempo ?? <span className="text-gray-400">—</span> },
+                        { label: 'Klien',  value: faktur.nama_klien ?? <span className="text-gray-400">—</span> },
+                        {
+                            label: 'Proyek',
+                            value: faktur.nama_proyek
+                                ? (faktur.id_proyek
+                                    ? <span className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                                        onClick={() => router.push(ROUTES.PROYEK_DETAIL(faktur.id_proyek!))}>
+                                        {faktur.nama_proyek}
+                                    </span>
+                                    : faktur.nama_proyek)
+                                : <span className="text-gray-400">—</span>,
+                        },
+                        {
+                            label: 'Ref. Penawaran',
+                            value: faktur.nomor_penawaran
+                                ? (
+                                    <span>
+                                        {faktur.nomor_penawaran}
+                                        {faktur.nilai_penawaran != null && (
+                                            <span className="text-xs text-gray-400 ml-2">Nilai: {formatRupiah(faktur.nilai_penawaran)}</span>
+                                        )}
+                                    </span>
+                                )
+                                : <span className="text-gray-400">— dibuat tanpa referensi penawaran</span>,
+                        },
                     ]).map(({ label, value }) => (
                         <div key={label}>
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>

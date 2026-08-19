@@ -223,6 +223,13 @@ const navigationConfig: NavigationTree[] = [
         authority: ['dispatcher', 'keuangan', 'manager', 'superadmin', 'admin'],
         subMenu: [],
     },
+    {
+        key: 'proses-pembayaran', path: '/proses-pembayaran', title: 'Proses Pembayaran',
+        translateKey: 'nav.prosesPembayaran', icon: 'handCoins',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'keuangan', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
 
     // === PENGATURAN ===
     {
