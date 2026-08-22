@@ -73,6 +73,10 @@ export const protectedRoutes: Routes = {
 
 export const publicRoutes: Routes = {
     '/': { key: 'landing', authority: [] },
+    '/tentang': { key: 'tentang', authority: [] },
+    '/layanan': { key: 'layanan', authority: [] },
+    '/armada-kami': { key: 'armadaKami', authority: [] },
+    '/kontak': { key: 'kontak', authority: [] },
 }
 
 export const authRoutes = authRoute

@@ -1,9 +1,9 @@
 import { Metadata } from 'next'
 
 const pageMeta: Metadata = {
-    title: 'Ecme - The Ultimate Next & TypeScript Web Template',
+    title: 'Sulita Logistik Indonesia — Jasa Transportasi & Logistik',
     description:
-        'Admin Template and Starter Kit with React, Tailwind Components and Next.js',
+        'PT Sulita Logistik Indonesia — jasa angkutan kontrak, distribusi rutin, sewa unit + supir, dan project logistik dengan armada terawat dan monitoring digital real-time.',
     icons: {
         icon: '/favicon.ico',
     },
