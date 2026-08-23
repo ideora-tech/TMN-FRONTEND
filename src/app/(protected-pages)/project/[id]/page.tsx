@@ -2,7 +2,7 @@
 import { use, useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Checkbox, Tooltip } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
@@ -17,7 +17,6 @@ import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
-import { useEstimasiPenugasan } from '@/utils/hooks/useEstimasiPenugasan'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
@@ -76,36 +75,6 @@ const PENUGASAN_STATUS_CLASS: Record<string, string> = {
     batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
-// ── Dialog Tambah Penugasan (pasangan supir–armada) — pola sama persis dgn halaman menu Penugasan ──
-const UNIT_STATUS_CLASS: Record<string, string> = {
-    tersedia:    'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-    digunakan:   'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
-    perawatan:   'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-    tidak_aktif: 'bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400',
-}
-
-const UNIT_STATUS_LABEL: Record<string, string> = {
-    tersedia:    'Tersedia',
-    digunakan:   'Dalam Perjalanan',
-    perawatan:   'Perawatan',
-    tidak_aktif: 'Tidak Aktif',
-}
-
-type Pasangan = {
-    supir: Supir
-    armada: Armada | null // null bila armada default tidak ditemukan di daftar
-}
-
-type CreateFormState = {
-    estimasi_biaya: string
-}
-
-const EMPTY_CREATE_FORM: CreateFormState = {
-    estimasi_biaya: '',
-}
-
-type HasilGagal = { supir: string; armada: string; alasan: string }
-
 type RevisiItemForm = {
     id_rute: string
     id_jenis_kendaraan: string
@@ -146,8 +115,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaMap, setArmadaMap]             = useState<Record<string, Armada>>({})
     const [supirList, setSupirList]             = useState<Supir[]>([])
-    const [pasanganLoading, setPasanganLoading] = useState(false)
-    const [pasanganError, setPasanganError]     = useState(false)
 
     // Rute Proyek
     const [ruteProyekList, setRuteProyekList]   = useState<ProyekRute[]>([])
@@ -189,35 +156,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [fakturErrors, setFakturErrors]           = useState<Partial<Record<'nominal' | 'uraian', string>>>({})
     const [savingFaktur, setSavingFaktur]           = useState(false)
 
-    // Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan)
-    const [createDialogOpen, setCreateDialogOpen]   = useState(false)
-    const [createForm, setCreateForm]               = useState<CreateFormState>(EMPTY_CREATE_FORM)
-    const [checkedIds, setCheckedIds]               = useState<string[]>([]) // id_supir yang dicentang
-    const [pairSearch, setPairSearch]               = useState('')
-    const [createFormErrors, setCreateFormErrors]   = useState<Partial<Record<'pasangan', string>>>({})
-    const [createSubmitting, setCreateSubmitting]   = useState(false)
-    const [hasilPenugasan, setHasilPenugasan]       = useState<{ sukses: number; gagal: HasilGagal[] } | null>(null)
-    const [estimasiManual, setEstimasiManual]       = useState(false)
-    const {
-        itemOptions: ruteOptions,
-        selectedItemId: ruteItemId,
-        setSelectedItemId: setRuteItemId,
-        estimasi: estimasiOtomatis,
-        namaRute: namaRuteEstimasi,
-        idRute: idRuteEstimasi,
-        dataTidakLengkap: estimasiDataTidakLengkap,
-    } = useEstimasiPenugasan(id)
-
-    useEffect(() => {
-        if (estimasiManual || estimasiOtomatis == null) return
-        setCreateForm(p => ({ ...p, estimasi_biaya: String(estimasiOtomatis) }))
-    }, [estimasiOtomatis, estimasiManual])
-
-    // Refetch armada & supir — dipanggil saat mount dan setiap kali dialog dibuka,
-    // supaya status unit (tersedia/digunakan/dst) tidak basi.
     const fetchArmadaSupir = useCallback(async () => {
-        setPasanganLoading(true)
-        setPasanganError(false)
         try {
             const [armadaRes, supirRes] = await Promise.all([
                 armadaService.list(1, 100),
@@ -227,11 +166,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             armadaRes.data.forEach((a: Armada) => { aMap[a.id_armada] = a })
             setArmadaMap(aMap)
             setSupirList(supirRes.data)
-        } catch {
-            setPasanganError(true)
-        } finally {
-            setPasanganLoading(false)
-        }
+        } catch { /* hanya melengkapi nama supir/armada di daftar penugasan */ }
     }, [])
 
     const fetchProject = useCallback(async () => {
@@ -250,43 +185,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             .catch(() => {})
         fetchArmadaSupir()
     }, [id, fetchProject, fetchArmadaSupir])
-
-    // Pasangan supir–armada: semua supir aktif yang punya armada default.
-    const pasanganList = useMemo<Pasangan[]>(() => {
-        return supirList
-            .filter(s => s.status === 'aktif' && s.id_armada_default)
-            .map(s => ({ supir: s, armada: armadaMap[s.id_armada_default!] ?? null }))
-    }, [supirList, armadaMap])
-
-    const filteredPasangan = useMemo(() => {
-        const q = pairSearch.trim().toLowerCase()
-        if (!q) return pasanganList
-        return pasanganList.filter(p =>
-            p.supir.nama.toLowerCase().includes(q) ||
-            (p.armada?.nopol ?? '').toLowerCase().includes(q))
-    }, [pasanganList, pairSearch])
-
-    const isPairSelectable = (p: Pasangan) => p.armada?.status === 'tersedia' || p.armada?.status === 'digunakan'
-
-    const filteredAvailable = useMemo(
-        () => filteredPasangan.filter(isPairSelectable),
-        [filteredPasangan])
-
-    const allFilteredChecked = filteredAvailable.length > 0
-        && filteredAvailable.every(p => checkedIds.includes(p.supir.id_supir))
-
-    const togglePair = (pairId: string) => {
-        setCheckedIds(prev => prev.includes(pairId) ? prev.filter(x => x !== pairId) : [...prev, pairId])
-        setCreateFormErrors(prev => ({ ...prev, pasangan: undefined }))
-    }
-
-    const toggleAllFiltered = () => {
-        const ids = filteredAvailable.map(p => p.supir.id_supir)
-        setCheckedIds(prev => allFilteredChecked
-            ? prev.filter(x => !ids.includes(x))
-            : Array.from(new Set([...prev, ...ids])))
-        setCreateFormErrors(prev => ({ ...prev, pasangan: undefined }))
-    }
 
     const fetchPenugasan = useCallback(async () => {
         setPenugasanLoading(true)
@@ -601,114 +499,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             setUpdating(false)
             setPendingStatus(null)
         }
-    }
-
-    const openCreateDialog = () => {
-        setCreateForm({ ...EMPTY_CREATE_FORM, estimasi_biaya: estimasiOtomatis != null ? String(estimasiOtomatis) : '' })
-        setEstimasiManual(false)
-        setCheckedIds([])
-        setPairSearch('')
-        setCreateFormErrors({})
-        setCreateDialogOpen(true)
-        fetchArmadaSupir() // refresh status unit — jangan blok pembukaan modal
-    }
-
-    const closeCreateDialog = () => setCreateDialogOpen(false)
-
-    const validateCreateForm = () => {
-        const e: typeof createFormErrors = {}
-        if (checkedIds.length === 0) e.pasangan = 'Centang minimal satu pasangan'
-        setCreateFormErrors(e)
-        return Object.keys(e).length === 0
-    }
-
-    const handleSubmitCreate = async () => {
-        if (!validateCreateForm()) {
-            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-            return
-        }
-        setCreateSubmitting(true)
-        try {
-            const estimasi = createForm.estimasi_biaya ? Number(createForm.estimasi_biaya) : null
-            const pairs = pasanganList.filter(p => checkedIds.includes(p.supir.id_supir))
-            const results = await Promise.allSettled(pairs.map(p =>
-                penugasanService.create({
-                    id_proyek:      id,
-                    id_supir:       p.supir.id_supir,
-                    id_armada:      p.supir.id_armada_default ?? undefined,
-                    estimasi_biaya: estimasi,
-                    id_rute:        idRuteEstimasi,
-                })
-            ))
-            const gagal: HasilGagal[] = []
-            results.forEach((r, i) => {
-                if (r.status === 'rejected') {
-                    const p = pairs[i]
-                    gagal.push({
-                        supir:  p.supir.nama,
-                        armada: p.armada?.nopol ?? (p.supir.id_armada_default ?? '').slice(0, 8),
-                        alasan: parseApiError(r.reason),
-                    })
-                }
-            })
-            const sukses = results.length - gagal.length
-            setCreateDialogOpen(false)
-            fetchPenugasan()
-            if (gagal.length === 0) {
-                toast.push(<Notification type="success" title={`${sukses} penugasan berhasil dibuat`} />)
-            } else {
-                setHasilPenugasan({ sukses, gagal })
-            }
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setCreateSubmitting(false)
-        }
-    }
-
-    const renderPasanganRow = (p: Pasangan) => {
-        const pairId     = p.supir.id_supir
-        const selectable = isPairSelectable(p)
-        const isChecked  = checkedIds.includes(pairId)
-        return (
-            <tr
-                key={pairId}
-                className={`${selectable ? 'hover:bg-gray-50 dark:hover:bg-gray-700/40 cursor-pointer' : 'opacity-50 cursor-not-allowed'} transition-colors`}
-                onClick={() => { if (selectable) togglePair(pairId) }}
-            >
-                <td className="py-2.5 pl-3 pr-1 w-10" onClick={e => e.stopPropagation()}>
-                    <Checkbox
-                        checked={isChecked}
-                        disabled={!selectable}
-                        onChange={() => togglePair(pairId)}
-                    />
-                </td>
-                <td className="py-2.5 pr-4">
-                    <p className="font-medium text-gray-800 dark:text-gray-200">{p.supir.nama}</p>
-                    <p className="text-xs text-gray-400">SIM {p.supir.jenis_sim ?? '-'}</p>
-                </td>
-                <td className="py-2.5 pr-4">
-                    {p.armada ? (
-                        <div>
-                            <p className="font-semibold text-gray-800 dark:text-gray-200">{p.armada.nopol}</p>
-                            <p className="text-xs text-gray-400">{[p.armada.nama_jenis, p.armada.merk].filter(Boolean).join(' · ')}</p>
-                        </div>
-                    ) : (
-                        <span className="font-mono text-xs text-gray-500">
-                            {(p.supir.id_armada_default ?? '').slice(0, 8)}
-                        </span>
-                    )}
-                </td>
-                <td className="py-2.5 pr-3">
-                    {p.armada ? (
-                        <Tag className={`text-xs font-semibold ${UNIT_STATUS_CLASS[p.armada.status] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300'}`}>
-                            {UNIT_STATUS_LABEL[p.armada.status] ?? p.armada.status}
-                        </Tag>
-                    ) : <span className="text-gray-400 text-xs">—</span>}
-                </td>
-            </tr>
-        )
     }
 
     const handleDeletePenugasan = async () => {
@@ -1285,15 +1075,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <Card>
                 <div className="flex items-center justify-between mb-1">
                     <div>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Penugasan</p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Penugasan Harian</p>
                         <p className="text-xs text-gray-400 mt-0.5">{penugasanList.length} penugasan terdaftar</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openCreateDialog}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.PENUGASAN)}>
                         Tambah Penugasan
                     </Button>
                 </div>
-
-                {/* Form tambah penugasan */}
 
                 {penugasanLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
@@ -1368,168 +1156,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                 )}
             </Card>
-
-            {/* Dialog Tambah Penugasan — list pasangan supir–armada multi-centang (pola menu Penugasan) */}
-            <Dialog isOpen={createDialogOpen} onRequestClose={closeCreateDialog} onClose={closeCreateDialog} width={920}>
-                <h5 className="text-base font-semibold mb-1">Tambah Penugasan</h5>
-                <p className="text-xs text-gray-400 mb-4">
-                    Centang satu atau lebih pasangan supir–armada untuk di-assign ke proyek ini.
-                    Jadwal harian per tanggal diatur belakangan di menu Penugasan → tab Papan Jadwal.
-                </p>
-                <form onSubmit={e => { e.preventDefault(); handleSubmitCreate() }}>
-                    {pasanganLoading ? (
-                        <div className="py-12 flex items-center justify-center">
-                            <Spinner size={32} />
-                        </div>
-                    ) : pasanganError ? (
-                        <div className="py-10 text-center">
-                            <p className="text-red-500 text-sm">Gagal memuat data — coba buka ulang</p>
-                        </div>
-                    ) : pasanganList.length === 0 ? (
-                        <div className="py-10 text-center">
-                            <p className="text-gray-500 text-sm">
-                                Belum ada pasangan supir–armada. Atur Armada Default di menu Supir.
-                            </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                                Atau gunakan{' '}
-                                <Link href={ROUTES.PENUGASAN_BARU} className="text-blue-600 hover:underline dark:text-blue-400">
-                                    form manual
-                                </Link>{' '}
-                                untuk kombinasi bebas.
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between gap-4 mb-3">
-                                <Input
-                                    size="sm"
-                                    className="max-w-xs"
-                                    placeholder="Cari nama supir / nopol..."
-                                    value={pairSearch}
-                                    onChange={e => setPairSearch(e.target.value)}
-                                />
-                                <span className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
-                                    {checkedIds.length} pasangan dipilih
-                                    {checkedIds.length > 0 && (
-                                        <button type="button"
-                                            className="text-blue-600 hover:underline dark:text-blue-400"
-                                            onClick={() => setCheckedIds([])}>
-                                            Batalkan
-                                        </button>
-                                    )}
-                                </span>
-                            </div>
-                            <div className="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
-                                <div className="max-h-64 overflow-y-auto overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0 z-10">
-                                            <tr className="border-b border-gray-100 dark:border-gray-700">
-                                                <th className="py-2.5 pl-3 pr-1 w-10 text-left">
-                                                    <Tooltip title="Pilih semua yang tersedia">
-                                                        <span>
-                                                            <Checkbox
-                                                                checked={allFilteredChecked}
-                                                                disabled={filteredAvailable.length === 0}
-                                                                onChange={toggleAllFiltered}
-                                                            />
-                                                        </span>
-                                                    </Tooltip>
-                                                </th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
-                                                <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
-                                                <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Status Unit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                            {filteredPasangan.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={4}
-                                                        className="py-6 text-center text-gray-400 text-sm">
-                                                        Tidak ada pasangan yang cocok dengan pencarian
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                filteredPasangan.map(renderPasanganRow)
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            {createFormErrors.pasangan && (
-                                <p className="text-red-500 text-xs mt-1.5">{createFormErrors.pasangan}</p>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-5">
-                                {ruteOptions.length > 1 && (
-                                    <FormItem label="Rute (untuk uang jalan)">
-                                        <Select isSearchable={false}
-                                            options={ruteOptions}
-                                            value={ruteOptions.find(o => o.value === ruteItemId) ?? null}
-                                            onChange={opt => { if (opt) { setRuteItemId(opt.value); setEstimasiManual(false) } }}
-                                        />
-                                    </FormItem>
-                                )}
-                                <FormItem label="Uang Jalan">
-                                    <Input
-                                        prefix="Rp"
-                                        placeholder="0"
-                                        value={createForm.estimasi_biaya ? formatNum(Number(createForm.estimasi_biaya)) : ''}
-                                        onChange={e => { setEstimasiManual(true); setCreateForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') })) }}
-                                    />
-                                    {!estimasiManual && estimasiOtomatis != null && namaRuteEstimasi && (
-                                        <p className="text-xs text-gray-400 mt-1">Otomatis dari uang jalan rute: {namaRuteEstimasi}</p>
-                                    )}
-                                    {!estimasiManual && estimasiOtomatis == null && estimasiDataTidakLengkap && (
-                                        <p className="text-xs text-amber-500 mt-1">Rute proyek belum punya uang jalan — isi estimasi manual</p>
-                                    )}
-                                </FormItem>
-                            </div>
-                        </>
-                    )}
-                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeCreateDialog}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={createSubmitting}
-                            disabled={pasanganLoading || pasanganError || pasanganList.length === 0}>
-                            Simpan
-                        </Button>
-                    </div>
-                </form>
-            </Dialog>
-
-            {/* Dialog hasil pembuatan massal — tampil bila sebagian/semua gagal */}
-            <Dialog isOpen={!!hasilPenugasan} onRequestClose={() => setHasilPenugasan(null)} onClose={() => setHasilPenugasan(null)} width={640}>
-                <h5 className="text-base font-semibold mb-1">Hasil Tambah Penugasan</h5>
-                {hasilPenugasan && (
-                    <>
-                        <p className="text-sm text-gray-500 mb-4">
-                            {hasilPenugasan.sukses} berhasil, {hasilPenugasan.gagal.length} gagal.
-                        </p>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                    <tr className="border-b border-gray-100 dark:border-gray-700">
-                                        <th className="py-2.5 pl-3 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Supir</th>
-                                        <th className="py-2.5 pr-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Armada</th>
-                                        <th className="py-2.5 pr-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Alasan</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {hasilPenugasan.gagal.map((g, i) => (
-                                        <tr key={i}>
-                                            <td className="py-2.5 pl-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{g.supir}</td>
-                                            <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{g.armada}</td>
-                                            <td className="py-2.5 pr-3 text-red-500 text-xs">{g.alasan}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-                <div className="flex justify-end mt-6">
-                    <Button variant="solid" onClick={() => setHasilPenugasan(null)}>Tutup</Button>
-                </div>
-            </Dialog>
 
             {/* Confirm Hapus Penugasan */}
             <ConfirmDialog isOpen={!!deletePenugasanTarget} type="danger" title="Hapus Penugasan?"

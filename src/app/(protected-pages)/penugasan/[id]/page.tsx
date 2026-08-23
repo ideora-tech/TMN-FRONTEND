@@ -278,14 +278,12 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex flex-col gap-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(dariVendor
-                    ? ROUTES.PENUGASAN_VENDOR
-                    : penugasan ? `${ROUTES.PENUGASAN}?proyek=${penugasan.id_proyek}` : ROUTES.PENUGASAN)}
+                <button type="button" onClick={() => router.push(dariVendor ? ROUTES.PENUGASAN_VENDOR : ROUTES.PENUGASAN)}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
-                    <h3 className="font-bold">{dariVendor ? 'Detail Penugasan Vendor' : 'Detail Penugasan'}</h3>
+                    <h3 className="font-bold">{dariVendor ? 'Detail Penugasan Vendor' : 'Detail Penugasan Harian'}</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Informasi dan pengelolaan penugasan</p>
                 </div>
             </div>
@@ -300,7 +298,9 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                     P
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">Penugasan</p>
+                                    <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">
+                                        {dariVendor ? 'Penugasan' : 'Penugasan Harian'}
+                                    </p>
                                     <p className="text-sm text-gray-500 mt-1">
                                         {penugasan.tanggal_tugas
                                             ? dayjs(penugasan.tanggal_tugas).format('DD MMM YYYY')

@@ -78,7 +78,14 @@ const navigationConfig: NavigationTree[] = [
     },
     {
         key: 'penugasan', path: '/penugasan', title: 'Penugasan',
-        translateKey: 'nav.penugasan', icon: 'userCheck',
+        translateKey: 'nav.penugasan', icon: 'calendar',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
+    {
+        key: 'jadwal-shift-supir', path: '/jadwal-shift-supir', title: 'Jadwal Shift Supir',
+        translateKey: 'nav.jadwalShiftSupir', icon: 'userCheck',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['dispatcher', 'manager', 'superadmin', 'admin'],
         subMenu: [],

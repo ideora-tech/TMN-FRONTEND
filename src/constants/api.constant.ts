@@ -120,6 +120,10 @@ export const API_ENDPOINTS = {
     SUPIR_IMPORT_TEMPLATE: '/api/proxy/supir/import/template',
     SUPIR_IMPORT:          '/api/proxy/supir/import',
 
+    // Supir Proyek
+    SUPIR_PROYEK:        '/api/proxy/supir-proyek',
+    SUPIR_PROYEK_DETAIL: (id: string) => `/api/proxy/supir-proyek/${id}`,
+
     // Vendor
     VENDOR:        '/api/proxy/vendor',
     VENDOR_DETAIL: (id: string) => `/api/proxy/vendor/${id}`,
@@ -210,6 +214,8 @@ export const API_ENDPOINTS = {
     PENUGASAN:        '/api/proxy/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
     PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
+    PENUGASAN_HARIAN: '/api/proxy/penugasan/harian',
+    PENUGASAN_BOARD:  '/api/proxy/penugasan/board',
 
     // Pengguna
     PENGGUNA:                  '/api/proxy/pengguna',
