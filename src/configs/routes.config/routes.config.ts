@@ -60,6 +60,7 @@ export const protectedRoutes: Routes = {
     ...listRoute('parameter-bok', 'parameter-bok', ADMIN_ONLY),
     ...listRoute('departemen', 'departemen'),
     ...listRoute('jabatan', 'jabatan'),
+    '/struktur-organisasi': { key: 'struktur-organisasi', authority: [] },
     ...listRoute('karyawan', 'karyawan'),
     '/cuti': { key: 'cuti', authority: [] },
     '/absensi': { key: 'absensi', authority: [] },

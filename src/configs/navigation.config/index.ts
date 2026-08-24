@@ -186,6 +186,13 @@ const navigationConfig: NavigationTree[] = [
         authority: ['manager', 'superadmin', 'admin'],
         subMenu: [],
     },
+    {
+        key: 'struktur-organisasi', path: '/struktur-organisasi', title: 'Struktur Organisasi',
+        translateKey: 'nav.strukturOrganisasi', icon: 'usersThree',
+        type: NAV_ITEM_TYPE_ITEM,
+        authority: ['manager', 'superadmin', 'admin'],
+        subMenu: [],
+    },
 
     // === KEUANGAN ===
     {

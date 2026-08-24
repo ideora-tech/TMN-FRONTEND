@@ -71,6 +71,7 @@ export const ROUTES = {
     ARUS_KAS: '/arus-kas',
     PROSES_PEMBAYARAN: '/proses-pembayaran',
     APPROVAL_KEUANGAN: '/approval-keuangan',
+    APPROVAL_SAYA: '/approval-saya',
 
     KONSOLIDASI_KLIEN:     '/konsolidasi-klien',
     KONSOLIDASI_VENDOR:    '/konsolidasi-vendor',
@@ -105,6 +106,7 @@ export const ROUTES = {
     JABATAN:        '/jabatan',
     JABATAN_BARU:   '/jabatan/baru',
     JABATAN_DETAIL: (id: string) => `/jabatan/${id}`,
+    STRUKTUR_ORGANISASI: '/struktur-organisasi',
 
     KARYAWAN:        '/karyawan',
     KARYAWAN_BARU:   '/karyawan/baru',

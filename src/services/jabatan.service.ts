@@ -5,6 +5,7 @@ export interface Jabatan {
     id_jabatan: string
     id_perusahaan: string
     id_departemen: string | null
+    id_jabatan_induk: string | null
     id_peran: string | null
     kode_jabatan: string
     nama_jabatan: string

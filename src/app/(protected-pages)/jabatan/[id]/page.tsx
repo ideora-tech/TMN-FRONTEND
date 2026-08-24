@@ -26,16 +26,19 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
     const [saving, setSaving]   = useState(false)
     const [deptOptions, setDeptOptions] = useState<{ value: string; label: string }[]>([])
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
+    const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         Promise.all([
             jabatanService.get(id),
             axios.get(API_ENDPOINTS.DEPARTEMEN, { params: { limit: 999 } }),
             axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } }),
-        ]).then(([j, dRes, pRes]) => {
+            axios.get(API_ENDPOINTS.JABATAN, { params: { limit: 999 } }),
+        ]).then(([j, dRes, pRes, jListRes]) => {
             setData(j); setForm({ ...j, is_supir: !!j.is_supir })
             setDeptOptions((dRes.data.data as Departemen[]).map(d => ({ value: d.id_departemen, label: d.nama_departemen })))
             setPeranOptions((pRes.data.data as Peran[]).map(p => ({ value: p.id_peran, label: p.nama_peran })))
+            setIndukOptions((jListRes.data.data as Jabatan[]).filter(x => x.aktif && x.id_jabatan !== id).map(x => ({ value: x.id_jabatan, label: x.nama_jabatan })))
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
           .finally(() => setLoading(false))
     }, [id])
@@ -60,6 +63,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                 kode_jabatan:  form.kode_jabatan,
                 nama_jabatan:  form.nama_jabatan,
                 id_departemen: form.id_departemen ?? null,
+                id_jabatan_induk: form.id_jabatan_induk ?? null,
                 id_peran:      form.id_peran ?? null,
                 level:         form.level,
                 tunjangan_jabatan: form.tunjangan_jabatan,
@@ -120,6 +124,7 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                                 { label: 'Level',        value: String(data.level) },
                                 { label: 'Tunjangan Jabatan', value: formatRupiah(data.tunjangan_jabatan ?? 0) },
                                 { label: 'Departemen',   value: deptOptions.find(o => o.value === data.id_departemen)?.label ?? (data.id_departemen ? data.id_departemen : '—') },
+                                { label: 'Jabatan Atasan', value: indukOptions.find(o => o.value === data.id_jabatan_induk)?.label ?? (data.id_jabatan_induk ? data.id_jabatan_induk : '—') },
                                 { label: 'Peran',        value: peranOptions.find(o => o.value === data.id_peran)?.label ?? (data.id_peran ? data.id_peran : '—') },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -154,6 +159,13 @@ export default function JabatanDetailPage({ params }: { params: Promise<{ id: st
                                     options={deptOptions}
                                     value={deptOptions.find(o => o.value === form.id_departemen) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, id_departemen: opt?.value ?? null }))} />
+                            </FormItem>
+                            <FormItem label="Jabatan Atasan"
+                                extra={<span className="text-xs text-gray-400">Untuk struktur organisasi &mdash; siapa yang membawahi jabatan ini</span>}>
+                                <Select isClearable isSearchable placeholder="Pilih jabatan atasan (opsional)..."
+                                    options={indukOptions}
+                                    value={indukOptions.find(o => o.value === form.id_jabatan_induk) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_jabatan_induk: opt?.value ?? null }))} />
                             </FormItem>
                             <FormItem label="Peran">
                                 <Select isClearable isSearchable placeholder="Pilih peran..."

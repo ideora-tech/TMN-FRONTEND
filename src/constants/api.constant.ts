@@ -241,6 +241,7 @@ export const API_ENDPOINTS = {
     // Jabatan
     JABATAN:        '/api/proxy/jabatan',
     JABATAN_DETAIL: (id: string) => `/api/proxy/jabatan/${id}`,
+    JABATAN_STRUKTUR_ORGANISASI: '/api/proxy/jabatan/struktur-organisasi',
 
     // Perusahaan
     PERUSAHAAN:        '/api/proxy/perusahaan',
