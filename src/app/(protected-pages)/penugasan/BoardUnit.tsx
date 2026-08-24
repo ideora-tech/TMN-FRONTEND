@@ -1,13 +1,13 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag, Dropdown } from '@/components/ui'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import { HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineEye, HiOutlinePencilAlt } from 'react-icons/hi'
 import dayjs, { Dayjs } from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import {
     penugasanHarianService,
@@ -19,10 +19,17 @@ import { penugasanService } from '@/services/penugasan.service'
 import { projectService } from '@/services/project.service'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService, Supir } from '@/services/supir.service'
-import { tripService } from '@/services/trip.service'
+import { tripService, Trip } from '@/services/trip.service'
 import MulaiTripDialog from '../trip/MulaiTripDialog'
 
 type Option = { value: string; label: string }
+type TipeUnitFilter = 'semua' | 'internal' | 'vendor'
+const TANPA_SUPIR_DEFAULT = '__tanpa__'
+const TIPE_UNIT_OPTIONS: { value: TipeUnitFilter; label: string }[] = [
+    { value: 'semua', label: 'Semua Unit' },
+    { value: 'internal', label: 'Internal' },
+    { value: 'vendor', label: 'Vendor' },
+]
 
 const AVATAR_COLORS = ['#2563eb', '#059669', '#7c3aed', '#db2777', '#d97706', '#0891b2', '#4f46e5', '#65a30d']
 const avatarColor = (teks: string) => AVATAR_COLORS[(teks.charCodeAt(0) || 0) % AVATAR_COLORS.length]
@@ -41,6 +48,8 @@ export default function BoardUnit() {
     const [units, setUnits] = useState<BoardUnitRow[]>([])
     const [assignments, setAssignments] = useState<BoardAssignment[]>([])
     const [cariUnit, setCariUnit] = useState('')
+    const [filterTipeUnit, setFilterTipeUnit] = useState<TipeUnitFilter>('semua')
+    const [filterSupirDefault, setFilterSupirDefault] = useState<string | null>(null)
     const todayColRef = useRef<HTMLTableCellElement>(null)
 
     const [supirAktif, setSupirAktif] = useState<Supir[]>([])
@@ -58,6 +67,13 @@ export default function BoardUnit() {
     const [assignTitikDrop, setAssignTitikDrop] = useState<string[]>(emptyTitikDrop())
     const [assignSubmitting, setAssignSubmitting] = useState(false)
     const [hasilAssign, setHasilAssign] = useState<HasilAssign | null>(null)
+
+    const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+    const [detailAssignment, setDetailAssignment] = useState<BoardAssignment | null>(null)
+    const [detailUnit, setDetailUnit] = useState<BoardUnitRow | null>(null)
+    const [detailTrips, setDetailTrips] = useState<Trip[]>([])
+    const [detailTripsLoading, setDetailTripsLoading] = useState(false)
+    const detailFetchRef = useRef<string | null>(null)
 
     const [aksiDialogOpen, setAksiDialogOpen] = useState(false)
     const [aksiAssignment, setAksiAssignment] = useState<BoardAssignment | null>(null)
@@ -106,15 +122,32 @@ export default function BoardUnit() {
         )).catch(() => {})
     }, [])
 
+    const supirDefaultOptions = useMemo<Option[]>(() => {
+        const peta = new Map<string, string>()
+        units.forEach(u => { if (u.id_supir_default && u.nama_supir_default) peta.set(u.id_supir_default, u.nama_supir_default) })
+        const daftar = [...peta.entries()]
+            .map(([value, label]) => ({ value, label }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        return [{ value: TANPA_SUPIR_DEFAULT, label: 'Tanpa supir default' }, ...daftar]
+    }, [units])
+
     const unitsTampil = useMemo(() => {
         const q = cariUnit.trim().toLowerCase()
-        const terurut = [...units].sort((a, b) => a.nopol.localeCompare(b.nopol))
+        const terurut = [...units]
+            .filter(u => filterTipeUnit === 'semua' || u.tipe === filterTipeUnit)
+            .filter(u => {
+                if (!filterSupirDefault) return true
+                if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !u.id_supir_default
+                return u.id_supir_default === filterSupirDefault
+            })
+            .sort((a, b) => a.nopol.localeCompare(b.nopol))
         if (!q) return terurut
         return terurut.filter(u =>
             u.nopol.toLowerCase().includes(q) ||
             (u.nama_jenis ?? '').toLowerCase().includes(q) ||
-            (u.nama_vendor ?? '').toLowerCase().includes(q))
-    }, [units, cariUnit])
+            (u.nama_vendor ?? '').toLowerCase().includes(q) ||
+            (u.nama_supir_default ?? '').toLowerCase().includes(q))
+    }, [units, cariUnit, filterTipeUnit, filterSupirDefault])
 
     const tanggalList = useMemo(() => {
         const n = bulan.daysInMonth()
@@ -211,6 +244,27 @@ export default function BoardUnit() {
         }
     }
 
+    const refreshDetailTrips = (assignment: BoardAssignment) => {
+        setDetailTrips([])
+        if (assignment.trips.length === 0) return
+        setDetailTripsLoading(true)
+        detailFetchRef.current = assignment.id_penugasan
+        const idPenugasanDiminta = assignment.id_penugasan
+        Promise.all(assignment.trips.map(t => tripService.get(t.id_trip)))
+            .then(rows => { if (detailFetchRef.current === idPenugasanDiminta) setDetailTrips(rows) })
+            .catch(() => { if (detailFetchRef.current === idPenugasanDiminta) setDetailTrips([]) })
+            .finally(() => { if (detailFetchRef.current === idPenugasanDiminta) setDetailTripsLoading(false) })
+    }
+
+    const bukaDetail = (assignment: BoardAssignment, unit: BoardUnitRow) => {
+        setDetailAssignment(assignment)
+        setDetailUnit(unit)
+        setDetailDialogOpen(true)
+        refreshDetailTrips(assignment)
+    }
+
+    const tutupDetail = () => setDetailDialogOpen(false)
+
     const bukaAksi = (assignment: BoardAssignment, unit: BoardUnitRow) => {
         setAksiAssignment(assignment)
         setAksiUnit(unit)
@@ -237,6 +291,12 @@ export default function BoardUnit() {
     }, [aksiDialogOpen, aksiAssignment])
 
     const tutupAksi = () => setAksiDialogOpen(false)
+
+    const bukaEditDariDetail = () => {
+        if (!detailAssignment || !detailUnit) return
+        setDetailDialogOpen(false)
+        bukaAksi(detailAssignment, detailUnit)
+    }
 
     const handleSubmitAksi = async () => {
         if (!aksiAssignment || !aksiSupirId || !aksiRuteId) return
@@ -281,7 +341,7 @@ export default function BoardUnit() {
             await tripService.batalkan(batalTripTarget)
             toast.push(<Notification type="success" title="Trip berhasil dibatalkan" />)
             setBatalTripTarget(null)
-            setAksiDialogOpen(false)
+            setDetailDialogOpen(false)
             fetchBoard()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -298,7 +358,7 @@ export default function BoardUnit() {
             toast.push(<Notification type="success" title="Trip berhasil diselesaikan" />)
             setSelesaiTripTarget(null)
             setSelesaikanPenugasanJuga(false)
-            setAksiDialogOpen(false)
+            setDetailDialogOpen(false)
             fetchBoard()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -308,8 +368,16 @@ export default function BoardUnit() {
     }
 
     const hariIni = dayjs().format('YYYY-MM-DD')
-    const tripBerjalanAksi = aksiAssignment?.trips.find(t => t.status === 'berjalan') ?? null
-    const tripTerakhirAksi = aksiAssignment && aksiAssignment.trips.length > 0 ? aksiAssignment.trips[aksiAssignment.trips.length - 1] : null
+    const tripBerjalanDetail = detailAssignment?.trips.find(t => t.status === 'berjalan') ?? null
+    const tripBerjalanFull = detailTrips.find(t => t.id_trip === tripBerjalanDetail?.id_trip) ?? null
+    const tripTerakhirDetail = detailAssignment && detailAssignment.trips.length > 0 ? detailAssignment.trips[detailAssignment.trips.length - 1] : null
+    const selesaiSemuaDetail = !tripBerjalanDetail && (detailAssignment?.trips.length ?? 0) > 0
+    const statusDetailLabel = tripBerjalanDetail ? 'Sedang Jalan' : selesaiSemuaDetail ? 'Selesai' : 'Belum Mulai'
+    const statusDetailClass = tripBerjalanDetail
+        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
+        : selesaiSemuaDetail
+        ? 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100'
+        : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100'
 
     return (
         <div className="p-4 flex flex-col gap-4">
@@ -319,6 +387,20 @@ export default function BoardUnit() {
                 <span className="font-semibold min-w-[140px] text-center">{bulan.format('MMMM YYYY')}</span>
                 <Button size="sm" variant="default" icon={<HiOutlineChevronRight />}
                     onClick={() => setBulan(b => b.add(1, 'month'))} />
+                <div className="ml-auto flex items-center gap-2 flex-wrap">
+                    <div className="w-56">
+                        <Select size="sm" isClearable placeholder="Filter supir default..."
+                            options={supirDefaultOptions}
+                            value={supirDefaultOptions.find(o => o.value === filterSupirDefault) ?? null}
+                            onChange={opt => setFilterSupirDefault(opt?.value ?? null)} />
+                    </div>
+                    <div className="w-44">
+                        <Select size="sm" isSearchable={false}
+                            options={TIPE_UNIT_OPTIONS}
+                            value={TIPE_UNIT_OPTIONS.find(o => o.value === filterTipeUnit) ?? TIPE_UNIT_OPTIONS[0]}
+                            onChange={opt => setFilterTipeUnit(opt?.value ?? 'semua')} />
+                    </div>
+                </div>
             </div>
 
             {loading ? (
@@ -333,7 +415,7 @@ export default function BoardUnit() {
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[260px] border-b border-r border-gray-200 dark:border-gray-600">
-                                    <Input size="sm" placeholder="Cari nopol / jenis / vendor..."
+                                    <Input size="sm" placeholder="Cari nopol / jenis / vendor / supir..."
                                         prefix={<HiOutlineSearch className="text-gray-400" />}
                                         value={cariUnit}
                                         onChange={e => setCariUnit(e.target.value)} />
@@ -356,6 +438,13 @@ export default function BoardUnit() {
                             </tr>
                         </thead>
                         <tbody>
+                            {unitsTampil.length === 0 && (
+                                <tr>
+                                    <td colSpan={tanggalList.length + 1} className="text-center text-sm text-gray-400 py-10">
+                                        Tidak ada unit yang cocok dengan filter
+                                    </td>
+                                </tr>
+                            )}
                             {unitsTampil.map(u => {
                                 const warna = avatarColor(u.nopol)
                                 const key = unitKey(u)
@@ -402,54 +491,24 @@ export default function BoardUnit() {
                                                                 : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
                                                             return (
                                                                 <div className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna}`}
-                                                                    onClick={() => bukaAksi(a, u)}>
+                                                                    onClick={() => bukaDetail(a, u)}>
                                                                     <div className="flex items-center justify-between gap-1">
-                                                                        <span className="text-sm font-bold text-blue-600 dark:text-blue-300 truncate">
-                                                                            {a.kode_proyek ?? '—'}
+                                                                        <span className="flex items-center gap-1 min-w-0">
+                                                                            <span className="text-sm font-bold text-blue-600 dark:text-blue-300 truncate">
+                                                                                {a.kode_proyek ?? '—'}
+                                                                            </span>
+                                                                            {a.trips.length > 1 && (
+                                                                                <span className="shrink-0 text-[9px] font-bold px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                                                                                    title={`${a.trips.length} trip hari ini`}>
+                                                                                    {a.trips.length} rit
+                                                                                </span>
+                                                                            )}
                                                                         </span>
-                                                                        <span className="flex items-center shrink-0">
-                                                                            {a.trips.length > 1 ? (
-                                                                                <Dropdown
-                                                                                    placement="bottom-end"
-                                                                                    renderTitle={
-                                                                                        <span className="relative inline-flex p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 cursor-pointer"
-                                                                                            title={`${a.trips.length} trip hari ini`}
-                                                                                            onClick={e => e.stopPropagation()}>
-                                                                                            <HiOutlineEye className="w-3.5 h-3.5" />
-                                                                                            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold leading-none">
-                                                                                                {a.trips.length}
-                                                                                            </span>
-                                                                                        </span>
-                                                                                    }
-                                                                                >
-                                                                                    {a.trips.map((trip, idx) => (
-                                                                                        <Dropdown.Item key={trip.id_trip} eventKey={trip.id_trip}
-                                                                                            onClick={() => window.open(ROUTES.TRIP_DETAIL(trip.id_trip), '_blank', 'noopener')}>
-                                                                                            <span className="flex items-center gap-2 text-sm whitespace-nowrap">
-                                                                                                Rit {idx + 1}
-                                                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                                                                                                    trip.status === 'berjalan'
-                                                                                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300'
-                                                                                                        : 'bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300'
-                                                                                                }`}>
-                                                                                                    {trip.status === 'berjalan' ? 'Sedang Jalan' : 'Selesai'}
-                                                                                                </span>
-                                                                                            </span>
-                                                                                        </Dropdown.Item>
-                                                                                    ))}
-                                                                                </Dropdown>
-                                                                            ) : a.trips.length === 1 ? (
-                                                                                <button type="button" className="p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
-                                                                                    title={a.trips[0].status === 'berjalan' ? 'Lihat trip yang sedang jalan' : 'Lihat trip selesai'}
-                                                                                    onClick={e => { e.stopPropagation(); window.open(ROUTES.TRIP_DETAIL(a.trips[0].id_trip), '_blank', 'noopener') }}>
-                                                                                    <HiOutlineEye className="w-3.5 h-3.5" />
-                                                                                </button>
-                                                                            ) : null}
-                                                                            <button type="button" className="p-0.5 text-red-400 hover:text-red-600"
-                                                                                onClick={e => { e.stopPropagation(); setHapusTarget(a) }}>
-                                                                                <HiOutlineTrash className="w-3.5 h-3.5" />
-                                                                            </button>
-                                                                        </span>
+                                                                        <button type="button" className="p-0.5 shrink-0 text-red-400 hover:text-red-600"
+                                                                            title="Hapus penugasan"
+                                                                            onClick={e => { e.stopPropagation(); setHapusTarget(a) }}>
+                                                                            <HiOutlineTrash className="w-3.5 h-3.5" />
+                                                                        </button>
                                                                     </div>
                                                                     <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-300 uppercase truncate">{a.nama_rute ?? '—'}</p>
                                                                     <p className="text-[11px] text-gray-500 dark:text-gray-300 truncate">{a.nama_supir ?? '—'}</p>
@@ -605,8 +664,156 @@ export default function BoardUnit() {
                 </div>
             </Dialog>
 
+            <Dialog isOpen={detailDialogOpen} onRequestClose={tutupDetail} onClose={tutupDetail} width={520}>
+                <div className="flex items-start justify-between gap-3 mb-1 pr-10">
+                    <div className="min-w-0">
+                        <h5 className="text-base font-semibold">Detail Penugasan</h5>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {detailUnit?.nopol} — {detailAssignment?.kode_proyek ?? '—'}
+                            {detailAssignment && ` · ${dayjs(detailAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
+                        </p>
+                    </div>
+                    <Button size="sm" variant="default" className="shrink-0" icon={<HiOutlinePencilAlt />} onClick={bukaEditDariDetail}>
+                        Ubah
+                    </Button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Unit / Armada</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            {detailUnit?.nopol ?? '—'}
+                            {detailUnit?.nama_jenis && <span className="text-gray-400 font-normal"> · {detailUnit.nama_jenis}</span>}
+                            {detailUnit?.tipe === 'vendor' && detailUnit?.nama_vendor && (
+                                <span className="text-purple-500 font-normal"> · Vendor {detailUnit.nama_vendor}</span>
+                            )}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                        <Tag className={`${statusDetailClass} border-0 font-semibold`}>{statusDetailLabel}</Tag>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Supir</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailAssignment?.nama_supir ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Rute</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailAssignment?.nama_rute ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Uang Jalan</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            {detailAssignment?.estimasi_biaya != null ? formatRupiah(detailAssignment.estimasi_biaya) : <span className="text-gray-400">—</span>}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Perjalanan</p>
+                    {detailTripsLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-400 py-2"><Spinner size={16} /> Memuat data trip...</div>
+                    ) : detailTrips.length === 0 ? (
+                        <p className="text-sm text-gray-400">Trip belum dimulai.</p>
+                    ) : detailTrips.length === 1 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Mulai Jalan</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                    {detailTrips[0].waktu_checkin ? dayjs(detailTrips[0].waktu_checkin).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span>}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Selesai Jalan</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                    {detailTrips[0].waktu_checkout ? dayjs(detailTrips[0].waktu_checkout).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">Belum selesai</span>}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {detailTrips.map((trip, idx) => (
+                                <div key={trip.id_trip} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold">Rit {idx + 1}</span>
+                                            <Tag className={`text-[10px] border-0 font-semibold ${
+                                                trip.status === 'berjalan'
+                                                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
+                                                    : 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100'
+                                            }`}>
+                                                {trip.status === 'berjalan' ? 'Sedang Jalan' : 'Selesai'}
+                                            </Tag>
+                                        </div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            {trip.waktu_checkin ? dayjs(trip.waktu_checkin).format('DD MMM HH:mm') : '—'}
+                                            {' → '}
+                                            {trip.waktu_checkout ? dayjs(trip.waktu_checkout).format('DD MMM HH:mm') : 'Belum selesai'}
+                                        </p>
+                                    </div>
+                                    <button type="button" className="p-1 shrink-0 text-gray-400 hover:text-blue-600"
+                                        title="Lihat detail lengkap trip ini"
+                                        onClick={() => window.open(ROUTES.TRIP_DETAIL(trip.id_trip), '_blank', 'noopener')}>
+                                        <HiOutlineEye className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Aksi Trip</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                Status saat ini: <span className="font-semibold">{statusDetailLabel}</span>
+                            </p>
+                            {tripBerjalanDetail && !tripBerjalanFull?.punya_laporan && (
+                                <p
+                                    className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 cursor-pointer hover:underline"
+                                    onClick={() => setLaporanDialogTrip(tripBerjalanDetail.id_trip)}
+                                >
+                                    Isi laporan perjalanan dulu sebelum bisa diselesaikan
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {tripTerakhirDetail && (
+                                <Button type="button" size="sm" variant="default" onClick={() => setLaporanDialogTrip(tripTerakhirDetail.id_trip)}>
+                                    Isi Laporan
+                                </Button>
+                            )}
+                            {tripBerjalanDetail ? (
+                                <>
+                                    <Button type="button" size="sm" variant="default" className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                        onClick={() => setBatalTripTarget(tripBerjalanDetail.id_trip)}>
+                                        Batalkan Trip
+                                    </Button>
+                                    {tripBerjalanFull?.punya_laporan && (
+                                        <Button type="button" size="sm" variant="solid"
+                                            onClick={() => setSelesaiTripTarget(tripBerjalanDetail.id_trip)}>
+                                            Selesaikan Trip
+                                        </Button>
+                                    )}
+                                </>
+                            ) : (
+                                <Button type="button" size="sm" variant="solid"
+                                    onClick={() => { setDetailDialogOpen(false); setShowMulaiTripDariSel(true) }}>
+                                    Mulai Trip
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="plain" onClick={tutupDetail}>Tutup</Button>
+                </div>
+            </Dialog>
+
             <Dialog isOpen={aksiDialogOpen} onRequestClose={tutupAksi} onClose={tutupAksi} width={560}>
-                <h5 className="text-base font-semibold mb-1">Detail Penugasan</h5>
+                <h5 className="text-base font-semibold mb-1">Ubah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {aksiUnit?.nopol} — {aksiAssignment?.kode_proyek ?? '—'}
                     {aksiAssignment && ` · ${dayjs(aksiAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
@@ -664,32 +871,11 @@ export default function BoardUnit() {
                         </div>
                     </div>
                     <div className="flex flex-wrap justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={tutupAksi}>Tutup</Button>
+                        <Button type="button" variant="plain" onClick={tutupAksi}>Batal</Button>
                         <Button type="button" variant="solid" className="bg-red-600 hover:bg-red-700"
                             onClick={() => aksiAssignment && setHapusTarget(aksiAssignment)}>
-                            Hapus
+                            Hapus Penugasan
                         </Button>
-                        {tripTerakhirAksi && (
-                            <Button type="button" variant="default" onClick={() => setLaporanDialogTrip(tripTerakhirAksi.id_trip)}>
-                                Isi Laporan
-                            </Button>
-                        )}
-                        {tripBerjalanAksi ? (
-                            <>
-                                <Button type="button" variant="solid" className="bg-red-600 hover:bg-red-700"
-                                    onClick={() => setBatalTripTarget(tripBerjalanAksi.id_trip)}>
-                                    Batal Trip
-                                </Button>
-                                <Button type="button" variant="solid" onClick={() => setSelesaiTripTarget(tripBerjalanAksi.id_trip)}>
-                                    Selesaikan
-                                </Button>
-                            </>
-                        ) : (
-                            <Button type="button" variant="solid"
-                                onClick={() => { setAksiDialogOpen(false); setShowMulaiTripDariSel(true) }}>
-                                Mulai Trip
-                            </Button>
-                        )}
                         <Button type="submit" variant="solid" loading={aksiSaving} disabled={!aksiSupirId || !aksiRuteId}>
                             Simpan
                         </Button>
@@ -740,13 +926,17 @@ export default function BoardUnit() {
                 isOpen={showMulaiTripDariSel}
                 onClose={() => setShowMulaiTripDariSel(false)}
                 onSukses={() => { setShowMulaiTripDariSel(false); fetchBoard() }}
-                idPenugasanTerkunci={aksiAssignment?.id_penugasan}
-                idProyekTerkunci={aksiAssignment?.id_proyek}
+                idPenugasanTerkunci={detailAssignment?.id_penugasan}
+                idProyekTerkunci={detailAssignment?.id_proyek}
             />
 
             <Dialog isOpen={!!laporanDialogTrip} onRequestClose={() => setLaporanDialogTrip(null)} onClose={() => setLaporanDialogTrip(null)} width={900}>
                 {laporanDialogTrip && (
-                    <LaporanPerjalananPanel idTrip={laporanDialogTrip} onSaved={fetchBoard} autoOpenForm />
+                    <LaporanPerjalananPanel
+                        idTrip={laporanDialogTrip}
+                        onSaved={() => { fetchBoard(); if (detailAssignment) refreshDetailTrips(detailAssignment) }}
+                        autoOpenForm
+                    />
                 )}
             </Dialog>
         </div>

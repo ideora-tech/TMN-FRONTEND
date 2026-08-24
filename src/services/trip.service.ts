@@ -23,6 +23,7 @@ export interface Trip {
     id_penugasan?: string | null
     titik_drop?: string[]
     sudah_difakturkan?: boolean
+    punya_laporan?: boolean
     pengajuan_uang_jalan?: PengajuanUangJalanTrip | null
 }
 

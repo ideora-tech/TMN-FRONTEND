@@ -366,6 +366,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
             </Card>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {(trip.status === 'belum_mulai' || trip.status === 'berjalan') && (
                 <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -374,6 +375,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             <p className="text-xs text-gray-400 mt-0.5">
                                 Status saat ini: <span className="font-semibold">{STATUS_LABEL[trip.status]}</span>
                             </p>
+                            {trip.status === 'berjalan' && !trip.punya_laporan && (
+                                <p
+                                    className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 cursor-pointer hover:underline"
+                                    onClick={() => document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                >
+                                    Isi laporan perjalanan dulu sebelum bisa diselesaikan
+                                </p>
+                            )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {trip.status === 'belum_mulai' && (
@@ -381,8 +390,13 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                     Mulai Trip
                                 </Button>
                             )}
-                            {trip.status === 'berjalan' && (
-                                <Button size="sm" variant="solid" onClick={() => setAksiTrip('selesai')} disabled={aksiLoading}>
+                            {trip.status === 'berjalan' && trip.punya_laporan && (
+                                <Button
+                                    size="sm"
+                                    variant="solid"
+                                    onClick={() => setAksiTrip('selesai')}
+                                    disabled={aksiLoading}
+                                >
                                     Selesaikan
                                 </Button>
                             )}
@@ -400,7 +414,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 <LaporanPerjalananPanel idTrip={id} onSaved={fetchRekap} />
             </Card>
 
-            <div className={`grid grid-cols-1 gap-4 ${trip?.pengajuan_uang_jalan ? 'lg:grid-cols-2' : ''}`}>
                 <Card>
                     <div className="flex justify-between items-center mb-4">
                         <h5>Riwayat Status</h5>
@@ -462,9 +475,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                     </Card>
                 )}
-            </div>
 
-            <div className={`grid grid-cols-1 gap-4 ${trip.status === 'selesai' && trip.id_penugasan ? 'lg:grid-cols-2' : ''}`}>
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h5>Rekap Biaya</h5>
