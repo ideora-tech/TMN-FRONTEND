@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tooltip, Dropdown } from '@/components/ui'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Tooltip, Dropdown } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
@@ -61,8 +61,6 @@ export default function PapanShift({
     const [pilihShift, setPilihShift]       = useState<string | null>(null)
     const [sampaiTanggal, setSampaiTanggal] = useState('') // opsional: rentang assign sampai tanggal ini
     const [pilihSupirPengganti, setPilihSupirPengganti] = useState<string | null>(null)
-    const [pakaiTitikDropOverride, setPakaiTitikDropOverride] = useState(false)
-    const [titikDropOverrideList, setTitikDropOverrideList] = useState<string[]>([])
     const [daftarSupirAktif, setDaftarSupirAktif] = useState<Supir[]>([])
     const [saving, setSaving]               = useState(false)
     const [hasilGagal, setHasilGagal]       = useState<{ sukses: number; gagal: { tanggal?: string; alasan: string }[] } | null>(null)
@@ -251,8 +249,6 @@ export default function PapanShift({
         setPilihShift(jadwal.id_shift)
         setSampaiTanggal('')
         setPilihSupirPengganti(jadwal.id_supir_pengganti ?? null)
-        setPakaiTitikDropOverride(jadwal.titik_drop_override.length > 0)
-        setTitikDropOverrideList(jadwal.titik_drop_override.length > 0 ? jadwal.titik_drop_override : [])
         setDialogOpen(true)
     }
 
@@ -338,7 +334,6 @@ export default function PapanShift({
                 await jadwalShiftService.update(editJadwal.id_jadwal_shift, {
                     id_shift: pilihShift,
                     id_supir_pengganti: pilihSupirPengganti,
-                    titik_drop_override: pakaiTitikDropOverride ? titikDropOverrideList : null,
                 })
                 toast.push(<Notification type="success" title="Shift berhasil diganti" />)
             } else if (bulkMode && bulkAksi === 'ganti') {
@@ -901,33 +896,6 @@ export default function PapanShift({
                                     value={pilihSupirPengganti ? { value: pilihSupirPengganti, label: daftarSupirAktif.find(s => s.id_supir === pilihSupirPengganti)?.nama ?? '' } : null}
                                     onChange={opt => setPilihSupirPengganti((opt as Option | null)?.value ?? null)} />
                             </FormItem>
-                            <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                <Checkbox checked={pakaiTitikDropOverride}
-                                    onChange={checked => { setPakaiTitikDropOverride(checked); if (!checked) setTitikDropOverrideList([]) }}>
-                                    Pakai titik drop khusus untuk hari ini
-                                </Checkbox>
-                                {pakaiTitikDropOverride && (
-                                    <div className="flex flex-col gap-2 mt-2">
-                                        {titikDropOverrideList.map((lokasi, i) => (
-                                            <div key={i} className="flex items-center gap-2">
-                                                <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
-                                                <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
-                                                    onChange={e => setTitikDropOverrideList(prev => prev.map((d, idx) => (idx === i ? e.target.value : d)))} />
-                                                <button type="button"
-                                                    onClick={() => setTitikDropOverrideList(prev => prev.filter((_, idx) => idx !== i))}
-                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
-                                                    <HiOutlineTrash />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
-                                            disabled={titikDropOverrideList.length >= 10}
-                                            onClick={() => setTitikDropOverrideList(prev => [...prev, ''])}>
-                                            Tambah Titik
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
                         </>
                     )}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
