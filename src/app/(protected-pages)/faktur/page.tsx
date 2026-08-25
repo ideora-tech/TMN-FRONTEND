@@ -12,6 +12,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { fakturService, Faktur } from '@/services/faktur.service'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
 
@@ -99,12 +100,37 @@ export default function FakturPage() {
             ),
         },
         {
-            header: 'Total', accessorKey: 'total', size: 180,
+            header: 'Klien', accessorKey: 'nama_klien', size: 180,
+            cell: ({ row }: CellContext<Faktur, unknown>) => row.original.nama_klien ?? '-',
+        },
+        {
+            header: 'Proyek', accessorKey: 'nama_proyek', size: 180,
+            cell: ({ row }: CellContext<Faktur, unknown>) => row.original.nama_proyek ?? '-',
+        },
+        {
+            header: 'Total', accessorKey: 'total', size: 150,
             cell: ({ row }: CellContext<Faktur, unknown>) => formatRupiah(row.original.total),
         },
         {
-            header: 'Jatuh Tempo', accessorKey: 'jatuh_tempo', size: 150,
-            cell: ({ row }: CellContext<Faktur, unknown>) => row.original.jatuh_tempo ?? '-',
+            header: 'Tanggal Invoice', accessorKey: 'tanggal_faktur', size: 130,
+            cell: ({ row }: CellContext<Faktur, unknown>) =>
+                row.original.tanggal_faktur ? dayjs(row.original.tanggal_faktur).format('DD/MM/YYYY') : '-',
+        },
+        {
+            header: 'Jatuh Tempo', accessorKey: 'jatuh_tempo', size: 130,
+            cell: ({ row }: CellContext<Faktur, unknown>) =>
+                row.original.jatuh_tempo ? dayjs(row.original.jatuh_tempo).format('DD/MM/YYYY') : '-',
+        },
+        {
+            header: 'Dibuat Oleh', accessorKey: 'dibuat_oleh_nama', size: 170,
+            cell: ({ row }: CellContext<Faktur, unknown>) => (
+                <div>
+                    <div className="text-gray-800 dark:text-gray-200">{row.original.dibuat_oleh_nama ?? '-'}</div>
+                    {row.original.dibuat_pada && (
+                        <div className="text-xs text-gray-400">{dayjs(row.original.dibuat_pada).format('DD/MM/YY HH:mm')}</div>
+                    )}
+                </div>
+            ),
         },
         {
             header: 'Status', accessorKey: 'status', size: 130,
