@@ -53,7 +53,7 @@ export async function getNavigation(): Promise<NavigationTree[]> {
     if (!token) return navigationConfig
 
     try {
-        const res = await fetch(`${BACKEND_URL}/api/v1/menu/tree`, {
+        const res = await fetch(`${BACKEND_URL}/api/menu/tree`, {
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: 'application/json',

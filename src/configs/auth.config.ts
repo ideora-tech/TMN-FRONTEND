@@ -16,7 +16,7 @@ export default {
         Credentials({
             async authorize(credentials) {
                 try {
-                    const res = await fetch(`${process.env.BACKEND_URL ?? 'http://localhost:4019'}/api/v1/auth/login`, {
+                    const res = await fetch(`${process.env.BACKEND_URL ?? 'http://localhost:4019'}/api/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                         body: JSON.stringify({

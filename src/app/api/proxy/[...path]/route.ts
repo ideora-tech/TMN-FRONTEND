@@ -12,7 +12,7 @@ async function handler(
     const pathStr = path.join('/')
 
     const searchParams = new URL(request.url).searchParams.toString()
-    const backendUrl = `${BACKEND_URL}/api/v1/${pathStr}${searchParams ? `?${searchParams}` : ''}`
+    const backendUrl = `${BACKEND_URL}/api/${pathStr}${searchParams ? `?${searchParams}` : ''}`
 
     const headers: Record<string, string> = {
         Accept: 'application/json',

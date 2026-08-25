@@ -40,7 +40,7 @@ All browser requests go to `/api` — **never call the Laravel backend directly 
 Browser (Axios langsung, path penuh /api/proxy/...)
   → /api/proxy/[...path]  (Next.js route handler — sudah ada)
     → reads Sanctum token from next-auth session server-side
-    → ${BACKEND_URL:-http://localhost:4019}/api/v1/<endpoint>  Authorization: Bearer <token>
+    → ${BACKEND_URL:-http://localhost:4019}/api/<endpoint>  Authorization: Bearer <token>
 ```
 
 - Service files memakai **axios mentah** (`import axios from 'axios'`) dengan path penuh dari `API_ENDPOINTS` — bukan wrapper `ApiService`/`AxiosBase` (wrapper itu ada tapi tidak dipakai fitur bisnis).
@@ -50,7 +50,7 @@ Browser (Axios langsung, path penuh /api/proxy/...)
 
 `src/middleware.ts` enforces auth using next-auth. It reads `authRoutes` / `publicRoutes` from `src/configs/routes.config/` and redirects unauthenticated users to `/sign-in`.
 
-- Login sudah tersambung ke backend nyata: provider Credentials di `src/configs/auth.config.ts` memanggil `POST /api/v1/auth/login` Laravel; `kodePeran` user dijadikan `authority` (lowercase) untuk guard route & filter menu.
+- Login sudah tersambung ke backend nyata: provider Credentials di `src/configs/auth.config.ts` memanggil `POST /api/auth/login` Laravel; `kodePeran` user dijadikan `authority` (lowercase) untuk guard route & filter menu.
 - **Client components:** `useCurrentSession()` from `src/utils/hooks/useCurrentSession.ts` — never `getSession()`.
 - **Server components:** `auth()` from `src/auth.ts`.
 - Register new protected routes in `src/configs/routes.config/routes.config.ts`.
