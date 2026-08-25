@@ -35,6 +35,15 @@ const STATUS_LABEL: Record<string, string> = {
     dibatalkan: 'Dibatalkan',
 }
 
+function formatDurasi(awal?: string | null, akhir?: string | null): string | null {
+    if (!awal || !akhir) return null
+    const beda = dayjs(akhir).diff(dayjs(awal), 'minute')
+    if (beda < 0) return null
+    const jam = Math.floor(beda / 60)
+    const menit = beda % 60
+    return jam > 0 ? `${jam} jam ${menit} menit` : `${menit} menit`
+}
+
 type SumberValue = '' | 'internal' | 'vendor'
 type SumberOption = { value: SumberValue; label: string }
 
@@ -173,6 +182,13 @@ export default function RiwayatTripTab() {
                 row.original.waktu_checkout
                     ? <span className="text-emerald-600 dark:text-emerald-400">{dayjs(row.original.waktu_checkout).format('DD/MM/YY HH:mm')}</span>
                     : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Durasi', id: 'durasi', size: 120,
+            cell: ({ row }: CellContext<Trip, unknown>) => {
+                const durasi = formatDurasi(row.original.waktu_berangkat, row.original.waktu_checkout)
+                return durasi ?? <span className="text-gray-400">—</span>
+            },
         },
         {
             header: 'Status', accessorKey: 'status', size: 100,

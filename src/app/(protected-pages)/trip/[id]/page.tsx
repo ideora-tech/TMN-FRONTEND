@@ -88,6 +88,15 @@ const PERAN_LABEL: Record<string, string> = {
     BOD:         'BOD',
 }
 
+function formatDurasi(awal?: string | null, akhir?: string | null): string | null {
+    if (!awal || !akhir) return null
+    const beda = dayjs(akhir).diff(dayjs(awal), 'minute')
+    if (beda < 0) return null
+    const jam = Math.floor(beda / 60)
+    const menit = beda % 60
+    return jam > 0 ? `${jam} jam ${menit} menit` : `${menit} menit`
+}
+
 type RekapBiaya = {
     total_bbm: number
     total_uang_jalan: number
@@ -344,6 +353,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 label: 'Check-out',
                                 value: trip.waktu_checkout ? dayjs(trip.waktu_checkout).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">-</span>,
                             },
+                            ...(formatDurasi(trip.waktu_checkin, trip.waktu_checkout)
+                                ? [{ label: 'Durasi', value: formatDurasi(trip.waktu_checkin, trip.waktu_checkout) as React.ReactNode }]
+                                : []),
                             ...(trip.catatan
                                 ? [{ label: 'Catatan', value: trip.catatan as React.ReactNode }]
                                 : []),
@@ -367,7 +379,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     </div>
                     <Button
                         size="sm"
-                        variant="default"
+                        variant="solid"
                         icon={<HiOutlinePencilAlt />}
                         disabled={trip.sudah_difakturkan}
                         onClick={openTitikDropDialog}

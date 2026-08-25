@@ -8,10 +8,23 @@ export interface FakturItem {
     subtotal: number
 }
 
+export interface FakturTrip {
+    id_trip: string
+    rute: string | null
+    armada_nopol: string | null
+    supir_nama: string | null
+    waktu_berangkat: string | null
+    waktu_checkin: string | null
+    waktu_checkout: string | null
+    status: string
+}
+
 export interface Faktur {
     id_faktur: string
     nomor_faktur: string
     total: number
+    nama_pajak?: string | null
+    persen_pajak?: number | null
     status: 'draft' | 'terkirim' | 'lunas' | 'batal'
     tanggal_faktur?: string
     jatuh_tempo?: string
@@ -28,6 +41,7 @@ export interface Faktur {
     dibuat_oleh_nama?: string | null
     diubah_oleh_nama?: string | null
     riwayat_status?: RiwayatFaktur[] | null
+    trip_terkait?: FakturTrip[]
 }
 
 export interface RiwayatFaktur {
@@ -64,6 +78,8 @@ export const fakturService = {
     async update(id: string, payload: {
         tanggal_faktur?: string | null
         jatuh_tempo?: string | null
+        nama_pajak?: string | null
+        persen_pajak?: number | null
         items?: { deskripsi: string; qty: number; harga_satuan: number }[]
     }) {
         const { data } = await axios.put(API_ENDPOINTS.FAKTUR_DETAIL(id), payload)

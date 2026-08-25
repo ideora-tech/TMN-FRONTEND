@@ -46,6 +46,26 @@ const RIWAYAT_TAG: Record<string, string> = {
     batal:    'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
 }
 
+const TRIP_STATUS_CLASS: Record<string, string> = {
+    belum_mulai: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    berjalan:    'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    selesai:     'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
+}
+
+const TRIP_STATUS_LABEL: Record<string, string> = {
+    belum_mulai: 'Belum Mulai', berjalan: 'Berjalan', selesai: 'Selesai', dibatalkan: 'Dibatalkan',
+}
+
+function formatDurasi(awal?: string | null, akhir?: string | null): string | null {
+    if (!awal || !akhir) return null
+    const beda = dayjs(akhir).diff(dayjs(awal), 'minute')
+    if (beda < 0) return null
+    const jam = Math.floor(beda / 60)
+    const menit = beda % 60
+    return jam > 0 ? `${jam} jam ${menit} menit` : `${menit} menit`
+}
+
 const RIWAYAT_BORDER: Record<string, string> = {
     draft:    'border-l-gray-400',
     diedit:   'border-l-amber-400',
@@ -68,6 +88,8 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [editTanggal, setEditTanggal]     = useState('')
     const [editJatuhTempo, setEditJatuhTempo] = useState('')
     const [editItems, setEditItems]         = useState<EditItemRow[]>([])
+    const [editNamaPajak, setEditNamaPajak]     = useState('')
+    const [editPersenPajak, setEditPersenPajak] = useState('')
     const [savingEdit, setSavingEdit]       = useState(false)
 
     const openEdit = () => {
@@ -79,6 +101,8 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             qty: String(it.qty),
             harga_satuan: String(it.harga_satuan),
         })))
+        setEditNamaPajak(faktur.nama_pajak ?? '')
+        setEditPersenPajak(faktur.persen_pajak != null ? String(faktur.persen_pajak) : '')
         setEditOpen(true)
     }
 
@@ -88,7 +112,10 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const tambahEditRow = () => setEditItems(prev => [...prev, { deskripsi: '', qty: '1', harga_satuan: '' }])
     const hapusEditRow  = (index: number) => setEditItems(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
 
-    const totalEdit = editItems.reduce((sum, r) => sum + (Number(r.qty) || 0) * (Number(r.harga_satuan) || 0), 0)
+    const subtotalEdit = editItems.reduce((sum, r) => sum + (Number(r.qty) || 0) * (Number(r.harga_satuan) || 0), 0)
+    const persenPajakEdit = Number(editPersenPajak) || 0
+    const nominalPajakEdit = subtotalEdit * persenPajakEdit / 100
+    const totalEdit = subtotalEdit + nominalPajakEdit
     const editValid = editItems.length > 0 && editItems.every(r => r.deskripsi.trim() !== '' && (Number(r.qty) || 0) > 0)
 
     const handleSaveEdit = async () => {
@@ -98,6 +125,8 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             const updated = await fakturService.update(id, {
                 tanggal_faktur: editTanggal || null,
                 jatuh_tempo: editJatuhTempo || null,
+                nama_pajak: editNamaPajak.trim() || null,
+                persen_pajak: editPersenPajak ? Number(editPersenPajak) : null,
                 items: editItems.map(r => ({
                     deskripsi: r.deskripsi.trim(),
                     qty: Number(r.qty),
@@ -339,7 +368,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <div className="flex items-center justify-between mb-4">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Item Invoice</p>
                             {faktur.status === 'draft' && (
-                                <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={openEdit}>
+                                <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={openEdit}>
                                     Edit Invoice
                                 </Button>
                             )}
@@ -365,9 +394,27 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                                     ))}
                                 </tbody>
                                 <tfoot>
-                                    <tr className="border-t border-gray-200 dark:border-gray-600">
-                                        <td colSpan={3} className="pt-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</td>
-                                        <td className="pt-3 text-right font-bold text-gray-900 dark:text-gray-100">{formatRupiah(faktur.total)}</td>
+                                    {!!faktur.persen_pajak && (
+                                        <>
+                                            <tr className="border-t border-gray-200 dark:border-gray-600">
+                                                <td colSpan={3} className="pt-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Subtotal</td>
+                                                <td className="pt-3 text-right text-gray-600 dark:text-gray-400">
+                                                    {formatRupiah(faktur.items.reduce((s, i) => s + i.subtotal, 0))}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td colSpan={3} className="pt-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                                    {faktur.nama_pajak || 'Pajak'} ({faktur.persen_pajak}%)
+                                                </td>
+                                                <td className="pt-1 text-right text-gray-600 dark:text-gray-400">
+                                                    {formatRupiah(faktur.total - faktur.items.reduce((s, i) => s + i.subtotal, 0))}
+                                                </td>
+                                            </tr>
+                                        </>
+                                    )}
+                                    <tr className={faktur.persen_pajak ? '' : 'border-t border-gray-200 dark:border-gray-600'}>
+                                        <td colSpan={3} className="pt-2 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</td>
+                                        <td className="pt-2 text-right font-bold text-gray-900 dark:text-gray-100">{formatRupiah(faktur.total)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -375,6 +422,53 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     </Card>
                 )}
             </div>
+
+            {faktur.trip_terkait && faktur.trip_terkait.length > 0 && (
+                <Card className="mt-4">
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
+                        Trip Terkait ({faktur.trip_terkait.length})
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Supir & Armada</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Berangkat</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Selesai</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Durasi</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {faktur.trip_terkait.map(t => (
+                                    <tr key={t.id_trip}>
+                                        <td className="py-3 px-4 text-gray-800 dark:text-gray-200">{t.rute ?? '—'}</td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                            {t.supir_nama ?? '—'}
+                                            {t.armada_nopol && <span className="text-gray-400"> · {t.armada_nopol}</span>}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                            {t.waktu_berangkat ? dayjs(t.waktu_berangkat).format('DD/MM/YY HH:mm') : '—'}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                            {t.waktu_checkout ? dayjs(t.waktu_checkout).format('DD/MM/YY HH:mm') : '—'}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                            {formatDurasi(t.waktu_checkin, t.waktu_checkout) ?? '—'}
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${TRIP_STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {TRIP_STATUS_LABEL[t.status] ?? t.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            )}
 
             <Dialog isOpen={editOpen} onRequestClose={() => setEditOpen(false)} onClose={() => setEditOpen(false)} width={800}>
                 <h5 className="text-base font-semibold mb-2">Edit Invoice</h5>
@@ -428,9 +522,38 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3">
-                                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span>
-                                <span className="font-bold text-lg tabular-nums">{formatRupiah(totalEdit)}</span>
+
+                            <div className="mt-4">
+                                <p className="text-sm font-semibold mb-2">Pajak (opsional)</p>
+                                <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-8 sm:col-span-9">
+                                        <Input placeholder="Nama pajak (mis. PPN)" value={editNamaPajak}
+                                            onChange={e => setEditNamaPajak(e.target.value)} />
+                                    </div>
+                                    <div className="col-span-4 sm:col-span-3">
+                                        <Input suffix="%" placeholder="0" value={editPersenPajak}
+                                            onChange={e => setEditPersenPajak(e.target.value.replace(/[^\d.]/g, ''))} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3 flex flex-col gap-1">
+                                {persenPajakEdit > 0 && (
+                                    <>
+                                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                            <span>Subtotal</span>
+                                            <span className="tabular-nums">{formatRupiah(subtotalEdit)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                            <span>{editNamaPajak.trim() || 'Pajak'} ({persenPajakEdit}%)</span>
+                                            <span className="tabular-nums">{formatRupiah(nominalPajakEdit)}</span>
+                                        </div>
+                                    </>
+                                )}
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span>
+                                    <span className="font-bold text-lg tabular-nums">{formatRupiah(totalEdit)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
