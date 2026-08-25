@@ -1,0 +1,64 @@
+.tree,
+.tree ul {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tree {
+    justify-content: center;
+}
+
+.tree ul {
+    padding-top: 2.5rem;
+}
+
+.tree li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding: 0 1.25rem;
+}
+
+.tree li::before,
+.tree li::after {
+    content: '';
+    position: absolute;
+    top: -2.5rem;
+    width: 50%;
+    height: 2.5rem;
+    border-color: #d1d5db;
+    border-style: solid;
+    border-width: 0;
+}
+
+.tree li::before {
+    right: 50%;
+    border-top-width: 1px;
+}
+
+.tree li::after {
+    left: 50%;
+    border-top-width: 1px;
+    border-left-width: 1px;
+}
+
+.tree li:first-child::before {
+    border: none;
+}
+
+.tree li:last-child::after {
+    border-top: none;
+}
+
+.treeRoot > li::before,
+.treeRoot > li::after {
+    display: none;
+}
+
+:global(.dark) .tree li::before,
+:global(.dark) .tree li::after {
+    border-color: #4b5563;
+}
