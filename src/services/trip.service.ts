@@ -54,6 +54,9 @@ export interface StatusTrip {
     keterangan?: string
     latitude?: number
     longitude?: number
+    dibuat_oleh?: string | null
+    dibuat_oleh_nama?: string | null
+    dibuat_oleh_peran?: string | null
     dibuat_pada: string
 }
 

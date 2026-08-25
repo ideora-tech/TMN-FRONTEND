@@ -77,6 +77,17 @@ const RIWAYAT_BORDER: Record<string, string> = {
     dibatalkan:  'border-l-red-400',
 }
 
+const PERAN_LABEL: Record<string, string> = {
+    SUPIR:       'Supir',
+    SUPERADMIN:  'Super Admin',
+    ADMIN:       'Admin',
+    MANAGER:     'Manager',
+    DISPATCHER:  'Dispatcher',
+    KEUANGAN:    'Keuangan',
+    SALES:       'Sales',
+    BOD:         'BOD',
+}
+
 type RekapBiaya = {
     total_bbm: number
     total_uang_jalan: number
@@ -433,6 +444,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                         <span className="text-xs text-gray-400">{dayjs(s.dibuat_pada).format('DD/MM/YYYY HH:mm')}</span>
                                     </div>
                                     {s.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">{s.keterangan}</div>}
+                                    {s.dibuat_oleh_nama && (
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            Oleh: {s.dibuat_oleh_nama}
+                                            {s.dibuat_oleh_peran && ` (${PERAN_LABEL[s.dibuat_oleh_peran] ?? s.dibuat_oleh_peran})`}
+                                        </div>
+                                    )}
                                     {s.latitude && s.longitude && <div className="text-xs text-gray-400 mt-1">Koordinat: {s.latitude}, {s.longitude}</div>}
                                 </div>
                             ))}
