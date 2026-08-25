@@ -694,6 +694,10 @@ export default function BoardUnit() {
                         <Tag className={`${statusDetailClass} border-0 font-semibold`}>{statusDetailLabel}</Tag>
                     </div>
                     <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Proyek</p>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailAssignment?.nama_proyek ?? '—'}</p>
+                    </div>
+                    <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Supir</p>
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailAssignment?.nama_supir ?? '—'}</p>
                     </div>

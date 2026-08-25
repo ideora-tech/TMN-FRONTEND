@@ -29,6 +29,7 @@ export interface BoardAssignment {
     nama_supir: string | null
     id_proyek: string
     kode_proyek: string | null
+    nama_proyek: string | null
     id_rute: string | null
     nama_rute: string | null
     estimasi_biaya: number | null
