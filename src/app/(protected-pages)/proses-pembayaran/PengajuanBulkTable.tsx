@@ -15,6 +15,7 @@ import {
     HiOutlinePencilAlt,
     HiOutlineTrash,
     HiOutlineExternalLink,
+    HiOutlineClipboardList,
 } from 'react-icons/hi'
 import DetailPengajuanDialog from '../arus-kas/DetailPengajuanDialog'
 import { parseApiError } from '@/utils/error.util'
@@ -35,6 +36,7 @@ type Props = {
     onRefresh: () => void
     onEdit?: (p: PengajuanPengeluaran) => void
     onDelete?: (p: PengajuanPengeluaran) => void
+    onShowLog?: (p: PengajuanPengeluaran) => void
 }
 
 type HasilGagalBulk = { nomor: string; alasan: string }
@@ -45,7 +47,7 @@ const BULK_LABEL: Record<BulkAction, string> = {
     cek: 'Cek', setuju: 'Setujui', tolak: 'Tolak', transfer: 'Transfer',
 }
 
-export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete }: Props) {
+export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete, onShowLog }: Props) {
     const { session } = useCurrentSession()
     const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
     const punyaPeran = (...roles: string[]) => roles.some(r => authority.includes(r))
@@ -356,6 +358,15 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 <HiOutlineEye className="text-lg" />
                             </span>
                         </Tooltip>
+                        {onShowLog && (
+                            <Tooltip title="Log Aktivitas">
+                                <span
+                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                    onClick={() => onShowLog(p)}>
+                                    <HiOutlineClipboardList className="text-lg" />
+                                </span>
+                            </Tooltip>
+                        )}
                         {p.status === 'diajukan' && bolehKeuangan && (
                             <Tooltip title="Cek">
                                 <span

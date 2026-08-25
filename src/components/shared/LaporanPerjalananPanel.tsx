@@ -310,7 +310,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                 {laporanLoading && <span className="text-xs text-gray-400">Memuat...</span>}
                 {!laporanLoading && !showLaporanForm && laporan && (
                     <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={handleOpenEditLaporan}>
-                        Edit
+                        Ubah
                     </Button>
                 )}
                 {!laporanLoading && !showLaporanForm && !laporan && canIsiLaporan && (

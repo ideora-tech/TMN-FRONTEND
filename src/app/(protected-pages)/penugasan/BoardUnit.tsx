@@ -154,14 +154,15 @@ export default function BoardUnit() {
         return Array.from({ length: n }, (_, i) => bulan.date(i + 1))
     }, [bulan])
 
-    /** Assignment berstatus 'batal' sengaja diabaikan di sini — backend tidak menganggapnya menghuni tanggal tersebut (lihat adaPenugasanUnitPadaTanggal), jadi sel tetap tampil kosong/bisa diisi lagi. */
+    /** Assignment berstatus 'batal' tidak dianggap menghuni sel ini. Satu unit boleh punya lebih dari 1 assignment (proyek berbeda) di tanggal yang sama — ditampilkan bertumpuk. */
     const assignMap = useMemo(() => {
-        const m: Record<string, Record<string, BoardAssignment>> = {}
+        const m: Record<string, Record<string, BoardAssignment[]>> = {}
         assignments.filter(a => a.status !== 'batal').forEach(a => {
             const key = a.id_armada ? `internal:${a.id_armada}` : a.id_armada_vendor ? `vendor:${a.id_armada_vendor}` : null
             if (!key) return
             m[key] ??= {}
-            m[key][a.tanggal] = a
+            m[key][a.tanggal] ??= []
+            m[key][a.tanggal].push(a)
         })
         return m
     }, [assignments])
@@ -477,11 +478,11 @@ export default function BoardUnit() {
                                         </td>
                                         {tanggalList.map(t => {
                                             const tglKey = t.format('YYYY-MM-DD')
-                                            const a = assignMap[key]?.[tglKey]
+                                            const daftar = assignMap[key]?.[tglKey] ?? []
                                             return (
-                                                <td key={tglKey} className="px-1.5 py-2 border-b border-r border-gray-200 dark:border-gray-600 align-middle">
-                                                    {a ? (
-                                                        (() => {
+                                                <td key={tglKey} className="px-1.5 py-2 border-b border-r border-gray-200 dark:border-gray-600 align-top">
+                                                    <div className="flex flex-col gap-1">
+                                                        {daftar.map(a => {
                                                             const berjalan = a.trips.some(tr => tr.status === 'berjalan')
                                                             const selesaiSemua = !berjalan && a.trips.length > 0
                                                             const kelasWarna = berjalan
@@ -490,7 +491,7 @@ export default function BoardUnit() {
                                                                 ? 'border-purple-300 dark:border-purple-500/50 bg-purple-50 dark:bg-purple-500/10'
                                                                 : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
                                                             return (
-                                                                <div className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna}`}
+                                                                <div key={a.id_penugasan} className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna}`}
                                                                     onClick={() => bukaDetail(a, u)}>
                                                                     <div className="flex items-center justify-between gap-1">
                                                                         <span className="flex items-center gap-1 min-w-0">
@@ -523,14 +524,13 @@ export default function BoardUnit() {
                                                                     )}
                                                                 </div>
                                                             )
-                                                        })()
-                                                    ) : (
+                                                        })}
                                                         <button type="button"
-                                                            className="w-full h-12 rounded-lg border border-dashed border-transparent hover:border-blue-300 text-transparent hover:text-blue-400 flex items-center justify-center transition-colors"
+                                                            className={`w-full rounded-lg border border-dashed border-transparent hover:border-blue-300 text-transparent hover:text-blue-400 flex items-center justify-center transition-colors ${daftar.length > 0 ? 'h-6' : 'h-12'}`}
                                                             onClick={() => bukaAssignDialog(u, tglKey)}>
                                                             <HiOutlinePlus className="w-4 h-4" />
                                                         </button>
-                                                    )}
+                                                    </div>
                                                 </td>
                                             )
                                         })}
@@ -673,8 +673,8 @@ export default function BoardUnit() {
                             {detailAssignment && ` · ${dayjs(detailAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
                         </p>
                     </div>
-                    <Button size="sm" variant="default" className="shrink-0" icon={<HiOutlinePencilAlt />} onClick={bukaEditDariDetail}>
-                        Ubah
+                    <Button size="sm" variant="solid" className="shrink-0" icon={<HiOutlinePencilAlt />} onClick={bukaEditDariDetail}>
+                        Edit
                     </Button>
                 </div>
 

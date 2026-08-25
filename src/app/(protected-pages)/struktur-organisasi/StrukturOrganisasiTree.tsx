@@ -2,21 +2,22 @@
 import { useState } from 'react'
 import { Dialog } from '@/components/ui'
 import { JabatanTreeNode } from '@/services/strukturOrganisasi.service'
+import styles from './StrukturOrganisasiTree.module.css'
 
 type Props = {
     node: JabatanTreeNode
 }
 
-export default function StrukturOrganisasiTree({ node }: Props) {
+function KartuJabatan({ node }: Props) {
     const [showDaftar, setShowDaftar] = useState(false)
 
     return (
-        <div>
-            <div className="inline-flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 min-w-[220px]">
-                <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{node.nama_jabatan}</span>
+        <>
+            <div className="flex flex-col gap-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm px-4 py-3 min-w-[200px] max-w-[240px]">
+                <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{node.nama_jabatan}</span>
                     {node.nama_departemen && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 whitespace-nowrap flex-shrink-0">
                             {node.nama_departemen}
                         </span>
                     )}
@@ -25,7 +26,7 @@ export default function StrukturOrganisasiTree({ node }: Props) {
                     <span className="text-xs text-gray-400 italic">Belum ada yang menjabat</span>
                 )}
                 {node.jumlah_karyawan === 1 && (
-                    <span className="text-xs text-gray-600 dark:text-gray-300">{node.karyawan[0].nama_karyawan}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{node.karyawan[0].nama_karyawan}</span>
                 )}
                 {node.jumlah_karyawan > 1 && (
                     <button type="button" onClick={() => setShowDaftar(true)}
@@ -34,14 +35,6 @@ export default function StrukturOrganisasiTree({ node }: Props) {
                     </button>
                 )}
             </div>
-
-            {node.children.length > 0 && (
-                <div className="ml-6 mt-3 pl-4 border-l-2 border-gray-200 dark:border-gray-600 flex flex-col gap-3">
-                    {node.children.map(child => (
-                        <StrukturOrganisasiTree key={child.id_jabatan} node={child} />
-                    ))}
-                </div>
-            )}
 
             <Dialog isOpen={showDaftar} onRequestClose={() => setShowDaftar(false)} onClose={() => setShowDaftar(false)} width={400}>
                 <h5 className="mb-1">{node.nama_jabatan}</h5>
@@ -54,6 +47,31 @@ export default function StrukturOrganisasiTree({ node }: Props) {
                     ))}
                 </ul>
             </Dialog>
+        </>
+    )
+}
+
+function NodeJabatan({ node }: Props) {
+    return (
+        <li>
+            <KartuJabatan node={node} />
+            {node.children.length > 0 && (
+                <ul className={styles.tree}>
+                    {node.children.map(child => (
+                        <NodeJabatan key={child.id_jabatan} node={child} />
+                    ))}
+                </ul>
+            )}
+        </li>
+    )
+}
+
+export default function StrukturOrganisasiTree({ node }: Props) {
+    return (
+        <div className="overflow-x-auto pb-2">
+            <ul className={`${styles.tree} ${styles.treeRoot}`}>
+                <NodeJabatan node={node} />
+            </ul>
         </div>
     )
 }
