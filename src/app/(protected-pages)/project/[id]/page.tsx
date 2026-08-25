@@ -709,13 +709,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek</p>
                         <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
                     </div>
-                    <Tooltip title={hargaTerkunci ? 'Harga terkunci — tambah rute lewat penawaran revisi' : ''}>
-                        <span>
-                            <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled={hargaTerkunci} onClick={openAddRute}>
-                                Tambah Rute
-                            </Button>
-                        </span>
-                    </Tooltip>
+                    {!hargaTerkunci && (
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
+                            Tambah Rute
+                        </Button>
+                    )}
                 </div>
 
                 {showRuteForm && (

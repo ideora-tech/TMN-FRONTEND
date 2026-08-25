@@ -7,6 +7,9 @@ export interface Perusahaan {
     email: string | null
     telepon: string | null
     alamat: string | null
+    nama_bank: string | null
+    atas_nama_rekening: string | null
+    nomor_rekening: string | null
     id_zona: string | null
     id_mata_uang: string | null
     aktif: boolean
@@ -22,7 +25,7 @@ export const perusahaanService = {
         const { data } = await axios.get(API_ENDPOINTS.PERUSAHAAN_DETAIL(id))
         return data.data as Perusahaan
     },
-    async create(payload: Omit<Perusahaan, 'id_perusahaan' | 'aktif' | 'dibuat_pada'>) {
+    async create(payload: Omit<Perusahaan, 'id_perusahaan' | 'aktif' | 'dibuat_pada' | 'nama_bank' | 'atas_nama_rekening' | 'nomor_rekening'>) {
         const { data } = await axios.post(API_ENDPOINTS.PERUSAHAAN, payload)
         return data.data as Perusahaan
     },

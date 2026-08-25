@@ -9,7 +9,6 @@ import {
     HiArrowLeft,
     HiOutlineMap,
     HiOutlinePlus,
-    HiOutlinePencilAlt,
     HiOutlineTrash,
 } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -199,10 +198,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     const ubahTitikDrop   = (i: number, v: string) => setTitikDropForm(prev => prev.map((d, idx) => (idx === i ? v : d)))
     const hapusTitikDrop  = (i: number) => setTitikDropForm(prev => prev.filter((_, idx) => idx !== i))
 
-    const openTitikDropDialog = () => {
-        setTitikDropForm(trip?.titik_drop ?? [])
-        setTitikDropDialogOpen(true)
-    }
+    // Dikomen sementara bersamaan dengan tombol Ubah Titik Drop di bawah (25 Agu 2026)
+    // const openTitikDropDialog = () => {
+    //     setTitikDropForm(trip?.titik_drop ?? [])
+    //     setTitikDropDialogOpen(true)
+    // }
     const closeTitikDropDialog = () => setTitikDropDialogOpen(false)
 
     const handleSubmitTitikDrop = async () => {
@@ -370,6 +370,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     ))}
                 </div>
 
+                {/* Ubah Titik Drop — dikomen sementara atas permintaan user (25 Agu 2026)
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Titik Drop</p>
@@ -387,6 +388,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         Ubah Titik Drop
                     </Button>
                 </div>
+                */}
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

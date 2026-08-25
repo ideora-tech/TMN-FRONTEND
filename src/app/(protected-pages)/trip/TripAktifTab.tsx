@@ -5,7 +5,6 @@ import { Card, Input, Select, Tag, Tooltip, Spinner, Pagination, toast, Notifica
 import {
     HiOutlineSearch,
     HiOutlineX,
-    HiPlusCircle,
     HiOutlineChevronDown,
     HiOutlineChevronRight,
     HiOutlineDocumentText,
@@ -13,7 +12,6 @@ import {
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { tripService, Trip, RingkasanProyekTrip } from '@/services/trip.service'
-import MulaiTripDialog from './MulaiTripDialog'
 import dayjs from 'dayjs'
 
 type StatusOption = { value: string; label: string }
@@ -86,9 +84,6 @@ export default function TripAktifTab() {
     const [pageSize]                      = useState(10)
     const [total, setTotal]               = useState(0)
 
-    const [showMulai, setShowMulai]               = useState(false)
-    const [proyekUntukMulai, setProyekUntukMulai]  = useState<string | undefined>(undefined)
-
     const [expanded, setExpanded]         = useState<Set<string>>(new Set())
     const [expandedRute, setExpandedRute] = useState<Set<string>>(new Set())
     const [showAllRute, setShowAllRute]   = useState<Set<string>>(new Set())
@@ -127,11 +122,6 @@ export default function TripAktifTab() {
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
-    const handleTambah = (idProyek: string) => {
-        setProyekUntukMulai(idProyek)
-        setShowMulai(true)
-    }
-
     const toggleExpand = async (idProyek: string) => {
         setExpanded(prev => {
             const next = new Set(prev)
@@ -164,30 +154,6 @@ export default function TripAktifTab() {
             else next.add(kunci)
             return next
         })
-    }
-
-    const handleSuksesMulai = async (idProyek: string) => {
-        fetchData()
-        if (!idProyek) return
-        setExpanded(prev => new Set(prev).add(idProyek))
-        setLoadingTrips(prev => new Set(prev).add(idProyek))
-        try {
-            const res = await tripService.list({ id_proyek: idProyek, status: statusEfektif, sumber: sumberFilter || undefined, limit: 100 })
-            setTripsByProyek(prev => ({ ...prev, [idProyek]: res.data }))
-            const terbaru = [...res.data].sort((a, b) => (b.waktu_berangkat ?? '').localeCompare(a.waktu_berangkat ?? ''))[0]
-            if (terbaru) {
-                const namaRute = terbaru.rute?.trim() || 'Tanpa Rute'
-                setExpandedRute(prev => new Set(prev).add(`${idProyek}::${namaRute}`))
-            }
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setLoadingTrips(prev => {
-                const next = new Set(prev)
-                next.delete(idProyek)
-                return next
-            })
-        }
     }
 
     return (
@@ -272,16 +238,7 @@ export default function TripAktifTab() {
                                                         {proyek.jumlah_trip} trip
                                                     </Tag>
                                                 </td>
-                                                <td className="py-3 pr-3 text-right">
-                                                    <Tooltip title="Tambah Trip">
-                                                        <span
-                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                                                            onClick={(e) => { e.stopPropagation(); handleTambah(proyek.id_proyek) }}
-                                                        >
-                                                            <HiPlusCircle className="text-lg" />
-                                                        </span>
-                                                    </Tooltip>
-                                                </td>
+                                                <td className="py-3 pr-3" />
                                             </tr>
                                             {isExpanded && (
                                                 <tr>
@@ -389,13 +346,6 @@ export default function TripAktifTab() {
                     <Pagination currentPage={currentPage} total={total} pageSize={pageSize} onChange={setCurrentPage} />
                 </div>
             )}
-
-            <MulaiTripDialog
-                isOpen={showMulai}
-                onClose={() => setShowMulai(false)}
-                onSukses={handleSuksesMulai}
-                idProyekTerkunci={proyekUntukMulai}
-            />
         </div>
     )
 }

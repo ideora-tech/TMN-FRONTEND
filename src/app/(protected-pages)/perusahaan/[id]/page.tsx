@@ -49,6 +49,9 @@ export default function PerusahaanDetailPage({ params }: { params: Promise<{ id:
                 email:   form.email || null,
                 telepon: form.telepon || null,
                 alamat:  form.alamat || null,
+                nama_bank:          form.nama_bank || null,
+                atas_nama_rekening: form.atas_nama_rekening || null,
+                nomor_rekening:     form.nomor_rekening || null,
                 aktif:   form.aktif,
             })
             setPerusahaan(updated)
@@ -118,6 +121,25 @@ export default function PerusahaanDetailPage({ params }: { params: Promise<{ id:
                                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-line">{perusahaan.alamat}</p>
                             </div>
                         )}
+                        {(perusahaan.nama_bank || perusahaan.atas_nama_rekening || perusahaan.nomor_rekening) && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Rekening Bank (untuk invoice)</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3">
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-0.5">Nama Bank</p>
+                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{perusahaan.nama_bank ?? '—'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-0.5">Nama Rekening</p>
+                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{perusahaan.atas_nama_rekening ?? '—'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-400 mb-0.5">No. Rekening</p>
+                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{perusahaan.nomor_rekening ?? '—'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>
@@ -156,6 +178,18 @@ export default function PerusahaanDetailPage({ params }: { params: Promise<{ id:
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800" />
                                 </FormItem>
                             </div>
+                            <div className="sm:col-span-2 mt-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Rekening Bank (untuk invoice)</p>
+                            </div>
+                            <FormItem label="Nama Bank">
+                                <Input value={form.nama_bank ?? ''} onChange={(e) => setForm(p => ({ ...p, nama_bank: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Nama Rekening">
+                                <Input value={form.atas_nama_rekening ?? ''} onChange={(e) => setForm(p => ({ ...p, atas_nama_rekening: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="No. Rekening">
+                                <Input value={form.nomor_rekening ?? ''} onChange={(e) => setForm(p => ({ ...p, nomor_rekening: e.target.value }))} />
+                            </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(perusahaan); setErrors({}) }}>Batal</Button>

@@ -3,7 +3,6 @@ import { useState } from 'react'
 import Tabs from '@/components/ui/Tabs'
 import TripAktifTab from './TripAktifTab'
 import RiwayatTripTab from './RiwayatTripTab'
-import AlokasiArmadaTab from './AlokasiArmadaTab'
 
 export default function TripPage() {
     const [activeTab, setActiveTab] = useState('aktif')
@@ -19,12 +18,10 @@ export default function TripPage() {
                 <Tabs.TabList>
                     <Tabs.TabNav value="aktif">Trip Aktif</Tabs.TabNav>
                     <Tabs.TabNav value="riwayat">Riwayat</Tabs.TabNav>
-                    <Tabs.TabNav value="alokasi">Alokasi Armada</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="aktif"><TripAktifTab /></Tabs.TabContent>
                     <Tabs.TabContent value="riwayat"><RiwayatTripTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="alokasi"><AlokasiArmadaTab /></Tabs.TabContent>
                 </div>
             </Tabs>
         </div>
