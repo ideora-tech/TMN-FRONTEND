@@ -16,7 +16,7 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function JabatanBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_jabatan: '', nama_jabatan: '', id_departemen: '', id_jabatan_induk: '', id_peran: '', level: '1', tunjangan_jabatan: '', aktif: true, is_supir: false })
+    const [form, setForm] = useState({ nama_jabatan: '', id_departemen: '', id_jabatan_induk: '', id_peran: '', level: '1', tunjangan_jabatan: '', aktif: true, is_supir: false })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [departemenOptions, setDepartemenOptions] = useState<{ value: string; label: string }[]>([])
@@ -37,7 +37,6 @@ export default function JabatanBaruPage() {
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode_jabatan.trim()) e.kode_jabatan = 'Kode wajib diisi'
         if (!form.nama_jabatan.trim()) e.nama_jabatan = 'Nama wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -52,7 +51,6 @@ export default function JabatanBaruPage() {
         setLoading(true)
         try {
             await jabatanService.create({
-                kode_jabatan: form.kode_jabatan,
                 nama_jabatan: form.nama_jabatan,
                 id_departemen: form.id_departemen || null,
                 id_jabatan_induk: form.id_jabatan_induk || null,
@@ -86,10 +84,6 @@ export default function JabatanBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Jabatan" asterisk invalid={!!errors.kode_jabatan} errorMessage={errors.kode_jabatan}>
-                        <Input placeholder="Kode unik" value={form.kode_jabatan} invalid={!!errors.kode_jabatan}
-                            onChange={e => setForm(p => ({ ...p, kode_jabatan: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Jabatan" asterisk invalid={!!errors.nama_jabatan} errorMessage={errors.nama_jabatan}>
                         <Input placeholder="Nama jabatan" value={form.nama_jabatan} invalid={!!errors.nama_jabatan}
                             onChange={e => setForm(p => ({ ...p, nama_jabatan: e.target.value }))} />

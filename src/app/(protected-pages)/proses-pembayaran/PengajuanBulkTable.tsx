@@ -102,6 +102,8 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
 
     const [detailTarget, setDetailTarget] = useState<PengajuanPengeluaran | null>(null)
 
+    const [cekTarget, setCekTarget] = useState<PengajuanPengeluaran | null>(null)
+
     const [tolakTarget, setTolakTarget] = useState<PengajuanPengeluaran | null>(null)
     const [alasanSatuan, setAlasanSatuan] = useState('')
     const [errAlasanSatuan, setErrAlasanSatuan] = useState('')
@@ -120,11 +122,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     const [bulkSubmitting, setBulkSubmitting] = useState(false)
     const [hasilBulk, setHasilBulk] = useState<{ sukses: number; gagal: HasilGagalBulk[]; dilewati: number } | null>(null)
 
-    const jalankanCekSatuan = async (p: PengajuanPengeluaran) => {
+    const jalankanCekSatuan = async () => {
+        if (!cekTarget) return
         setAksiSatuLoading(true)
         try {
-            const hasil = await arusKasService.cek(p.id_pengajuan)
+            const hasil = await arusKasService.cek(cekTarget.id_pengajuan)
             toast.push(<Notification type="success" title={hasil.message} />)
+            setCekTarget(null)
             onRefresh()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -356,7 +360,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             <Tooltip title="Cek">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                                    onClick={() => jalankanCekSatuan(p)}>
+                                    onClick={() => setCekTarget(p)}>
                                     <HiOutlineCheckCircle className="text-lg" />
                                 </span>
                             </Tooltip>
@@ -460,6 +464,20 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
             />
 
             <DetailPengajuanDialog pengajuan={detailTarget} onClose={() => setDetailTarget(null)} onRefresh={onRefresh} />
+
+            <ConfirmDialog
+                isOpen={!!cekTarget}
+                type="info"
+                title="Cek Pengajuan"
+                confirmText="Ya, Cek"
+                cancelText="Batal"
+                onClose={() => setCekTarget(null)}
+                onCancel={() => setCekTarget(null)}
+                onConfirm={jalankanCekSatuan}
+                confirmButtonProps={{ loading: aksiSatuLoading }}
+            >
+                <p>Tandai pengajuan {cekTarget?.nomor_pengajuan} sebagai sudah dicek?</p>
+            </ConfirmDialog>
 
             <ConfirmDialog
                 isOpen={!!tolakTarget}

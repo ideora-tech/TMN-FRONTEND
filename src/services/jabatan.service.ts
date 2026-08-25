@@ -24,7 +24,7 @@ export const jabatanService = {
         const { data } = await axios.get(API_ENDPOINTS.JABATAN_DETAIL(id))
         return data.data as Jabatan
     },
-    async create(payload: Omit<Jabatan, 'id_jabatan' | 'id_perusahaan'>) {
+    async create(payload: Omit<Jabatan, 'id_jabatan' | 'id_perusahaan' | 'kode_jabatan'>) {
         const { data } = await axios.post(API_ENDPOINTS.JABATAN, payload)
         return data.data as Jabatan
     },

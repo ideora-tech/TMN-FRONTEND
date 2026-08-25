@@ -14,7 +14,7 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function DepartemenBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_departemen: '', nama_departemen: '', id_departemen_induk: '', aktif: true })
+    const [form, setForm] = useState({ nama_departemen: '', id_departemen_induk: '', aktif: true })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
@@ -27,7 +27,6 @@ export default function DepartemenBaruPage() {
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode_departemen.trim()) e.kode_departemen = 'Kode wajib diisi'
         if (!form.nama_departemen.trim()) e.nama_departemen = 'Nama wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -42,7 +41,6 @@ export default function DepartemenBaruPage() {
         setLoading(true)
         try {
             await departemenService.create({
-                kode_departemen: form.kode_departemen,
                 nama_departemen: form.nama_departemen,
                 id_departemen_induk: form.id_departemen_induk || null,
                 aktif: form.aktif,
@@ -71,10 +69,6 @@ export default function DepartemenBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Departemen" asterisk invalid={!!errors.kode_departemen} errorMessage={errors.kode_departemen}>
-                        <Input placeholder="Kode unik" value={form.kode_departemen} invalid={!!errors.kode_departemen}
-                            onChange={e => setForm(p => ({ ...p, kode_departemen: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Departemen" asterisk invalid={!!errors.nama_departemen} errorMessage={errors.nama_departemen}>
                         <Input placeholder="Nama departemen" value={form.nama_departemen} invalid={!!errors.nama_departemen}
                             onChange={e => setForm(p => ({ ...p, nama_departemen: e.target.value }))} />

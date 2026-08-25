@@ -19,7 +19,7 @@ export const departemenService = {
         const { data } = await axios.get(API_ENDPOINTS.DEPARTEMEN_DETAIL(id))
         return data.data as Departemen
     },
-    async create(payload: Omit<Departemen, 'id_departemen' | 'id_perusahaan'>) {
+    async create(payload: Omit<Departemen, 'id_departemen' | 'id_perusahaan' | 'kode_departemen'>) {
         const { data } = await axios.post(API_ENDPOINTS.DEPARTEMEN, payload)
         return data.data as Departemen
     },
