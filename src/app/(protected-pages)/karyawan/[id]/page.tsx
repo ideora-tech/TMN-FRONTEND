@@ -902,6 +902,12 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         </table>
                     </div>
                 )}
+
+                {!editing && (
+                    <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    </div>
+                )}
             </Card>
 
             {riwayatJabatan.length > 0 && (

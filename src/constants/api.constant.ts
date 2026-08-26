@@ -155,6 +155,7 @@ export const API_ENDPOINTS = {
     FAKTUR:        '/api/proxy/faktur',
     FAKTUR_DETAIL: (id: string) => `/api/proxy/faktur/${id}`,
     FAKTUR_STATUS: (id: string) => `/api/proxy/faktur/${id}/status`,
+    FAKTUR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/faktur/${id}/ajukan-approval`,
 
 
     // Invoice Vendor
@@ -267,6 +268,7 @@ export const API_ENDPOINTS = {
     PENAWARAN:        '/api/proxy/penawaran',
     PENAWARAN_DETAIL: (id: string) => `/api/proxy/penawaran/${id}`,
     PENAWARAN_STATUS: (id: string) => `/api/proxy/penawaran/${id}/status`,
+    PENAWARAN_AJUKAN_APPROVAL: (id: string) => `/api/proxy/penawaran/${id}/ajukan-approval`,
 
     // Notifikasi
     NOTIFIKASI:       '/api/proxy/notifikasi',
@@ -346,6 +348,7 @@ export const API_ENDPOINTS = {
     PENUGASAN_EVALUASI:    (idPenugasan: string) => `/api/proxy/penugasan/${idPenugasan}/evaluasi`,
     EVALUASI_DETAIL:       (id: string) => `/api/proxy/evaluasi/${id}`,
     EVALUASI_VENDOR_REKAP: '/api/proxy/evaluasi-vendor/rekap',
+    EVALUASI_VENDOR_PENUGASAN: '/api/proxy/evaluasi-vendor/penugasan',
     VENDOR_EVALUASI:       (idVendor: string) => `/api/proxy/vendor/${idVendor}/evaluasi`,
 
     // Arus Kas
@@ -365,9 +368,18 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PEMASUKAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pemasukan/${id}`,
 
     // Approval Keuangan
+    // APPROVER_KEUANGAN masih dipakai approvalKeuangan.service.ts lama — jangan dihapus
+    // sebelum migrasi ke Approval Generik (konfigurasi-approval) ikut ter-commit.
     APPROVER_KEUANGAN:        '/api/proxy/arus-kas/approver',
     APPROVER_KEUANGAN_DETAIL: (id: string) => `/api/proxy/arus-kas/approver/${id}`,
     PENGATURAN_APPROVAL:      '/api/proxy/arus-kas/pengaturan-approval',
+
+    // Approval Generik
+    APPROVAL_EVENT_TYPE:               '/api/proxy/approval-event-type',
+    APPROVAL_EVENT_TYPE_APPROVER:      (idEventType: string) => `/api/proxy/approval-event-type/${idEventType}/approver`,
+    APPROVAL_EVENT_TYPE_APPROVER_DETAIL: (idEventType: string, idConfig: string) => `/api/proxy/approval-event-type/${idEventType}/approver/${idConfig}`,
+    APPROVAL_MENUNGGU_SAYA: '/api/proxy/approval-pengajuan/menunggu-saya',
+    APPROVAL_KEPUTUSAN:     (idApproval: string) => `/api/proxy/approval-pengajuan/${idApproval}/keputusan`,
 
     // Pengaturan Kode
     PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',

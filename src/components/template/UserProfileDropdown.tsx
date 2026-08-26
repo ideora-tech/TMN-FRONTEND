@@ -42,6 +42,8 @@ const _UserDropdown = () => {
 
     const kodePeran = (session?.user as Record<string, unknown>)?.kodePeran as string | null
     const roleLabel = kodePeran ? (ROLE_LABEL[kodePeran] ?? kodePeran) : ''
+    const namaJabatan = (session?.user as Record<string, unknown>)?.namaJabatan as string | null
+    const subLabel = [roleLabel, namaJabatan].filter(Boolean).join(' · ')
 
     return (
         <Dropdown
@@ -53,9 +55,9 @@ const _UserDropdown = () => {
                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 leading-tight">
                             {session?.user?.name || 'Pengguna'}
                         </span>
-                        {roleLabel && (
+                        {subLabel && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                                {roleLabel}
+                                {subLabel}
                             </span>
                         )}
                     </div>

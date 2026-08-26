@@ -364,6 +364,9 @@ export default function PembelianDetailPage() {
                         </Tag>
                     )}
                 </div>
+                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                </div>
             </Card>
 
             <Dialog isOpen={realisasiOpen} onClose={() => setRealisasiOpen(false)} onRequestClose={() => setRealisasiOpen(false)}>

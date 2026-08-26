@@ -19,6 +19,7 @@ import { Vendor } from '@/services/vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import dayjs from 'dayjs'
 
 const STATUS_CLASS: Record<string, string> = {
@@ -59,7 +60,7 @@ const EMPTY_DIALOG_FORM: DialogFormState = {
     tanggal_tugas: '', estimasi_biaya: '',
 }
 
-type DialogErrors = Partial<Record<'id_vendor' | 'id_kontrak_vendor' | 'unit' | 'supir' | 'tanggal_tugas', string>>
+type DialogErrors = Partial<Record<'id_vendor' | 'id_kontrak_vendor' | 'unit' | 'supir' | 'tanggal_tugas' | 'id_rute', string>>
 
 type HasilGagal = { supir: string; armada: string; alasan: string }
 
@@ -124,6 +125,8 @@ export default function PenugasanVendorTab() {
     const [dlgErrors, setDlgErrors]                   = useState<DialogErrors>({})
     const [createSubmitting, setCreateSubmitting]     = useState(false)
     const [titikDropCreate, setTitikDropCreate] = useState<string[]>([])
+    const [dlgRuteId, setDlgRuteId]             = useState('')
+    const [dlgRuteRows, setDlgRuteRows]         = useState<ProyekRute[]>([])
     const tambahDropCreate = () => setTitikDropCreate(prev => (prev.length < 10 ? [...prev, ''] : prev))
     const ubahDropCreate   = (i: number, v: string) => setTitikDropCreate(prev => prev.map((d, idx) => (idx === i ? v : d)))
     const hapusDropCreate  = (i: number) => setTitikDropCreate(prev => prev.filter((_, idx) => idx !== i))
@@ -185,14 +188,31 @@ export default function PenugasanVendorTab() {
         return () => { ignore = true }
     }, [dlgVendorId])
 
+    // Kontrak unit_only sengaja disembunyikan — penugasan unit vendor
+    // unit_only sudah ditangani lewat menu Penugasan (board unit) Operasional.
     const kontrakOptions = useMemo<Option[]>(() =>
         dlgKontrakList
-            .filter(k => k.id_vendor === dlgVendorId)
+            .filter(k => k.id_vendor === dlgVendorId && k.mekanisme !== 'unit_only')
             .map(k => ({
                 value: k.id_kontrak_vendor,
                 label: `${k.nomor_kontrak || 'Tanpa nomor'} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}${k.nilai_kontrak ? ' — Rp ' + formatNum(k.nilai_kontrak) : ''}`,
             })),
     [dlgKontrakList, dlgVendorId])
+
+    const adaKontrakUnitOnlyTersembunyi = useMemo(() =>
+        dlgVendorId !== '' && dlgKontrakList.some(k => k.id_vendor === dlgVendorId && k.mekanisme === 'unit_only'),
+    [dlgKontrakList, dlgVendorId])
+
+    const dlgRuteOptions = useMemo<Option[]>(() => {
+        const unik = new Map<string, string>()
+        dlgRuteRows.forEach(r => {
+            if (!unik.has(r.id_rute)) {
+                const arah = (r.asal || r.tujuan) ? ` (${r.asal ?? '?'} → ${r.tujuan ?? '?'})` : ''
+                unik.set(r.id_rute, `${r.nama_rute ?? r.kode_rute ?? r.id_rute}${arah}`)
+            }
+        })
+        return [...unik.entries()].map(([value, label]) => ({ value, label }))
+    }, [dlgRuteRows])
 
     const selectedKontrak = dlgKontrakList.find(k => k.id_kontrak_vendor === dlgKontrakId) ?? null
     const mekanisme = selectedKontrak?.mekanisme ?? null
@@ -260,12 +280,17 @@ export default function PenugasanVendorTab() {
         setDlgForm(EMPTY_DIALOG_FORM)
         setDlgErrors({})
         setTitikDropCreate([])
+        setDlgRuteId('')
+        setDlgRuteRows([])
     }
 
     const openCreateDialog = () => {
         if (!selectedProyek) return
         resetDialogState()
         setCreateDialogOpen(true)
+        proyekRuteService.list(selectedProyek)
+            .then(rows => setDlgRuteRows(rows))
+            .catch(() => setDlgRuteRows([]))
     }
 
     const closeCreateDialog = () => {
@@ -292,6 +317,7 @@ export default function PenugasanVendorTab() {
                 e.supir = `${nama} dipilih di ${dobel[1]} unit — satu supir hanya bisa membawa satu unit`
             }
         }
+        if (!dlgRuteId) e.id_rute = 'Rute wajib dipilih'
         if (!dlgForm.tanggal_tugas) e.tanggal_tugas = 'Tanggal tugas wajib diisi'
         setDlgErrors(e)
         return Object.keys(e).length === 0
@@ -312,6 +338,7 @@ export default function PenugasanVendorTab() {
                 penugasanService.create({
                     sumber:            'vendor',
                     id_proyek:         selectedProyek,
+                    id_rute:           dlgRuteId,
                     id_kontrak_vendor: dlgKontrakId,
                     id_armada_vendor:  a.id_armada_vendor,
                     id_supir:          mekanisme === 'unit_only' ? rowSupir[a.id_armada_vendor] : null,
@@ -932,6 +959,12 @@ export default function PenugasanVendorTab() {
                         </div>
                     )}
 
+                    {adaKontrakUnitOnlyTersembunyi && (
+                        <p className="-mt-1 mb-3 text-xs text-amber-600 dark:text-amber-400">
+                            Kontrak Unit Only tidak tampil di sini — penugasan unit vendor Unit Only dilakukan lewat menu Penugasan (Operasional)
+                        </p>
+                    )}
+
                     <div className="flex items-center justify-between gap-4 mb-3 mt-2">
                         <Input
                             size="sm"
@@ -1014,6 +1047,19 @@ export default function PenugasanVendorTab() {
                     )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-5">
+                        <FormItem label="Rute" asterisk invalid={!!dlgErrors.id_rute} errorMessage={dlgErrors.id_rute}>
+                            <Select<Option>
+                                isSearchable
+                                placeholder={dlgRuteOptions.length === 0 ? 'Belum ada rute terdaftar untuk proyek ini' : 'Pilih rute...'}
+                                options={dlgRuteOptions}
+                                value={dlgRuteOptions.find(o => o.value === dlgRuteId) ?? null}
+                                invalid={!!dlgErrors.id_rute}
+                                onChange={opt => {
+                                    setDlgRuteId(opt?.value ?? '')
+                                    setDlgErrors(prev => ({ ...prev, id_rute: undefined }))
+                                }}
+                            />
+                        </FormItem>
                         <FormItem label="Tanggal Tugas" asterisk invalid={!!dlgErrors.tanggal_tugas} errorMessage={dlgErrors.tanggal_tugas}>
                             <DatePicker
                                 inputFormat="DD/MM/YYYY"
@@ -1024,10 +1070,10 @@ export default function PenugasanVendorTab() {
                                 }}
                             />
                         </FormItem>
-                        <FormItem label="Estimasi Biaya">
+                        <FormItem label="Estimasi Biaya" extra="Kosongkan untuk otomatis dari uang jalan rate card proyek">
                             <Input
                                 prefix="Rp"
-                                placeholder="0"
+                                placeholder="Otomatis dari rate card"
                                 value={dlgForm.estimasi_biaya ? formatNum(Number(dlgForm.estimasi_biaya)) : ''}
                                 onChange={e => setDlgForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') }))}
                             />

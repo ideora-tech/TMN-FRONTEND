@@ -39,6 +39,23 @@ export interface EvaluasiVendorItem {
     dibuat_pada: string
 }
 
+export interface PenugasanUntukEvaluasi {
+    id_penugasan: string
+    tanggal_tugas: string | null
+    id_vendor: string
+    nama_vendor: string
+    kode_proyek: string | null
+    nama_proyek: string | null
+    nopol: string | null
+    nama_supir: string | null
+    id_evaluasi: string | null
+    nilai_ketepatan_waktu: number | null
+    nilai_kualitas: number | null
+    nilai_harga: number | null
+    nilai_responsif: number | null
+    catatan: string | null
+}
+
 export type EvaluasiPayload = {
     nilai_armada?: number | null
     nilai_supir?: number | null
@@ -78,5 +95,12 @@ export const evaluasiService = {
     async listByVendor(idVendor: string) {
         const { data } = await axios.get(API_ENDPOINTS.VENDOR_EVALUASI(idVendor))
         return data.data as EvaluasiVendorItem[]
+    },
+
+    async listPenugasanUntukEvaluasi(page = 1, limit = 10, search?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.EVALUASI_VENDOR_PENUGASAN, {
+            params: { page, limit, search: search || undefined },
+        })
+        return data as { data: PenugasanUntukEvaluasi[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
 }

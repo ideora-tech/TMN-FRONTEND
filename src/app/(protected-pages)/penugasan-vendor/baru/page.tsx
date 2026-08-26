@@ -86,8 +86,10 @@ export default function PenugasanVendorBaruPage() {
 
     // kontrakList sudah difilter server-side untuk id_vendor terpilih; guard di sini menjaga
     // agar tidak menampilkan sisa data basi selama fetch vendor baru masih berlangsung.
+    // Kontrak unit_only disembunyikan — penugasan unit vendor unit_only lewat
+    // menu Penugasan (board unit) Operasional.
     const kontrakOptions = kontrakList
-        .filter(k => k.id_vendor === form.id_vendor)
+        .filter(k => k.id_vendor === form.id_vendor && k.mekanisme !== 'unit_only')
         .map(k => ({ value: k.id_kontrak_vendor, label: `${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}${k.nilai_kontrak ? ' — Rp ' + formatNum(k.nilai_kontrak) : ''}` }))
 
     const selectedKontrak = kontrakList.find(k => k.id_kontrak_vendor === form.id_kontrak_vendor) ?? null

@@ -1,8 +1,8 @@
 'use client'
-import { Fragment, use, useEffect, useState, useCallback } from 'react'
+import { Fragment, use, useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Tag, Spinner, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh } from 'react-icons/hi'
+import { Card, Button, Input, Tag, Spinner, toast, Notification } from '@/components/ui'
+import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { peranService, Peran } from '@/services/peran.service'
@@ -27,6 +27,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
     const [permsAwal, setPermsAwal] = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving]   = useState(false)
+    const [cariMenu, setCariMenu] = useState('')
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -91,7 +92,25 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         })
     }
 
-    const semuaItem = grup.flatMap(g => g.items)
+    // Filter pencarian: cocokkan nama grup (tampilkan seluruh isinya) atau
+    // nama/path menu; grup tanpa hasil disembunyikan.
+    const grupTampil = useMemo(() => {
+        const q = cariMenu.trim().toLowerCase()
+        if (!q) return grup
+        return grup
+            .map(g => g.root.nama_menu.toLowerCase().includes(q)
+                ? g
+                : {
+                    ...g,
+                    items: g.items.filter(m =>
+                        m.nama_menu.toLowerCase().includes(q) || (m.path ?? '').toLowerCase().includes(q)),
+                })
+            .filter(g => g.items.length > 0)
+    }, [grup, cariMenu])
+
+    // Checkbox "Semua"/per-kolom di header bekerja pada baris yang TAMPIL —
+    // saat pencarian aktif, centang massal tidak menyentuh menu yang tersembunyi.
+    const semuaItem = grupTampil.flatMap(g => g.items)
 
     const toggleKolom = (aksi: string) => {
         const allOn = semuaItem.every(m => perms[permKey(m.id_menu, aksi)])
@@ -210,8 +229,26 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                     </div>
 
+                    <div className="mb-4">
+                        <Input
+                            className="max-w-sm"
+                            size="sm"
+                            placeholder="Cari menu atau path..."
+                            prefix={<HiOutlineSearch className="text-lg text-gray-400" />}
+                            suffix={cariMenu
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setCariMenu('')} />
+                                : null}
+                            value={cariMenu}
+                            onChange={e => setCariMenu(e.target.value)}
+                        />
+                    </div>
+
                     {grup.length === 0 ? (
                         <p className="text-gray-400 text-sm py-4 text-center">Belum ada menu terdaftar</p>
+                    ) : grupTampil.length === 0 ? (
+                        <p className="text-gray-400 text-sm py-4 text-center">
+                            Tidak ada menu yang cocok dengan &quot;{cariMenu}&quot;
+                        </p>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -259,7 +296,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {grup.map(g => {
+                                    {grupTampil.map(g => {
                                         const adaAnak = g.items.some(m => m.id_menu !== g.root.id_menu)
                                         return (
                                             <Fragment key={g.root.id_menu}>
@@ -309,6 +346,9 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                     )}
                 </form>
+                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                </div>
             </Card>
         </div>
     )

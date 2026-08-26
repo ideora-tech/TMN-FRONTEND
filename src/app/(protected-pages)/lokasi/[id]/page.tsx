@@ -153,6 +153,11 @@ export default function LokasiDetailPage({ params }: { params: Promise<{ id: str
                         </form>
                     </>
                 )}
+                {!editing && (
+                    <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    </div>
+                )}
             </Card>
         </div>
     )

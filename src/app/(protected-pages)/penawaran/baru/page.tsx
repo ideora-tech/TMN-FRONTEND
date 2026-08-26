@@ -102,7 +102,7 @@ export default function PenawaranBaruPage() {
 
     const tambahRuteOption = (r: Rute) =>
         setRuteOptions(prev => prev.some(o => o.value === r.id_rute)
-            ? prev
+            ? prev.map(o => o.value === r.id_rute ? { ...o, label: labelRute(r) } : o)
             : [...prev, { value: r.id_rute, label: labelRute(r) }])
 
     const setItemRute = (index: number, value: string) => updateItem(index, { id_rute: value })

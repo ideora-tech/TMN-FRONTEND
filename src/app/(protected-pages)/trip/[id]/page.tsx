@@ -3,7 +3,6 @@ import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Checkbox, Dialog, Input, Tag, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import EvaluasiPenugasanCard from '@/components/shared/EvaluasiPenugasanCard'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
 import {
     HiArrowLeft,
@@ -618,13 +617,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         })()}
                     </div>
                 )}
+
+                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                </div>
             </Card>
 
-            {trip.status === 'selesai' && trip.id_penugasan && (
-                <div id="evaluasi-penugasan-card">
-                    <EvaluasiPenugasanCard idPenugasan={trip.id_penugasan} sumber={trip.sumber ?? 'internal'} />
-                </div>
-            )}
             </div>
 
             <Dialog isOpen={titikDropDialogOpen} onRequestClose={closeTitikDropDialog} onClose={closeTitikDropDialog} width={520}>

@@ -2,7 +2,7 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Tag, toast, Notification } from '@/components/ui'
+import { Card, Button, Tag, toast, Notification } from '@/components/ui'
 import { HiArrowLeft } from 'react-icons/hi'
 import { PiMapPinDuotone, PiTruckDuotone, PiCurrencyCircleDollarDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
@@ -167,7 +167,11 @@ export default function LaporanDetailPage({ params }: { params: Promise<{ id: st
                         </table>
                     </div>
                 )}
+                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                </div>
             </Card>
+
         </div>
     )
 }

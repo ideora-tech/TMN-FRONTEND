@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Button, Dialog, Input, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlineSearch, HiPlusCircle } from 'react-icons/hi'
+import { Button, Dialog, Input, Tooltip, toast, Notification } from '@/components/ui'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineSearch, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { parseApiError } from '@/utils/error.util'
 import { RuteBaruForm } from '@/components/shared/RuteBaruDialog'
@@ -17,12 +17,14 @@ type Props = {
     onRuteBaru: (rute: Rute) => void
 }
 
-type Tampilan = 'daftar' | 'buat'
+type Tampilan = 'daftar' | 'buat' | 'edit'
 
 const LIMIT_RUTE = 20
 
 export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }: Props) {
     const [tampilan, setTampilan] = useState<Tampilan>('daftar')
+    const [ruteEdit, setRuteEdit] = useState<Rute | null>(null)
+    const [ruteBaruDibuat, setRuteBaruDibuat] = useState<Rute | null>(null)
 
     const [cari, setCari] = useState('')
     const [cariDebounced, setCariDebounced] = useState('')
@@ -36,6 +38,8 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
     useEffect(() => {
         if (!isOpen) return
         setTampilan('daftar')
+        setRuteEdit(null)
+        setRuteBaruDibuat(null)
         setCari('')
         setCariDebounced('')
     }, [isOpen])
@@ -84,13 +88,27 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
 
     const bukaFormBuat = () => setTampilan('buat')
 
+    const bukaFormEdit = (rute: Rute) => {
+        setRuteEdit(rute)
+        setTampilan('edit')
+    }
+
     const ruteBaruTersimpan = (rute: Rute) => {
         onRuteBaru(rute)
-        onPilih({ id_rute: rute.id_rute })
-        toast.push(<Notification type="success" title="Rute berhasil dibuat & ditambahkan ke penawaran" />)
+        setRuteBaruDibuat(rute)
+        toast.push(<Notification type="success" title="Rute berhasil dibuat — pilih dari daftar untuk menambahkannya ke penawaran" />)
         setCari('')
         setCariDebounced('')
         setVersiDaftar(v => v + 1)
+        setTampilan('daftar')
+    }
+
+    const ruteEditTersimpan = (rute: Rute) => {
+        onRuteBaru(rute)
+        if (ruteBaruDibuat?.id_rute === rute.id_rute) setRuteBaruDibuat(rute)
+        toast.push(<Notification type="success" title="Rute berhasil diperbarui" />)
+        setVersiDaftar(v => v + 1)
+        setRuteEdit(null)
         setTampilan('daftar')
     }
 
@@ -117,27 +135,51 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
                     </div>
                     <div className="max-h-[55vh] overflow-y-auto pr-1 flex flex-col gap-2">
                         {memuatRute && <p className="text-sm text-gray-400 py-6 text-center">Memuat...</p>}
-                        {!memuatRute && ruteRows.length === 0 && (
+                        {!memuatRute && ruteRows.length === 0 && !ruteBaruDibuat && (
                             <p className="text-sm text-gray-400 py-6 text-center">
                                 Tidak ada rute yang cocok — buat rute baru dengan tombol di atas
                             </p>
                         )}
-                        {!memuatRute && ruteRows.map(r => (
-                            <div key={r.id_rute}
-                                className="flex items-center justify-between gap-3 px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{r.nama_rute}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                                        {r.kode_rute}
-                                        {(r.asal || r.tujuan) ? ` · ${r.asal ?? '?'} → ${r.tujuan ?? '?'}` : ''}
-                                    </p>
+                        {!memuatRute && [
+                            ...(ruteBaruDibuat ? [ruteBaruDibuat] : []),
+                            ...ruteRows.filter(r => r.id_rute !== ruteBaruDibuat?.id_rute),
+                        ].map(r => {
+                            const baruDibuat = r.id_rute === ruteBaruDibuat?.id_rute
+                            return (
+                                <div key={r.id_rute}
+                                    className={`flex items-center justify-between gap-3 px-3 py-2.5 border rounded-lg ${baruDibuat
+                                        ? 'border-emerald-300 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/10'
+                                        : 'border-gray-200 dark:border-gray-700'}`}>
+                                    <div className="min-w-0">
+                                        <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">
+                                            {r.nama_rute}
+                                            {baruDibuat && (
+                                                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                    Baru
+                                                </span>
+                                            )}
+                                        </p>
+                                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                                            {r.kode_rute}
+                                            {(r.asal || r.tujuan) ? ` · ${r.asal ?? '?'} → ${r.tujuan ?? '?'}` : ''}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <Tooltip title="Edit Rute">
+                                            <span
+                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                onClick={() => bukaFormEdit(r)}>
+                                                <HiOutlinePencilAlt className="text-base" />
+                                            </span>
+                                        </Tooltip>
+                                        <Button type="button" size="sm" variant="solid"
+                                            onClick={() => pilihRute(r.id_rute)}>
+                                            Pilih
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button type="button" size="sm" variant="solid" className="flex-shrink-0"
-                                    onClick={() => pilihRute(r.id_rute)}>
-                                    Pilih
-                                </Button>
-                            </div>
-                        ))}
+                            )
+                        })}
                         {!memuatRute && adaLagi && (
                             <Button type="button" size="sm" variant="default" loading={memuatLagi} onClick={muatLebihBanyak}>
                                 Muat Lebih Banyak
@@ -153,17 +195,28 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
                     <div className="flex items-center gap-2 mb-1">
                         <button
                             type="button"
-                            onClick={() => setTampilan('daftar')}
+                            onClick={() => { setTampilan('daftar'); setRuteEdit(null) }}
                             className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors"
                         >
                             <HiArrowLeft />
                         </button>
-                        <h5 className="text-base font-semibold">Rute Baru</h5>
+                        <h5 className="text-base font-semibold">
+                            {tampilan === 'edit' ? 'Edit Rute' : 'Rute Baru'}
+                        </h5>
                     </div>
                     <p className="text-xs text-gray-400 mb-4 ml-9">
-                        Rute langsung tersedia di penawaran setelah disimpan
+                        {tampilan === 'edit'
+                            ? `Perubahan berlaku untuk rute ${ruteEdit?.nama_rute ?? ''} di semua tempat rute ini dipakai`
+                            : 'Setelah disimpan, rute muncul di daftar — pilih dari daftar untuk menambahkannya ke penawaran'}
                     </p>
-                    <RuteBaruForm onBatal={() => setTampilan('daftar')} onSaved={ruteBaruTersimpan} />
+                    {tampilan === 'edit' ? (
+                        <RuteBaruForm key={ruteEdit?.id_rute}
+                            ruteAwal={ruteEdit}
+                            onBatal={() => { setTampilan('daftar'); setRuteEdit(null) }}
+                            onSaved={ruteEditTersimpan} />
+                    ) : (
+                        <RuteBaruForm onBatal={() => setTampilan('daftar')} onSaved={ruteBaruTersimpan} />
+                    )}
                 </>
             )}
         </Dialog>

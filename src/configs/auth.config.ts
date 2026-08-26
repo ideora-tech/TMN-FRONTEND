@@ -36,6 +36,7 @@ export default {
                         email:       json.data.pengguna.email,
                         accessToken: json.data.token,
                         kodePeran:   json.data.pengguna.kode_peran ?? null,
+                        namaJabatan: json.data.pengguna.karyawan?.nama_jabatan ?? null,
                     }
                 } catch {
                     return null
@@ -50,6 +51,7 @@ export default {
                 token.accessToken = u.accessToken
                 token.id          = user.id
                 token.kodePeran   = u.kodePeran ?? null
+                token.namaJabatan = u.namaJabatan ?? null
             }
             return token
         },
@@ -59,8 +61,9 @@ export default {
                 accessToken: token.accessToken,
                 user: {
                     ...session.user,
-                    id:        token.id as string,
-                    kodePeran: token.kodePeran as string | null,
+                    id:          token.id as string,
+                    kodePeran:   token.kodePeran as string | null,
+                    namaJabatan: token.namaJabatan as string | null,
                     authority: token.kodePeran
                         ? [(token.kodePeran as string).toLowerCase()]
                         : ['user'],

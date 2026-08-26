@@ -21,11 +21,20 @@ const FORM_RUTE_KOSONG: FormRuteBaru = {
     estimasi_jarak_km: '', estimasi_durasi_menit: '',
 }
 
-export function RuteBaruForm({ onBatal, onSaved }: {
+export function RuteBaruForm({ onBatal, onSaved, ruteAwal }: {
     onBatal: () => void
     onSaved: (rute: Rute) => void
+    ruteAwal?: Rute | null
 }) {
-    const [formRute, setFormRute] = useState<FormRuteBaru>(FORM_RUTE_KOSONG)
+    const [formRute, setFormRute] = useState<FormRuteBaru>(() => ruteAwal
+        ? {
+            nama_rute: ruteAwal.nama_rute,
+            id_lokasi_asal: ruteAwal.id_lokasi_asal ?? '',
+            id_lokasi_tujuan: ruteAwal.id_lokasi_tujuan ?? '',
+            estimasi_jarak_km: ruteAwal.estimasi_jarak_km != null ? String(ruteAwal.estimasi_jarak_km) : '',
+            estimasi_durasi_menit: ruteAwal.estimasi_durasi_menit != null ? String(ruteAwal.estimasi_durasi_menit) : '',
+        }
+        : FORM_RUTE_KOSONG)
     const [errorsRute, setErrorsRute] = useState<Partial<Record<'nama_rute', string>>>({})
     const [lokasiOptions, setLokasiOptions] = useState<Option[]>([])
     const [menyimpan, setMenyimpan] = useState(false)
@@ -48,13 +57,16 @@ export function RuteBaruForm({ onBatal, onSaved }: {
 
         setMenyimpan(true)
         try {
-            const rute = await ruteService.create({
+            const payload = {
                 nama_rute: formRute.nama_rute.trim(),
                 id_lokasi_asal: formRute.id_lokasi_asal || null,
                 id_lokasi_tujuan: formRute.id_lokasi_tujuan || null,
                 estimasi_jarak_km: formRute.estimasi_jarak_km ? parseFloat(formRute.estimasi_jarak_km) : null,
                 estimasi_durasi_menit: formRute.estimasi_durasi_menit ? parseInt(formRute.estimasi_durasi_menit) : null,
-            })
+            }
+            const rute = ruteAwal
+                ? await ruteService.update(ruteAwal.id_rute, payload)
+                : await ruteService.create(payload)
             onSaved(rute)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -102,7 +114,9 @@ export function RuteBaruForm({ onBatal, onSaved }: {
             </div>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Button type="button" variant="plain" onClick={onBatal}>Kembali</Button>
-                <Button type="submit" variant="solid" loading={menyimpan}>Simpan Rute</Button>
+                <Button type="submit" variant="solid" loading={menyimpan}>
+                    {ruteAwal ? 'Simpan Perubahan' : 'Simpan Rute'}
+                </Button>
             </div>
         </form>
     )
