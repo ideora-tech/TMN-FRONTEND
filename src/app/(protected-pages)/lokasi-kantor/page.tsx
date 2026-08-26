@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -103,7 +103,7 @@ export default function LokasiKantorPage() {
                     <Tooltip title="Detail">
                         <span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                             onClick={() => router.push(ROUTES.LOKASI_KANTOR_DETAIL(row.original.id_lokasi))}>
-                            <HiOutlinePencilAlt className="text-lg" />
+                            <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Hapus">

@@ -1,8 +1,8 @@
 ﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -170,7 +170,6 @@ export default function ProjectPage() {
                     <h3 className="font-bold">Proyek</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola proyek klien</p>
                 </div>
-                {/* Tambah Proyek — disembunyikan sementara atas permintaan user (26 Agu 2026)
                 <Button
                     variant="solid"
                     size="sm"
@@ -179,7 +178,6 @@ export default function ProjectPage() {
                 >
                     Tambah Proyek
                 </Button>
-                */}
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
