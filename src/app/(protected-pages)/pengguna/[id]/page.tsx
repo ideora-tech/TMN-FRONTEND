@@ -26,11 +26,9 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
     const [saving, setSaving]   = useState(false)
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
 
-    // tautan supir (akun login mobile)
+    // tautan supir (akun login mobile) — read-only di sini, dikelola dari halaman Supir
     const [supirList, setSupirList]     = useState<Supir[]>([])
     const [karyawanList, setKaryawanList] = useState<Karyawan[]>([])
-    const [idSupirAwal, setIdSupirAwal] = useState('')
-    const [idSupirTaut, setIdSupirTaut] = useState('')
 
     const [pwOpen, setPwOpen]   = useState(false)
     const [pwForm, setPwForm]   = useState({ kata_sandi_baru: '', konfirmasi: '' })
@@ -47,21 +45,12 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
             setData(p); setForm(p)
             setPeranOptions((pRes.data.data as Peran[]).map(r => ({ value: r.kode_peran, label: r.nama_peran })))
             if (kRes) setKaryawanList(kRes.data)
-            if (sRes) {
-                setSupirList(sRes.data)
-                const tertaut = sRes.data.find((s: Supir) => s.id_pengguna === id)
-                setIdSupirAwal(tertaut?.id_supir ?? '')
-                setIdSupirTaut(tertaut?.id_supir ?? '')
-            }
+            if (sRes) setSupirList(sRes.data)
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
           .finally(() => setLoading(false))
     }, [id])
 
-    const supirOptions = supirList
-        .filter(s => !s.id_pengguna || s.id_pengguna === id)
-        .map(s => ({ value: s.id_supir, label: `${s.nama} — ${s.no_sim ?? 'tanpa SIM'}` }))
-
-    const namaSupirTertaut = supirList.find(s => s.id_supir === idSupirAwal)?.nama ?? null
+    const supirTertaut = supirList.find(s => s.id_pengguna === id) ?? null
 
     const karyawanOptions = karyawanList.map(k => ({ value: k.id_karyawan, label: `${k.nama_karyawan} — ${k.nik}` }))
 
@@ -76,21 +65,6 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 id_karyawan: form.id_karyawan ?? null,
             })
             setData(updated)
-
-            if (form.kode_peran === 'SUPIR' && idSupirTaut !== idSupirAwal) {
-                try {
-                    if (idSupirAwal) await supirService.update(idSupirAwal, { id_pengguna: null })
-                    if (idSupirTaut) await supirService.update(idSupirTaut, { id_pengguna: id })
-                    setSupirList(prev => prev.map(s => ({
-                        ...s,
-                        id_pengguna: s.id_supir === idSupirTaut ? id : (s.id_pengguna === id ? null : s.id_pengguna),
-                    })))
-                    setIdSupirAwal(idSupirTaut)
-                } catch (errTaut) {
-                    setIdSupirTaut(idSupirAwal)
-                    toast.push(<Notification type="warning" title={`Data tersimpan, tapi tautan supir gagal diperbarui: ${parseApiError(errTaut)}`} />)
-                }
-            }
 
             setEditing(false)
             toast.push(<Notification type="success" title="Pengguna berhasil diperbarui" />)
@@ -173,10 +147,13 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                         : <span className="text-gray-400">Belum ditautkan</span>,
                                 },
                                 ...(data.kode_peran === 'SUPIR' ? [{
-                                    label: 'Supir Tertaut',
-                                    value: namaSupirTertaut
-                                        ? <span className="font-semibold">{namaSupirTertaut}</span>
-                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                    label: 'Dipakai oleh Supir',
+                                    value: supirTertaut
+                                        ? <span className="font-semibold text-primary cursor-pointer hover:underline"
+                                            onClick={() => router.push(ROUTES.SUPIR_DETAIL(supirTertaut.id_supir))}>
+                                            {supirTertaut.nama}
+                                          </span>
+                                        : <span className="text-gray-400">Belum ada — tautkan dari halaman Supir</span>,
                                 }] : []),
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -229,18 +206,21 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
                             </FormItem>
                             {form.kode_peran === 'SUPIR' && (
-                                <FormItem label="Tautkan ke Supir (opsional)"
-                                    extra={<span className="text-xs text-gray-400">Supir yang memakai akun ini untuk login aplikasi mobile — hanya supir yang belum punya akun yang muncul</span>}>
-                                    <Select isClearable isSearchable
-                                        placeholder="Pilih supir..."
-                                        options={supirOptions}
-                                        value={supirOptions.find(o => o.value === idSupirTaut) ?? null}
-                                        onChange={opt => setIdSupirTaut(opt?.value ?? '')} />
+                                <FormItem label="Dipakai oleh Supir"
+                                    extra={<span className="text-xs text-gray-400">Tautan akun login mobile dikelola dari halaman Supir → Edit → Akun Login Mobile</span>}>
+                                    <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
+                                        {supirTertaut
+                                            ? <span className="font-semibold text-primary cursor-pointer hover:underline"
+                                                onClick={() => router.push(ROUTES.SUPIR_DETAIL(supirTertaut.id_supir))}>
+                                                {supirTertaut.nama}
+                                              </span>
+                                            : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
+                                    </div>
                                 </FormItem>
                             )}
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setIdSupirTaut(idSupirAwal) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
