@@ -68,6 +68,10 @@ export interface AssignHarianHasil {
 }
 
 export const penugasanHarianService = {
+    async aktivitasBoard() {
+        const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_BOARD_AKTIVITAS)
+        return data.data as { terakhir: string | null }
+    },
     async board(dari: string, sampai: string) {
         const { data } = await axios.get(API_ENDPOINTS.PENUGASAN_BOARD, { params: { dari, sampai } })
         return data.data as BoardData

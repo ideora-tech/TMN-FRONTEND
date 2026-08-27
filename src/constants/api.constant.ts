@@ -214,6 +214,7 @@ export const API_ENDPOINTS = {
     PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
     PENUGASAN_HARIAN: '/api/proxy/penugasan/harian',
     PENUGASAN_BOARD:  '/api/proxy/penugasan/board',
+    PENUGASAN_BOARD_AKTIVITAS: '/api/proxy/penugasan/board/aktivitas',
 
     // Pengguna
     PENGGUNA:                  '/api/proxy/pengguna',

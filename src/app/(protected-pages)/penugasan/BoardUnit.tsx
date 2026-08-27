@@ -98,8 +98,8 @@ export default function BoardUnit() {
     const aksiFetchRef = useRef<string | null>(null)
     const assignRuteFetchRef = useRef<string | null>(null)
 
-    const fetchBoard = useCallback(async () => {
-        setLoading(true)
+    const fetchBoard = useCallback(async (senyap = false) => {
+        if (!senyap) setLoading(true)
         try {
             const dari   = bulan.format('YYYY-MM-DD')
             const sampai = bulan.endOf('month').format('YYYY-MM-DD')
@@ -107,13 +107,38 @@ export default function BoardUnit() {
             setUnits(hasil.units)
             setAssignments(hasil.assignments)
         } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            if (!senyap) toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setLoading(false)
+            if (!senyap) setLoading(false)
         }
     }, [bulan])
 
     useEffect(() => { fetchBoard() }, [fetchBoard])
+
+    const stempelTerakhir = useRef<string | null>(null)
+
+    useEffect(() => {
+        const cekAktivitas = async () => {
+            if (document.hidden) return
+            try {
+                const { terakhir } = await penugasanHarianService.aktivitasBoard()
+                if (terakhir !== stempelTerakhir.current) {
+                    const pertamaKali = stempelTerakhir.current === null
+                    stempelTerakhir.current = terakhir
+                    if (!pertamaKali) fetchBoard(true)
+                }
+            } catch {
+                /* cek berikutnya akan mencoba lagi */
+            }
+        }
+        cekAktivitas()
+        const interval = setInterval(cekAktivitas, 8000)
+        document.addEventListener('visibilitychange', cekAktivitas)
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', cekAktivitas)
+        }
+    }, [fetchBoard])
 
     useEffect(() => {
         supirService.list(1, 500, undefined, 'aktif').then(res => setSupirAktif(res.data)).catch(() => {})
