@@ -10,8 +10,6 @@ export interface JadwalShift {
     shift_nama: string
     jam_mulai: string
     jam_selesai: string
-    nopol_alokasi?: string | null
-    sumber_alokasi?: string | null
     status_trip?: 'berjalan' | 'selesai' | null
     id_trip?: string | null
     trips?: { status: 'berjalan' | 'selesai'; id_trip: string }[]
