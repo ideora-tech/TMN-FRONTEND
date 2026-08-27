@@ -51,6 +51,9 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
     }, [id])
 
     const supirTertaut = supirList.find(s => s.id_pengguna === id) ?? null
+    const namaKaryawanSupir = supirTertaut?.id_karyawan
+        ? (karyawanList.find(k => k.id_karyawan === supirTertaut.id_karyawan)?.nama_karyawan ?? supirTertaut.id_karyawan)
+        : null
 
     const karyawanOptions = karyawanList.map(k => ({ value: k.id_karyawan, label: `${k.nama_karyawan} — ${k.nik}` }))
 
@@ -62,7 +65,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 email:       form.email,
                 kode_peran:  form.kode_peran ?? null,
                 aktif:       form.aktif,
-                id_karyawan: form.id_karyawan ?? null,
+                id_karyawan: form.kode_peran === 'SUPIR' ? null : (form.id_karyawan ?? null),
             })
             setData(updated)
 
@@ -140,12 +143,19 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 { label: 'Email',         value: data.email },
                                 { label: 'Peran',         value: peranOptions.find(o => o.value === data.kode_peran)?.label ?? data.kode_peran ?? <span className="text-gray-400">—</span> },
                                 { label: 'Login Terakhir', value: data.login_terakhir ? dayjs(data.login_terakhir).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span> },
-                                {
+                                ...(data.kode_peran === 'SUPIR' ? [{
+                                    label: 'Karyawan (via Profil Supir)',
+                                    value: supirTertaut
+                                        ? (namaKaryawanSupir
+                                            ? <span className="font-semibold">{namaKaryawanSupir}</span>
+                                            : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
+                                        : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>,
+                                }] : [{
                                     label: 'Karyawan Tertaut',
                                     value: data.id_karyawan
                                         ? <span className="font-semibold">{karyawanOptions.find(o => o.value === data.id_karyawan)?.label ?? data.id_karyawan}</span>
                                         : <span className="text-gray-400">Belum ditautkan</span>,
-                                },
+                                }]),
                                 ...(data.kode_peran === 'SUPIR' ? [{
                                     label: 'Dipakai oleh Supir',
                                     value: supirTertaut
@@ -197,14 +207,27 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
-                            <FormItem label="Tautkan ke Karyawan (opsional)"
-                                extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
-                                <Select isClearable isSearchable
-                                    placeholder="Pilih karyawan..."
-                                    options={karyawanOptions}
-                                    value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
-                                    onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
-                            </FormItem>
+                            {form.kode_peran === 'SUPIR' ? (
+                                <FormItem label="Karyawan (via Profil Supir)"
+                                    extra={<span className="text-xs text-gray-400">Mengikuti profil supir — dikelola dari halaman Supir → Edit → Tautkan ke Karyawan</span>}>
+                                    <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
+                                        {supirTertaut
+                                            ? (namaKaryawanSupir
+                                                ? <span className="font-semibold">{namaKaryawanSupir}</span>
+                                                : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
+                                            : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
+                                    </div>
+                                </FormItem>
+                            ) : (
+                                <FormItem label="Tautkan ke Karyawan (opsional)"
+                                    extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
+                                    <Select isClearable isSearchable
+                                        placeholder="Pilih karyawan..."
+                                        options={karyawanOptions}
+                                        value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                                        onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
+                                </FormItem>
+                            )}
                             {form.kode_peran === 'SUPIR' && (
                                 <FormItem label="Dipakai oleh Supir"
                                     extra={<span className="text-xs text-gray-400">Tautan akun login mobile dikelola dari halaman Supir → Edit → Akun Login Mobile</span>}>
