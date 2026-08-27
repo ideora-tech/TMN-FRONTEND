@@ -6,7 +6,7 @@ import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast,
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiPlusCircle, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlineEye } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -968,7 +968,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <div className="flex items-center justify-between mb-3">
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
-                                <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addRawatItem}>Tambah Part</Button>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={addRawatItem}>Tambah Part</Button>
                             </div>
                             {rawatItems.length === 0 ? (
                                 <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>
@@ -1274,7 +1274,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-3">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
-                            <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={() => addItem(setEditRawatItems)}>Tambah Part</Button>
+                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => addItem(setEditRawatItems)}>Tambah Part</Button>
                         </div>
                         {editRawatLoading ? (
                             <div className="flex justify-center py-4"><Spinner /></div>

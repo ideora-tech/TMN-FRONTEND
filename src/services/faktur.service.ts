@@ -25,7 +25,8 @@ export interface Faktur {
     total: number
     nama_pajak?: string | null
     persen_pajak?: number | null
-    status: 'draft' | 'terkirim' | 'lunas' | 'batal'
+    status: 'draft' | 'menunggu_approval' | 'terkirim' | 'lunas' | 'batal'
+    alasan_ditolak_internal: string | null
     tanggal_faktur?: string
     jatuh_tempo?: string
     id_proyek?: string | null
@@ -87,6 +88,10 @@ export const fakturService = {
     },
     async updateStatus(id: string, status: string) {
         const { data } = await axios.patch(API_ENDPOINTS.FAKTUR_STATUS(id), { status })
+        return data.data as Faktur
+    },
+    async ajukanApproval(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.FAKTUR_AJUKAN_APPROVAL(id))
         return data.data as Faktur
     },
 }

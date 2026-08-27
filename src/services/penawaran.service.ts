@@ -1,13 +1,14 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type PenawaranStatus = 'draft' | 'terkirim' | 'negosiasi' | 'disetujui' | 'ditolak'
+export type PenawaranStatus = 'draft' | 'menunggu_approval' | 'terkirim' | 'negosiasi' | 'disetujui' | 'ditolak'
 export type TipeHargaPenawaran = 'per_rit' | 'borongan'
 
 export interface Penawaran {
     id_penawaran: string
     id_perusahaan: string
     id_klien: string | null
+    nama_klien?: string | null
     nomor_penawaran: string
     judul: string
     tipe_harga: TipeHargaPenawaran
@@ -16,6 +17,7 @@ export interface Penawaran {
     tanggal_penawaran: string | null
     tanggal_berlaku: string | null
     catatan: string | null
+    alasan_ditolak_internal: string | null
     id_proyek: string | null
     id_penawaran_induk: string | null
     aktif: boolean
@@ -30,7 +32,6 @@ export interface PenawaranPayload {
     id_klien?: string | null
     tipe_harga?: TipeHargaPenawaran
     nilai_penawaran?: number | null
-    status?: PenawaranStatus
     tanggal_penawaran?: string | null
     tanggal_berlaku?: string | null
     catatan?: string | null
@@ -76,6 +77,9 @@ export const penawaranService = {
 
     updateStatus: (id: string, status: PenawaranStatus): Promise<Penawaran> =>
         axios.put(API_ENDPOINTS.PENAWARAN_STATUS(id), { status }).then(r => r.data?.data),
+
+    ajukanApproval: (id: string): Promise<Penawaran> =>
+        axios.post(API_ENDPOINTS.PENAWARAN_AJUKAN_APPROVAL(id)).then(r => r.data?.data),
 
     delete: (id: string): Promise<void> =>
         axios.delete(API_ENDPOINTS.PENAWARAN_DETAIL(id)).then(() => undefined),

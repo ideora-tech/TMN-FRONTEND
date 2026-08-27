@@ -121,6 +121,7 @@ export default function PenawaranBaruPage() {
     const validate = () => {
         const e: Partial<Record<keyof FormState, string>> = {}
         if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
+        if (!form.id_klien) e.id_klien = 'Klien wajib dipilih'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -136,7 +137,7 @@ export default function PenawaranBaruPage() {
         try {
             const created = await penawaranService.create({
                 judul: form.judul.trim(),
-                id_klien: form.id_klien || null,
+                id_klien: form.id_klien,
                 tipe_harga: form.tipe_harga,
                 nilai_penawaran: nilaiOtomatis
                     ? undefined
@@ -198,8 +199,8 @@ export default function PenawaranBaruPage() {
                                 value={TIPE_HARGA_OPTIONS.find(o => o.value === form.tipe_harga) ?? null}
                                 onChange={opt => setForm(p => ({ ...p, tipe_harga: opt?.value ?? 'per_rit' }))} />
                         </FormItem>
-                        <FormItem label="Klien">
-                            <Select<Option> isClearable isSearchable placeholder="Pilih klien (opsional)"
+                        <FormItem label="Klien" asterisk invalid={!!errors.id_klien} errorMessage={errors.id_klien}>
+                            <Select<Option> isSearchable placeholder="Pilih klien"
                                 options={klienOptions}
                                 value={klienOptions.find(o => o.value === form.id_klien) ?? null}
                                 onChange={opt => set('id_klien', opt?.value ?? '')} />

@@ -31,18 +31,20 @@ export const PENERIMA_LABEL: Partial<Record<KategoriPengajuan, string>> = {
 
 export const STATUS_LABEL: Record<StatusPengajuan, string> = {
     diajukan:          'Diajukan',
-    dicek:             'Dicek',
+    dicek:             'Menunggu Persetujuan Transfer',
     menunggu_approval: 'Menunggu Approval',
     disetujui:         'Disetujui',
+    siap_transfer:     'Siap Transfer',
     ditolak:           'Ditolak',
     ditransfer:        'Ditransfer',
 }
 
 export const STATUS_TAG: Record<StatusPengajuan, string> = {
     diajukan:          'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    dicek:             'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-100',
     menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
     disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
+    siap_transfer:     'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
     ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
     ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }

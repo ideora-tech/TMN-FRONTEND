@@ -151,7 +151,7 @@ export default function PembelianDetailPage() {
             <p className="text-xs text-gray-400">
                 {data.id_perawatan
                     ? 'Biaya pembelian ini termasuk dalam pengajuan perawatan terkait'
-                    : 'Approval & pembayaran dilakukan di menu Keuangan → Proses Pembayaran'}
+                    : 'Approval oleh approver sesuai Konfigurasi Approval (via Persetujuan Saya), pembayaran di menu Keuangan → Proses Pembayaran'}
             </p>
 
             {data.status === 'ditolak' && data.alasan_ditolak && (
@@ -345,7 +345,7 @@ export default function PembelianDetailPage() {
             <Card>
                 <div className="flex flex-wrap justify-between items-center gap-3">
                     <div>
-                        <h5>Approval Keuangan</h5>
+                        <h5>Approval Pengajuan Pengeluaran</h5>
                         {data.pengajuan_keuangan ? (
                             <p className="text-xs text-gray-400 mt-0.5 font-mono">
                                 {data.pengajuan_keuangan.nomor_pengajuan} — {formatRupiah(data.pengajuan_keuangan.nominal)}
@@ -353,8 +353,8 @@ export default function PembelianDetailPage() {
                         ) : (
                             <p className="text-sm text-gray-400 mt-0.5">
                                 {data.id_perawatan
-                                    ? 'Approval keuangan pembelian ini mengikuti pengajuan perawatan terkait.'
-                                    : 'Belum ada pengajuan keuangan.'}
+                                    ? 'Pengajuan pengeluaran pembelian ini mengikuti pengajuan perawatan terkait.'
+                                    : 'Belum ada pengajuan pengeluaran.'}
                             </p>
                         )}
                     </div>
@@ -365,7 +365,7 @@ export default function PembelianDetailPage() {
                     )}
                 </div>
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Batal</Button>
                 </div>
             </Card>
 

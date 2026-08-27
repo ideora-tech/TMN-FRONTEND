@@ -4,7 +4,7 @@ import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePick
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import { HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineEye, HiOutlinePencilAlt } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineEye, HiOutlinePencilAlt } from 'react-icons/hi'
 import dayjs, { Dayjs } from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -19,6 +19,7 @@ import { penugasanService } from '@/services/penugasan.service'
 import { projectService } from '@/services/project.service'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { supirVendorService } from '@/services/supirVendor.service'
 import { tripService, Trip } from '@/services/trip.service'
 import MulaiTripDialog from '../trip/MulaiTripDialog'
 
@@ -35,6 +36,12 @@ const AVATAR_COLORS = ['#2563eb', '#059669', '#7c3aed', '#db2777', '#d97706', '#
 const avatarColor = (teks: string) => AVATAR_COLORS[(teks.charCodeAt(0) || 0) % AVATAR_COLORS.length]
 
 const HARI = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB']
+
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Saja', unit_driver: 'Unit + Driver', full: 'Borongan',
+}
+const unitPaketVendor = (u: BoardUnitRow | null) =>
+    !!u && u.tipe === 'vendor' && !!u.mekanisme && u.mekanisme !== 'unit_only'
 
 const unitKey = (u: BoardUnitRow) => (u.tipe === 'internal' ? `internal:${u.id_armada}` : `vendor:${u.id_armada_vendor}`)
 
@@ -53,6 +60,7 @@ export default function BoardUnit() {
     const todayColRef = useRef<HTMLTableCellElement>(null)
 
     const [supirAktif, setSupirAktif] = useState<Supir[]>([])
+    const [supirVendorOptions, setSupirVendorOptions] = useState<Option[]>([])
     const [proyekOptions, setProyekOptions] = useState<Option[]>([])
 
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
@@ -215,7 +223,13 @@ export default function BoardUnit() {
         setAssignUnit(unit)
         setAssignTanggalMulai(tanggal)
         setAssignTanggalSampai(tanggal)
-        setAssignSupirId(unit.id_supir_default ?? '')
+        setAssignSupirId(unitPaketVendor(unit) ? '' : (unit.id_supir_default ?? ''))
+        setSupirVendorOptions([])
+        if (unitPaketVendor(unit) && unit.id_vendor) {
+            supirVendorService.list(1, 500, unit.id_vendor)
+                .then(res => setSupirVendorOptions(res.data.map(s => ({ value: s.id_supir_vendor, label: s.nama }))))
+                .catch(() => setSupirVendorOptions([]))
+        }
         setAssignProyekId('')
         setAssignRuteId(null)
         setAssignRuteRows([])
@@ -244,7 +258,7 @@ export default function BoardUnit() {
             const hasil = await penugasanHarianService.assign({
                 tanggal: assignTanggalMulai,
                 tanggal_sampai: pakaiRentang ? assignTanggalSampai : null,
-                id_supir: assignSupirId,
+                ...(unitPaketVendor(assignUnit) ? { id_supir_vendor: assignSupirId } : { id_supir: assignSupirId }),
                 id_proyek: assignProyekId,
                 id_rute: assignRuteId,
                 uang_jalan: assignUangJalan !== '' ? Number(assignUangJalan) : null,
@@ -294,7 +308,13 @@ export default function BoardUnit() {
     const bukaAksi = (assignment: BoardAssignment, unit: BoardUnitRow) => {
         setAksiAssignment(assignment)
         setAksiUnit(unit)
-        setAksiSupirId(assignment.id_supir ?? '')
+        setAksiSupirId(unitPaketVendor(unit) ? (assignment.id_supir_vendor ?? '') : (assignment.id_supir ?? ''))
+        setSupirVendorOptions([])
+        if (unitPaketVendor(unit) && unit.id_vendor) {
+            supirVendorService.list(1, 500, unit.id_vendor)
+                .then(res => setSupirVendorOptions(res.data.map(s => ({ value: s.id_supir_vendor, label: s.nama }))))
+                .catch(() => setSupirVendorOptions([]))
+        }
         setAksiRuteId(assignment.id_rute)
         setAksiUangJalan(assignment.estimasi_biaya != null ? String(Math.round(assignment.estimasi_biaya)) : '')
         setAksiTitikDrop(emptyTitikDrop())
@@ -329,7 +349,7 @@ export default function BoardUnit() {
         setAksiSaving(true)
         try {
             await penugasanHarianService.update(aksiAssignment.id_penugasan, {
-                id_supir:       aksiSupirId,
+                ...(unitPaketVendor(aksiUnit) ? { id_supir_vendor: aksiSupirId } : { id_supir: aksiSupirId }),
                 id_rute:        aksiRuteId,
                 estimasi_biaya: aksiUangJalan !== '' ? Number(aksiUangJalan) : null,
                 titik_drop:     aksiTitikDrop.map(d => d.trim()).filter(Boolean),
@@ -487,7 +507,7 @@ export default function BoardUnit() {
                                                         <p className="font-semibold text-sm truncate font-mono">{u.nopol}</p>
                                                         {u.tipe === 'vendor' && (
                                                             <Tag className="text-[10px] shrink-0 bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
-                                                                Vendor
+                                                                {`Vendor${u.mekanisme && u.mekanisme !== 'unit_only' ? ` · ${MEKANISME_LABEL[u.mekanisme] ?? u.mekanisme}` : ''}`}
                                                             </Tag>
                                                         )}
                                                     </div>
@@ -588,12 +608,22 @@ export default function BoardUnit() {
                             }}
                         />
                     </FormItem>
-                    <FormItem label="Supir" asterisk>
-                        <Select placeholder="Pilih supir..."
-                            options={supirOptions}
-                            value={supirOptions.find(o => o.value === assignSupirId) ?? null}
-                            onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
-                    </FormItem>
+                    {unitPaketVendor(assignUnit) ? (
+                        <FormItem label="Supir Vendor" asterisk
+                            extra={<span className="text-xs text-gray-400">Unit paket — driver dari vendor {assignUnit?.nama_vendor}</span>}>
+                            <Select placeholder="Pilih supir vendor..."
+                                options={supirVendorOptions}
+                                value={supirVendorOptions.find(o => o.value === assignSupirId) ?? null}
+                                onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                        </FormItem>
+                    ) : (
+                        <FormItem label="Supir" asterisk>
+                            <Select placeholder="Pilih supir..."
+                                options={supirOptions}
+                                value={supirOptions.find(o => o.value === assignSupirId) ?? null}
+                                onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                        </FormItem>
+                    )}
                     <FormItem label="Proyek" asterisk>
                         <Select placeholder="Pilih proyek..."
                             options={proyekOptions}
@@ -621,7 +651,7 @@ export default function BoardUnit() {
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
-                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={assignTitikDrop.length >= 10}
                                 onClick={() => setAssignTitikDrop(prev => [...prev, ''])}>
                                 Tambah Titik
@@ -861,10 +891,10 @@ export default function BoardUnit() {
                     {aksiAssignment && ` · ${dayjs(aksiAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitAksi() }}>
-                    <FormItem label="Supir" asterisk>
-                        <Select placeholder="Pilih supir..."
-                            options={aksiSupirOptions}
-                            value={aksiSupirOptions.find(o => o.value === aksiSupirId) ?? null}
+                    <FormItem label={unitPaketVendor(aksiUnit) ? 'Supir Vendor' : 'Supir'} asterisk>
+                        <Select placeholder={unitPaketVendor(aksiUnit) ? 'Pilih supir vendor...' : 'Pilih supir...'}
+                            options={unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions}
+                            value={(unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions).find(o => o.value === aksiSupirId) ?? null}
                             onChange={opt => setAksiSupirId((opt as Option | null)?.value ?? '')} />
                         {aksiAssignment?.id_pengajuan && aksiSupirId !== (aksiAssignment?.id_supir ?? '') && (
                             <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
@@ -891,7 +921,7 @@ export default function BoardUnit() {
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
-                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={aksiTitikDrop.length >= 10}
                                 onClick={() => setAksiTitikDrop(prev => [...prev, ''])}>
                                 Tambah Titik

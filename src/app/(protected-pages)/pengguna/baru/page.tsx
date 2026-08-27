@@ -52,7 +52,7 @@ export default function PenggunaBaruPage() {
         try {
             await penggunaService.create({
                 id_perusahaan: null,
-                id_karyawan: form.kode_peran === 'SUPIR' ? null : (form.id_karyawan || null),
+                id_karyawan: form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? null : (form.id_karyawan || null),
                 username: form.username,
                 email: form.email,
                 kata_sandi: form.kata_sandi,
@@ -102,14 +102,14 @@ export default function PenggunaBaruPage() {
                         <Select isClearable isSearchable placeholder="Pilih peran..."
                             options={peranOptions}
                             value={peranOptions.find(o => o.value === form.kode_peran) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '', id_karyawan: opt?.value === 'SUPIR' ? '' : p.id_karyawan }))} />
+                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '', id_karyawan: opt?.value === 'SUPIR' || opt?.value === 'SUPIR_VENDOR' ? '' : p.id_karyawan }))} />
                     </FormItem>
                     <FormItem label="Status">
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                     </FormItem>
-                    {form.kode_peran !== 'SUPIR' && (
+                    {form.kode_peran !== 'SUPIR' && form.kode_peran !== 'SUPIR_VENDOR' && (
                         <FormItem label="Tautkan ke Karyawan (opsional)"
                             extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
                             <Select isClearable isSearchable
@@ -119,7 +119,7 @@ export default function PenggunaBaruPage() {
                                 onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? '' }))} />
                         </FormItem>
                     )}
-                    {form.kode_peran === 'SUPIR' && (
+                    {(form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR') && (
                         <div className="sm:col-span-2 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
                             Setelah akun dibuat, tautkan ke supirnya dari halaman Supir → Edit → Akun Login Mobile. Tautan karyawan (untuk supir internal) juga dikelola dari halaman Supir — supir luar tidak perlu karyawan.
                         </div>

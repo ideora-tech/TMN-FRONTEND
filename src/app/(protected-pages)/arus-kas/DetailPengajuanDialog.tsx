@@ -116,10 +116,10 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
     }
 
     const riwayat = p ? [
-        { label: 'Diajukan',   waktu: p.dibuat_pada,     keterangan: `Tanggal pengajuan ${dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}` },
-        { label: 'Dicek',      waktu: p.dicek_pada,      keterangan: null },
-        { label: 'Disetujui',  waktu: p.disetujui_pada,  keterangan: null },
-        { label: 'Ditransfer', waktu: p.ditransfer_pada, keterangan: p.tanggal_transfer ? `Tanggal transfer ${dayjs(p.tanggal_transfer).format('DD MMM YYYY')}` : null },
+        { label: 'Diajukan',     waktu: p.dibuat_pada,     keterangan: `Tanggal pengajuan ${dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}` },
+        { label: 'Disetujui',    waktu: p.disetujui_pada,  keterangan: null },
+        { label: 'Diverifikasi Keuangan', waktu: p.dicek_pada, keterangan: null },
+        { label: 'Ditransfer',   waktu: p.ditransfer_pada, keterangan: p.tanggal_transfer ? `Tanggal transfer ${dayjs(p.tanggal_transfer).format('DD MMM YYYY')}` : null },
     ].filter(r => r.waktu) : []
 
     return (

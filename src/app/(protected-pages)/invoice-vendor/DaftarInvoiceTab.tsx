@@ -19,10 +19,11 @@ import { Vendor } from '@/services/vendor.service'
 type Option = { value: string; label: string }
 
 const STATUS_OPTIONS: Option[] = [
-    { value: '',             label: 'Semua Verifikasi' },
-    { value: 'draft',        label: 'Draft' },
-    { value: 'diverifikasi', label: 'Diverifikasi' },
-    { value: 'ditolak',      label: 'Ditolak' },
+    { value: '',                 label: 'Semua Verifikasi' },
+    { value: 'draft',            label: 'Draft' },
+    { value: 'menunggu_approval', label: 'Menunggu Approval' },
+    { value: 'diverifikasi',     label: 'Diverifikasi' },
+    { value: 'ditolak',          label: 'Ditolak' },
 ]
 
 const STATUS_PEMBAYARAN_OPTIONS: Option[] = [
@@ -33,15 +34,17 @@ const STATUS_PEMBAYARAN_OPTIONS: Option[] = [
 ]
 
 export const STATUS_TAG: Record<string, string> = {
-    draft:        'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    diverifikasi: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    ditolak:      'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    diverifikasi:      'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-    draft:        'Draft',
-    diverifikasi: 'Diverifikasi',
-    ditolak:      'Ditolak',
+    draft:             'Draft',
+    menunggu_approval: 'Menunggu Approval',
+    diverifikasi:      'Diverifikasi',
+    ditolak:           'Ditolak',
 }
 
 export const BAYAR_TAG: Record<string, string> = {

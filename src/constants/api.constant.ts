@@ -163,7 +163,7 @@ export const API_ENDPOINTS = {
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
     INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,
-    INVOICE_VENDOR_VERIFIKASI: (id: string) => `/api/proxy/invoice-vendor/${id}/verifikasi`,
+    INVOICE_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/invoice-vendor/${id}/ajukan-approval`,
     INVOICE_VENDOR_PEMBAYARAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran`,
     INVOICE_VENDOR_PEMBAYARAN_DELETE: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}`,
 
@@ -374,10 +374,13 @@ export const API_ENDPOINTS = {
 
     // Approval Generik
     APPROVAL_EVENT_TYPE:               '/api/proxy/approval-event-type',
+    APPROVAL_EVENT_TYPE_DETAIL:        (id: string) => `/api/proxy/approval-event-type/${id}`,
     APPROVAL_EVENT_TYPE_APPROVER:      (idEventType: string) => `/api/proxy/approval-event-type/${idEventType}/approver`,
     APPROVAL_EVENT_TYPE_APPROVER_DETAIL: (idEventType: string, idConfig: string) => `/api/proxy/approval-event-type/${idEventType}/approver/${idConfig}`,
     APPROVAL_MENUNGGU_SAYA: '/api/proxy/approval-pengajuan/menunggu-saya',
     APPROVAL_KEPUTUSAN:     (idApproval: string) => `/api/proxy/approval-pengajuan/${idApproval}/keputusan`,
+    APPROVAL_RIWAYAT_SAYA:  '/api/proxy/approval-pengajuan/riwayat-saya',
+    APPROVAL_EXPORT_SAYA:   '/api/proxy/approval-pengajuan/export-saya',
 
     // Pengaturan Kode
     PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',

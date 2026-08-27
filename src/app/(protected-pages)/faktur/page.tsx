@@ -17,18 +17,24 @@ import dayjs from 'dayjs'
 type StatusOption = { value: string; label: string }
 
 const STATUS_OPTIONS: StatusOption[] = [
-    { value: '',         label: 'Semua Status' },
-    { value: 'draft',    label: 'Draft' },
-    { value: 'terkirim', label: 'Terkirim' },
-    { value: 'lunas',    label: 'Lunas' },
-    { value: 'batal',    label: 'Batal' },
+    { value: '',                  label: 'Semua Status' },
+    { value: 'draft',             label: 'Draft' },
+    { value: 'menunggu_approval', label: 'Menunggu Approval' },
+    { value: 'terkirim',          label: 'Terkirim' },
+    { value: 'lunas',             label: 'Lunas' },
+    { value: 'batal',             label: 'Batal' },
 ]
 
 const STATUS_TAG: Record<string, string> = {
-    draft:    'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    lunas:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    batal:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    terkirim:          'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    lunas:             'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    batal:             'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Batal',
 }
 
 export default function FakturPage() {
@@ -136,7 +142,7 @@ export default function FakturPage() {
             header: 'Status', accessorKey: 'status', size: 130,
             cell: ({ row }: CellContext<Faktur, unknown>) => (
                 <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {row.original.status}
+                    {STATUS_LABEL[row.original.status] ?? row.original.status}
                 </Tag>
             ),
         },

@@ -5,7 +5,7 @@ import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/co
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineTrash, HiOutlineDocumentText } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -239,7 +239,7 @@ export default function PembelianForm({ mode, initial }: Props) {
                     <div className="mt-4">
                         <div className="flex items-center justify-between mb-2">
                             <p className="font-semibold">Item Sparepart</p>
-                            <Button type="button" size="xs" icon={<HiOutlinePlus />} onClick={tambahRow}>
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />} onClick={tambahRow}>
                                 Tambah Item
                             </Button>
                         </div>

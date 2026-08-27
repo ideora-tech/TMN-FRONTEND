@@ -11,30 +11,33 @@ import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
 
 export const PENGAJUAN_LABEL: Record<string, string> = {
     diajukan:          'Diajukan',
-    dicek:             'Dicek Keuangan',
+    dicek:             'Diverifikasi — Menunggu Persetujuan Transfer',
     menunggu_approval: 'Menunggu Approval',
     menunggu:          'Menunggu Approval',
     disetujui:         'Disetujui',
+    siap_transfer:     'Siap Transfer',
     ditolak:           'Ditolak',
     ditransfer:        'Sudah Ditransfer',
 }
 
 export const PENGAJUAN_TAG: Record<string, string> = {
     diajukan:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300',
-    dicek:             'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    dicek:             'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-100',
     menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
     disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300',
+    siap_transfer:     'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
     ditolak:           'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',
     ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }
 
 const IKON: Record<string, { icon: ReactNode; className: string }> = {
-    diajukan:   { icon: <HiOutlinePaperAirplane />, className: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300' },
-    dicek:      { icon: <HiOutlineSearch />,        className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },
-    menunggu:   { icon: <HiOutlineClock />,         className: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300' },
-    disetujui:  { icon: <HiOutlineCheck />,         className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
-    ditolak:    { icon: <HiOutlineX />,             className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' },
-    ditransfer: { icon: <HiOutlineCash />,          className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
+    diajukan:      { icon: <HiOutlinePaperAirplane />, className: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300' },
+    dicek:         { icon: <HiOutlineSearch />,        className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },
+    menunggu:      { icon: <HiOutlineClock />,         className: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300' },
+    disetujui:     { icon: <HiOutlineCheck />,         className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
+    siap_transfer: { icon: <HiOutlineCheck />,         className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },
+    ditolak:       { icon: <HiOutlineX />,             className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' },
+    ditransfer:    { icon: <HiOutlineCash />,          className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
 }
 
 type Props = {

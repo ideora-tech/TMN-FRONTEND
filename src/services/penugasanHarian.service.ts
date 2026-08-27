@@ -12,6 +12,8 @@ export interface BoardUnit {
     nama_jenis?: string | null
     nama_vendor?: string | null
     id_supir_default?: string | null
+    id_vendor?: string | null
+    mekanisme?: string | null
     nama_supir_default?: string | null
 }
 
@@ -26,6 +28,7 @@ export interface BoardAssignment {
     id_armada?: string | null
     id_armada_vendor?: string | null
     id_supir: string | null
+    id_supir_vendor?: string | null
     nama_supir: string | null
     id_proyek: string
     kode_proyek: string | null
@@ -48,7 +51,8 @@ export interface AssignHarianPayload {
     tanggal_sampai?: string | null
     id_armada?: string
     id_armada_vendor?: string
-    id_supir: string
+    id_supir?: string | null
+    id_supir_vendor?: string | null
     id_proyek: string
     id_rute: string
     uang_jalan?: number | null

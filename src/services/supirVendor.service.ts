@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface SupirVendor {
     id_supir_vendor: string
     id_vendor: string
+    id_pengguna?: string | null
     nama: string
     telepon?: string | null
     no_sim?: string | null

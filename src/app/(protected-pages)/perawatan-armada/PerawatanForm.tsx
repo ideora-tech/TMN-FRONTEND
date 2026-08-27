@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlinePaperClip } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineTrash, HiOutlinePaperClip } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -399,7 +399,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-3">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Spare Part Diganti</p>
-                            <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addItem}>Tambah Part</Button>
+                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={addItem}>Tambah Part</Button>
                         </div>
                         {items.length === 0 ? (
                             <p className="text-gray-400 text-xs py-2">Belum ada spare part ditambahkan.</p>

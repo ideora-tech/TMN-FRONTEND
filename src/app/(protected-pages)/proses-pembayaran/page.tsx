@@ -17,7 +17,7 @@ import PengajuanBulkTable from './PengajuanBulkTable'
 type Option = { value: string; label: string }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
-type TabValue = 'menunggu' | 'disetujui' | 'ditolak' | 'ditransfer'
+type TabValue = 'menunggu' | 'verifikasi' | 'ditolak' | 'ditransfer'
 
 type PengajuanForm = {
     kategori: KategoriPengajuan | ''
@@ -65,8 +65,8 @@ export default function ProsesPembayaranPage() {
         })
     }, [list, kategoriFilter, search])
 
-    const menunggu   = useMemo(() => filteredList.filter(p => p.status === 'diajukan' || p.status === 'dicek' || p.status === 'menunggu_approval'), [filteredList])
-    const disetujui  = useMemo(() => filteredList.filter(p => p.status === 'disetujui'), [filteredList])
+    const menunggu   = useMemo(() => filteredList.filter(p => p.status === 'diajukan' || p.status === 'menunggu_approval'), [filteredList])
+    const verifikasi = useMemo(() => filteredList.filter(p => p.status === 'disetujui' || p.status === 'dicek' || p.status === 'siap_transfer'), [filteredList])
     const ditolak    = useMemo(() => filteredList.filter(p => p.status === 'ditolak'), [filteredList])
     const ditransfer = useMemo(() => filteredList.filter(p => p.status === 'ditransfer'), [filteredList])
 
@@ -155,7 +155,7 @@ export default function ProsesPembayaranPage() {
                 <div>
                     <h3 className="font-bold">Proses Pembayaran</h3>
                     <p className="text-gray-500 text-sm mt-0.5">
-                        Buat, cek, setujui/tolak, dan transfer pengajuan pengeluaran — satu per satu atau sekaligus
+                        Buat, setujui/tolak, verifikasi, dan transfer pengajuan pengeluaran — satu per satu atau sekaligus
                     </p>
                 </div>
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={openAdd}>
@@ -163,77 +163,109 @@ export default function ProsesPembayaranPage() {
                 </Button>
             </div>
 
-            <Card bodyClass="p-0">
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
-                    <Input
-                        className="flex-1 min-w-60"
-                        placeholder="Cari nomor pengajuan atau penerima..."
-                        suffix={search
-                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setSearch('')} />
-                            : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                    <div className="w-full sm:w-56 shrink-0">
-                        <Select
-                            isSearchable={false}
-                            placeholder="Semua kategori"
-                            isClearable
-                            options={KATEGORI_OPTIONS_FILTER}
-                            value={KATEGORI_OPTIONS_FILTER.find(o => o.value === kategoriFilter) ?? null}
-                            onChange={opt => setKategoriFilter((opt as Option | null)?.value ?? '')}
-                        />
-                    </div>
-                    {loading && <Spinner size={20} />}
+            <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
+                <Tabs.TabList>
+                    <Tabs.TabNav value="menunggu">Menunggu Approval ({menunggu.length})</Tabs.TabNav>
+                    <Tabs.TabNav value="verifikasi">Verifikasi & Transfer ({verifikasi.length})</Tabs.TabNav>
+                    <Tabs.TabNav value="ditolak">Ditolak ({ditolak.length})</Tabs.TabNav>
+                    <Tabs.TabNav value="ditransfer">Sudah Transfer ({ditransfer.length})</Tabs.TabNav>
+                </Tabs.TabList>
+                <div className="pt-2">
+                    {(() => {
+                        const filterBar = (
+                            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
+                                <Input
+                                    className="flex-1 min-w-60"
+                                    placeholder="Cari nomor pengajuan atau penerima..."
+                                    suffix={search
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setSearch('')} />
+                                        : <HiOutlineSearch className="text-gray-400 text-lg" />}
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                />
+                                <div className="w-full sm:w-56 shrink-0">
+                                    <Select
+                                        isSearchable={false}
+                                        placeholder="Semua kategori"
+                                        isClearable
+                                        options={KATEGORI_OPTIONS_FILTER}
+                                        value={KATEGORI_OPTIONS_FILTER.find(o => o.value === kategoriFilter) ?? null}
+                                        onChange={opt => setKategoriFilter((opt as Option | null)?.value ?? '')}
+                                    />
+                                </div>
+                                {loading && <Spinner size={20} />}
+                            </div>
+                        )
+                        return (
+                            <>
+                                <Tabs.TabContent value="menunggu">
+                                    <Card bodyClass="p-0">
+                                        {filterBar}
+                                        <div className="p-4">
+                                            {menunggu.some(p => p.status === 'diajukan') && (
+                                                <p className="text-xs text-gray-400 mb-3">
+                                                    Ada pengajuan berstatus lama (Diajukan) yang belum masuk alur approval baru. Jalankan command <code className="font-mono">arus-kas:migrasi-approval-pending</code> di backend untuk memindahkannya.
+                                                </p>
+                                            )}
+                                            <PengajuanBulkTable
+                                                list={menunggu} loading={loading}
+                                                bulkActions={['setuju', 'tolak']}
+                                                showStatusColumn
+                                                onRefresh={fetchData}
+                                                onEdit={openEdit}
+                                                onDelete={setDeleteTarget}
+                                            />
+                                        </div>
+                                    </Card>
+                                </Tabs.TabContent>
+                                <Tabs.TabContent value="verifikasi">
+                                    <Card bodyClass="p-0">
+                                        {filterBar}
+                                        <div className="p-4">
+                                            <PengajuanBulkTable
+                                                list={verifikasi} loading={loading}
+                                                bulkActions={['cek', 'transfer']}
+                                                showStatusColumn
+                                                onRefresh={fetchData}
+                                            />
+                                        </div>
+                                    </Card>
+                                </Tabs.TabContent>
+                                <Tabs.TabContent value="ditolak">
+                                    <Card bodyClass="p-0">
+                                        {filterBar}
+                                        <div className="p-4">
+                                            <PengajuanBulkTable
+                                                list={ditolak} loading={loading}
+                                                bulkActions={[]}
+                                                showStatusColumn={false}
+                                                extraColumn="ditolak"
+                                                onRefresh={fetchData}
+                                                onEdit={openEdit}
+                                                onDelete={setDeleteTarget}
+                                            />
+                                        </div>
+                                    </Card>
+                                </Tabs.TabContent>
+                                <Tabs.TabContent value="ditransfer">
+                                    <Card bodyClass="p-0">
+                                        {filterBar}
+                                        <div className="p-4">
+                                            <PengajuanBulkTable
+                                                list={ditransfer} loading={loading}
+                                                bulkActions={[]}
+                                                showStatusColumn={false}
+                                                extraColumn="ditransfer"
+                                                onRefresh={fetchData}
+                                            />
+                                        </div>
+                                    </Card>
+                                </Tabs.TabContent>
+                            </>
+                        )
+                    })()}
                 </div>
-
-                <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
-                    <Tabs.TabList>
-                        <Tabs.TabNav value="menunggu">Menunggu ({menunggu.length})</Tabs.TabNav>
-                        <Tabs.TabNav value="disetujui">Disetujui ({disetujui.length})</Tabs.TabNav>
-                        <Tabs.TabNav value="ditolak">Ditolak ({ditolak.length})</Tabs.TabNav>
-                        <Tabs.TabNav value="ditransfer">Sudah Transfer ({ditransfer.length})</Tabs.TabNav>
-                    </Tabs.TabList>
-                    <div className="p-4">
-                        <Tabs.TabContent value="menunggu">
-                            <PengajuanBulkTable
-                                list={menunggu} loading={loading}
-                                bulkActions={['cek', 'setuju', 'tolak']}
-                                showStatusColumn
-                                onRefresh={fetchData}
-                                onEdit={openEdit}
-                                onDelete={setDeleteTarget}
-                            />
-                        </Tabs.TabContent>
-                        <Tabs.TabContent value="disetujui">
-                            <PengajuanBulkTable
-                                list={disetujui} loading={loading}
-                                bulkActions={['transfer']}
-                                showStatusColumn={false}
-                                onRefresh={fetchData}
-                            />
-                        </Tabs.TabContent>
-                        <Tabs.TabContent value="ditolak">
-                            <PengajuanBulkTable
-                                list={ditolak} loading={loading}
-                                bulkActions={[]}
-                                showStatusColumn={false}
-                                extraColumn="ditolak"
-                                onRefresh={fetchData}
-                            />
-                        </Tabs.TabContent>
-                        <Tabs.TabContent value="ditransfer">
-                            <PengajuanBulkTable
-                                list={ditransfer} loading={loading}
-                                bulkActions={[]}
-                                showStatusColumn={false}
-                                extraColumn="ditransfer"
-                                onRefresh={fetchData}
-                            />
-                        </Tabs.TabContent>
-                    </div>
-                </Tabs>
-            </Card>
+            </Tabs>
 
             <Dialog isOpen={showForm} onRequestClose={closeForm} onClose={closeForm} width={640}>
                 <h5 className="text-base font-semibold mb-5">{editTarget ? 'Edit Pengajuan' : 'Tambah Pengajuan'}</h5>

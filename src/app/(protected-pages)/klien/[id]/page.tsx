@@ -24,10 +24,15 @@ const PROYEK_STATUS_CLASS: Record<string, string> = {
 }
 
 const FAKTUR_STATUS_CLASS: Record<string, string> = {
-    draft:    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    terkirim: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
-    lunas:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    batal:    'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+    draft:              'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    menunggu_approval:  'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    terkirim:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
+    lunas:              'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    batal:              'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+}
+
+const FAKTUR_STATUS_LABEL: Record<string, string> = {
+    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Batal',
 }
 
 export default function KlienDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -377,7 +382,7 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                                         </td>
                                         <td className="py-3 pr-4">
                                             <Tag className={`text-xs font-semibold ${FAKTUR_STATUS_CLASS[f.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {f.status}
+                                                {FAKTUR_STATUS_LABEL[f.status] ?? f.status}
                                             </Tag>
                                         </td>
                                         <td className="py-3 text-right">
@@ -394,6 +399,12 @@ export default function KlienDetailPage({ params }: { params: Promise<{ id: stri
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {!editing && (
+                    <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
                     </div>
                 )}
             </Card>

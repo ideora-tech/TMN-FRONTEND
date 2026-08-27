@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { tripService, Trip } from '@/services/trip.service'
@@ -452,7 +452,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                         <>
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Biaya Lain</p>
-                                <Button type="button" size="sm" variant="plain" icon={<HiOutlinePlus />} onClick={addBiayaLainRow}>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={addBiayaLainRow}>
                                     Tambah Biaya
                                 </Button>
                             </div>
@@ -500,8 +500,8 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                         <Button
                             type="button"
                             size="sm"
-                            variant="plain"
-                            icon={<HiOutlinePlus />}
+                            variant="solid"
+                            icon={<HiPlusCircle />}
                             disabled={sudahDifakturkan || laporanForm.biaya_tagihan.length >= 10}
                             onClick={addBiayaTagihanRow}
                         >

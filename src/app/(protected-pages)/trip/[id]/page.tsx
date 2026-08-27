@@ -4,12 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Checkbox, Dialog, Input, Tag, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import {
-    HiArrowLeft,
-    HiOutlineMap,
-    HiOutlinePlus,
-    HiOutlineTrash,
-} from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -632,7 +627,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                     <div className="max-h-[65vh] overflow-y-auto pr-1">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop</p>
-                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={titikDropForm.length >= 10} onClick={tambahTitikDrop}>Tambah Titik</Button>
                         </div>
                         <div className="flex flex-col gap-2">

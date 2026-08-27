@@ -5,7 +5,7 @@ import axios from 'axios'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -16,34 +16,37 @@ import { fakturService, Faktur } from '@/services/faktur.service'
 type EditItemRow = { deskripsi: string; qty: string; harga_satuan: string }
 
 const STATUS_CLASS: Record<string, string> = {
-    draft:    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    lunas:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
-    batal:    'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
+    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    terkirim:          'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    lunas:             'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    batal:             'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Batal',
+    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Batal',
 }
 
 // Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
 const NEXT_STATUS: Record<string, string[]> = {
-    draft:    ['terkirim', 'batal'],
-    terkirim: ['lunas', 'batal'],
-    lunas:    [],
-    batal:    [],
+    draft:             ['batal'],
+    menunggu_approval: [],
+    terkirim:          ['lunas', 'batal'],
+    lunas:              [],
+    batal:              [],
 }
 
 const RIWAYAT_LABEL: Record<string, string> = {
-    draft: 'Dibuat', diedit: 'Diedit', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Dibatalkan',
+    draft: 'Dibuat', diedit: 'Diedit', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Dibatalkan',
 }
 
 const RIWAYAT_TAG: Record<string, string> = {
-    draft:    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    diedit:   'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-    terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    lunas:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
-    batal:    'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
+    draft:              'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    diedit:             'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+    menunggu_approval:  'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
+    terkirim:           'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    lunas:              'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    batal:              'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const TRIP_STATUS_CLASS: Record<string, string> = {
@@ -67,11 +70,12 @@ function formatDurasi(awal?: string | null, akhir?: string | null): string | nul
 }
 
 const RIWAYAT_BORDER: Record<string, string> = {
-    draft:    'border-l-gray-400',
-    diedit:   'border-l-amber-400',
-    terkirim: 'border-l-blue-400',
-    lunas:    'border-l-emerald-400',
-    batal:    'border-l-red-400',
+    draft:              'border-l-gray-400',
+    diedit:             'border-l-amber-400',
+    menunggu_approval:  'border-l-violet-400',
+    terkirim:           'border-l-blue-400',
+    lunas:              'border-l-emerald-400',
+    batal:              'border-l-red-400',
 }
 
 export default function FakturDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +85,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [loading, setLoading]   = useState(true)
     const [updating, setUpdating] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     const [downloadingExport, setDownloadingExport] = useState<'excel' | 'pdf' | null>(null)
 
@@ -164,6 +169,19 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         }
     }
 
+    const handleAjukanApproval = async () => {
+        setAjukanLoading(true)
+        try {
+            const updated = await fakturService.ajukanApproval(id)
+            setFaktur(updated)
+            toast.push(<Notification type="success" title="Invoice diajukan untuk approval" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setAjukanLoading(false)
+        }
+    }
+
     const handleExport = async (type: 'excel' | 'pdf') => {
         setDownloadingExport(type)
         try {
@@ -213,6 +231,40 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     onExportPdf={() => handleExport('pdf')}
                 />
             </div>
+
+            {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (
+                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+                    <div className="flex items-start gap-3">
+                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
+                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{faktur.alasan_ditolak_internal}</p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
+            {faktur.status === 'draft' && (
+                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim</p>
+                        </div>
+                        <Button size="sm" variant="solid" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                            Ajukan Approval
+                        </Button>
+                    </div>
+                </Card>
+            )}
+
+            {faktur.status === 'menunggu_approval' && (
+                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
+                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien.
+                    </p>
+                </Card>
+            )}
 
             {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
             {(NEXT_STATUS[faktur.status] ?? []).length > 0 && (
@@ -339,6 +391,9 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                 </div>
 
+                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                </div>
             </Card>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -492,7 +547,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <div className="mt-3">
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-sm font-semibold">Item Invoice</p>
-                                <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />} onClick={tambahEditRow}>
+                                <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />} onClick={tambahEditRow}>
                                     Tambah Item
                                 </Button>
                             </div>

@@ -21,6 +21,7 @@ import { formatRupiah, formatNum } from '@/utils/formatNumber'
 
 const STATUS_CLASS: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
+    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
     terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
     negosiasi: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
     disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
@@ -28,11 +29,12 @@ const STATUS_CLASS: Record<string, string> = {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', terkirim: 'Terkirim', negosiasi: 'Negosiasi', disetujui: 'Disetujui', ditolak: 'Ditolak',
+    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', negosiasi: 'Negosiasi', disetujui: 'Disetujui', ditolak: 'Ditolak',
 }
 
 const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
-    draft: ['terkirim'],
+    draft: [],
+    menunggu_approval: [],
     terkirim: ['negosiasi', 'disetujui', 'ditolak'],
     negosiasi: ['disetujui', 'ditolak'],
     disetujui: [],
@@ -124,7 +126,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
     const tambahRuteOption = (r: Rute) =>
         setRuteOptions(prev => prev.some(o => o.value === r.id_rute)
-            ? prev
+            ? prev.map(o => o.value === r.id_rute ? { ...o, label: labelRute(r) } : o)
             : [...prev, { value: r.id_rute, label: labelRute(r) }])
 
     const setItemRute = (index: number, value: string) => updateItem(index, { id_rute: value })
@@ -143,6 +145,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const validate = () => {
         const e: Partial<Record<keyof EditForm, string>> = {}
         if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
+        if (!form.id_klien) e.id_klien = 'Klien wajib dipilih'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -150,6 +153,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [pendingStatus, setPendingStatus] = useState<PenawaranStatus | null>(null)
     const [statusLoading, setStatusLoading] = useState(false)
     const [downloadingPdf, setDownloadingPdf] = useState(false)
+    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     useEffect(() => {
         penawaranService.get(id)
@@ -185,7 +189,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
         setSaving(true)
         try {
             const updated = await penawaranService.update(id, {
-                id_klien: form.id_klien || null,
+                id_klien: form.id_klien,
                 judul: form.judul,
                 tipe_harga: form.tipe_harga,
                 nilai_penawaran: nilaiOtomatis
@@ -233,6 +237,19 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setStatusLoading(false)
+        }
+    }
+
+    const handleAjukanApproval = async () => {
+        setAjukanLoading(true)
+        try {
+            const updated = await penawaranService.ajukanApproval(id)
+            setData(updated)
+            toast.push(<Notification type="success" title="Penawaran diajukan untuk approval" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setAjukanLoading(false)
         }
     }
 
@@ -310,6 +327,18 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 </div>
             </div>
 
+            {data.status === 'draft' && data.alasan_ditolak_internal && (
+                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+                    <div className="flex items-start gap-3">
+                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
+                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{data.alasan_ditolak_internal}</p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {/* Banner aksi setelah disetujui */}
             {data.status === 'disetujui' && (
                 <Card className="border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10">
@@ -336,6 +365,28 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                             )}
                         </div>
                     </div>
+                </Card>
+            )}
+
+            {data.status === 'draft' && (
+                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim</p>
+                        </div>
+                        <Button size="sm" variant="solid" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                            Ajukan Approval
+                        </Button>
+                    </div>
+                </Card>
+            )}
+
+            {data.status === 'menunggu_approval' && (
+                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
+                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien.
+                    </p>
                 </Card>
             )}
 
@@ -503,8 +554,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         value={TIPE_HARGA_OPTIONS.find(o => o.value === form.tipe_harga) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, tipe_harga: opt?.value ?? 'per_rit' }))} />
                                 </FormItem>
-                                <FormItem label="Klien">
-                                    <Select<Option> isClearable isSearchable placeholder="Pilih klien (opsional)"
+                                <FormItem label="Klien" asterisk invalid={!!errors.id_klien} errorMessage={errors.id_klien}>
+                                    <Select<Option> isSearchable placeholder="Pilih klien"
                                         options={klienOptions}
                                         value={klienOptions.find(o => o.value === form.id_klien) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, id_klien: opt?.value ?? '' }))} />
@@ -663,6 +714,11 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                             </div>
                         </form>
                     </>
+                )}
+                {!editing && (
+                    <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    </div>
                 )}
             </Card>
 

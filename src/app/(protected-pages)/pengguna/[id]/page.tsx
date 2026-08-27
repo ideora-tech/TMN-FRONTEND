@@ -65,7 +65,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 email:       form.email,
                 kode_peran:  form.kode_peran ?? null,
                 aktif:       form.aktif,
-                id_karyawan: form.kode_peran === 'SUPIR' ? null : (form.id_karyawan ?? null),
+                id_karyawan: form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? null : (form.id_karyawan ?? null),
             })
             setData(updated)
 
@@ -207,7 +207,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
-                            {form.kode_peran === 'SUPIR' ? (
+                            {form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? (
                                 <FormItem label="Karyawan (via Profil Supir)"
                                     extra={<span className="text-xs text-gray-400">Mengikuti profil supir — dikelola dari halaman Supir → Edit → Tautkan ke Karyawan</span>}>
                                     <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">

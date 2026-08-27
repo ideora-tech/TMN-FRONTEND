@@ -50,7 +50,7 @@ export const protectedRoutes: Routes = {
     '/konsolidasi-klien': { key: 'konsolidasi-klien', authority: [] },
     '/arus-kas': { key: 'arus-kas', authority: [] },
     '/proses-pembayaran': { key: 'proses-pembayaran', authority: [] },
-    '/approval-keuangan': { key: 'approval-keuangan', authority: ['superadmin', 'admin'] },
+    '/konfigurasi-approval': { key: 'konfigurasi-approval', authority: ['superadmin', 'admin'] },
     ...listRoute('pengguna', 'pengguna', ADMIN_ONLY),
     ...listRoute('peran', 'peran', ADMIN_ONLY),
     ...listRoute('jenis-kendaraan', 'jenis-kendaraan'),

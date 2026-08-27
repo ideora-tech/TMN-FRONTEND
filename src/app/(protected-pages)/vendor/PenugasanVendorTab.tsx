@@ -7,7 +7,7 @@ import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlinePlus, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -847,7 +847,7 @@ export default function PenugasanVendorTab() {
                     <div className="mt-1">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
-                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={titikDropEdit.length >= 10} onClick={tambahDropEdit}>Tambah Titik</Button>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -1083,7 +1083,7 @@ export default function PenugasanVendorTab() {
                     <div className="mt-3">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
-                            <Button type="button" size="xs" variant="plain" icon={<HiOutlinePlus />}
+                            <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={titikDropCreate.length >= 10} onClick={tambahDropCreate}>Tambah Titik</Button>
                         </div>
                         <div className="flex flex-col gap-2">

@@ -9,6 +9,7 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
+import { penggunaService } from '@/services/pengguna.service'
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -37,12 +38,29 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
     const [form, setForm]       = useState<Partial<SupirVendor>>({})
     const [saving, setSaving]   = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof SupirVendor, string>>>({})
+    const [akunOptions, setAkunOptions] = useState<{ value: string; label: string }[]>([])
+    const [akunMap, setAkunMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
         supirVendorService.get(id)
             .then(d => { setData(d); setForm(d) })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
+    }, [id])
+
+    useEffect(() => {
+        Promise.all([penggunaService.list(1, 500), supirVendorService.list(1, 500)])
+            .then(([p, sv]) => {
+                const dipakai = new Set(
+                    sv.data.filter(s => s.id_pengguna && s.id_supir_vendor !== id).map(s => s.id_pengguna as string)
+                )
+                const akun = p.data.filter(u => u.kode_peran === 'SUPIR_VENDOR')
+                setAkunMap(Object.fromEntries(akun.map(u => [u.id_pengguna, u.username])))
+                setAkunOptions(akun
+                    .filter(u => !dipakai.has(u.id_pengguna))
+                    .map(u => ({ value: u.id_pengguna, label: `${u.username} — ${u.email ?? ''}` })))
+            })
+            .catch(() => {})
     }, [id])
 
     const validate = () => {
@@ -66,6 +84,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                 no_sim:  form.no_sim || null,
                 masa_berlaku_sim: form.masa_berlaku_sim || null,
                 aktif:   form.aktif,
+                id_pengguna: form.id_pengguna || null,
             })
             setData(updated)
             setForm(updated)
@@ -124,6 +143,12 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                                 { label: 'Telepon',          value: data.telepon ?? <span className="text-gray-400">—</span> },
                                 { label: 'No SIM',           value: data.no_sim ?? <span className="text-gray-400">—</span> },
                                 { label: 'Masa Berlaku SIM', value: renderMasaBerlaku(data.masa_berlaku_sim) },
+                                {
+                                    label: 'Akun Login Mobile',
+                                    value: data.id_pengguna
+                                        ? <span className="font-mono">{akunMap[data.id_pengguna] ?? data.id_pengguna}</span>
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -159,6 +184,13 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                                 <DatePicker inputFormat="DD/MM/YYYY"
                                     value={form.masa_berlaku_sim ? dayjs(form.masa_berlaku_sim).toDate() : null}
                                     onChange={date => setForm(p => ({ ...p, masa_berlaku_sim: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
+                            </FormItem>
+                            <FormItem label="Akun Login Mobile (opsional)"
+                                extra={<span className="text-xs text-gray-400">Akun berperan SUPIR_VENDOR untuk login aplikasi mobile driver — buat akunnya di Pengaturan → Pengguna</span>}>
+                                <Select isClearable isSearchable placeholder="Pilih akun pengguna..."
+                                    options={akunOptions}
+                                    value={akunOptions.find(o => o.value === form.id_pengguna) ?? null}
+                                    onChange={opt => setForm(prev => ({ ...prev, id_pengguna: (opt as { value: string } | null)?.value ?? null }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

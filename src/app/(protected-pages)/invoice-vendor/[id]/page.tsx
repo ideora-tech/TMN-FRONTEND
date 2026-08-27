@@ -8,7 +8,7 @@ import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -56,12 +56,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
 
     const [rekapKonsolidasi, setRekapKonsolidasi] = useState<KonsolidasiRekap | null>(null)
 
-    const [showVerifikasi, setShowVerifikasi] = useState(false)
-    const [verifying, setVerifying]           = useState(false)
-    const [showTolak, setShowTolak]           = useState(false)
-    const [catatanTolak, setCatatanTolak]     = useState('')
-    const [tolakError, setTolakError]         = useState('')
-    const [rejecting, setRejecting]           = useState(false)
+    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     const [showBayar, setShowBayar]     = useState(false)
     const [bayarForm, setBayarForm]     = useState({ ...BAYAR_FORM_KOSONG })
@@ -167,37 +162,16 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         }
     }
 
-    const handleVerifikasi = async () => {
-        setVerifying(true)
+    const handleAjukanApproval = async () => {
+        setAjukanLoading(true)
         try {
-            await invoiceVendorService.verifikasi(id, 'verifikasi')
-            toast.push(<Notification type="success" title="Invoice berhasil diverifikasi" />)
-            setShowVerifikasi(false)
-            fetchDetail()
+            await invoiceVendorService.ajukanApproval(id)
+            await fetchDetail()
+            toast.push(<Notification type="success" title="Invoice diajukan untuk approval" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setVerifying(false)
-        }
-    }
-
-    const handleTolak = async () => {
-        if (!catatanTolak.trim()) {
-            setTolakError('Catatan penolakan wajib diisi')
-            return
-        }
-        setRejecting(true)
-        try {
-            await invoiceVendorService.verifikasi(id, 'tolak', catatanTolak.trim())
-            toast.push(<Notification type="success" title="Invoice ditolak" />)
-            setShowTolak(false)
-            setCatatanTolak('')
-            setTolakError('')
-            fetchDetail()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setRejecting(false)
+            setAjukanLoading(false)
         }
     }
 
@@ -283,17 +257,9 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     {data.status === 'draft' && !editing && (
-                        <>
-                            <Button variant="solid" size="sm" icon={<HiOutlineCheckCircle />}
-                                onClick={() => setShowVerifikasi(true)}>
-                                Verifikasi
-                            </Button>
-                            <Button variant="default" size="sm" icon={<HiOutlineXCircle />}
-                                customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300 hover:text-red-500'}
-                                onClick={() => { setShowTolak(true); setCatatanTolak(''); setTolakError('') }}>
-                                Tolak
-                            </Button>
-                        </>
+                        <Button variant="solid" size="sm" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                            Ajukan Approval
+                        </Button>
                     )}
                     {(data.status === 'draft' || data.status === 'ditolak') && !editing && (
                         <Button variant="default" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>
@@ -302,6 +268,14 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     )}
                 </div>
             </div>
+
+            {data.status === 'menunggu_approval' && (
+                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
+                        Menunggu keputusan approver — invoice belum bisa dibayar.
+                    </p>
+                </Card>
+            )}
 
             {data.status === 'ditolak' && data.catatan_verifikasi && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
@@ -585,34 +559,6 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </div>
                 )}
             </Card>
-
-            <ConfirmDialog isOpen={showVerifikasi} type="info" title="Verifikasi Invoice"
-                confirmText="Ya, Verifikasi" cancelText="Batal"
-                onClose={() => setShowVerifikasi(false)} onCancel={() => setShowVerifikasi(false)}
-                onConfirm={handleVerifikasi}
-                confirmButtonProps={{ loading: verifying }}>
-                <p>Verifikasi invoice {data.nomor_invoice}? Setelah diverifikasi, invoice tidak dapat diubah dan pembayaran dapat dicatat.</p>
-            </ConfirmDialog>
-
-            <Dialog isOpen={showTolak} onRequestClose={() => setShowTolak(false)} onClose={() => setShowTolak(false)}>
-                <h5 className="font-bold mb-1">Tolak Invoice</h5>
-                <p className="text-sm text-gray-500 mb-4">{data.nomor_invoice} · {data.vendor?.nama_vendor ?? '—'}</p>
-                <form onSubmit={e => { e.preventDefault(); handleTolak() }}>
-                    <FormItem label="Catatan Penolakan" asterisk invalid={!!tolakError} errorMessage={tolakError}>
-                        <Input textArea rows={3} placeholder="Alasan invoice ditolak..."
-                            invalid={!!tolakError}
-                            value={catatanTolak}
-                            onChange={e => { setCatatanTolak(e.target.value); if (tolakError) setTolakError('') }} />
-                    </FormItem>
-                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setShowTolak(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={rejecting}
-                            customColorClass={() => 'bg-red-500 hover:bg-red-600 text-white'}>
-                            Tolak Invoice
-                        </Button>
-                    </div>
-                </form>
-            </Dialog>
 
             <Dialog isOpen={showBayar} onRequestClose={() => setShowBayar(false)} onClose={() => setShowBayar(false)}>
                 <h5 className="font-bold mb-1">Catat Pembayaran</h5>

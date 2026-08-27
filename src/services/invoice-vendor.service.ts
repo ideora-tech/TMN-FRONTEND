@@ -28,7 +28,7 @@ export interface InvoiceVendor {
     pph: number
     total: number
     keterangan: string | null
-    status: 'draft' | 'diverifikasi' | 'ditolak'
+    status: 'draft' | 'menunggu_approval' | 'diverifikasi' | 'ditolak'
     status_pembayaran: 'belum' | 'sebagian' | 'lunas'
     catatan_verifikasi: string | null
     diverifikasi_oleh?: string | null
@@ -127,8 +127,8 @@ export const invoiceVendorService = {
     async remove(id: string) {
         await axios.delete(API_ENDPOINTS.INVOICE_VENDOR_DETAIL(id))
     },
-    async verifikasi(id: string, aksi: 'verifikasi' | 'tolak', catatan?: string) {
-        const { data } = await axios.patch(API_ENDPOINTS.INVOICE_VENDOR_VERIFIKASI(id), { aksi, catatan: catatan || undefined })
+    async ajukanApproval(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.INVOICE_VENDOR_AJUKAN_APPROVAL(id))
         return data.data as InvoiceVendor
     },
     async monitoring() {

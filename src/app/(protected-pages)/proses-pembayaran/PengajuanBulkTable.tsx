@@ -44,7 +44,7 @@ type HasilGagalBulk = { nomor: string; alasan: string }
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 const BULK_LABEL: Record<BulkAction, string> = {
-    cek: 'Cek', setuju: 'Setujui', tolak: 'Tolak', transfer: 'Transfer',
+    cek: 'Verifikasi', setuju: 'Setujui', tolak: 'Tolak', transfer: 'Transfer',
 }
 
 export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete, onShowLog }: Props) {
@@ -57,10 +57,10 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
 
     const eligibleFor = (p: PengajuanPengeluaran, action: BulkAction): boolean => {
         switch (action) {
-            case 'cek':      return p.status === 'diajukan' && bolehKeuangan
+            case 'cek':      return p.status === 'disetujui' && bolehKeuangan
             case 'setuju':   return p.status === 'menunggu_approval' && p.bisa_approve
-            case 'tolak':    return ((p.status === 'diajukan' || p.status === 'dicek') && bolehManager) || (p.status === 'menunggu_approval' && p.bisa_approve)
-            case 'transfer': return p.status === 'disetujui' && bolehKeuangan
+            case 'tolak':    return (p.status === 'menunggu_approval' && p.bisa_approve) || ((p.status === 'disetujui' || p.status === 'dicek' || p.status === 'siap_transfer') && bolehManager)
+            case 'transfer': return p.status === 'siap_transfer' && bolehKeuangan
         }
     }
 
@@ -367,8 +367,8 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {p.status === 'diajukan' && bolehKeuangan && (
-                            <Tooltip title="Cek">
+                        {p.status === 'disetujui' && bolehKeuangan && (
+                            <Tooltip title="Verifikasi">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                                     onClick={() => setCekTarget(p)}>
@@ -376,7 +376,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'diajukan' || p.status === 'dicek') && bolehManager && (
+                        {(p.status === 'disetujui' || p.status === 'dicek' || p.status === 'siap_transfer') && bolehManager && (
                             <Tooltip title="Tolak">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
@@ -385,7 +385,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {p.status === 'disetujui' && bolehKeuangan && (
+                        {p.status === 'siap_transfer' && bolehKeuangan && (
                             <Tooltip title="Transfer">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 transition-colors"
@@ -394,7 +394,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {p.status === 'diajukan' && bolehKelola && onEdit && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && onEdit && (
                             <Tooltip title="Edit">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -403,7 +403,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {p.status === 'diajukan' && bolehKelola && onDelete && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && onDelete && (
                             <Tooltip title="Hapus">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
@@ -432,7 +432,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                     {bulkActions.includes('cek') && (
                         <Button size="sm" variant="solid" loading={bulkSubmitting} disabled={eligibleCountUntuk('cek') === 0}
                             onClick={() => bukaBulkKeputusan('cek')}>
-                            Cek Terpilih ({eligibleCountUntuk('cek')})
+                            Verifikasi Terpilih ({eligibleCountUntuk('cek')})
                         </Button>
                     )}
                     {bulkActions.includes('setuju') && (
@@ -479,15 +479,15 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
             <ConfirmDialog
                 isOpen={!!cekTarget}
                 type="info"
-                title="Cek Pengajuan"
-                confirmText="Ya, Cek"
+                title="Verifikasi Pengajuan"
+                confirmText="Ya, Verifikasi"
                 cancelText="Batal"
                 onClose={() => setCekTarget(null)}
                 onCancel={() => setCekTarget(null)}
                 onConfirm={jalankanCekSatuan}
                 confirmButtonProps={{ loading: aksiSatuLoading }}
             >
-                <p>Tandai pengajuan {cekTarget?.nomor_pengajuan} sebagai sudah dicek?</p>
+                <p>Tandai pengajuan {cekTarget?.nomor_pengajuan} sebagai sudah diverifikasi?</p>
             </ConfirmDialog>
 
             <ConfirmDialog
@@ -572,7 +572,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                 <h5 className="text-base font-semibold mb-1">Transfer Pengajuan Terpilih</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {eligibleCountUntuk('transfer')} pengajuan akan ditransfer dengan tanggal yang sama.
-                    {selectedRows.length - eligibleCountUntuk('transfer') > 0 && ` ${selectedRows.length - eligibleCountUntuk('transfer')} dilewati karena belum berstatus Disetujui.`}
+                    {selectedRows.length - eligibleCountUntuk('transfer') > 0 && ` ${selectedRows.length - eligibleCountUntuk('transfer')} dilewati karena belum berstatus Siap Transfer.`}
                 </p>
                 <form onSubmit={e => { e.preventDefault(); jalankanTransferBulk() }}>
                     <FormItem label="Tanggal Transfer" asterisk>
