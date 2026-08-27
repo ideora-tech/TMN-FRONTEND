@@ -746,6 +746,12 @@ export default function BoardUnit() {
                         <p className="text-sm text-gray-400">Trip belum dimulai.</p>
                     ) : detailTrips.length === 1 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                            {detailTrips[0].status === 'dibatalkan' && detailTrips[0].alasan_dibatalkan && (
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Alasan Dibatalkan</p>
+                                    <p className="text-sm font-medium text-red-500 dark:text-red-400">{detailTrips[0].alasan_dibatalkan}</p>
+                                </div>
+                            )}
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Mulai Jalan</p>
                                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -769,9 +775,11 @@ export default function BoardUnit() {
                                             <Tag className={`text-[10px] border-0 font-semibold ${
                                                 trip.status === 'berjalan'
                                                     ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'
-                                                    : 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100'
+                                                    : trip.status === 'dibatalkan'
+                                                        ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100'
+                                                        : 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100'
                                             }`}>
-                                                {trip.status === 'berjalan' ? 'Sedang Jalan' : 'Selesai'}
+                                                {trip.status === 'berjalan' ? 'Sedang Jalan' : trip.status === 'dibatalkan' ? 'Dibatalkan' : 'Selesai'}
                                             </Tag>
                                         </div>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -779,6 +787,11 @@ export default function BoardUnit() {
                                             {' → '}
                                             {trip.waktu_checkout ? dayjs(trip.waktu_checkout).format('DD MMM HH:mm') : 'Belum selesai'}
                                         </p>
+                                        {trip.status === 'dibatalkan' && trip.alasan_dibatalkan && (
+                                            <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
+                                                {trip.alasan_dibatalkan}
+                                            </p>
+                                        )}
                                     </div>
                                     <button type="button" className="p-1 shrink-0 text-gray-400 hover:text-blue-600"
                                         title="Lihat detail lengkap trip ini"

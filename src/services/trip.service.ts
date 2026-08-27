@@ -17,6 +17,7 @@ export interface Trip {
     status: 'belum_mulai' | 'berjalan' | 'selesai' | 'dibatalkan'
     catatan?: string
     uang_jalan_alokasi?: number | null
+    alasan_dibatalkan?: string | null
     sumber?: 'internal' | 'vendor'
     vendor_nama?: string | null
     mekanisme?: 'unit_only' | 'unit_driver' | 'full' | null
