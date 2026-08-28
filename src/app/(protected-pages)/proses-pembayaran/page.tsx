@@ -17,7 +17,7 @@ import PengajuanBulkTable from './PengajuanBulkTable'
 type Option = { value: string; label: string }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
-type TabValue = 'menunggu' | 'verifikasi' | 'ditolak' | 'ditransfer'
+type TabValue = 'menunggu' | 'verifikasi' | 'siap' | 'ditolak' | 'ditransfer'
 
 type PengajuanForm = {
     kategori: KategoriPengajuan | ''
@@ -65,10 +65,11 @@ export default function ProsesPembayaranPage() {
         })
     }, [list, kategoriFilter, search])
 
-    const menunggu   = useMemo(() => filteredList.filter(p => p.status === 'diajukan' || p.status === 'menunggu_approval'), [filteredList])
-    const verifikasi = useMemo(() => filteredList.filter(p => p.status === 'disetujui' || p.status === 'dicek' || p.status === 'siap_transfer'), [filteredList])
-    const ditolak    = useMemo(() => filteredList.filter(p => p.status === 'ditolak'), [filteredList])
-    const ditransfer = useMemo(() => filteredList.filter(p => p.status === 'ditransfer'), [filteredList])
+    const menunggu     = useMemo(() => filteredList.filter(p => p.status === 'diajukan' || p.status === 'menunggu_approval'), [filteredList])
+    const verifikasi   = useMemo(() => filteredList.filter(p => p.status === 'disetujui' || p.status === 'dicek'), [filteredList])
+    const siapTransfer = useMemo(() => filteredList.filter(p => p.status === 'siap_transfer'), [filteredList])
+    const ditolak      = useMemo(() => filteredList.filter(p => p.status === 'ditolak'), [filteredList])
+    const ditransfer   = useMemo(() => filteredList.filter(p => p.status === 'ditransfer'), [filteredList])
 
     const [showForm, setShowForm]     = useState(false)
     const [editTarget, setEditTarget] = useState<PengajuanPengeluaran | null>(null)
@@ -166,7 +167,8 @@ export default function ProsesPembayaranPage() {
             <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="menunggu">Menunggu Approval ({menunggu.length})</Tabs.TabNav>
-                    <Tabs.TabNav value="verifikasi">Verifikasi & Transfer ({verifikasi.length})</Tabs.TabNav>
+                    <Tabs.TabNav value="verifikasi">Perlu Verifikasi ({verifikasi.length})</Tabs.TabNav>
+                    <Tabs.TabNav value="siap">Siap Transfer ({siapTransfer.length})</Tabs.TabNav>
                     <Tabs.TabNav value="ditolak">Ditolak ({ditolak.length})</Tabs.TabNav>
                     <Tabs.TabNav value="ditransfer">Sudah Transfer ({ditransfer.length})</Tabs.TabNav>
                 </Tabs.TabList>
@@ -224,7 +226,20 @@ export default function ProsesPembayaranPage() {
                                         <div className="p-4">
                                             <PengajuanBulkTable
                                                 list={verifikasi} loading={loading}
-                                                bulkActions={['cek', 'transfer']}
+                                                bulkActions={['cek']}
+                                                showStatusColumn
+                                                onRefresh={fetchData}
+                                            />
+                                        </div>
+                                    </Card>
+                                </Tabs.TabContent>
+                                <Tabs.TabContent value="siap">
+                                    <Card bodyClass="p-0">
+                                        {filterBar}
+                                        <div className="p-4">
+                                            <PengajuanBulkTable
+                                                list={siapTransfer} loading={loading}
+                                                bulkActions={['transfer']}
                                                 showStatusColumn
                                                 onRefresh={fetchData}
                                             />
