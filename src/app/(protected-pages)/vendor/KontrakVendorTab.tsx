@@ -117,12 +117,17 @@ export default function KontrakVendorTab() {
             },
         },
         {
-            header: 'Status', accessorKey: 'status', size: 120,
+            header: 'Status', accessorKey: 'status', size: 150,
             cell: ({ row }) => {
+                const status = row.original.status
+                if (status === 'draft') return <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Draft</Tag>
+                if (status === 'menunggu_approval') return <Tag className="bg-violet-50 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">Menunggu Approval</Tag>
+                if (status === 'batal') return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Batal</Tag>
+                if (status === 'selesai') return <Tag className="bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">Selesai</Tag>
                 const tgl = row.original.tanggal_selesai
                 const expired = tgl ? dayjs(tgl).isBefore(dayjs(), 'day') : false
+                if (expired) return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Habis Masa Berlaku</Tag>
                 if (!tgl) return <Tag className="bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Tidak berbatas</Tag>
-                if (expired) return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
                 return <Tag className="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Aktif</Tag>
             },
         },
@@ -183,6 +188,7 @@ export default function KontrakVendorTab() {
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus kontrak ini? Tindakan ini tidak dapat dibatalkan.</p>
+                <p className="text-sm text-gray-500 mt-2">Unit &amp; supir yang tertaut akan dilepas menjadi milik vendor umum. Kontrak yang sudah punya riwayat penugasan tidak bisa dihapus — nonaktifkan saja.</p>
             </ConfirmDialog>
         </div>
     )

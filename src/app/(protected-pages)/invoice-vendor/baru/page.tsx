@@ -13,17 +13,26 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { invoiceVendorService } from '@/services/invoice-vendor.service'
 import { Vendor, KontrakVendor } from '@/services/vendor.service'
+import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 
 const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
 }
+
+const TIPE_PEMBAYARAN_OPTIONS = [
+    { value: 'full_payment', label: 'Full Payment' },
+    { value: 'dp', label: 'DP' },
+    { value: 'top', label: 'TOP' },
+    { value: 'advance_payment', label: 'Advance Payment' },
+]
 
 export default function InvoiceVendorBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
         id_vendor: '', id_kontrak_vendor: '',
         nomor_invoice: '', tanggal_invoice: dayjs().format('YYYY-MM-DD'),
-        jatuh_tempo: '', no_po: '', no_do: '',
+        jatuh_tempo: '', no_po: '', no_kontrak: '',
+        nopol: '', tipe_kendaraan: '', tipe_pembayaran: '', top_hari: '',
         periode_dari: '', periode_sampai: '',
         dpp: '', ppn: '', pph: '', keterangan: '',
     })
@@ -32,6 +41,7 @@ export default function InvoiceVendorBaruPage() {
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [vendorOptions, setVendorOptions]   = useState<{ value: string; label: string }[]>([])
     const [kontrakList, setKontrakList]       = useState<KontrakVendor[]>([])
+    const [armadaList, setArmadaList]         = useState<ArmadaVendor[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 999 } })
@@ -46,11 +56,23 @@ export default function InvoiceVendorBaruPage() {
             .catch(() => setKontrakList([]))
     }, [form.id_vendor])
 
+    useEffect(() => {
+        if (!form.id_vendor) { setArmadaList([]); return }
+        armadaVendorService.list(1, 999, form.id_vendor)
+            .then(r => setArmadaList(r.data))
+            .catch(() => setArmadaList([]))
+    }, [form.id_vendor])
+
     const kontrakOptions = kontrakList.map(k => ({
         value: k.id_kontrak_vendor,
         label: `${k.nomor_kontrak ?? 'Tanpa nomor'} · ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
     }))
     const selectedKontrak = kontrakList.find(k => k.id_kontrak_vendor === form.id_kontrak_vendor) ?? null
+    const nopolOptions = armadaList.map(a => ({
+        value: a.nopol,
+        label: a.nopol,
+        tipe: a.nama_jenis_kendaraan ?? a.jenis ?? '',
+    }))
 
     const applyTerminJatuhTempo = (kontrak: KontrakVendor | null, tanggalInvoice: string, manual: boolean) => {
         if (manual || !kontrak?.termin_pembayaran_hari || !tanggalInvoice) return null
@@ -64,6 +86,7 @@ export default function InvoiceVendorBaruPage() {
             return {
                 ...p,
                 id_kontrak_vendor: idKontrak,
+                no_kontrak: kontrak?.nomor_kontrak ?? p.no_kontrak,
                 jatuh_tempo: auto ?? (jatuhTempoManual ? p.jatuh_tempo : ''),
             }
         })
@@ -71,6 +94,9 @@ export default function InvoiceVendorBaruPage() {
 
     const handleTanggalInvoiceChange = (tanggal: string) => {
         setForm(p => {
+            if (p.tipe_pembayaran === 'top' && p.top_hari && tanggal && !jatuhTempoManual) {
+                return { ...p, tanggal_invoice: tanggal, jatuh_tempo: dayjs(tanggal).add(Number(p.top_hari), 'day').format('YYYY-MM-DD') }
+            }
             const kontrak = kontrakList.find(k => k.id_kontrak_vendor === p.id_kontrak_vendor) ?? null
             const auto = applyTerminJatuhTempo(kontrak, tanggal, jatuhTempoManual)
             return { ...p, tanggal_invoice: tanggal, jatuh_tempo: auto ?? p.jatuh_tempo }
@@ -104,7 +130,11 @@ export default function InvoiceVendorBaruPage() {
                 tanggal_invoice: form.tanggal_invoice,
                 jatuh_tempo: form.jatuh_tempo || null,
                 no_po: form.no_po.trim() || null,
-                no_do: form.no_do.trim() || null,
+                no_kontrak: form.no_kontrak.trim() || null,
+                nopol: form.nopol.trim() || null,
+                tipe_kendaraan: form.tipe_kendaraan.trim() || null,
+                tipe_pembayaran: form.tipe_pembayaran || null,
+                top_hari: form.tipe_pembayaran === 'top' && form.top_hari ? Number(form.top_hari) : null,
                 periode_dari: form.periode_dari || null,
                 periode_sampai: form.periode_sampai || null,
                 dpp: Number(form.dpp),
@@ -165,7 +195,41 @@ export default function InvoiceVendorBaruPage() {
                             value={form.tanggal_invoice ? dayjs(form.tanggal_invoice).toDate() : null}
                             onChange={date => handleTanggalInvoiceChange(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </FormItem>
-                    <FormItem label="Jatuh Tempo">
+                    <FormItem label="Tipe Pembayaran">
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                                <Select isSearchable={false} isClearable placeholder="Pilih tipe pembayaran..."
+                                    options={TIPE_PEMBAYARAN_OPTIONS}
+                                    value={TIPE_PEMBAYARAN_OPTIONS.find(o => o.value === form.tipe_pembayaran) ?? null}
+                                    onChange={opt => setForm(p => {
+                                        const tipe = opt?.value ?? ''
+                                        const next = { ...p, tipe_pembayaran: tipe }
+                                        if (tipe !== 'top') next.top_hari = ''
+                                        else if (p.top_hari && p.tanggal_invoice && !jatuhTempoManual)
+                                            next.jatuh_tempo = dayjs(p.tanggal_invoice).add(Number(p.top_hari), 'day').format('YYYY-MM-DD')
+                                        return next
+                                    })} />
+                            </div>
+                            {form.tipe_pembayaran === 'top' && (
+                                <Input className="w-28" suffix="hari" placeholder="0"
+                                    value={form.top_hari}
+                                    onChange={e => {
+                                        const v = e.target.value.replace(/\D/g, '')
+                                        setForm(p => ({
+                                            ...p,
+                                            top_hari: v,
+                                            jatuh_tempo: v && p.tanggal_invoice && !jatuhTempoManual
+                                                ? dayjs(p.tanggal_invoice).add(Number(v), 'day').format('YYYY-MM-DD')
+                                                : p.jatuh_tempo,
+                                        }))
+                                    }} />
+                            )}
+                        </div>
+                    </FormItem>
+                    <FormItem label="Jatuh Tempo"
+                        extra={form.tipe_pembayaran === 'top' && form.top_hari
+                            ? <span className="text-xs text-gray-400">Terisi otomatis dari TOP {form.top_hari} hari</span>
+                            : undefined}>
                         <DatePicker inputFormat="DD/MM/YYYY"
                             value={form.jatuh_tempo ? dayjs(form.jatuh_tempo).toDate() : null}
                             onChange={date => {
@@ -173,16 +237,30 @@ export default function InvoiceVendorBaruPage() {
                                 setForm(p => ({ ...p, jatuh_tempo: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
                             }} />
                     </FormItem>
-                    <div />
                     <FormItem label="No. PO">
                         <Input placeholder="Nomor purchase order" value={form.no_po}
                             onChange={e => setForm(p => ({ ...p, no_po: e.target.value }))} />
                     </FormItem>
-                    <FormItem label="No. DO">
-                        <Input placeholder="Nomor delivery order" value={form.no_do}
-                            onChange={e => setForm(p => ({ ...p, no_do: e.target.value }))} />
+                    <FormItem label="No. Kontrak"
+                        extra={selectedKontrak ? <span className="text-xs text-gray-400">Terisi otomatis dari kontrak terpilih</span> : undefined}>
+                        <Input placeholder="Nomor kontrak vendor" value={form.no_kontrak}
+                            onChange={e => setForm(p => ({ ...p, no_kontrak: e.target.value }))} />
                     </FormItem>
-                    <FormItem label="Periode Dari" extra="Periode kerja yang ditagihkan — dipakai pencocokan konsolidasi">
+                    <FormItem label="Nopol">
+                        <Select isSearchable isClearable placeholder="Pilih unit vendor..."
+                            options={nopolOptions}
+                            value={nopolOptions.find(o => o.value === form.nopol) ?? null}
+                            onChange={opt => setForm(p => ({
+                                ...p,
+                                nopol: opt?.value ?? '',
+                                tipe_kendaraan: opt?.tipe ? opt.tipe : p.tipe_kendaraan,
+                            }))} />
+                    </FormItem>
+                    <FormItem label="Tipe Kendaraan">
+                        <Input placeholder="mis. Tronton, CDD" value={form.tipe_kendaraan}
+                            onChange={e => setForm(p => ({ ...p, tipe_kendaraan: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Periode Dari" extra="Periode kerja yang ditagihkan — dipakai pencocokan rekon invoice">
                         <DatePicker inputFormat="DD/MM/YYYY"
                             value={form.periode_dari ? dayjs(form.periode_dari).toDate() : null}
                             onChange={date => setForm(p => ({ ...p, periode_dari: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />

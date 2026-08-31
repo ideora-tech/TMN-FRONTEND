@@ -11,8 +11,13 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaVendorService } from '@/services/armadaVendor.service'
+import { kontrakVendorService } from '@/services/kontrak-vendor.service'
 import { Vendor } from '@/services/vendor.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
+}
 
 export default function ArmadaVendorBaruPage() {
     const router = useRouter()
@@ -21,12 +26,13 @@ export default function ArmadaVendorBaruPage() {
 
     const [form, setForm] = useState({
         id_vendor: initialIdVendor, nopol: '', merk: '', jenis: '', id_jenis_kendaraan: '', tahun: '',
-        kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
+        kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '', id_kontrak_vendor: '',
     })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([])
     const [jenisKendaraanOptions, setJenisKendaraanOptions] = useState<{ value: string; label: string }[]>([])
+    const [kontrakOptions, setKontrakOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 100 } })
@@ -36,6 +42,18 @@ export default function ArmadaVendorBaruPage() {
             .then(res => setJenisKendaraanOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
     }, [])
+
+    useEffect(() => {
+        setForm(p => ({ ...p, id_kontrak_vendor: '' }))
+        setKontrakOptions([])
+        if (!form.id_vendor) return
+        kontrakVendorService.list(1, { id_vendor: form.id_vendor, limit: '200' })
+            .then(res => setKontrakOptions(res.data.map(k => ({
+                value: k.id_kontrak_vendor,
+                label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+            }))))
+            .catch(() => {})
+    }, [form.id_vendor])
 
     const validate = () => {
         const e: Record<string, string> = {}
@@ -63,6 +81,7 @@ export default function ArmadaVendorBaruPage() {
                 kapasitas: form.kapasitas.trim() || null,
                 masa_berlaku_stnk: form.masa_berlaku_stnk || null,
                 masa_berlaku_kir: form.masa_berlaku_kir || null,
+                id_kontrak_vendor: form.id_kontrak_vendor || null,
             })
             toast.push(<Notification type="success" title="Armada vendor berhasil ditambahkan" />)
             router.push(form.id_vendor ? `${ROUTES.ARMADA_VENDOR}?id_vendor=${form.id_vendor}` : ROUTES.ARMADA_VENDOR)
@@ -93,6 +112,18 @@ export default function ArmadaVendorBaruPage() {
                             options={vendorOptions}
                             value={vendorOptions.find(o => o.value === form.id_vendor) ?? null}
                             onChange={opt => setForm(p => ({ ...p, id_vendor: opt?.value ?? '' }))} />
+                    </FormItem>
+                    <FormItem label="Kontrak (opsional)">
+                        <Select isSearchable isClearable
+                            isDisabled={!form.id_vendor || kontrakOptions.length === 0}
+                            placeholder={!form.id_vendor
+                                ? 'Pilih vendor dahulu...'
+                                : kontrakOptions.length === 0
+                                    ? 'Vendor ini belum punya kontrak'
+                                    : 'Pilih kontrak...'}
+                            options={kontrakOptions}
+                            value={kontrakOptions.find(o => o.value === form.id_kontrak_vendor) ?? null}
+                            onChange={opt => setForm(p => ({ ...p, id_kontrak_vendor: (opt as { value: string } | null)?.value ?? '' }))} />
                     </FormItem>
                     <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
                         <Input placeholder="B 1234 XYZ" value={form.nopol} invalid={!!errors.nopol}

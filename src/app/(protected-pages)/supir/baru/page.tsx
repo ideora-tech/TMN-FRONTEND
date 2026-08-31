@@ -108,7 +108,7 @@ export default function SupirBaruPage() {
                             options={JENIS_SIM_OPTIONS}
                             onChange={(option) => option && setForm(p => ({ ...p, jenis_sim: option.value }))} />
                     </FormItem>
-                    <FormItem label="Tgl Kadaluarsa SIM">
+                    <FormItem label="Tgl Habis Masa Berlaku SIM">
                         <DatePicker
                             value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
                             onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />

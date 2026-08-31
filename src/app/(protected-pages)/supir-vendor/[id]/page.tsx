@@ -9,7 +9,12 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
+import { kontrakVendorService } from '@/services/kontrak-vendor.service'
 import { penggunaService } from '@/services/pengguna.service'
+
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+}
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -23,7 +28,7 @@ const renderMasaBerlaku = (tgl?: string | null) => {
         <span className="inline-flex items-center gap-2">
             <span>{dayjs(tgl).format('DD MMM YYYY')}</span>
             {expired && (
-                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
+                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Habis Masa Berlaku</Tag>
             )}
         </span>
     )
@@ -40,6 +45,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
     const [errors, setErrors]   = useState<Partial<Record<keyof SupirVendor, string>>>({})
     const [akunOptions, setAkunOptions] = useState<{ value: string; label: string }[]>([])
     const [akunMap, setAkunMap] = useState<Record<string, string>>({})
+    const [kontrakOptions, setKontrakOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         supirVendorService.get(id)
@@ -47,6 +53,16 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [id])
+
+    useEffect(() => {
+        if (!data?.id_vendor) return
+        kontrakVendorService.list(1, { id_vendor: data.id_vendor, limit: '200' })
+            .then(res => setKontrakOptions(res.data.map(k => ({
+                value: k.id_kontrak_vendor,
+                label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+            }))))
+            .catch(() => {})
+    }, [data?.id_vendor])
 
     useEffect(() => {
         Promise.all([penggunaService.list(1, 500), supirVendorService.list(1, 500)])
@@ -85,6 +101,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                 masa_berlaku_sim: form.masa_berlaku_sim || null,
                 aktif:   form.aktif,
                 id_pengguna: form.id_pengguna || null,
+                id_kontrak_vendor: form.id_kontrak_vendor || null,
             })
             setData(updated)
             setForm(updated)
@@ -139,6 +156,12 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
                                 { label: 'Vendor',           value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Kontrak',
+                                    value: data.id_kontrak_vendor
+                                        ? (kontrakOptions.find(o => o.value === data.id_kontrak_vendor)?.label ?? data.id_kontrak_vendor.slice(0, 8))
+                                        : <span className="text-gray-400">Tidak tertaut kontrak</span>,
+                                },
                                 { label: 'Nama',             value: data.nama },
                                 { label: 'Telepon',          value: data.telepon ?? <span className="text-gray-400">—</span> },
                                 { label: 'No SIM',           value: data.no_sim ?? <span className="text-gray-400">—</span> },
@@ -191,6 +214,14 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                                     options={akunOptions}
                                     value={akunOptions.find(o => o.value === form.id_pengguna) ?? null}
                                     onChange={opt => setForm(prev => ({ ...prev, id_pengguna: (opt as { value: string } | null)?.value ?? null }))} />
+                            </FormItem>
+                            <FormItem label="Kontrak (opsional)">
+                                <Select isSearchable isClearable
+                                    isDisabled={kontrakOptions.length === 0}
+                                    placeholder={kontrakOptions.length === 0 ? 'Vendor ini belum punya kontrak' : 'Pilih kontrak...'}
+                                    options={kontrakOptions}
+                                    value={kontrakOptions.find(o => o.value === form.id_kontrak_vendor) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_kontrak_vendor: (opt as { value: string } | null)?.value ?? null }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

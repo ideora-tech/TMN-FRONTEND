@@ -20,7 +20,11 @@ export interface InvoiceVendor {
     tanggal_invoice: string
     jatuh_tempo: string | null
     no_po: string | null
-    no_do: string | null
+    no_kontrak: string | null
+    nopol: string | null
+    tipe_kendaraan: string | null
+    tipe_pembayaran: 'full_payment' | 'dp' | 'top' | 'advance_payment' | null
+    top_hari: number | null
     periode_dari: string | null
     periode_sampai: string | null
     dpp: number
@@ -81,7 +85,11 @@ export type InvoiceVendorPayload = {
     tanggal_invoice: string
     jatuh_tempo?: string | null
     no_po?: string | null
-    no_do?: string | null
+    no_kontrak?: string | null
+    nopol?: string | null
+    tipe_kendaraan?: string | null
+    tipe_pembayaran?: string | null
+    top_hari?: number | null
     periode_dari?: string | null
     periode_sampai?: string | null
     dpp: number

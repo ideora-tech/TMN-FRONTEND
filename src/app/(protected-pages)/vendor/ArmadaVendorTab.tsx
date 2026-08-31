@@ -11,6 +11,7 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
+import { kontrakVendorService } from '@/services/kontrak-vendor.service'
 import { Vendor } from '@/services/vendor.service'
 
 type VendorOption = { value: string; label: string }
@@ -29,10 +30,18 @@ export default function ArmadaVendorTab() {
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [vendorOptions, setVendorOptions] = useState<VendorOption[]>([])
+    const [kontrakLabelMap, setKontrakLabelMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 100 } })
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
+            .catch(() => {})
+        kontrakVendorService.list(1, { limit: '500' })
+            .then(res => {
+                const peta: Record<string, string> = {}
+                res.data.forEach(k => { peta[k.id_kontrak_vendor] = k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}` })
+                setKontrakLabelMap(peta)
+            })
             .catch(() => {})
     }, [])
 
@@ -67,6 +76,14 @@ export default function ArmadaVendorTab() {
         {
             header: 'Vendor', accessorKey: 'nama_vendor',
             cell: ({ row }) => row.original.nama_vendor ?? <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Kontrak', accessorKey: 'id_kontrak_vendor',
+            cell: ({ row }) => {
+                const idKontrak = row.original.id_kontrak_vendor
+                if (!idKontrak) return <span className="text-gray-400">—</span>
+                return kontrakLabelMap[idKontrak] ?? idKontrak.slice(0, 8)
+            },
         },
         {
             header: 'Merk', accessorKey: 'merk',

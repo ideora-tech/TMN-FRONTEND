@@ -89,7 +89,7 @@ function getExpiryInfo(berlakuSampai: string | null): {
 } {
     if (!berlakuSampai) return { label: '—', className: 'bg-gray-100 text-gray-400', daysLeft: null, urgent: false }
     const days = Math.ceil((new Date(berlakuSampai).getTime() - Date.now()) / 86400000)
-    if (days < 0)   return { label: 'Kadaluarsa', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',       daysLeft: days, urgent: true }
+    if (days < 0)   return { label: 'Habis Masa Berlaku', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',       daysLeft: days, urgent: true }
     if (days <= 14) return { label: `${days} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',   daysLeft: days, urgent: true }
     if (days <= 30) return { label: `${days} hari lagi`, className: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400', daysLeft: days, urgent: true }
     if (days <= 60) return { label: `${days} hari lagi`, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400', daysLeft: days, urgent: false }
@@ -402,7 +402,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
             {urgentCount > 0 && (
                 <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
                     <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
-                    <span><strong>{urgentCount} dokumen</strong> kadaluarsa atau hampir kadaluarsa — segera perbarui.</span>
+                    <span><strong>{urgentCount} dokumen</strong> habis masa berlaku atau hampir habis masa berlaku — segera perbarui.</span>
                 </div>
             )}
 
@@ -533,7 +533,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex items-center justify-between mb-1">
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Dokumen Vendor</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal kadaluarsa terdekat</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal habis masa berlaku terdekat</p>
                     </div>
                     <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowDocForm(v => !v)}>
                         Tambah Dokumen
@@ -1024,7 +1024,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                                 {!k.tanggal_selesai ? (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Tidak ada masa berlaku</span>
                                                 ) : isExpired ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">Kadaluarsa</span>
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">Habis Masa Berlaku</span>
                                                 ) : (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Aktif</span>
                                                 )}

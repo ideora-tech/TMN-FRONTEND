@@ -85,7 +85,7 @@ export default function DashboardOperasionalTab() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
                     <div className="flex items-center gap-3">
                         <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
-                        <span><strong>{dokumenExpiring.total} dokumen</strong> kadaluarsa ≤30 hari</span>
+                        <span><strong>{dokumenExpiring.total} dokumen</strong> habis masa berlaku ≤30 hari</span>
                     </div>
                     <ul className="mt-2 ml-8 list-disc space-y-1">
                         {(showAllDokumen ? dokumenExpiring.items : dokumenExpiring.items.slice(0, 3)).map((item, idx) => (

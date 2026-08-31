@@ -14,6 +14,12 @@ export interface OpsiArmadaVendor {
     jenis: string | null
     id_vendor: string
     nama_vendor: string
+    kontrak_habis?: boolean
+}
+
+export interface TitikDropInput {
+    lokasi: string
+    uang_jalan_tambahan?: number
 }
 
 export interface Penugasan {
@@ -31,6 +37,8 @@ export interface Penugasan {
     id_armada_vendor: string | null
     id_supir_vendor: string | null
     titik_drop?: string[]
+    /** Sama isinya dengan titik_drop, tapi menyertakan uang_jalan_tambahan per titik. */
+    titik_drop_detail?: TitikDropInput[]
     dibuat_pada: string
     diubah_pada: string
 }
@@ -76,7 +84,7 @@ export const penugasanService = {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN, payload)
         return data.data as Penugasan
     },
-    async update(id: string, payload: Partial<Omit<Penugasan, 'id_penugasan' | 'dibuat_pada' | 'diubah_pada'>>) {
+    async update(id: string, payload: Partial<Omit<Penugasan, 'id_penugasan' | 'dibuat_pada' | 'diubah_pada' | 'titik_drop' | 'titik_drop_detail'>> & { titik_drop?: string[] | TitikDropInput[] }) {
         const { data } = await axios.put(API_ENDPOINTS.PENUGASAN_DETAIL(id), payload)
         return data.data as Penugasan
     },

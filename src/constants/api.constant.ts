@@ -95,6 +95,7 @@ export const API_ENDPOINTS = {
 
     // Jadwal Shift
     JADWAL_SHIFT:        '/api/proxy/jadwal-shift',
+    JADWAL_SHIFT_OPSI_SUPIR_VENDOR: '/api/proxy/jadwal-shift/opsi-supir-vendor',
     JADWAL_SHIFT_DETAIL: (id: string) => `/api/proxy/jadwal-shift/${id}`,
     JADWAL_SHIFT_IMPORT:          '/api/proxy/jadwal-shift/import',
     JADWAL_SHIFT_IMPORT_TEMPLATE: '/api/proxy/jadwal-shift/import/template',
@@ -130,6 +131,16 @@ export const API_ENDPOINTS = {
     // Kontrak Vendor
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
+    KONTRAK_VENDOR_TEMPLATE_PASANGAN: '/api/proxy/kontrak-vendor/template-pasangan',
+    KONTRAK_VENDOR_EXPORT_PDF: (id: string) => `/api/proxy/kontrak-vendor/${id}/export/pdf`,
+    KONTRAK_VENDOR_EXPORT_EXCEL: (id: string) => `/api/proxy/kontrak-vendor/${id}/export/excel`,
+    KONTRAK_VENDOR_PARSE_PASANGAN: '/api/proxy/kontrak-vendor/parse-pasangan',
+    KONTRAK_VENDOR_PARSE_UNIT:  '/api/proxy/kontrak-vendor/parse-unit',
+    KONTRAK_VENDOR_PARSE_SUPIR: '/api/proxy/kontrak-vendor/parse-supir',
+    KONTRAK_VENDOR_TIMPA_UNIT:  (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-unit`,
+    KONTRAK_VENDOR_TIMPA_PASANGAN: (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-pasangan`,
+    KONTRAK_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/kontrak-vendor/${id}/ajukan-approval`,
+    KONTRAK_VENDOR_TIMPA_SUPIR: (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-supir`,
 
     // Trip
     TRIP:                 '/api/proxy/trip',
@@ -381,6 +392,7 @@ export const API_ENDPOINTS = {
     APPROVAL_KEPUTUSAN:     (idApproval: string) => `/api/proxy/approval-pengajuan/${idApproval}/keputusan`,
     APPROVAL_RIWAYAT_SAYA:  '/api/proxy/approval-pengajuan/riwayat-saya',
     APPROVAL_EXPORT_SAYA:   '/api/proxy/approval-pengajuan/export-saya',
+    APPROVAL_STATUS_REFERENSI: '/api/proxy/approval-pengajuan/status-referensi',
 
     // Pengaturan Kode
     PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',

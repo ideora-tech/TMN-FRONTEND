@@ -352,7 +352,7 @@ export default function KonfigurasiApprovalPage() {
                     </Button>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
-                    Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, lainnya</span> — kalau jenisnya tidak ada/nonaktif, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor) dipakai oleh modulnya masing-masing.
+                    Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, lainnya</span> — kalau jenisnya tidak ada/nonaktif, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor, kontrak_vendor) dipakai oleh modulnya masing-masing.
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                     Kode <span className="font-mono">persetujuan_transfer</span> adalah gerbang persetujuan transfer oleh dirut sebelum staf keuangan transfer dana — opsional; tanpa jenis ini (atau saat dinonaktifkan), pengajuan langsung siap transfer setelah diverifikasi keuangan.

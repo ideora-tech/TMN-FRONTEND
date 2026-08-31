@@ -699,7 +699,7 @@ export default function PenugasanVendorTab() {
                         </Tag>
                         {dokumenKadaluarsa && (
                             <Tag className="text-xs font-semibold bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-                                STNK/KIR kadaluarsa
+                                STNK/KIR habis masa berlaku
                             </Tag>
                         )}
                     </div>

@@ -224,7 +224,7 @@ const navigationConfig: NavigationTree[] = [
         subMenu: [],
     },
     {
-        key: 'konsolidasi-vendor', path: '/konsolidasi-vendor', title: 'Konsolidasi Vendor',
+        key: 'konsolidasi-vendor', path: '/konsolidasi-vendor', title: 'Rekon Invoice',
         translateKey: 'nav.konsolidasiVendor', icon: 'repeat',
         type: NAV_ITEM_TYPE_ITEM,
         authority: ['keuangan', 'manager', 'superadmin', 'admin'],

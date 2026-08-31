@@ -20,7 +20,17 @@ import { KontrakVendor } from '@/services/vendor.service'
 import { STATUS_TAG, STATUS_LABEL, BAYAR_TAG, BAYAR_LABEL } from '../DaftarInvoiceTab'
 
 const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
+}
+
+const TIPE_PEMBAYARAN_OPTIONS = [
+    { value: 'full_payment', label: 'Full Payment' },
+    { value: 'dp', label: 'DP' },
+    { value: 'top', label: 'TOP' },
+    { value: 'advance_payment', label: 'Advance Payment' },
+]
+const TIPE_PEMBAYARAN_LABEL: Record<string, string> = {
+    full_payment: 'Full Payment', dp: 'DP', top: 'TOP', advance_payment: 'Advance Payment',
 }
 
 const METODE_OPTIONS = [
@@ -47,7 +57,8 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState({
         id_kontrak_vendor: '', nomor_invoice: '', tanggal_invoice: '', jatuh_tempo: '',
-        no_po: '', no_do: '', periode_dari: '', periode_sampai: '',
+        no_po: '', no_kontrak: '', nopol: '', tipe_kendaraan: '',
+        tipe_pembayaran: '', top_hari: '', periode_dari: '', periode_sampai: '',
         dpp: '', ppn: '', pph: '', keterangan: '',
     })
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -72,7 +83,11 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         tanggal_invoice:   d.tanggal_invoice,
         jatuh_tempo:       d.jatuh_tempo ?? '',
         no_po:             d.no_po ?? '',
-        no_do:             d.no_do ?? '',
+        no_kontrak:        d.no_kontrak ?? '',
+        nopol:             d.nopol ?? '',
+        tipe_kendaraan:    d.tipe_kendaraan ?? '',
+        tipe_pembayaran:   d.tipe_pembayaran ?? '',
+        top_hari:          d.top_hari ? String(d.top_hari) : '',
         periode_dari:      d.periode_dari ?? '',
         periode_sampai:    d.periode_sampai ?? '',
         dpp:               String(d.dpp ?? ''),
@@ -141,7 +156,11 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 tanggal_invoice: form.tanggal_invoice,
                 jatuh_tempo: form.jatuh_tempo || null,
                 no_po: form.no_po.trim() || null,
-                no_do: form.no_do.trim() || null,
+                no_kontrak: form.no_kontrak.trim() || null,
+                nopol: form.nopol.trim() || null,
+                tipe_kendaraan: form.tipe_kendaraan.trim() || null,
+                tipe_pembayaran: form.tipe_pembayaran || null,
+                top_hari: form.tipe_pembayaran === 'top' && form.top_hari ? Number(form.top_hari) : null,
                 periode_dari: form.periode_dari || null,
                 periode_sampai: form.periode_sampai || null,
                 dpp: Number(form.dpp),
@@ -302,7 +321,15 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     : <span className="text-gray-400">—</span>,
                             },
                             { label: 'No. PO', value: data.no_po ?? <span className="text-gray-400">—</span> },
-                            { label: 'No. DO', value: data.no_do ?? <span className="text-gray-400">—</span> },
+                            { label: 'No. Kontrak', value: data.no_kontrak ?? <span className="text-gray-400">—</span> },
+                            { label: 'Nopol', value: data.nopol ?? <span className="text-gray-400">—</span> },
+                            { label: 'Tipe Kendaraan', value: data.tipe_kendaraan ?? <span className="text-gray-400">—</span> },
+                            {
+                                label: 'Tipe Pembayaran',
+                                value: data.tipe_pembayaran
+                                    ? `${TIPE_PEMBAYARAN_LABEL[data.tipe_pembayaran] ?? data.tipe_pembayaran}${data.tipe_pembayaran === 'top' && data.top_hari ? ` (${data.top_hari} hari)` : ''}`
+                                    : <span className="text-gray-400">—</span>,
+                            },
                             {
                                 label: 'Periode',
                                 value: data.periode_dari && data.periode_sampai
@@ -361,8 +388,33 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                             <FormItem label="No. PO">
                                 <Input value={form.no_po} onChange={e => setForm(p => ({ ...p, no_po: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="No. DO">
-                                <Input value={form.no_do} onChange={e => setForm(p => ({ ...p, no_do: e.target.value }))} />
+                            <FormItem label="No. Kontrak">
+                                <Input value={form.no_kontrak} onChange={e => setForm(p => ({ ...p, no_kontrak: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Nopol">
+                                <Input value={form.nopol} onChange={e => setForm(p => ({ ...p, nopol: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Tipe Kendaraan">
+                                <Input value={form.tipe_kendaraan} onChange={e => setForm(p => ({ ...p, tipe_kendaraan: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Tipe Pembayaran">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                        <Select isSearchable={false} isClearable placeholder="Pilih tipe pembayaran..."
+                                            options={TIPE_PEMBAYARAN_OPTIONS}
+                                            value={TIPE_PEMBAYARAN_OPTIONS.find(o => o.value === form.tipe_pembayaran) ?? null}
+                                            onChange={opt => setForm(p => ({
+                                                ...p,
+                                                tipe_pembayaran: opt?.value ?? '',
+                                                top_hari: (opt?.value ?? '') === 'top' ? p.top_hari : '',
+                                            }))} />
+                                    </div>
+                                    {form.tipe_pembayaran === 'top' && (
+                                        <Input className="w-28" suffix="hari" placeholder="0"
+                                            value={form.top_hari}
+                                            onChange={e => setForm(p => ({ ...p, top_hari: e.target.value.replace(/\D/g, '') }))} />
+                                    )}
+                                </div>
                             </FormItem>
                             <FormItem label="Periode Dari">
                                 <DatePicker inputFormat="DD/MM/YYYY"
@@ -421,7 +473,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 const cocok = adaOtomatis && Math.abs(selisih) < 1
                 return (
                     <Card>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Pencocokan Konsolidasi</p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Pencocokan Rekon Invoice</p>
                         <p className="text-xs text-gray-400 mb-4">
                             Rekap trip vendor selesai ber-laporan periode {dayjs(data.periode_dari).format('DD MMM YYYY')} — {dayjs(data.periode_sampai).format('DD MMM YYYY')}
                         </p>
@@ -457,7 +509,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         </div>
                         <Link href={`${ROUTES.KONSOLIDASI_VENDOR}?vendor=${data.id_vendor}`}
                             className="inline-block text-blue-500 hover:underline text-xs mt-4">
-                            Lihat rincian di Konsolidasi Vendor
+                            Lihat rincian di Rekon Invoice
                         </Link>
                     </Card>
                 )

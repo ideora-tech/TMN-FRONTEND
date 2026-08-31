@@ -10,6 +10,7 @@ import PapanShift from './PapanShift'
 import { supirProyekService, SupirProyek } from '@/services/supirProyek.service'
 import { projectService, Project } from '@/services/project.service'
 import { supirService, Supir } from '@/services/supir.service'
+import { jadwalShiftService, OpsiSupirVendor } from '@/services/jadwalShift.service'
 
 type HasilGagalTambah = { supir: string; alasan: string }
 
@@ -31,6 +32,7 @@ export default function JadwalShiftSupirPage() {
     }
 
     const [list, setList]       = useState<SupirProyek[]>([])
+    const [supirVendorList, setSupirVendorList] = useState<OpsiSupirVendor[]>([])
     const [loading, setLoading] = useState(false)
 
     const [tambahDialogOpen, setTambahDialogOpen] = useState(false)
@@ -59,6 +61,10 @@ export default function JadwalShiftSupirPage() {
         } finally {
             setSupirAktifLoading(false)
         }
+    }, [])
+
+    useEffect(() => {
+        jadwalShiftService.opsiSupirVendor().then(setSupirVendorList).catch(() => {})
     }, [])
 
     useEffect(() => {
@@ -201,6 +207,7 @@ export default function JadwalShiftSupirPage() {
                         idProyek={selectedProyek}
                         namaProyek={proyekOptions.find(o => o.value === selectedProyek)?.label ?? ''}
                         supirList={list}
+                        supirVendorList={supirVendorList}
                         loading={loading}
                         onHapusSupir={handleHapusSupir}
                         refetch={fetchData}

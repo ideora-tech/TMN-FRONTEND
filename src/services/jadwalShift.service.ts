@@ -5,7 +5,8 @@ export interface JadwalShift {
     id_jadwal_shift: string
     id_proyek: string
     id_shift: string
-    id_supir: string
+    id_supir: string | null
+    id_supir_vendor: string | null
     tanggal: string
     shift_nama: string
     jam_mulai: string
@@ -22,8 +23,14 @@ export interface JadwalShift {
 
 export interface HasilBatchShift {
     sukses: number
-    gagal: { id_supir: string; tanggal?: string; alasan: string }[]
+    gagal: { id_supir?: string; id_supir_vendor?: string; tanggal?: string; alasan: string }[]
     peringatan?: string[]
+}
+
+export interface OpsiSupirVendor {
+    id_supir_vendor: string
+    nama: string
+    nama_vendor: string
 }
 
 export const jadwalShiftService = {
@@ -31,9 +38,13 @@ export const jadwalShiftService = {
         const { data } = await axios.get(API_ENDPOINTS.JADWAL_SHIFT, { params: { id_proyek: idProyek, dari, sampai } })
         return data.data as JadwalShift[]
     },
-    async create(payload: { id_proyek: string; id_shift: string; tanggal: string; tanggal_sampai?: string | null; supir: string[] }) {
+    async create(payload: { id_proyek: string; id_shift: string; tanggal: string; tanggal_sampai?: string | null; supir?: string[]; supir_vendor?: string[] }) {
         const { data } = await axios.post(API_ENDPOINTS.JADWAL_SHIFT, payload)
         return data.data as HasilBatchShift
+    },
+    async opsiSupirVendor() {
+        const { data } = await axios.get(API_ENDPOINTS.JADWAL_SHIFT_OPSI_SUPIR_VENDOR)
+        return data.data as OpsiSupirVendor[]
     },
     async update(id: string, payload: {
         id_shift: string

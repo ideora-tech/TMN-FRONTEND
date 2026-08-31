@@ -24,7 +24,7 @@ const MEKANISME_CLASS: Record<string, string> = {
     full:        'bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
 }
 const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
 }
 
 type Option = { value: string; label: string }

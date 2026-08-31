@@ -9,6 +9,7 @@ export interface SupirVendor {
     telepon?: string | null
     no_sim?: string | null
     masa_berlaku_sim?: string | null
+    id_kontrak_vendor?: string | null
     aktif: boolean
     nama_vendor?: string
     dibuat_pada?: string
@@ -27,7 +28,7 @@ export const supirVendorService = {
         const { data } = await axios.get(API_ENDPOINTS.SUPIR_VENDOR_DETAIL(id))
         return data.data as SupirVendor
     },
-    async create(payload: { id_vendor: string; nama: string; telepon?: string | null; no_sim?: string | null; masa_berlaku_sim?: string | null; aktif?: boolean }) {
+    async create(payload: { id_vendor: string; nama: string; telepon?: string | null; no_sim?: string | null; masa_berlaku_sim?: string | null; id_kontrak_vendor?: string | null; aktif?: boolean }) {
         const { data } = await axios.post(API_ENDPOINTS.SUPIR_VENDOR, payload)
         return data.data as SupirVendor
     },

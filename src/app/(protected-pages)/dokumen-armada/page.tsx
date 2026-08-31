@@ -31,7 +31,7 @@ const JENIS_FILTER_OPTIONS: Option[] = [{ value: '', label: 'Semua Jenis' }, ...
 function getExpiryInfo(berlakuSampai: string | null): { label: string; className: string } {
     if (!berlakuSampai) return { label: '—', className: 'bg-gray-100 text-gray-400' }
     const days = Math.ceil((new Date(berlakuSampai).getTime() - Date.now()) / 86400000)
-    if (days < 0)   return { label: 'Kadaluarsa', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
+    if (days < 0)   return { label: 'Habis Masa Berlaku', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
     if (days <= 14) return { label: `${days} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
     if (days <= 30) return { label: `${days} hari lagi`, className: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' }
     if (days <= 60) return { label: `${days} hari lagi`, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' }

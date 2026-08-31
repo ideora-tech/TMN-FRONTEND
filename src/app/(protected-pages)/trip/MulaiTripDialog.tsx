@@ -3,10 +3,10 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button, FormItem, Input, toast, Notification, Dialog } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { parseApiError } from '@/utils/error.util'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { tripService } from '@/services/trip.service'
 import { projectService } from '@/services/project.service'
-import { penugasanService, Penugasan } from '@/services/penugasan.service'
+import { penugasanService, Penugasan, TitikDropInput } from '@/services/penugasan.service'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService } from '@/services/supir.service'
 import { armadaService } from '@/services/armada.service'
@@ -40,6 +40,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
     const [penugasanRows, setPenugasanRows] = useState<Penugasan[]>([])
     const [defaultUangJalanPenugasan, setDefaultUangJalanPenugasan] = useState<number | null>(null)
     const [defaultIdRutePenugasan, setDefaultIdRutePenugasan] = useState<string | null>(null)
+    const [titikDropInfo, setTitikDropInfo] = useState<TitikDropInput[]>([])
     const uangJalanManual = useRef(false)
     const ruteManual = useRef(false)
     const [memuat, setMemuat] = useState(false)
@@ -59,6 +60,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setUangJalan('')
         setDefaultUangJalanPenugasan(null)
         setDefaultIdRutePenugasan(null)
+        setTitikDropInfo([])
         uangJalanManual.current = false
         ruteManual.current = false
         if (!terkunci) {
@@ -87,6 +89,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             setDefaultUangJalanPenugasan(p.estimasi_biaya ?? null)
             terapkanDefaultUangJalan(p.estimasi_biaya ?? null)
             setDefaultIdRutePenugasan(p.id_rute ?? null)
+            setTitikDropInfo(p.titik_drop_detail ?? [])
         }).catch(() => setWarnShiftTerkunci(false))
         return () => { dibatalkan = true }
     }, [isOpen, terkunci, idPenugasanTerkunci, idProyekTerkunci])
@@ -162,7 +165,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
             setPenugasanOptions(rows.map((p: Penugasan) => {
                 const supir  = namaSupir[p.id_supir ?? p.id_supir_vendor ?? ''] ?? 'Tanpa supir'
                 const armada = nopolArmada[p.id_armada ?? p.id_armada_vendor ?? ''] ?? 'tanpa armada'
-                const warnSim = p.id_supir && simKadaluarsa.has(p.id_supir) ? ' ⚠ SIM kadaluarsa' : ''
+                const warnSim = p.id_supir && simKadaluarsa.has(p.id_supir) ? ' ⚠ SIM habis masa berlaku' : ''
                 const warnJalan = p.id_armada && armadaSedangJalan.has(p.id_armada) ? ' ⚠ armada sedang dalam perjalanan' : ''
                 const warnShift = proyekPakaiShift && p.id_supir && !supirShiftHariIni.has(p.id_supir)
                     ? ' ⚠ tanpa jadwal shift hari ini' : ''
@@ -192,6 +195,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
         setDefaultUangJalanPenugasan(row?.estimasi_biaya ?? null)
         terapkanDefaultUangJalan(row?.estimasi_biaya ?? null)
         setDefaultIdRutePenugasan(row?.id_rute ?? null)
+        setTitikDropInfo(row?.titik_drop_detail ?? [])
     }, [isOpen, terkunci, pilihPenugasan, penugasanRows])
 
     const handleSubmit = async () => {
@@ -261,6 +265,20 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                         value={uangJalan ? formatNum(Number(uangJalan)) : ''}
                         onChange={e => { uangJalanManual.current = true; setUangJalan(e.target.value.replace(/\D/g, '')) }} />
                 </FormItem>
+                {titikDropInfo.length > 0 && (
+                    <FormItem label="Titik Drop">
+                        <div className="flex flex-col gap-1 rounded-lg bg-gray-50 dark:bg-gray-700/50 px-3 py-2">
+                            {titikDropInfo.map((d, i) => (
+                                <div key={i} className="flex items-center justify-between gap-3 text-sm">
+                                    <span className="text-gray-600 dark:text-gray-300">{i + 1}. {d.lokasi}</span>
+                                    {!!d.uang_jalan_tambahan && (
+                                        <span className="text-xs text-gray-400 shrink-0">+{formatRupiah(d.uang_jalan_tambahan)}</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </FormItem>
+                )}
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={onClose}>Batal</Button>
                     <Button type="submit" variant="solid" loading={saving} disabled={!pilihPenugasan}>

@@ -11,7 +11,12 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { supirVendorService } from '@/services/supirVendor.service'
+import { kontrakVendorService } from '@/services/kontrak-vendor.service'
 import { Vendor } from '@/services/vendor.service'
+
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
+}
 
 export default function SupirVendorBaruPage() {
     const router = useRouter()
@@ -19,17 +24,30 @@ export default function SupirVendorBaruPage() {
     const initialIdVendor = searchParams.get('id_vendor') ?? ''
 
     const [form, setForm] = useState({
-        id_vendor: initialIdVendor, nama: '', telepon: '', no_sim: '', masa_berlaku_sim: '',
+        id_vendor: initialIdVendor, nama: '', telepon: '', no_sim: '', masa_berlaku_sim: '', id_kontrak_vendor: '',
     })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([])
+    const [kontrakOptions, setKontrakOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 100 } })
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
             .catch(() => {})
     }, [])
+
+    useEffect(() => {
+        setForm(p => ({ ...p, id_kontrak_vendor: '' }))
+        setKontrakOptions([])
+        if (!form.id_vendor) return
+        kontrakVendorService.list(1, { id_vendor: form.id_vendor, limit: '200' })
+            .then(res => setKontrakOptions(res.data.map(k => ({
+                value: k.id_kontrak_vendor,
+                label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+            }))))
+            .catch(() => {})
+    }, [form.id_vendor])
 
     const validate = () => {
         const e: Record<string, string> = {}
@@ -53,6 +71,7 @@ export default function SupirVendorBaruPage() {
                 telepon: form.telepon || null,
                 no_sim: form.no_sim || null,
                 masa_berlaku_sim: form.masa_berlaku_sim || null,
+                id_kontrak_vendor: form.id_kontrak_vendor || null,
             })
             toast.push(<Notification type="success" title="Supir vendor berhasil ditambahkan" />)
             router.push(form.id_vendor ? `${ROUTES.SUPIR_VENDOR}?id_vendor=${form.id_vendor}` : ROUTES.SUPIR_VENDOR)
@@ -83,6 +102,18 @@ export default function SupirVendorBaruPage() {
                             options={vendorOptions}
                             value={vendorOptions.find(o => o.value === form.id_vendor) ?? null}
                             onChange={opt => setForm(p => ({ ...p, id_vendor: opt?.value ?? '' }))} />
+                    </FormItem>
+                    <FormItem label="Kontrak (opsional)">
+                        <Select isSearchable isClearable
+                            isDisabled={!form.id_vendor || kontrakOptions.length === 0}
+                            placeholder={!form.id_vendor
+                                ? 'Pilih vendor dahulu...'
+                                : kontrakOptions.length === 0
+                                    ? 'Vendor ini belum punya kontrak'
+                                    : 'Pilih kontrak...'}
+                            options={kontrakOptions}
+                            value={kontrakOptions.find(o => o.value === form.id_kontrak_vendor) ?? null}
+                            onChange={opt => setForm(p => ({ ...p, id_kontrak_vendor: (opt as { value: string } | null)?.value ?? '' }))} />
                     </FormItem>
                     <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
                         <Input placeholder="Nama lengkap supir" value={form.nama} invalid={!!errors.nama}

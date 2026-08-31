@@ -17,7 +17,7 @@ import { Vendor } from '@/services/vendor.service'
 import { konsolidasiVendorService, KonsolidasiRekap, KonsolidasiTrip } from '@/services/konsolidasiVendor.service'
 
 const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
 }
 
 export default function KonsolidasiVendorPage() {
@@ -138,7 +138,7 @@ export default function KonsolidasiVendorPage() {
     return (
         <div className="flex flex-col gap-4">
             <div>
-                <h3 className="font-bold">Konsolidasi Vendor</h3>
+                <h3 className="font-bold">Rekon Invoice</h3>
                 <p className="text-gray-500 text-sm mt-0.5">
                     Rekap pemakaian armada vendor per periode — bahan pencocokan invoice & laporan ke vendor
                 </p>

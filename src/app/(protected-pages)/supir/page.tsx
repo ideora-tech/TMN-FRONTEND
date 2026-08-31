@@ -169,14 +169,14 @@ export default function SupirPage() {
                     : <span className="text-gray-400">—</span>,
         },
         {
-            header: 'Kadaluarsa SIM', accessorKey: 'tgl_kadaluarsa_sim', size: 170,
+            header: 'Habis Masa Berlaku SIM', accessorKey: 'tgl_kadaluarsa_sim', size: 170,
             cell: ({ row }: CellContext<Supir, unknown>) => {
                 const tgl = row.original.tgl_kadaluarsa_sim
                 if (!tgl) return '-'
                 const daysLeft = Math.ceil((new Date(tgl).getTime() - Date.now()) / 86400000)
                 let badge: { label: string; className: string } | null = null
                 if (daysLeft < 0) {
-                    badge = { label: 'SIM kadaluarsa', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
+                    badge = { label: 'SIM habis masa berlaku', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
                 } else if (daysLeft <= 7) {
                     badge = { label: `${daysLeft} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
                 } else if (daysLeft <= 30) {

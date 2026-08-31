@@ -191,7 +191,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
                     <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
                     <span>
-                        SIM kadaluarsa dalam <strong>{daysLeft} hari</strong> ({supir.tgl_kadaluarsa_sim})
+                        SIM habis masa berlaku dalam <strong>{daysLeft} hari</strong> ({supir.tgl_kadaluarsa_sim})
                     </span>
                 </div>
             )}
@@ -239,7 +239,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 { label: 'Nomor SIM', value: supir.no_sim ?? '—' },
                                 { label: 'Jenis SIM', value: supir.jenis_sim ?? '—' },
                                 {
-                                    label: 'Kadaluarsa SIM',
+                                    label: 'Habis Masa Berlaku SIM',
                                     value: supir.tgl_kadaluarsa_sim
                                         ? <span className={simWarning ? 'text-amber-600 font-semibold dark:text-amber-400' : ''}>
                                             {dayjs(supir.tgl_kadaluarsa_sim).format('DD MMM YYYY')}
@@ -309,7 +309,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         options={JENIS_SIM_OPTIONS}
                                         onChange={opt => opt && setForm(p => ({ ...p, jenis_sim: opt.value }))} />
                                 </FormItem>
-                                <FormItem label="Tgl Kadaluarsa SIM">
+                                <FormItem label="Tgl Habis Masa Berlaku SIM">
                                     <DatePicker
                                         value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
                                         onChange={date => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { penugasanService, Penugasan, StatusPenugasan } from '@/services/penugasan.service'
+import { penugasanService, Penugasan, StatusPenugasan, TitikDropInput } from '@/services/penugasan.service'
 
 export type TipeUnitBoard = 'internal' | 'vendor'
 
@@ -14,7 +14,12 @@ export interface BoardUnit {
     id_supir_default?: string | null
     id_vendor?: string | null
     mekanisme?: string | null
+    id_supir_vendor_default?: string | null
     nama_supir_default?: string | null
+    id_kontrak_vendor?: string | null
+    id_kontrak_vendor_unit?: string | null
+    kontrak_habis?: boolean
+    status_kontrak?: 'draft' | 'menunggu_approval' | 'aktif' | 'selesai' | 'batal' | null
 }
 
 export interface BoardAssignmentTrip {
@@ -56,7 +61,7 @@ export interface AssignHarianPayload {
     id_proyek: string
     id_rute: string
     uang_jalan?: number | null
-    titik_drop?: string[]
+    titik_drop?: TitikDropInput[]
 }
 
 export interface AssignHarianGagal {

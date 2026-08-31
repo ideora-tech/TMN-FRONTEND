@@ -9,7 +9,12 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
+import { kontrakVendorService } from '@/services/kontrak-vendor.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+
+const MEKANISME_LABEL: Record<string, string> = {
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
+}
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -23,7 +28,7 @@ const renderMasaBerlaku = (tgl?: string | null) => {
         <span className="inline-flex items-center gap-2">
             <span>{dayjs(tgl).format('DD MMM YYYY')}</span>
             {expired && (
-                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kadaluarsa</Tag>
+                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Habis Masa Berlaku</Tag>
             )}
         </span>
     )
@@ -40,6 +45,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
     const [saving, setSaving]   = useState(false)
 
     const [jenisKendaraanOptions, setJenisKendaraanOptions] = useState<{ value: string; label: string }[]>([])
+    const [kontrakOptions, setKontrakOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
         armadaVendorService.get(id)
@@ -50,6 +56,16 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
             .then(res => setJenisKendaraanOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
     }, [id])
+
+    useEffect(() => {
+        if (!data?.id_vendor) return
+        kontrakVendorService.list(1, { id_vendor: data.id_vendor, limit: '200' })
+            .then(res => setKontrakOptions(res.data.map(k => ({
+                value: k.id_kontrak_vendor,
+                label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+            }))))
+            .catch(() => {})
+    }, [data?.id_vendor])
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
@@ -75,6 +91,7 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                 kapasitas: form.kapasitas?.trim() || null,
                 masa_berlaku_stnk: form.masa_berlaku_stnk || null,
                 masa_berlaku_kir: form.masa_berlaku_kir || null,
+                id_kontrak_vendor: form.id_kontrak_vendor || null,
                 aktif: form.aktif,
             })
             setData(updated)
@@ -130,6 +147,12 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
                                 { label: 'Vendor',            value: data.nama_vendor ?? <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Kontrak',
+                                    value: data.id_kontrak_vendor
+                                        ? (kontrakOptions.find(o => o.value === data.id_kontrak_vendor)?.label ?? data.id_kontrak_vendor.slice(0, 8))
+                                        : <span className="text-gray-400">Tidak tertaut kontrak</span>,
+                                },
                                 { label: 'Nopol',             value: data.nopol },
                                 { label: 'Merk',              value: data.merk ?? <span className="text-gray-400">—</span> },
                                 { label: 'Jenis',             value: data.jenis ?? <span className="text-gray-400">—</span> },
@@ -196,6 +219,14 @@ export default function ArmadaVendorDetailPage({ params }: { params: Promise<{ i
                                 <DatePicker inputFormat="DD/MM/YYYY"
                                     value={form.masa_berlaku_kir ? dayjs(form.masa_berlaku_kir).toDate() : null}
                                     onChange={date => setForm(p => ({ ...p, masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
+                            </FormItem>
+                            <FormItem label="Kontrak (opsional)">
+                                <Select isSearchable isClearable
+                                    isDisabled={kontrakOptions.length === 0}
+                                    placeholder={kontrakOptions.length === 0 ? 'Vendor ini belum punya kontrak' : 'Pilih kontrak...'}
+                                    options={kontrakOptions}
+                                    value={kontrakOptions.find(o => o.value === form.id_kontrak_vendor) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_kontrak_vendor: (opt as { value: string } | null)?.value ?? null }))} />
                             </FormItem>
                             <FormItem label="Status">
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}

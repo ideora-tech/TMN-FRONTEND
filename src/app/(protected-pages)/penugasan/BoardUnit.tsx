@@ -4,7 +4,7 @@ import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePick
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineEye, HiOutlinePencilAlt } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineEye, HiOutlinePencilAlt, HiX } from 'react-icons/hi'
 import dayjs, { Dayjs } from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -15,7 +15,7 @@ import {
     BoardAssignment,
     AssignHarianGagal,
 } from '@/services/penugasanHarian.service'
-import { penugasanService } from '@/services/penugasan.service'
+import { penugasanService, TitikDropInput } from '@/services/penugasan.service'
 import { projectService } from '@/services/project.service'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService, Supir } from '@/services/supir.service'
@@ -26,7 +26,8 @@ import MulaiTripDialog from '../trip/MulaiTripDialog'
 type Option = { value: string; label: string }
 type TipeUnitFilter = 'semua' | 'internal' | 'vendor'
 const TANPA_SUPIR_DEFAULT = '__tanpa__'
-const TIPE_UNIT_OPTIONS: { value: TipeUnitFilter; label: string }[] = [
+const KATEGORI_UNIT_VALUES: TipeUnitFilter[] = ['semua', 'internal', 'vendor']
+const KATEGORI_UNIT_OPTIONS: { value: TipeUnitFilter; label: string }[] = [
     { value: 'semua', label: 'Semua Unit' },
     { value: 'internal', label: 'Internal' },
     { value: 'vendor', label: 'Vendor' },
@@ -43,9 +44,28 @@ const MEKANISME_LABEL: Record<string, string> = {
 const unitPaketVendor = (u: BoardUnitRow | null) =>
     !!u && u.tipe === 'vendor' && !!u.mekanisme && u.mekanisme !== 'unit_only'
 
+const kontrakBelumDisetujui = (u: BoardUnitRow | null) =>
+    !!u && u.tipe === 'vendor' && (u.status_kontrak === 'draft' || u.status_kontrak === 'menunggu_approval')
+
+/**
+ * suffix WAJIB selalu berupa node yang sama (bukan undefined saat kosong) —
+ * Input.tsx merender struktur DOM berbeda (bare <input> vs dibungkus span
+ * prefix/suffix) tergantung truthy-nya prefix/suffix, jadi toggle
+ * undefined<->node di sini akan me-remount elemen <input> dan fokus/kursor
+ * hilang setiap ketikan pertama. Ikon disembunyikan via class, bukan dihapus.
+ */
+const suffixHapus = (value: string, onClear: () => void) => (
+    <HiX
+        className={`cursor-pointer text-gray-400 hover:text-gray-600 ${value ? '' : 'invisible pointer-events-none'}`}
+        onClick={onClear}
+    />
+)
+
 const unitKey = (u: BoardUnitRow) => (u.tipe === 'internal' ? `internal:${u.id_armada}` : `vendor:${u.id_armada_vendor}`)
 
-const emptyTitikDrop = (): string[] => []
+type TitikDropRow = { lokasi: string; uang_jalan_tambahan: string }
+const emptyTitikDrop = (): TitikDropRow[] => []
+const emptyTitikDropRow = (): TitikDropRow => ({ lokasi: '', uang_jalan_tambahan: '' })
 
 type HasilAssign = { sukses: number; gagal: AssignHarianGagal[]; peringatan: string[] }
 
@@ -54,8 +74,7 @@ export default function BoardUnit() {
     const [loading, setLoading] = useState(false)
     const [units, setUnits] = useState<BoardUnitRow[]>([])
     const [assignments, setAssignments] = useState<BoardAssignment[]>([])
-    const [cariUnit, setCariUnit] = useState('')
-    const [filterTipeUnit, setFilterTipeUnit] = useState<TipeUnitFilter>('semua')
+    const [filterUnit, setFilterUnit] = useState<string>('semua')
     const [filterSupirDefault, setFilterSupirDefault] = useState<string | null>(null)
     const todayColRef = useRef<HTMLTableCellElement>(null)
 
@@ -72,7 +91,7 @@ export default function BoardUnit() {
     const [assignRuteId, setAssignRuteId] = useState<string | null>(null)
     const [assignRuteRows, setAssignRuteRows] = useState<ProyekRute[]>([])
     const [assignUangJalan, setAssignUangJalan] = useState('')
-    const [assignTitikDrop, setAssignTitikDrop] = useState<string[]>(emptyTitikDrop())
+    const [assignTitikDrop, setAssignTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
     const [assignSubmitting, setAssignSubmitting] = useState(false)
     const [hasilAssign, setHasilAssign] = useState<HasilAssign | null>(null)
 
@@ -90,7 +109,7 @@ export default function BoardUnit() {
     const [aksiRuteId, setAksiRuteId] = useState<string | null>(null)
     const [aksiRuteRows, setAksiRuteRows] = useState<ProyekRute[]>([])
     const [aksiUangJalan, setAksiUangJalan] = useState('')
-    const [aksiTitikDrop, setAksiTitikDrop] = useState<string[]>(emptyTitikDrop())
+    const [aksiTitikDrop, setAksiTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
     const [aksiSaving, setAksiSaving] = useState(false)
 
     const [hapusTarget, setHapusTarget] = useState<BoardAssignment | null>(null)
@@ -164,23 +183,32 @@ export default function BoardUnit() {
         return [{ value: TANPA_SUPIR_DEFAULT, label: 'Tanpa supir default' }, ...daftar]
     }, [units])
 
-    const unitsTampil = useMemo(() => {
-        const q = cariUnit.trim().toLowerCase()
-        const terurut = [...units]
-            .filter(u => filterTipeUnit === 'semua' || u.tipe === filterTipeUnit)
-            .filter(u => {
-                if (!filterSupirDefault) return true
-                if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !u.id_supir_default
-                return u.id_supir_default === filterSupirDefault
-            })
+    const unitFilterOptions = useMemo<Option[]>(() => {
+        const daftarUnit = [...units]
             .sort((a, b) => a.nopol.localeCompare(b.nopol))
-        if (!q) return terurut
-        return terurut.filter(u =>
-            u.nopol.toLowerCase().includes(q) ||
-            (u.nama_jenis ?? '').toLowerCase().includes(q) ||
-            (u.nama_vendor ?? '').toLowerCase().includes(q) ||
-            (u.nama_supir_default ?? '').toLowerCase().includes(q))
-    }, [units, cariUnit, filterTipeUnit, filterSupirDefault])
+            .map(u => ({
+                value: unitKey(u),
+                label: [u.nopol, u.nama_jenis, u.nama_vendor, u.nama_supir_default].filter(Boolean).join(' · '),
+            }))
+        return [...KATEGORI_UNIT_OPTIONS, ...daftarUnit]
+    }, [units])
+
+    const unitsTampil = useMemo(() => {
+        const isKategori = (KATEGORI_UNIT_VALUES as string[]).includes(filterUnit)
+        let terurut = [...units]
+        if (isKategori) {
+            const tipe = filterUnit as TipeUnitFilter
+            terurut = terurut.filter(u => tipe === 'semua' || u.tipe === tipe)
+        } else {
+            terurut = terurut.filter(u => unitKey(u) === filterUnit)
+        }
+        terurut = terurut.filter(u => {
+            if (!filterSupirDefault) return true
+            if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !u.id_supir_default
+            return u.id_supir_default === filterSupirDefault
+        })
+        return terurut.sort((a, b) => a.nopol.localeCompare(b.nopol))
+    }, [units, filterUnit, filterSupirDefault])
 
     const tanggalList = useMemo(() => {
         const n = bulan.daysInMonth()
@@ -223,11 +251,16 @@ export default function BoardUnit() {
         setAssignUnit(unit)
         setAssignTanggalMulai(tanggal)
         setAssignTanggalSampai(tanggal)
-        setAssignSupirId(unitPaketVendor(unit) ? '' : (unit.id_supir_default ?? ''))
+        setAssignSupirId(unitPaketVendor(unit) ? (unit.id_supir_vendor_default ?? '') : (unit.id_supir_default ?? ''))
         setSupirVendorOptions([])
         if (unitPaketVendor(unit) && unit.id_vendor) {
             supirVendorService.list(1, 500, unit.id_vendor)
-                .then(res => setSupirVendorOptions(res.data.map(s => ({ value: s.id_supir_vendor, label: s.nama }))))
+                .then(res => {
+                    const cocok = unit.id_kontrak_vendor_unit
+                        ? res.data.filter(s => !s.id_kontrak_vendor || s.id_kontrak_vendor === unit.id_kontrak_vendor_unit)
+                        : res.data
+                    setSupirVendorOptions(cocok.map(s => ({ value: s.id_supir_vendor, label: s.nama })))
+                })
                 .catch(() => setSupirVendorOptions([]))
         }
         setAssignProyekId('')
@@ -254,7 +287,9 @@ export default function BoardUnit() {
         setAssignSubmitting(true)
         try {
             const pakaiRentang = !!assignTanggalSampai && assignTanggalSampai > assignTanggalMulai
-            const titikDropBersih = assignTitikDrop.map(d => d.trim()).filter(Boolean)
+            const titikDropBersih: TitikDropInput[] = assignTitikDrop
+                .filter(r => r.lokasi.trim())
+                .map(r => ({ lokasi: r.lokasi.trim(), uang_jalan_tambahan: r.uang_jalan_tambahan ? Number(r.uang_jalan_tambahan) : 0 }))
             const hasil = await penugasanHarianService.assign({
                 tanggal: assignTanggalMulai,
                 tanggal_sampai: pakaiRentang ? assignTanggalSampai : null,
@@ -312,7 +347,12 @@ export default function BoardUnit() {
         setSupirVendorOptions([])
         if (unitPaketVendor(unit) && unit.id_vendor) {
             supirVendorService.list(1, 500, unit.id_vendor)
-                .then(res => setSupirVendorOptions(res.data.map(s => ({ value: s.id_supir_vendor, label: s.nama }))))
+                .then(res => {
+                    const cocok = unit.id_kontrak_vendor_unit
+                        ? res.data.filter(s => !s.id_kontrak_vendor || s.id_kontrak_vendor === unit.id_kontrak_vendor_unit)
+                        : res.data
+                    setSupirVendorOptions(cocok.map(s => ({ value: s.id_supir_vendor, label: s.nama })))
+                })
                 .catch(() => setSupirVendorOptions([]))
         }
         setAksiRuteId(assignment.id_rute)
@@ -323,7 +363,12 @@ export default function BoardUnit() {
         aksiFetchRef.current = assignment.id_penugasan
         penugasanService.get(assignment.id_penugasan)
             .then(record => {
-                if (aksiFetchRef.current === assignment.id_penugasan) setAksiTitikDrop(record.titik_drop ?? [])
+                if (aksiFetchRef.current === assignment.id_penugasan) {
+                    setAksiTitikDrop((record.titik_drop_detail ?? []).map(d => ({
+                        lokasi: d.lokasi,
+                        uang_jalan_tambahan: d.uang_jalan_tambahan ? String(d.uang_jalan_tambahan) : '',
+                    })))
+                }
             })
             .catch(() => {})
     }
@@ -352,7 +397,9 @@ export default function BoardUnit() {
                 ...(unitPaketVendor(aksiUnit) ? { id_supir_vendor: aksiSupirId } : { id_supir: aksiSupirId }),
                 id_rute:        aksiRuteId,
                 estimasi_biaya: aksiUangJalan !== '' ? Number(aksiUangJalan) : null,
-                titik_drop:     aksiTitikDrop.map(d => d.trim()).filter(Boolean),
+                titik_drop:     aksiTitikDrop
+                    .filter(r => r.lokasi.trim())
+                    .map(r => ({ lokasi: r.lokasi.trim(), uang_jalan_tambahan: r.uang_jalan_tambahan ? Number(r.uang_jalan_tambahan) : 0 })),
             })
             toast.push(<Notification type="success" title="Penugasan berhasil diperbarui" />)
             setAksiDialogOpen(false)
@@ -440,11 +487,11 @@ export default function BoardUnit() {
                             value={supirDefaultOptions.find(o => o.value === filterSupirDefault) ?? null}
                             onChange={opt => setFilterSupirDefault(opt?.value ?? null)} />
                     </div>
-                    <div className="w-44">
-                        <Select size="sm" isSearchable={false}
-                            options={TIPE_UNIT_OPTIONS}
-                            value={TIPE_UNIT_OPTIONS.find(o => o.value === filterTipeUnit) ?? TIPE_UNIT_OPTIONS[0]}
-                            onChange={opt => setFilterTipeUnit(opt?.value ?? 'semua')} />
+                    <div className="w-64">
+                        <Select size="sm" isClearable placeholder="Cari / pilih unit..."
+                            options={unitFilterOptions}
+                            value={unitFilterOptions.find(o => o.value === filterUnit) ?? unitFilterOptions[0]}
+                            onChange={opt => setFilterUnit(opt?.value ?? 'semua')} />
                     </div>
                 </div>
             </div>
@@ -456,15 +503,12 @@ export default function BoardUnit() {
                     Belum ada unit armada aktif — tambahkan armada atau unit vendor Unit Only terlebih dahulu.
                 </p>
             ) : (
-                <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg shadow-xs">
+                <div className="max-h-[70vh] overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg shadow-xs">
                     <table className="border-separate border-spacing-0 min-w-full select-none">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[260px] border-b border-r border-gray-200 dark:border-gray-600">
-                                    <Input size="sm" placeholder="Cari nopol / jenis / vendor / supir..."
-                                        prefix={<HiOutlineSearch className="text-gray-400" />}
-                                        value={cariUnit}
-                                        onChange={e => setCariUnit(e.target.value)} />
+                                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unit</span>
                                 </th>
                                 {tanggalList.map(t => {
                                     const isToday = t.format('YYYY-MM-DD') === hariIni
@@ -508,6 +552,16 @@ export default function BoardUnit() {
                                                         {u.tipe === 'vendor' && (
                                                             <Tag className="text-[10px] shrink-0 bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
                                                                 {`Vendor${u.mekanisme && u.mekanisme !== 'unit_only' ? ` · ${MEKANISME_LABEL[u.mekanisme] ?? u.mekanisme}` : ''}`}
+                                                            </Tag>
+                                                        )}
+                                                        {kontrakBelumDisetujui(u) && (
+                                                            <Tag className="text-[10px] shrink-0 bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300">
+                                                                {u.status_kontrak === 'draft' ? 'Draft' : 'Menunggu Approval'}
+                                                            </Tag>
+                                                        )}
+                                                        {u.tipe === 'vendor' && u.kontrak_habis && !kontrakBelumDisetujui(u) && (
+                                                            <Tag className="text-[10px] shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                                                                Kontrak Habis
                                                             </Tag>
                                                         )}
                                                     </div>
@@ -587,12 +641,21 @@ export default function BoardUnit() {
                 </div>
             )}
 
-            <Dialog isOpen={assignDialogOpen} onRequestClose={() => setAssignDialogOpen(false)} onClose={() => setAssignDialogOpen(false)} width={560}>
+            <Dialog isOpen={assignDialogOpen} onRequestClose={() => setAssignDialogOpen(false)} onClose={() => setAssignDialogOpen(false)} width={720}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan Harian</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {assignUnit?.nopol}
                     {assignUnit?.tipe === 'vendor' && assignUnit?.nama_vendor ? ` · Vendor ${assignUnit.nama_vendor}` : ''}
                 </p>
+                {kontrakBelumDisetujui(assignUnit) ? (
+                    <p className="text-xs text-red-600 dark:text-red-400 -mt-3 mb-4">
+                        Kontrak vendor unit ini {assignUnit?.status_kontrak === 'draft' ? 'masih draft' : 'sedang menunggu approval'} — ajukan dan selesaikan approval kontrak dahulu sebelum menugaskan unit ini.
+                    </p>
+                ) : assignUnit?.tipe === 'vendor' && assignUnit?.kontrak_habis && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 -mt-3 mb-4">
+                        Kontrak vendor unit ini sudah habis — penugasan tetap bisa disimpan.
+                    </p>
+                )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmitAssign() }}>
                     <FormItem label="Tanggal" asterisk
                         extra="Pilih rentang untuk menjadwalkan beberapa hari sekaligus — hari yang sudah terisi otomatis dilewati">
@@ -653,16 +716,21 @@ export default function BoardUnit() {
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
                             <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={assignTitikDrop.length >= 10}
-                                onClick={() => setAssignTitikDrop(prev => [...prev, ''])}>
+                                onClick={() => setAssignTitikDrop(prev => [...prev, emptyTitikDropRow()])}>
                                 Tambah Titik
                             </Button>
                         </div>
                         <div className="flex flex-col gap-2">
-                            {assignTitikDrop.map((lokasi, i) => (
+                            {assignTitikDrop.map((row, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                     <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
-                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
-                                        onChange={e => setAssignTitikDrop(prev => prev.map((d, idx) => (idx === i ? e.target.value : d)))} />
+                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={row.lokasi}
+                                        suffix={suffixHapus(row.lokasi, () => setAssignTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, lokasi: '' } : r))))}
+                                        onChange={e => setAssignTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, lokasi: e.target.value } : r)))} />
+                                    <Input size="sm" className="w-72" prefix="Rp" placeholder="Uang jalan tambahan"
+                                        value={row.uang_jalan_tambahan ? formatNum(Number(row.uang_jalan_tambahan)) : ''}
+                                        suffix={suffixHapus(row.uang_jalan_tambahan, () => setAssignTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, uang_jalan_tambahan: '' } : r))))}
+                                        onChange={e => setAssignTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, uang_jalan_tambahan: e.target.value.replace(/\D/g, '') } : r)))} />
                                     <button type="button"
                                         onClick={() => setAssignTitikDrop(prev => prev.filter((_, idx) => idx !== i))}
                                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
@@ -675,7 +743,7 @@ export default function BoardUnit() {
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setAssignDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={assignSubmitting}
-                            disabled={!assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai}>
+                            disabled={!assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai || kontrakBelumDisetujui(assignUnit)}>
                             Simpan
                         </Button>
                     </div>
@@ -884,12 +952,17 @@ export default function BoardUnit() {
                 </div>
             </Dialog>
 
-            <Dialog isOpen={aksiDialogOpen} onRequestClose={tutupAksi} onClose={tutupAksi} width={560}>
+            <Dialog isOpen={aksiDialogOpen} onRequestClose={tutupAksi} onClose={tutupAksi} width={720}>
                 <h5 className="text-base font-semibold mb-1">Ubah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {aksiUnit?.nopol} — {aksiAssignment?.kode_proyek ?? '—'}
                     {aksiAssignment && ` · ${dayjs(aksiAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
                 </p>
+                {aksiUnit?.tipe === 'vendor' && aksiUnit?.kontrak_habis && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 -mt-3 mb-4">
+                        Kontrak vendor unit ini sudah habis — perubahan tetap bisa disimpan.
+                    </p>
+                )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmitAksi() }}>
                     <FormItem label={unitPaketVendor(aksiUnit) ? 'Supir Vendor' : 'Supir'} asterisk>
                         <Select placeholder={unitPaketVendor(aksiUnit) ? 'Pilih supir vendor...' : 'Pilih supir...'}
@@ -923,16 +996,21 @@ export default function BoardUnit() {
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
                             <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
                                 disabled={aksiTitikDrop.length >= 10}
-                                onClick={() => setAksiTitikDrop(prev => [...prev, ''])}>
+                                onClick={() => setAksiTitikDrop(prev => [...prev, emptyTitikDropRow()])}>
                                 Tambah Titik
                             </Button>
                         </div>
                         <div className="flex flex-col gap-2">
-                            {aksiTitikDrop.map((lokasi, i) => (
+                            {aksiTitikDrop.map((row, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                     <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
-                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={lokasi}
-                                        onChange={e => setAksiTitikDrop(prev => prev.map((d, idx) => (idx === i ? e.target.value : d)))} />
+                                    <Input size="sm" placeholder={`Titik drop ${i + 1}...`} value={row.lokasi}
+                                        suffix={suffixHapus(row.lokasi, () => setAksiTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, lokasi: '' } : r))))}
+                                        onChange={e => setAksiTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, lokasi: e.target.value } : r)))} />
+                                    <Input size="sm" className="w-72" prefix="Rp" placeholder="Uang jalan tambahan"
+                                        value={row.uang_jalan_tambahan ? formatNum(Number(row.uang_jalan_tambahan)) : ''}
+                                        suffix={suffixHapus(row.uang_jalan_tambahan, () => setAksiTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, uang_jalan_tambahan: '' } : r))))}
+                                        onChange={e => setAksiTitikDrop(prev => prev.map((r, idx) => (idx === i ? { ...r, uang_jalan_tambahan: e.target.value.replace(/\D/g, '') } : r)))} />
                                     <button type="button"
                                         onClick={() => setAksiTitikDrop(prev => prev.filter((_, idx) => idx !== i))}
                                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">

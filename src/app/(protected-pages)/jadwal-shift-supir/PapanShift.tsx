@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Tooltip, Dropdown } from '@/components/ui'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Tooltip, Dropdown, Tag } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
@@ -9,7 +9,7 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { buatXlsx, kolomXlsx, SelXlsx } from '@/utils/xlsx.util'
 import { proyekRuteService } from '@/services/proyekRute.service'
-import { jadwalShiftService, JadwalShift } from '@/services/jadwalShift.service'
+import { jadwalShiftService, JadwalShift, OpsiSupirVendor } from '@/services/jadwalShift.service'
 import { shiftService, Shift } from '@/services/shift.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { SupirProyek } from '@/services/supirProyek.service'
@@ -23,12 +23,21 @@ const HARI = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB']
 
 const jam = (t: string) => t.slice(0, 5) // "08:00:00" -> "08:00"
 
-type PilihanSel = { supir: SupirProyek; tanggal: string; jadwal?: JadwalShift }
+type BarisPapan = {
+    tipe: 'internal' | 'vendor'
+    key: string
+    nama: string
+    namaVendor: string | null
+    supirProyek: SupirProyek | null
+}
+
+type PilihanSel = { baris: BarisPapan; tanggal: string; jadwal?: JadwalShift }
 
 type Props = {
     idProyek: string
     namaProyek?: string
     supirList: SupirProyek[]
+    supirVendorList: OpsiSupirVendor[]
     loading: boolean
     onHapusSupir: (sp: SupirProyek) => Promise<void>
     refetch: () => void
@@ -36,7 +45,7 @@ type Props = {
 
 export default function PapanShift({
     idProyek, namaProyek = '',
-    supirList, loading: loadingSupir,
+    supirList, supirVendorList, loading: loadingSupir,
     onHapusSupir, refetch,
 }: Props) {
     const [bulan, setBulan]   = useState(dayjs().startOf('month'))
@@ -45,7 +54,7 @@ export default function PapanShift({
     const [importGagal, setImportGagal] = useState<{ baris: number; no_sim: string; alasan: string }[]>([])
     const [importDitimpa, setImportDitimpa] = useState<{ baris: number; no_sim: string; tanggal: string; shift_lama: string; shift_baru: string }[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const selTerakhir = useRef<{ idSupir: string; tanggal: string } | null>(null)
+    const selTerakhir = useRef<{ key: string; tanggal: string } | null>(null)
     const todayColRef = useRef<HTMLTableCellElement>(null)
     const [loadingJadwal, setLoadingJadwal] = useState(false)
 
@@ -56,7 +65,7 @@ export default function PapanShift({
     // Dialog assign (sel kosong) / ganti shift (ikon pensil) — supir & tanggal ikut sel yang diklik
     const [dialogOpen, setDialogOpen]       = useState(false)
     const [editJadwal, setEditJadwal]       = useState<JadwalShift | null>(null)
-    const [pilihSupirId, setPilihSupirId]   = useState('')
+    const [pilihBaris, setPilihBaris]       = useState<BarisPapan | null>(null)
     const [tanggalMulai, setTanggalMulai]   = useState('')
     const [pilihShift, setPilihShift]       = useState<string | null>(null)
     const [sampaiTanggal, setSampaiTanggal] = useState('') // opsional: rentang assign sampai tanggal ini
@@ -124,10 +133,10 @@ export default function PapanShift({
     const memuat = loadingJadwal || loadingSupir
 
     useEffect(() => {
-        if (!memuat && supirList.length > 0 && todayColRef.current) {
+        if (!memuat && (supirList.length > 0 || supirVendorList.length > 0) && todayColRef.current) {
             todayColRef.current.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' })
         }
-    }, [memuat, bulan, supirList.length])
+    }, [memuat, bulan, supirList.length, supirVendorList.length])
 
     const tanggalList = useMemo(() => {
         const n = bulan.daysInMonth()
@@ -138,54 +147,61 @@ export default function PapanShift({
     const jadwalMap = useMemo(() => {
         const m: Record<string, Record<string, JadwalShift>> = {}
         jadwalList.forEach(j => {
-            m[j.id_supir] ??= {}
-            m[j.id_supir][j.tanggal] = j
+            const kunci = j.id_supir ?? j.id_supir_vendor
+            if (!kunci) return
+            m[kunci] ??= {}
+            m[kunci][j.tanggal] = j
         })
         return m
     }, [jadwalList])
 
+    const barisSemua = useMemo<BarisPapan[]>(() => [
+        ...supirList.map(s => ({ tipe: 'internal' as const, key: s.id_supir, nama: s.nama, namaVendor: null, supirProyek: s })),
+        ...supirVendorList.map(v => ({ tipe: 'vendor' as const, key: v.id_supir_vendor, nama: v.nama, namaVendor: v.nama_vendor, supirProyek: null })),
+    ], [supirList, supirVendorList])
+
     const barisTampil = useMemo(() => {
         const q = cariSupir.trim().toLowerCase()
-        if (!q) return supirList
-        return supirList.filter(b => b.nama.toLowerCase().includes(q))
-    }, [supirList, cariSupir])
+        if (!q) return barisSemua
+        return barisSemua.filter(b => b.nama.toLowerCase().includes(q) || (b.namaVendor ?? '').toLowerCase().includes(q))
+    }, [barisSemua, cariSupir])
 
     const shiftOptions: Option[] = shiftList.map(s => ({
         value: s.id_shift,
         label: `${s.nama} — ${jam(s.jam_mulai)}-${jam(s.jam_selesai)}`,
     }))
 
-    const countShift = (idSupir: string) => Object.keys(jadwalMap[idSupir] ?? {}).length
+    const countShift = (key: string) => Object.keys(jadwalMap[key] ?? {}).length
 
     const selList   = useMemo(() => Object.values(selCells), [selCells])
     const selKosong = useMemo(() => selList.filter(c => !c.jadwal), [selList])
     const selTerisi = useMemo(() => selList.filter(c => !!c.jadwal), [selList])
 
-    const toggleSel = (supir: SupirProyek, tanggal: string, jadwal?: JadwalShift) => {
-        const key = `${supir.id_supir}|${tanggal}`
+    const toggleSel = (baris: BarisPapan, tanggal: string, jadwal?: JadwalShift) => {
+        const key = `${baris.key}|${tanggal}`
         setSelCells(prev => {
             const next = { ...prev }
             if (next[key]) delete next[key]
-            else next[key] = { supir, tanggal, jadwal }
+            else next[key] = { baris, tanggal, jadwal }
             return next
         })
-        selTerakhir.current = { idSupir: supir.id_supir, tanggal }
+        selTerakhir.current = { key: baris.key, tanggal }
     }
 
     // Shift+klik: pilih rentang (persegi) dari sel terakhir diklik sampai sel ini,
     // lintas baris supir dan kolom tanggal — untuk hapus/ganti/assign massal cepat.
-    const klikSel = (e: React.MouseEvent, supir: SupirProyek, tanggal: string, jadwal?: JadwalShift) => {
+    const klikSel = (e: React.MouseEvent, baris: BarisPapan, tanggal: string, jadwal?: JadwalShift) => {
         if (!e.shiftKey || selTerakhir.current === null) {
-            toggleSel(supir, tanggal, jadwal)
+            toggleSel(baris, tanggal, jadwal)
             return
         }
 
-        const idxBaris1 = barisTampil.findIndex(b => b.id_supir === selTerakhir.current!.idSupir)
-        const idxBaris2 = barisTampil.findIndex(b => b.id_supir === supir.id_supir)
+        const idxBaris1 = barisTampil.findIndex(b => b.key === selTerakhir.current!.key)
+        const idxBaris2 = barisTampil.findIndex(b => b.key === baris.key)
         const idxTgl1   = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === selTerakhir.current!.tanggal)
         const idxTgl2   = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === tanggal)
         if (idxBaris1 < 0 || idxBaris2 < 0 || idxTgl1 < 0 || idxTgl2 < 0) {
-            toggleSel(supir, tanggal, jadwal)
+            toggleSel(baris, tanggal, jadwal)
             return
         }
 
@@ -195,19 +211,19 @@ export default function PapanShift({
         setSelCells(prev => {
             const next = { ...prev }
             for (let bi = b1; bi <= b2; bi++) {
-                const baris = barisTampil[bi]
+                const brs = barisTampil[bi]
                 for (let ti = t1; ti <= t2; ti++) {
                     const tgl = tanggalList[ti].format('YYYY-MM-DD')
-                    next[`${baris.id_supir}|${tgl}`] = {
-                        supir: baris,
+                    next[`${brs.key}|${tgl}`] = {
+                        baris: brs,
                         tanggal: tgl,
-                        jadwal: jadwalMap[baris.id_supir]?.[tgl],
+                        jadwal: jadwalMap[brs.key]?.[tgl],
                     }
                 }
             }
             return next
         })
-        selTerakhir.current = { idSupir: supir.id_supir, tanggal }
+        selTerakhir.current = { key: baris.key, tanggal }
     }
 
     const bukaBulkAssign = () => {
@@ -216,7 +232,7 @@ export default function PapanShift({
         if (selKosong.length === 1) {
             // satu sel kosong → mode single: rentang tanggal masih bisa dipakai
             setBulkMode(false)
-            setPilihSupirId(selKosong[0].supir.id_supir)
+            setPilihBaris(selKosong[0].baris)
             setTanggalMulai(selKosong[0].tanggal)
             setSampaiTanggal(selKosong[0].tanggal)
         } else {
@@ -228,23 +244,23 @@ export default function PapanShift({
 
     const bukaBulkGanti = () => {
         if (selTerisi.length === 1 && selTerisi[0].jadwal) {
-            bukaGanti(selTerisi[0].supir, selTerisi[0].jadwal)
+            bukaGanti(selTerisi[0].baris, selTerisi[0].jadwal)
             return
         }
         setEditJadwal(null)
         setBulkMode(true)
         setBulkAksi('ganti')
-        setPilihSupirId('')
+        setPilihBaris(null)
         setTanggalMulai('')
         setSampaiTanggal('')
         setPilihShift(null)
         setDialogOpen(true)
     }
 
-    const bukaGanti = (supir: SupirProyek, jadwal: JadwalShift) => {
+    const bukaGanti = (baris: BarisPapan, jadwal: JadwalShift) => {
         setEditJadwal(jadwal)
         setBulkMode(false)
-        setPilihSupirId(supir.id_supir)
+        setPilihBaris(baris)
         setTanggalMulai(jadwal.tanggal)
         setPilihShift(jadwal.id_shift)
         setSampaiTanggal('')
@@ -331,10 +347,9 @@ export default function PapanShift({
         setSaving(true)
         try {
             if (editJadwal) {
-                await jadwalShiftService.update(editJadwal.id_jadwal_shift, {
-                    id_shift: pilihShift,
-                    id_supir_pengganti: pilihSupirPengganti,
-                })
+                await jadwalShiftService.update(editJadwal.id_jadwal_shift, editJadwal.id_supir_vendor
+                    ? { id_shift: pilihShift }
+                    : { id_shift: pilihShift, id_supir_pengganti: pilihSupirPengganti })
                 toast.push(<Notification type="success" title="Shift berhasil diganti" />)
             } else if (bulkMode && bulkAksi === 'ganti') {
                 let sukses = 0
@@ -344,7 +359,7 @@ export default function PapanShift({
                         await jadwalShiftService.update(c.jadwal!.id_jadwal_shift, { id_shift: pilihShift })
                         sukses++
                     } catch (err) {
-                        gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
+                        gagal.push({ tanggal: c.tanggal, alasan: `${c.baris.nama}: ${parseApiError(err)}` })
                     }
                 }
                 if (gagal.length > 0) {
@@ -362,15 +377,17 @@ export default function PapanShift({
                             id_shift: pilihShift,
                             tanggal: c.tanggal,
                             tanggal_sampai: null,
-                            supir: [c.supir.id_supir],
+                            ...(c.baris.tipe === 'vendor'
+                                ? { supir_vendor: [c.baris.key] }
+                                : { supir: [c.baris.key] }),
                         })
                         if (hasil.gagal.length > 0) {
-                            hasil.gagal.forEach(g => gagal.push({ tanggal: g.tanggal ?? c.tanggal, alasan: `${c.supir.nama}: ${g.alasan}` }))
+                            hasil.gagal.forEach(g => gagal.push({ tanggal: g.tanggal ?? c.tanggal, alasan: `${c.baris.nama}: ${g.alasan}` }))
                         } else {
                             sukses += hasil.sukses
                         }
                     } catch (err) {
-                        gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
+                        gagal.push({ tanggal: c.tanggal, alasan: `${c.baris.nama}: ${parseApiError(err)}` })
                     }
                 }
                 if (gagal.length > 0) {
@@ -379,14 +396,16 @@ export default function PapanShift({
                     toast.push(<Notification type="success" title={`${sukses} tanggal berhasil dijadwalkan`} />)
                 }
             } else {
-                if (!pilihSupirId || !tanggalMulai) return
+                if (!pilihBaris || !tanggalMulai) return
                 const pakaiRentang = !!sampaiTanggal && sampaiTanggal > tanggalMulai
                 const hasil = await jadwalShiftService.create({
                     id_proyek: idProyek,
                     id_shift: pilihShift,
                     tanggal: tanggalMulai,
                     tanggal_sampai: pakaiRentang ? sampaiTanggal : null,
-                    supir: [pilihSupirId],
+                    ...(pilihBaris.tipe === 'vendor'
+                        ? { supir_vendor: [pilihBaris.key] }
+                        : { supir: [pilihBaris.key] }),
                 })
                 if (hasil.gagal.length > 0) {
                     // rentang: sebagian bisa gagal — tampilkan detail per tanggal
@@ -430,7 +449,7 @@ export default function PapanShift({
                 await jadwalShiftService.delete(c.jadwal!.id_jadwal_shift)
                 sukses++
             } catch (err) {
-                gagal.push({ tanggal: c.tanggal, alasan: `${c.supir.nama}: ${parseApiError(err)}` })
+                gagal.push({ tanggal: c.tanggal, alasan: `${c.baris.nama}: ${parseApiError(err)}` })
             }
         }
         setBulkDeleting(false)
@@ -469,8 +488,8 @@ export default function PapanShift({
                 { teks: 'STAND BY', gaya: 'headerBiru' },
                 ...tanggalList.map(t => ({ teks: String(t.date()), gaya: 'headerBiru' as const })),
             ])
-            supirList.forEach((b, idx) => {
-                const jadwalSupir = jadwalMap[b.id_supir] ?? {}
+            barisSemua.forEach((b, idx) => {
+                const jadwalSupir = jadwalMap[b.key] ?? {}
                 const adaJadwal = Object.keys(jadwalSupir).length > 0
                 const pertama = Object.values(jadwalSupir)[0]
                 baris.push([
@@ -478,7 +497,7 @@ export default function PapanShift({
                     { teks: '-', gaya: 'hadir' },
                     { teks: namaRute, gaya: 'hadir' },
                     { teks: '-', gaya: 'hadir' },
-                    { teks: 'Internal', gaya: 'hadir' },
+                    { teks: b.tipe === 'vendor' ? (b.namaVendor ?? '-') : 'Internal', gaya: 'hadir' },
                     { teks: '-', gaya: 'hadir' },
                     { teks: b.nama, gaya: 'nama' },
                     { teks: pertama ? jam(pertama.jam_mulai) : '-', gaya: 'hadir' },
@@ -582,7 +601,7 @@ export default function PapanShift({
                     onClick={() => setBulan(b => b.add(1, 'month'))} />
                 <Button size="sm" variant="default" icon={<HiOutlineDownload />}
                     title="Download jadwal (.xlsx)"
-                    disabled={supirList.length === 0}
+                    disabled={barisSemua.length === 0}
                     loading={downloading}
                     onClick={handleDownload} />
                 <Button size="sm" variant="solid" icon={<HiPlusCircle />}
@@ -666,7 +685,7 @@ export default function PapanShift({
 
             {memuat ? (
                 <div className="flex justify-center py-16"><Spinner size={36} /></div>
-            ) : supirList.length === 0 ? (
+            ) : barisSemua.length === 0 ? (
                 <p className="text-gray-400 text-sm py-10 text-center">
                     Belum ada supir terdaftar di proyek ini — klik &ldquo;Tambah Supir&rdquo; di atas.
                 </p>
@@ -702,7 +721,7 @@ export default function PapanShift({
                             {barisTampil.map(b => {
                                 const warna = avatarColor(b.nama)
                                 return (
-                                    <tr key={b.id_supir}>
+                                    <tr key={b.key}>
                                         <td className="sticky left-0 z-10 px-3 py-3 bg-white dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-600 align-top">
                                             <div className="flex items-center gap-2.5">
                                                 <span className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-sm shrink-0"
@@ -710,21 +729,33 @@ export default function PapanShift({
                                                     {b.nama.charAt(0).toUpperCase()}
                                                 </span>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="font-semibold text-sm truncate uppercase">{b.nama}</p>
-                                                    <p className="text-[11px] text-gray-400">{countShift(b.id_supir)} shift</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="font-semibold text-sm truncate uppercase">{b.nama}</p>
+                                                        {b.tipe === 'vendor' && (
+                                                            <Tag className="text-[10px] shrink-0 bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300">
+                                                                Vendor
+                                                            </Tag>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-400 truncate">
+                                                        {countShift(b.key)} shift
+                                                        {b.namaVendor && <span className="ml-1 text-blue-500">· {b.namaVendor}</span>}
+                                                    </p>
                                                 </div>
-                                                <Tooltip title="Keluarkan supir dari proyek">
-                                                    <span className="p-1 text-red-400 hover:text-red-600 cursor-pointer shrink-0"
-                                                        onClick={() => setHapusSupirTarget(b)}>
-                                                        <HiOutlineTrash className="w-4 h-4" />
-                                                    </span>
-                                                </Tooltip>
+                                                {b.tipe === 'internal' && b.supirProyek && (
+                                                    <Tooltip title="Keluarkan supir dari proyek">
+                                                        <span className="p-1 text-red-400 hover:text-red-600 cursor-pointer shrink-0"
+                                                            onClick={() => setHapusSupirTarget(b.supirProyek)}>
+                                                            <HiOutlineTrash className="w-4 h-4" />
+                                                        </span>
+                                                    </Tooltip>
+                                                )}
                                             </div>
                                         </td>
                                         {tanggalList.map(t => {
                                             const key = t.format('YYYY-MM-DD')
-                                            const j = jadwalMap[b.id_supir]?.[key]
-                                            const terpilih = !!selCells[`${b.id_supir}|${key}`]
+                                            const j = jadwalMap[b.key]?.[key]
+                                            const terpilih = !!selCells[`${b.key}|${key}`]
                                             return (
                                                 <td key={key} className="px-1.5 py-2 border-b border-r border-gray-200 dark:border-gray-600 align-middle">
                                                     {j ? (
@@ -812,7 +843,7 @@ export default function PapanShift({
                                                                 </p>
                                                             )}
                                                         </div>
-                                                    ) : countShift(b.id_supir) > 0 ? (
+                                                    ) : countShift(b.key) > 0 ? (
                                                         <button type="button"
                                                             title="Libur — klik untuk jadwalkan"
                                                             className={`w-full h-12 rounded-lg border flex items-center justify-center transition-colors ${
@@ -856,7 +887,8 @@ export default function PapanShift({
                         : bulkMode
                         ? `${selKosong.length} tanggal terpilih — shift yang sama diterapkan ke semuanya`
                         : <>
-                            {supirList.find(x => x.id_supir === pilihSupirId)?.nama ?? ''}
+                            {pilihBaris?.nama ?? ''}
+                            {pilihBaris?.tipe === 'vendor' && pilihBaris.namaVendor ? ` · Vendor ${pilihBaris.namaVendor}` : ''}
                             {editJadwal && tanggalMulai && ` — ${dayjs(tanggalMulai).format('dddd, DD MMMM YYYY')}`}
                         </>}
                 </p>
@@ -888,7 +920,7 @@ export default function PapanShift({
                             Belum ada master Shift — klik tombol <strong>Tambah Shift</strong> di kanan atas papan.
                         </p>
                     )}
-                    {editJadwal && (
+                    {editJadwal && !editJadwal.id_supir_vendor && (
                         <>
                             <FormItem label="Supir Pengganti (opsional)">
                                 <Select isClearable placeholder="Pilih supir pengganti..."

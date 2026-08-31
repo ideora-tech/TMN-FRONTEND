@@ -47,7 +47,7 @@ const MEKANISME_CLASS: Record<string, string> = {
     full:        'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400',
 }
 const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'Full',
+    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
 }
 
 function shortId(id?: string | null) {
