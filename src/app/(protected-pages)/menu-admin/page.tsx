@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Select, Tooltip, Switcher, toast, Notification } from '@/components/ui'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef } from '@/components/shared/DataTable'
@@ -34,6 +34,7 @@ export default function MenuAdminPage() {
     const [total, setTotal]       = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<MenuItem | null>(null)
     const [movingId, setMovingId] = useState<string | null>(null)
+    const [togglingId, setTogglingId] = useState<string | null>(null)
 
     const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
@@ -90,6 +91,19 @@ export default function MenuAdminPage() {
         }
     }
 
+    const handleToggleAktif = async (menu: MenuItem) => {
+        setTogglingId(menu.id_menu)
+        try {
+            await menuService.update(menu.id_menu, { aktif: !menu.aktif })
+            setList(prev => prev.map(m => m.id_menu === menu.id_menu ? { ...m, aktif: !m.aktif } : m))
+            toast.push(<Notification type="success" title={`Menu ${!menu.aktif ? 'diaktifkan' : 'dinonaktifkan'}`} />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setTogglingId(null)
+        }
+    }
+
     const handleDelete = async () => {
         if (!deleteTarget) return
         setSubmitting(true)
@@ -114,9 +128,15 @@ export default function MenuAdminPage() {
         {
             header: 'Status', accessorKey: 'aktif',
             cell: ({ row }) => (
-                <Tag className={row.original.aktif ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}>
-                    {row.original.aktif ? 'Aktif' : 'Nonaktif'}
-                </Tag>
+                <Tooltip title={row.original.aktif ? 'Nonaktifkan' : 'Aktifkan'}>
+                    <span>
+                        <Switcher
+                            checked={row.original.aktif}
+                            isLoading={togglingId === row.original.id_menu}
+                            onChange={() => handleToggleAktif(row.original)}
+                        />
+                    </span>
+                </Tooltip>
             ),
         },
         {
