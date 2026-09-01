@@ -1,14 +1,15 @@
 'use client'
-import { use, useEffect, useState, useCallback } from 'react'
+import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -17,20 +18,22 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { invoiceVendorService, InvoiceVendor, PembayaranVendor } from '@/services/invoice-vendor.service'
 import { KontrakVendor } from '@/services/vendor.service'
+import { tipePembayaranService, TipePembayaran } from '@/services/tipe-pembayaran.service'
 import { STATUS_TAG, STATUS_LABEL, BAYAR_TAG, BAYAR_LABEL } from '../DaftarInvoiceTab'
 
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
 }
 
-const TIPE_PEMBAYARAN_OPTIONS = [
-    { value: 'full_payment', label: 'Full Payment' },
-    { value: 'dp', label: 'DP' },
-    { value: 'top', label: 'TOP' },
-    { value: 'advance_payment', label: 'Advance Payment' },
-]
-const TIPE_PEMBAYARAN_LABEL: Record<string, string> = {
-    full_payment: 'Full Payment', dp: 'DP', top: 'TOP', advance_payment: 'Advance Payment',
+const TRIP_STATUS_CLASS: Record<string, string> = {
+    belum_mulai: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    berjalan:    'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    selesai:     'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    dibatalkan:  'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400',
+}
+
+const TRIP_STATUS_LABEL: Record<string, string> = {
+    belum_mulai: 'Belum Mulai', berjalan: 'Berjalan', selesai: 'Selesai', dibatalkan: 'Dibatalkan',
 }
 
 const METODE_OPTIONS = [
@@ -63,11 +66,20 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     })
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
     const [saving, setSaving]         = useState(false)
+    const [ppnPersen, setPpnPersen] = useState('')
+    const [pphPersen, setPphPersen] = useState('')
+    const ppnManual = useRef(false)
+    const pphManual = useRef(false)
     const [kontrakList, setKontrakList] = useState<KontrakVendor[]>([])
+    const [tipePembayaranList, setTipePembayaranList] = useState<TipePembayaran[]>([])
 
     const [rekapKonsolidasi, setRekapKonsolidasi] = useState<KonsolidasiRekap | null>(null)
 
     const [ajukanLoading, setAjukanLoading] = useState(false)
+
+    const [downloadingPdf, setDownloadingPdf] = useState(false)
+    const [downloadingTermin, setDownloadingTermin] = useState<string | null>(null)
+    const [logOpen, setLogOpen] = useState(false)
 
     const [showBayar, setShowBayar]     = useState(false)
     const [bayarForm, setBayarForm]     = useState({ ...BAYAR_FORM_KOSONG })
@@ -111,6 +123,12 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     useEffect(() => { fetchDetail() }, [fetchDetail])
 
     useEffect(() => {
+        tipePembayaranService.list(1, 999)
+            .then(res => setTipePembayaranList(res.data))
+            .catch(() => setTipePembayaranList([]))
+    }, [])
+
+    useEffect(() => {
         if (!data?.id_vendor || !data.periode_dari || !data.periode_sampai) {
             setRekapKonsolidasi(null)
             return
@@ -131,6 +149,25 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         value: k.id_kontrak_vendor,
         label: `${k.nomor_kontrak ?? 'Tanpa nomor'} · ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
     }))
+
+    const tipePembayaranOptions = tipePembayaranList
+        .filter(t => t.aktif)
+        .map(t => ({ value: t.kode_tipe, label: t.nama_tipe }))
+    const tipePembayaranLabelMap = Object.fromEntries(tipePembayaranList.map(t => [t.kode_tipe, t.nama_tipe]))
+
+    useEffect(() => {
+        if (!ppnPersen || ppnManual.current) return
+        const persen = Number(ppnPersen)
+        if (Number.isNaN(persen)) return
+        setForm(p => ({ ...p, ppn: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
+    }, [form.dpp, ppnPersen])
+
+    useEffect(() => {
+        if (!pphPersen || pphManual.current) return
+        const persen = Number(pphPersen)
+        if (Number.isNaN(persen)) return
+        setForm(p => ({ ...p, pph: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
+    }, [form.dpp, pphPersen])
 
     const totalEdit = Math.max((Number(form.dpp) || 0) + (Number(form.ppn) || 0) - (Number(form.pph) || 0), 0)
 
@@ -191,6 +228,44 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setAjukanLoading(false)
+        }
+    }
+
+    const handleExportPdf = async () => {
+        setDownloadingPdf(true)
+        try {
+            const res = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_EXPORT_PDF(id), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `invoice-vendor-${data?.nomor_invoice ?? id}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingPdf(false)
+        }
+    }
+
+    const handleExportTermin = async (idPembayaran: string) => {
+        setDownloadingTermin(idPembayaran)
+        try {
+            const res = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN_EXPORT_PDF(id, idPembayaran), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `kwitansi-${data?.nomor_invoice ?? id}-${idPembayaran}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingTermin(null)
         }
     }
 
@@ -275,13 +350,29 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                    {!editing && (
+                        <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingPdf} onClick={handleExportPdf}>
+                            Export PDF
+                        </Button>
+                    )}
+                    {!editing && (
+                        <Button variant="default" size="sm" onClick={() => setLogOpen(true)}>
+                            Log Approval
+                        </Button>
+                    )}
                     {data.status === 'draft' && !editing && (
                         <Button variant="solid" size="sm" loading={ajukanLoading} onClick={handleAjukanApproval}>
                             Ajukan Approval
                         </Button>
                     )}
                     {(data.status === 'draft' || data.status === 'ditolak') && !editing && (
-                        <Button variant="default" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>
+                        <Button variant="default" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
+                            setEditing(true)
+                            setPpnPersen('')
+                            setPphPersen('')
+                            ppnManual.current = false
+                            pphManual.current = false
+                        }}>
                             Edit
                         </Button>
                     )}
@@ -313,6 +404,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     : <span className="text-gray-400">—</span>,
                             },
                             { label: 'Kontrak',         value: data.kontrak?.nomor_kontrak ?? <span className="text-gray-400">—</span> },
+                            { label: 'Nilai Kontrak',   value: data.kontrak ? formatRupiah(data.kontrak.nilai_kontrak) : <span className="text-gray-400">—</span> },
                             { label: 'Tanggal Invoice', value: dayjs(data.tanggal_invoice).format('DD MMM YYYY') },
                             {
                                 label: 'Jatuh Tempo',
@@ -327,7 +419,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                             {
                                 label: 'Tipe Pembayaran',
                                 value: data.tipe_pembayaran
-                                    ? `${TIPE_PEMBAYARAN_LABEL[data.tipe_pembayaran] ?? data.tipe_pembayaran}${data.tipe_pembayaran === 'top' && data.top_hari ? ` (${data.top_hari} hari)` : ''}`
+                                    ? `${tipePembayaranLabelMap[data.tipe_pembayaran] ?? data.tipe_pembayaran}${data.tipe_pembayaran === 'top' && data.top_hari ? ` (${data.top_hari} hari)` : ''}`
                                     : <span className="text-gray-400">—</span>,
                             },
                             {
@@ -401,8 +493,8 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1">
                                         <Select isSearchable={false} isClearable placeholder="Pilih tipe pembayaran..."
-                                            options={TIPE_PEMBAYARAN_OPTIONS}
-                                            value={TIPE_PEMBAYARAN_OPTIONS.find(o => o.value === form.tipe_pembayaran) ?? null}
+                                            options={tipePembayaranOptions}
+                                            value={tipePembayaranOptions.find(o => o.value === form.tipe_pembayaran) ?? null}
                                             onChange={opt => setForm(p => ({
                                                 ...p,
                                                 tipe_pembayaran: opt?.value ?? '',
@@ -416,6 +508,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     )}
                                 </div>
                             </FormItem>
+                            {/* Periode Dari/Sampai dinonaktifkan sementara — buka lagi kalau dibutuhkan:
                             <FormItem label="Periode Dari">
                                 <DatePicker inputFormat="DD/MM/YYYY"
                                     value={form.periode_dari ? dayjs(form.periode_dari).toDate() : null}
@@ -426,20 +519,43 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.periode_sampai ? dayjs(form.periode_sampai).toDate() : null}
                                     onChange={date => setForm(p => ({ ...p, periode_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
+                            */}
                             <FormItem label="DPP" asterisk invalid={!!formErrors.dpp} errorMessage={formErrors.dpp}>
                                 <Input prefix="Rp" placeholder="0" invalid={!!formErrors.dpp}
                                     value={form.dpp ? formatNum(Number(form.dpp)) : ''}
                                     onChange={e => setForm(p => ({ ...p, dpp: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
                             <FormItem label="PPN">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={form.ppn ? formatNum(Number(form.ppn)) : ''}
-                                    onChange={e => setForm(p => ({ ...p, ppn: e.target.value.replace(/\D/g, '') }))} />
+                                <div className="flex items-center gap-2">
+                                    <Input className="flex-1" prefix="Rp" placeholder="0"
+                                        value={form.ppn ? formatNum(Number(form.ppn)) : ''}
+                                        onChange={e => {
+                                            ppnManual.current = true
+                                            setForm(p => ({ ...p, ppn: e.target.value.replace(/\D/g, '') }))
+                                        }} />
+                                    <Input className="w-24" suffix="%" placeholder="0"
+                                        value={ppnPersen}
+                                        onChange={e => {
+                                            ppnManual.current = false
+                                            setPpnPersen(e.target.value.replace(/[^0-9.]/g, ''))
+                                        }} />
+                                </div>
                             </FormItem>
                             <FormItem label="PPh">
-                                <Input prefix="Rp" placeholder="0"
-                                    value={form.pph ? formatNum(Number(form.pph)) : ''}
-                                    onChange={e => setForm(p => ({ ...p, pph: e.target.value.replace(/\D/g, '') }))} />
+                                <div className="flex items-center gap-2">
+                                    <Input className="flex-1" prefix="Rp" placeholder="0"
+                                        value={form.pph ? formatNum(Number(form.pph)) : ''}
+                                        onChange={e => {
+                                            pphManual.current = true
+                                            setForm(p => ({ ...p, pph: e.target.value.replace(/\D/g, '') }))
+                                        }} />
+                                    <Input className="w-24" suffix="%" placeholder="0"
+                                        value={pphPersen}
+                                        onChange={e => {
+                                            pphManual.current = false
+                                            setPphPersen(e.target.value.replace(/[^0-9.]/g, ''))
+                                        }} />
+                                </div>
                             </FormItem>
                             <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mb-4 self-start">
                                 <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span>
@@ -464,6 +580,48 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </>
                 )}
             </Card>
+
+            {data.trip_terkait && data.trip_terkait.length > 0 && (
+                <Card>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
+                        Trip Terkait ({data.trip_terkait.length})
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Tanggal</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nopol</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Driver</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Proyek</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute</th>
+                                    <th className="py-2.5 px-4 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {data.trip_terkait.map(t => (
+                                    <tr key={t.id_trip}>
+                                        <td className="py-3 px-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
+                                            {dayjs(t.tanggal).format('DD MMM YYYY')}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{t.nopol ?? '—'}</td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{t.driver_nama ?? '—'}</td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                            {t.kode_proyek ? `${t.kode_proyek} — ${t.nama_proyek}` : (t.nama_proyek ?? '—')}
+                                        </td>
+                                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{t.rute ?? '—'}</td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${TRIP_STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {TRIP_STATUS_LABEL[t.status] ?? t.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            )}
 
             {data.periode_dari && data.periode_sampai && rekapKonsolidasi && (() => {
                 const kontrakOtomatis = rekapKonsolidasi.ringkasan.kontrak.filter(k => k.nilai_seharusnya != null)
@@ -590,14 +748,24 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                                 : <span className="text-gray-400 text-xs">—</span>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
-                                            <Tooltip title="Hapus">
-                                                <span
-                                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                    onClick={() => setDeleteBayarTarget(p)}
-                                                >
-                                                    <HiOutlineTrash className="text-lg" />
-                                                </span>
-                                            </Tooltip>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Tooltip title="Cetak Kwitansi PDF">
+                                                    <span
+                                                        className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors ${downloadingTermin === p.id_pembayaran_vendor ? 'opacity-50 pointer-events-none' : ''}`}
+                                                        onClick={() => handleExportTermin(p.id_pembayaran_vendor)}
+                                                    >
+                                                        <HiOutlineDownload className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                                <Tooltip title="Hapus">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                        onClick={() => setDeleteBayarTarget(p)}
+                                                    >
+                                                        <HiOutlineTrash className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -672,6 +840,14 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 confirmButtonProps={{ loading: deletingBayar }}>
                 <p>Hapus pembayaran {deleteBayarTarget ? formatRupiah(deleteBayarTarget.nominal) : ''} tanggal {deleteBayarTarget ? dayjs(deleteBayarTarget.tanggal_bayar).format('DD MMM YYYY') : ''}? Status pembayaran invoice akan dihitung ulang.</p>
             </ConfirmDialog>
+
+            <LogApprovalDialog
+                isOpen={logOpen}
+                onClose={() => setLogOpen(false)}
+                kode="invoice_vendor"
+                idReferensi={id}
+                emptyMessage="Belum ada pengajuan approval untuk invoice ini — ajukan dari tombol Ajukan Approval."
+            />
         </div>
     )
 }

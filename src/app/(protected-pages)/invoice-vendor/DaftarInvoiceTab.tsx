@@ -139,6 +139,12 @@ export default function DaftarInvoiceTab() {
             ),
         },
         {
+            header: 'Nilai Kontrak', accessorKey: 'nilai_kontrak', size: 160,
+            cell: ({ row }) => row.original.nilai_kontrak != null
+                ? <span className="tabular-nums">{formatRupiah(row.original.nilai_kontrak)}</span>
+                : <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Tanggal', accessorKey: 'tanggal_invoice', size: 130,
             cell: ({ row }) => dayjs(row.original.tanggal_invoice).format('DD MMM YYYY'),
         },

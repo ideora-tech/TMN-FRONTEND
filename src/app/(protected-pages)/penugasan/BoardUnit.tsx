@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Checkbox, Tag } from '@/components/ui'
+import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Tag } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
@@ -21,7 +21,6 @@ import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { supirVendorService } from '@/services/supirVendor.service'
 import { tripService, Trip } from '@/services/trip.service'
-import MulaiTripDialog from '../trip/MulaiTripDialog'
 
 type Option = { value: string; label: string }
 type TipeUnitFilter = 'semua' | 'internal' | 'vendor'
@@ -118,9 +117,10 @@ export default function BoardUnit() {
     const [batalTripTarget, setBatalTripTarget] = useState<string | null>(null)
     const [membatalkanTrip, setMembatalkanTrip] = useState(false)
     const [selesaiTripTarget, setSelesaiTripTarget] = useState<string | null>(null)
-    const [selesaikanPenugasanJuga, setSelesaikanPenugasanJuga] = useState(false)
+    // const [selesaikanPenugasanJuga, setSelesaikanPenugasanJuga] = useState(false) — nonaktif, trip kedua sudah ditolak backend; buka lagi kalau multi-rit per penugasan dibutuhkan
     const [menyelesaikanTrip, setMenyelesaikanTrip] = useState(false)
     const [showMulaiTripDariSel, setShowMulaiTripDariSel] = useState(false)
+    const [mulaiTripLoading, setMulaiTripLoading] = useState(false)
     const [laporanDialogTrip, setLaporanDialogTrip] = useState<string | null>(null)
     const aksiFetchRef = useRef<string | null>(null)
     const assignRuteFetchRef = useRef<string | null>(null)
@@ -447,16 +447,34 @@ export default function BoardUnit() {
         if (!selesaiTripTarget) return
         setMenyelesaikanTrip(true)
         try {
-            await tripService.checkout(selesaiTripTarget, selesaikanPenugasanJuga)
+            await tripService.checkout(selesaiTripTarget, true)
             toast.push(<Notification type="success" title="Trip berhasil diselesaikan" />)
             setSelesaiTripTarget(null)
-            setSelesaikanPenugasanJuga(false)
             setDetailDialogOpen(false)
             fetchBoard()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setMenyelesaikanTrip(false)
+        }
+    }
+
+    const handleMulaiTripLangsung = async () => {
+        if (!detailAssignment) return
+        setMulaiTripLoading(true)
+        try {
+            await tripService.mulai({
+                id_penugasan: detailAssignment.id_penugasan,
+                id_rute: detailAssignment.id_rute,
+                uang_jalan_alokasi: detailAssignment.estimasi_biaya,
+            })
+            toast.push(<Notification type="success" title="Trip berhasil dimulai" />)
+            setShowMulaiTripDariSel(false)
+            fetchBoard()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMulaiTripLoading(false)
         }
     }
 
@@ -937,6 +955,8 @@ export default function BoardUnit() {
                                         </Button>
                                     )}
                                 </>
+                            ) : selesaiSemuaDetail ? (
+                                <span className="text-xs text-gray-400">Trip sudah selesai — buat penugasan baru untuk perjalanan berikutnya</span>
                             ) : (
                                 <Button type="button" size="sm" variant="solid"
                                     onClick={() => { setDetailDialogOpen(false); setShowMulaiTripDariSel(true) }}>
@@ -1057,11 +1077,12 @@ export default function BoardUnit() {
 
             <ConfirmDialog isOpen={!!selesaiTripTarget} type="warning" title="Selesaikan Trip"
                 confirmText="Ya, Lanjutkan" cancelText="Batal"
-                onClose={() => { setSelesaiTripTarget(null); setSelesaikanPenugasanJuga(false) }}
-                onCancel={() => { setSelesaiTripTarget(null); setSelesaikanPenugasanJuga(false) }}
+                onClose={() => setSelesaiTripTarget(null)}
+                onCancel={() => setSelesaiTripTarget(null)}
                 onConfirm={handleSelesaikanTrip}
                 confirmButtonProps={{ loading: menyelesaikanTrip }}>
-                <p>Selesaikan trip yang sedang berjalan ini? Status akan berubah menjadi selesai.</p>
+                <p>Selesaikan trip yang sedang berjalan ini? Status akan berubah menjadi selesai dan penugasan ikut ditutup. Armada otomatis kembali tersedia setelah checkout.</p>
+                {/* Checkbox "Sekalian selesaikan penugasan" nonaktif — trip kedua per penugasan sudah ditolak backend, jadi penugasan selalu ditutup. Buka lagi kalau multi-rit per penugasan dibutuhkan:
                 <div className="mt-3">
                     <Checkbox checked={selesaikanPenugasanJuga} onChange={(checked: boolean) => setSelesaikanPenugasanJuga(checked)}>
                         Sekalian selesaikan penugasan
@@ -1070,15 +1091,21 @@ export default function BoardUnit() {
                         Armada otomatis kembali tersedia setelah checkout. Centang bila ini rit terakhir — penugasan ikut ditutup. Biarkan kosong bila masih ada rit berikutnya.
                     </p>
                 </div>
+                */}
             </ConfirmDialog>
 
-            <MulaiTripDialog
-                isOpen={showMulaiTripDariSel}
+            <ConfirmDialog isOpen={showMulaiTripDariSel} type="info" title="Mulai Trip"
+                confirmText="Ya, Mulai Trip" cancelText="Batal"
                 onClose={() => setShowMulaiTripDariSel(false)}
-                onSukses={() => { setShowMulaiTripDariSel(false); fetchBoard() }}
-                idPenugasanTerkunci={detailAssignment?.id_penugasan}
-                idProyekTerkunci={detailAssignment?.id_proyek}
-            />
+                onCancel={() => setShowMulaiTripDariSel(false)}
+                onConfirm={handleMulaiTripLangsung}
+                confirmButtonProps={{ loading: mulaiTripLoading }}>
+                <p>
+                    Mulai trip untuk <strong>{detailUnit?.nopol}</strong> — {detailAssignment?.nama_supir ?? '-'}
+                    {detailAssignment?.nama_rute && <> di rute <strong>{detailAssignment.nama_rute}</strong></>}?
+                    Trip langsung berjalan (check-in otomatis) — pastikan supir & armada siap berangkat.
+                </p>
+            </ConfirmDialog>
 
             <Dialog isOpen={!!laporanDialogTrip} onRequestClose={() => setLaporanDialogTrip(null)} onClose={() => setLaporanDialogTrip(null)} width={900}>
                 {laporanDialogTrip && (

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
-import Select from '@/components/ui/Select'
+// import Select from '@/components/ui/Select' — nonaktif bareng field Jenis BBM, buka lagi kalau dibutuhkan
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -138,12 +138,12 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
             .catch(() => {})
     }, [])
 
-    const jenisBbmOptions = jenisBbmList
-        .filter(j => j.aktif)
-        .map(j => ({
-            value: j.id_jenis_bbm,
-            label: j.harga_per_liter != null ? `${j.nama_bbm} — ${formatRupiah(j.harga_per_liter)}/L` : j.nama_bbm,
-        }))
+    // const jenisBbmOptions = jenisBbmList
+    //     .filter(j => j.aktif)
+    //     .map(j => ({
+    //         value: j.id_jenis_bbm,
+    //         label: j.harga_per_liter != null ? `${j.nama_bbm} — ${formatRupiah(j.harga_per_liter)}/L` : j.nama_bbm,
+    //     }))
 
     const mekanisme = trip?.sumber === 'vendor' ? (trip.mekanisme ?? null) : null
     const sembunyikanUangJalan = mekanisme === 'unit_driver' || mekanisme === 'full'
@@ -202,37 +202,38 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
         document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, [trip, laporan, laporanLoading, searchParams, canIsiLaporan, autoOpenForm])
 
-    const addBiayaLainRow = () => {
-        setLaporanForm(p => ({ ...p, biaya_lain: [...p.biaya_lain, { nama_biaya: '', nominal: '' }] }))
-    }
-
-    const removeBiayaLainRow = (idx: number) => {
-        setLaporanForm(p => ({ ...p, biaya_lain: p.biaya_lain.filter((_, i) => i !== idx) }))
-    }
-
-    const updateBiayaLainRow = (idx: number, field: keyof BiayaLainRow, value: string) => {
-        setLaporanForm(p => {
-            const next = [...p.biaya_lain]
-            next[idx] = { ...next[idx], [field]: value }
-            return { ...p, biaya_lain: next }
-        })
-    }
-
-    const addBiayaTagihanRow = () => {
-        setLaporanForm(p => (p.biaya_tagihan.length >= 10 ? p : { ...p, biaya_tagihan: [...p.biaya_tagihan, { nama_biaya: '', nominal: '' }] }))
-    }
-
-    const removeBiayaTagihanRow = (idx: number) => {
-        setLaporanForm(p => ({ ...p, biaya_tagihan: p.biaya_tagihan.filter((_, i) => i !== idx) }))
-    }
-
-    const updateBiayaTagihanRow = (idx: number, field: keyof BiayaTagihanRow, value: string) => {
-        setLaporanForm(p => {
-            const next = [...p.biaya_tagihan]
-            next[idx] = { ...next[idx], [field]: value }
-            return { ...p, biaya_tagihan: next }
-        })
-    }
+    // Handler form "Biaya Lain"/"Biaya Tagihan Klien" — nonaktif bareng form-nya, buka lagi kalau dibutuhkan:
+    // const addBiayaLainRow = () => {
+    //     setLaporanForm(p => ({ ...p, biaya_lain: [...p.biaya_lain, { nama_biaya: '', nominal: '' }] }))
+    // }
+    //
+    // const removeBiayaLainRow = (idx: number) => {
+    //     setLaporanForm(p => ({ ...p, biaya_lain: p.biaya_lain.filter((_, i) => i !== idx) }))
+    // }
+    //
+    // const updateBiayaLainRow = (idx: number, field: keyof BiayaLainRow, value: string) => {
+    //     setLaporanForm(p => {
+    //         const next = [...p.biaya_lain]
+    //         next[idx] = { ...next[idx], [field]: value }
+    //         return { ...p, biaya_lain: next }
+    //     })
+    // }
+    //
+    // const addBiayaTagihanRow = () => {
+    //     setLaporanForm(p => (p.biaya_tagihan.length >= 10 ? p : { ...p, biaya_tagihan: [...p.biaya_tagihan, { nama_biaya: '', nominal: '' }] }))
+    // }
+    //
+    // const removeBiayaTagihanRow = (idx: number) => {
+    //     setLaporanForm(p => ({ ...p, biaya_tagihan: p.biaya_tagihan.filter((_, i) => i !== idx) }))
+    // }
+    //
+    // const updateBiayaTagihanRow = (idx: number, field: keyof BiayaTagihanRow, value: string) => {
+    //     setLaporanForm(p => {
+    //         const next = [...p.biaya_tagihan]
+    //         next[idx] = { ...next[idx], [field]: value }
+    //         return { ...p, biaya_tagihan: next }
+    //     })
+    // }
 
     const handleSubmitLaporan = async () => {
         setSavingLaporan(true)
@@ -336,6 +337,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                         {!sembunyikanBiayaOps && (
                             <>
+                                {/* Jenis BBM dinonaktifkan sementara — buka lagi kalau dibutuhkan:
                                 <FormItem label="Jenis BBM">
                                     <Select
                                         placeholder="Pilih jenis BBM..."
@@ -349,6 +351,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                         isClearable
                                     />
                                 </FormItem>
+                                */}
                                 <FormItem label="Jumlah Liter">
                                     <Input
                                         type="number"
@@ -448,6 +451,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                         )}
                     </div>
 
+                    {/* Form "Biaya Lain" dan "Biaya Tagihan Klien" dinonaktifkan sementara — buka lagi kalau dibutuhkan:
                     {!sembunyikanBiayaOps && (
                         <>
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 mb-1">
@@ -543,6 +547,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                             ))}
                         </div>
                     )}
+                    */}
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>

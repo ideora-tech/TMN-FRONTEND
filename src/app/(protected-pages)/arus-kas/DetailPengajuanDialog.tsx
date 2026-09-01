@@ -71,6 +71,10 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
     const p = pengajuan
     const [approveOpen, setApproveOpen] = useState(false)
     const [tolakOpen, setTolakOpen]     = useState(false)
+    // Disalin dari `p` saat dialog aksi dibuka — dialog detail ditutup (onClose)
+    // di saat yang sama supaya dua Dialog react-modal tidak sama-sama isOpen
+    // (portal-nya numpuk sesuai urutan JSX, bukan urutan buka).
+    const [aksiTarget, setAksiTarget] = useState<PengajuanPengeluaran | null>(null)
     const [catatanTolak, setCatatanTolak] = useState('')
     const [errCatatanTolak, setErrCatatanTolak] = useState('')
     const [memproses, setMemproses] = useState(false)
@@ -78,19 +82,31 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
     const tutupAksiApproval = () => {
         setApproveOpen(false)
         setTolakOpen(false)
+        setAksiTarget(null)
         setCatatanTolak('')
         setErrCatatanTolak('')
     }
 
+    const bukaApprove = () => {
+        setAksiTarget(p)
+        setApproveOpen(true)
+        onClose()
+    }
+
+    const bukaTolak = () => {
+        setAksiTarget(p)
+        setTolakOpen(true)
+        onClose()
+    }
+
     const handleApprove = async () => {
-        if (!p) return
+        if (!aksiTarget) return
         setMemproses(true)
         try {
-            await arusKasService.keputusanApproval(p.id_pengajuan, 'setuju')
+            await arusKasService.keputusanApproval(aksiTarget.id_pengajuan, 'setuju')
             toast.push(<Notification type="success" title="Pengajuan disetujui" />)
             tutupAksiApproval()
             onRefresh?.()
-            onClose()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -99,15 +115,14 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
     }
 
     const handleTolakApproval = async () => {
-        if (!p) return
+        if (!aksiTarget) return
         if (!catatanTolak.trim()) { setErrCatatanTolak('Catatan penolakan wajib diisi'); return }
         setMemproses(true)
         try {
-            await arusKasService.keputusanApproval(p.id_pengajuan, 'tolak', catatanTolak.trim())
+            await arusKasService.keputusanApproval(aksiTarget.id_pengajuan, 'tolak', catatanTolak.trim())
             toast.push(<Notification type="success" title="Pengajuan ditolak" />)
             tutupAksiApproval()
             onRefresh?.()
-            onClose()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -209,11 +224,11 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                             </div>
                             {p.bisa_approve && !readOnly && (
                                 <div className="flex justify-end gap-2 mt-3">
-                                    <Button size="sm" variant="solid" loading={memproses} onClick={() => setApproveOpen(true)}>
+                                    <Button size="sm" variant="solid" loading={memproses} onClick={bukaApprove}>
                                         Approve
                                     </Button>
                                     <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
-                                        onClick={() => setTolakOpen(true)}>
+                                        onClick={bukaTolak}>
                                         Tolak
                                     </Button>
                                 </div>
@@ -252,12 +267,12 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
             title="Setujui Pengajuan"
             confirmText="Ya, Setujui"
             cancelText="Batal"
-            onClose={() => setApproveOpen(false)}
-            onCancel={() => setApproveOpen(false)}
+            onClose={tutupAksiApproval}
+            onCancel={tutupAksiApproval}
             onConfirm={handleApprove}
             confirmButtonProps={{ loading: memproses }}
         >
-            <p>Setujui pengajuan {p?.nomor_pengajuan}?</p>
+            <p>Setujui pengajuan {aksiTarget?.nomor_pengajuan}?</p>
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -266,12 +281,12 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
             title="Tolak Pengajuan"
             confirmText="Ya, Tolak"
             cancelText="Batal"
-            onClose={() => { setTolakOpen(false); setCatatanTolak(''); setErrCatatanTolak('') }}
-            onCancel={() => { setTolakOpen(false); setCatatanTolak(''); setErrCatatanTolak('') }}
+            onClose={tutupAksiApproval}
+            onCancel={tutupAksiApproval}
             onConfirm={handleTolakApproval}
             confirmButtonProps={{ loading: memproses, disabled: !catatanTolak.trim() }}
         >
-            <p>Tolak pengajuan {p?.nomor_pengajuan}?</p>
+            <p>Tolak pengajuan {aksiTarget?.nomor_pengajuan}?</p>
             <div className="mt-3">
                 <p className="text-sm font-semibold mb-1">Catatan penolakan <span className="text-red-500">*</span></p>
                 <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."

@@ -90,7 +90,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [draftErrors, setDraftErrors] = useState<Record<number, string>>({})
     const [menghapusUnit, setMenghapusUnit] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
-    const [downloadingExport, setDownloadingExport] = useState<'' | 'pdf' | 'excel'>('')
+    const [downloadingExport, setDownloadingExport] = useState(false)
 
     const toFormState = (d: KontrakVendor) => ({
         ...d,
@@ -172,17 +172,14 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         }
     }
 
-    const handleExport = async (type: 'pdf' | 'excel') => {
-        setDownloadingExport(type)
+    const handleExport = async () => {
+        setDownloadingExport(true)
         try {
-            const url = type === 'excel'
-                ? API_ENDPOINTS.KONTRAK_VENDOR_EXPORT_EXCEL(id)
-                : API_ENDPOINTS.KONTRAK_VENDOR_EXPORT_PDF(id)
-            const res = await axios.get(url, { responseType: 'blob' })
+            const res = await axios.get(API_ENDPOINTS.KONTRAK_VENDOR_EXPORT_PDF(id), { responseType: 'blob' })
             const href = URL.createObjectURL(res.data)
             const link = document.createElement('a')
             link.href = href
-            link.download = `kontrak-${data?.nomor_kontrak ?? id}.${type === 'excel' ? 'xlsx' : 'pdf'}`
+            link.download = `kontrak-${data?.nomor_kontrak ?? id}.pdf`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -190,7 +187,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setDownloadingExport('')
+            setDownloadingExport(false)
         }
     }
 
@@ -482,10 +479,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         Ajukan Approval
                                     </Button>
                                 )}
-                                <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingExport === 'pdf'}
-                                    onClick={() => handleExport('pdf')}>PDF</Button>
-                                <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingExport === 'excel'}
-                                    onClick={() => handleExport('excel')}>Excel</Button>
+                                <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingExport}
+                                    onClick={handleExport}>Export PDF</Button>
                                 <Button variant="default" size="sm" onClick={() => setLogOpen(true)}>Log Approval</Button>
                                 <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
                             </div>

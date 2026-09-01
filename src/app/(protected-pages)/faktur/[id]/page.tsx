@@ -4,8 +4,7 @@ import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
-import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -87,7 +86,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
     const [ajukanLoading, setAjukanLoading] = useState(false)
 
-    const [downloadingExport, setDownloadingExport] = useState<'excel' | 'pdf' | null>(null)
+    const [downloadingExport, setDownloadingExport] = useState(false)
 
     const [logOpen, setLogOpen]             = useState(false)
 
@@ -184,17 +183,14 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         }
     }
 
-    const handleExport = async (type: 'excel' | 'pdf') => {
-        setDownloadingExport(type)
+    const handleExportPdf = async () => {
+        setDownloadingExport(true)
         try {
-            const url = type === 'excel'
-                ? API_ENDPOINTS.FAKTUR_EXPORT_EXCEL(id)
-                : API_ENDPOINTS.FAKTUR_EXPORT_PDF(id)
-            const res = await axios.get(url, { responseType: 'blob' })
+            const res = await axios.get(API_ENDPOINTS.FAKTUR_EXPORT_PDF(id), { responseType: 'blob' })
             const href = URL.createObjectURL(res.data)
             const link = document.createElement('a')
             link.href = href
-            link.download = `invoice-${faktur?.nomor_faktur ?? id}.${type === 'excel' ? 'xlsx' : 'pdf'}`
+            link.download = `invoice-${faktur?.nomor_faktur ?? id}.pdf`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -202,7 +198,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setDownloadingExport(null)
+            setDownloadingExport(false)
         }
     }
 
@@ -227,11 +223,9 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran invoice</p>
                     </div>
                 </div>
-                <ExportDropdownButton
-                    loading={downloadingExport}
-                    onExportExcel={() => handleExport('excel')}
-                    onExportPdf={() => handleExport('pdf')}
-                />
+                <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={downloadingExport} onClick={handleExportPdf}>
+                    Export PDF
+                </Button>
             </div>
 
             {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (

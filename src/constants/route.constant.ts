@@ -90,6 +90,9 @@ export const ROUTES = {
     JENIS_KENDARAAN:        '/jenis-kendaraan',
     JENIS_KENDARAAN_BARU:   '/jenis-kendaraan/baru',
     JENIS_KENDARAAN_DETAIL: (id: string) => `/jenis-kendaraan/${id}`,
+    TIPE_PEMBAYARAN:        '/tipe-pembayaran',
+    TIPE_PEMBAYARAN_BARU:   '/tipe-pembayaran/baru',
+    TIPE_PEMBAYARAN_DETAIL: (id: string) => `/tipe-pembayaran/${id}`,
 
     LOKASI_KANTOR:        '/lokasi-kantor',
     LOKASI_KANTOR_BARU:   '/lokasi-kantor/baru',

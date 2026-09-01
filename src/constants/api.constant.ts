@@ -133,7 +133,6 @@ export const API_ENDPOINTS = {
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
     KONTRAK_VENDOR_TEMPLATE_PASANGAN: '/api/proxy/kontrak-vendor/template-pasangan',
     KONTRAK_VENDOR_EXPORT_PDF: (id: string) => `/api/proxy/kontrak-vendor/${id}/export/pdf`,
-    KONTRAK_VENDOR_EXPORT_EXCEL: (id: string) => `/api/proxy/kontrak-vendor/${id}/export/excel`,
     KONTRAK_VENDOR_PARSE_PASANGAN: '/api/proxy/kontrak-vendor/parse-pasangan',
     KONTRAK_VENDOR_PARSE_UNIT:  '/api/proxy/kontrak-vendor/parse-unit',
     KONTRAK_VENDOR_PARSE_SUPIR: '/api/proxy/kontrak-vendor/parse-supir',
@@ -173,10 +172,13 @@ export const API_ENDPOINTS = {
     KONSOLIDASI_VENDOR_EXPORT_EXCEL: '/api/proxy/konsolidasi-vendor/export/excel',
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
     INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
+    INVOICE_VENDOR_TRIP_SIAP_TAGIH: '/api/proxy/invoice-vendor/trip-siap-tagih',
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,
     INVOICE_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/invoice-vendor/${id}/ajukan-approval`,
     INVOICE_VENDOR_PEMBAYARAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran`,
     INVOICE_VENDOR_PEMBAYARAN_DELETE: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}`,
+    INVOICE_VENDOR_EXPORT_PDF: (id: string) => `/api/proxy/invoice-vendor/${id}/export/pdf`,
+    INVOICE_VENDOR_PEMBAYARAN_EXPORT_PDF: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}/export/pdf`,
 
     // Karyawan
     KARYAWAN:        '/api/proxy/karyawan',
@@ -239,6 +241,9 @@ export const API_ENDPOINTS = {
     // Jenis Kendaraan
     JENIS_KENDARAAN:        '/api/proxy/jenis-kendaraan',
     JENIS_KENDARAAN_DETAIL: (id: string) => `/api/proxy/jenis-kendaraan/${id}`,
+    TIPE_PEMBAYARAN:            '/api/proxy/tipe-pembayaran',
+    TIPE_PEMBAYARAN_OPSI_AKTIF: '/api/proxy/tipe-pembayaran/opsi-aktif',
+    TIPE_PEMBAYARAN_DETAIL:     (id: string) => `/api/proxy/tipe-pembayaran/${id}`,
 
     // Lokasi Kantor
     LOKASI_KANTOR:        '/api/proxy/lokasi-kantor',
@@ -285,7 +290,6 @@ export const API_ENDPOINTS = {
     NOTIFIKASI_BACA_SEMUA: '/api/proxy/notifikasi/baca-semua',
 
     // Export
-    FAKTUR_EXPORT_EXCEL:   (id: string) => `/api/proxy/faktur/${id}/export/excel`,
     FAKTUR_EXPORT_PDF:     (id: string) => `/api/proxy/faktur/${id}/export/pdf`,
     LAPORAN_EXPORT_EXCEL:  '/api/proxy/laporan/export/excel',
     LAPORAN_EXPORT_PDF:    '/api/proxy/laporan/export/pdf',

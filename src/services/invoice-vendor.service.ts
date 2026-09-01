@@ -1,6 +1,28 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
+export interface TripSiapTagihVendor {
+    id_trip: string
+    tanggal: string
+    rute: string | null
+    nopol: string | null
+    driver_nama: string | null
+    id_proyek: string
+    kode_proyek: string | null
+    nama_proyek: string
+}
+
+export interface TripTerkaitInvoiceVendor {
+    id_trip: string
+    tanggal: string
+    rute: string | null
+    nopol: string | null
+    driver_nama: string | null
+    kode_proyek: string | null
+    nama_proyek: string
+    status: string
+}
+
 export interface PembayaranVendor {
     id_pembayaran_vendor: string
     tanggal_bayar: string
@@ -16,6 +38,7 @@ export interface InvoiceVendor {
     id_invoice_vendor: string
     id_vendor: string
     id_kontrak_vendor: string | null
+    nilai_kontrak: number | null
     nomor_invoice: string
     tanggal_invoice: string
     jatuh_tempo: string | null
@@ -40,10 +63,11 @@ export interface InvoiceVendor {
     dibuat_pada?: string
     diubah_pada?: string
     vendor?: { id_vendor: string; nama_vendor: string }
-    kontrak?: { id_kontrak_vendor: string; nomor_kontrak: string | null } | null
+    kontrak?: { id_kontrak_vendor: string; nomor_kontrak: string | null; nilai_kontrak: number } | null
     total_dibayar?: number
     sisa?: number
     pembayaran?: PembayaranVendor[]
+    trip_terkait?: TripTerkaitInvoiceVendor[]
 }
 
 export interface AgingInvoiceVendor {
@@ -96,6 +120,7 @@ export type InvoiceVendorPayload = {
     ppn?: number
     pph?: number
     keterangan?: string | null
+    trip_ids?: string[]
 }
 
 export type PembayaranVendorPayload = {
@@ -142,6 +167,17 @@ export const invoiceVendorService = {
     async monitoring() {
         const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_MONITORING)
         return data.data as MonitoringInvoiceVendor
+    },
+    async tripSiapTagih(idKontrakVendor: string, dari?: string, sampai?: string, idProyek?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_TRIP_SIAP_TAGIH, {
+            params: {
+                id_kontrak_vendor: idKontrakVendor,
+                dari: dari || undefined,
+                sampai: sampai || undefined,
+                id_proyek: idProyek || undefined,
+            },
+        })
+        return data.data as TripSiapTagihVendor[]
     },
     async listPembayaran(idInvoice: string) {
         const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN(idInvoice))

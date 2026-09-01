@@ -551,12 +551,12 @@ export default function PersetujuanSayaPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
                             <div className="flex items-center gap-2">
                                 <Button size="sm" variant="solid"
-                                    icon={<HiOutlineCheck />} onClick={() => setSetujuTarget(detailTarget)}>
+                                    icon={<HiOutlineCheck />} onClick={() => { setSetujuTarget(detailTarget); setDetailTarget(null) }}>
                                     Setuju
                                 </Button>
                                 <Button size="sm" variant="default" className="text-red-500 border-red-300 hover:bg-red-50"
                                     icon={<HiOutlineX />}
-                                    onClick={() => { setTolakTarget(detailTarget); setCatatanTolak(''); setCatatanError('') }}>
+                                    onClick={() => { setTolakTarget(detailTarget); setCatatanTolak(''); setCatatanError(''); setDetailTarget(null) }}>
                                     Tolak
                                 </Button>
                             </div>
