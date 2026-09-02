@@ -454,6 +454,8 @@ export default function KontrakVendorBaruPage() {
                                                 <Select size="sm" isSearchable isClearable placeholder="Pilih..."
                                                     options={jenisKendaraanOptions}
                                                     value={jenisKendaraanOptions.find(o => o.value === u.id_jenis_kendaraan) ?? null}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                    styles={{ menuPortal: base => ({ ...base, zIndex: 60 }) }}
                                                     onChange={opt => ubahUnitRow(i, { id_jenis_kendaraan: (opt as { value: string } | null)?.value ?? '' })} />
                                             </td>
                                             {!pakaiSupir && (
