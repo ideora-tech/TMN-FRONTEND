@@ -278,7 +278,11 @@ export default function KontrakVendorBaruPage() {
                 })(),
                 ...(salinDari ? { salin_dari_kontrak: salinDari } : {}),
             })
-            toast.push(<Notification type="success" title="Kontrak tersimpan sebagai draft — ajukan approval dari halaman detail" />)
+            if (dibuat._pesan?.includes('diambil alih')) {
+                toast.push(<Notification type="warning" duration={8000} title={dibuat._pesan} />)
+            } else {
+                toast.push(<Notification type="success" title="Kontrak tersimpan sebagai draft — ajukan approval dari halaman detail" />)
+            }
             router.push(ROUTES.KONTRAK_VENDOR_DETAIL(dibuat.id_kontrak_vendor))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
