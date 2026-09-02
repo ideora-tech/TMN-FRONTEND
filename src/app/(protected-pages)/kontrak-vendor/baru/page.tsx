@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
@@ -89,6 +90,7 @@ export default function KontrakVendorBaruPage() {
     const [downloadingTemplate, setDownloadingTemplate] = useState<'' | 'unit' | 'supir'>('')
     const [parsing, setParsing] = useState<'' | 'unit' | 'supir'>('')
     const [parseGagal, setParseGagal] = useState<{ judul: string; daftar: BarisGagal[] } | null>(null)
+    const [hapusSemuaTarget, setHapusSemuaTarget] = useState<'unit' | 'supir' | null>(null)
 
     const pakaiSupir = form.mekanisme !== 'unit_only'
 
@@ -159,16 +161,16 @@ export default function KontrakVendorBaruPage() {
         try {
             if (pakaiSupir) {
                 const hasil = await kontrakVendorService.parsePasangan(file)
-                setUnitRows(prev => [...prev, ...hasil.baris_valid.map(b => ({
+                setUnitRows(hasil.baris_valid.map(b => ({
                     ...unitInputKeRow(b),
                     driver_nama: b.driver_nama ?? '',
                     driver_telepon: b.driver_telepon ?? '',
                     driver_no_sim: b.driver_no_sim ?? '',
-                }))])
+                })))
                 umumkanHasilParse('Pasangan Unit + Driver', hasil.baris_valid.length, hasil.baris_gagal)
             } else {
                 const hasil = await kontrakVendorService.parseUnit(file)
-                setUnitRows(prev => [...prev, ...hasil.baris_valid.map(unitInputKeRow)])
+                setUnitRows(hasil.baris_valid.map(unitInputKeRow))
                 umumkanHasilParse('Unit Disewa', hasil.baris_valid.length, hasil.baris_gagal)
             }
         } catch (err) {
@@ -184,13 +186,19 @@ export default function KontrakVendorBaruPage() {
         setParsing('supir')
         try {
             const hasil = await kontrakVendorService.parseSupir(file)
-            setSupirRows(prev => [...prev, ...hasil.baris_valid.map(supirInputKeRow)])
+            setSupirRows(hasil.baris_valid.map(supirInputKeRow))
             umumkanHasilParse('Supir dari Vendor', hasil.baris_valid.length, hasil.baris_gagal)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setParsing('')
         }
+    }
+
+    const handleHapusSemua = () => {
+        if (hapusSemuaTarget === 'unit') setUnitRows([])
+        if (hapusSemuaTarget === 'supir') setSupirRows([])
+        setHapusSemuaTarget(null)
     }
 
     const validate = () => {
@@ -385,9 +393,16 @@ export default function KontrakVendorBaruPage() {
                             <Upload accept=".xlsx" showList={false} uploadLimit={1} onChange={uploadExcelUnit}>
                                 <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
                                     loading={parsing === 'unit'}>
-                                    Upload Excel
+                                    Upload Excel (Timpa)
                                 </Button>
                             </Upload>
+                            {unitRows.length > 0 && (
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
+                                    className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                    onClick={() => setHapusSemuaTarget('unit')}>
+                                    Hapus Semua
+                                </Button>
+                            )}
                             <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
                                 onClick={() => setUnitRows(prev => [...prev, emptyUnitRow()])}>
                                 {pakaiSupir ? 'Tambah Pasangan' : 'Tambah Unit'}
@@ -514,9 +529,16 @@ export default function KontrakVendorBaruPage() {
                                 <Upload accept=".xlsx" showList={false} uploadLimit={1} onChange={uploadExcelSupir}>
                                     <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
                                         loading={parsing === 'supir'}>
-                                        Upload Excel
+                                        Upload Excel (Timpa)
                                     </Button>
                                 </Upload>
+                                {supirRows.length > 0 && (
+                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
+                                        className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                        onClick={() => setHapusSemuaTarget('supir')}>
+                                        Hapus Semua
+                                    </Button>
+                                )}
                                 <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
                                     onClick={() => setSupirRows(prev => [...prev, emptySupirRow()])}>
                                     Tambah Supir
@@ -592,6 +614,13 @@ export default function KontrakVendorBaruPage() {
                     <Button variant="solid" onClick={() => setParseGagal(null)}>Tutup</Button>
                 </div>
             </Dialog>
+
+            <ConfirmDialog isOpen={!!hapusSemuaTarget} type="danger" title="Hapus Semua"
+                onClose={() => setHapusSemuaTarget(null)} onConfirm={handleHapusSemua}>
+                <p>
+                    Hapus semua {hapusSemuaTarget === 'supir' ? 'supir cadangan' : (pakaiSupir ? 'pasangan unit + driver' : 'unit')} yang sudah ditambahkan di tabel ini?
+                </p>
+            </ConfirmDialog>
         </div>
     )
 }

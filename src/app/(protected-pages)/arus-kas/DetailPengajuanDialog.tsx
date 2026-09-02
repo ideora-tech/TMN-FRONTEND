@@ -19,6 +19,15 @@ const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
 
 function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
+    if (p.id_invoice_vendor) {
+        return (
+            <a href={ROUTES.INVOICE_VENDOR_DETAIL(p.id_invoice_vendor)} target="_blank" rel="noreferrer" className="w-fit">
+                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300 cursor-pointer hover:opacity-80">
+                    Dari Invoice Vendor <HiOutlineExternalLink className="text-xs" />
+                </Tag>
+            </a>
+        )
+    }
     if (p.id_trip) {
         return (
             <a href={ROUTES.TRIP_DETAIL(p.id_trip)} target="_blank" rel="noreferrer" className="w-fit">

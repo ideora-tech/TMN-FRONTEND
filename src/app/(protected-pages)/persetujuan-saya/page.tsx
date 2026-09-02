@@ -1,11 +1,14 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Tag, Button, Dialog, Input, toast, Notification } from '@/components/ui'
+import { Card, Tag, Button, Dialog, Input, Spinner, toast, Notification } from '@/components/ui'
 import Tabs from '@/components/ui/Tabs'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
+import ApprovalTimeline, { type StatusApprovalReferensi } from '@/components/shared/ApprovalTimeline'
+import axios from 'axios'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
 import { HiOutlineCheck, HiOutlineX, HiOutlineEye, HiOutlineSearch, HiOutlineClipboardList, HiOutlineDownload } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -20,6 +23,13 @@ const DETAIL_ROUTE: Record<string, (id: string) => string> = {
     faktur:         (id) => ROUTES.FAKTUR_DETAIL(id),
     invoice_vendor: (id) => ROUTES.INVOICE_VENDOR_DETAIL(id),
     ...Object.fromEntries(KODE_PENGAJUAN_PENGELUARAN.map((kode): [string, () => string] => [kode, () => ROUTES.PROSES_PEMBAYARAN])),
+}
+
+const PDF_EXPORT_ROUTE: Record<string, (id: string) => string> = {
+    penawaran:      (id) => API_ENDPOINTS.PENAWARAN_PDF(id),
+    faktur:         (id) => API_ENDPOINTS.FAKTUR_EXPORT_PDF(id),
+    invoice_vendor: (id) => API_ENDPOINTS.INVOICE_VENDOR_EXPORT_PDF(id),
+    kontrak_vendor: (id) => API_ENDPOINTS.KONTRAK_VENDOR_EXPORT_PDF(id),
 }
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
@@ -89,6 +99,20 @@ export default function PersetujuanSayaPage() {
     const [logOpen, setLogOpen] = useState(false)
     const [logInfo, setLogInfo] = useState<PengajuanKeuanganInfo | null>(null)
     const [logLoading, setLogLoading] = useState(false)
+
+    const [riwayatApproval, setRiwayatApproval] = useState<StatusApprovalReferensi | null>(null)
+    const [riwayatApprovalLoading, setRiwayatApprovalLoading] = useState(false)
+
+    useEffect(() => {
+        if (!riwayatDetail) { setRiwayatApproval(null); return }
+        setRiwayatApprovalLoading(true)
+        axios.get(API_ENDPOINTS.APPROVAL_STATUS_REFERENSI, {
+            params: { kode: riwayatDetail.kode_event_type, id_referensi: riwayatDetail.id_referensi },
+        })
+            .then(r => setRiwayatApproval(r.data.data as StatusApprovalReferensi | null))
+            .catch(() => setRiwayatApproval(null))
+            .finally(() => setRiwayatApprovalLoading(false))
+    }, [riwayatDetail])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -277,6 +301,29 @@ export default function PersetujuanSayaPage() {
         if (!buatRute) return
         setDetailTarget(null)
         router.push(buatRute(item.id_referensi))
+    }
+
+    const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null)
+
+    const cetakPdf = async (item: { kode_event_type: string | null; id_referensi: string; nomor_referensi: string | null }) => {
+        const buatUrl = item.kode_event_type ? PDF_EXPORT_ROUTE[item.kode_event_type] : null
+        if (!buatUrl) return
+        setDownloadingPdfId(item.id_referensi)
+        try {
+            const res = await axios.get(buatUrl(item.id_referensi), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `${item.nomor_referensi ?? item.id_referensi}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingPdfId(null)
+        }
     }
 
     const columns: ColumnDef<ApprovalPengajuanSaya>[] = [
@@ -559,6 +606,13 @@ export default function PersetujuanSayaPage() {
                                     onClick={() => { setTolakTarget(detailTarget); setCatatanTolak(''); setCatatanError(''); setDetailTarget(null) }}>
                                     Tolak
                                 </Button>
+                                {detailTarget.kode_event_type && PDF_EXPORT_ROUTE[detailTarget.kode_event_type] && (
+                                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                                        loading={downloadingPdfId === detailTarget.id_referensi}
+                                        onClick={() => cetakPdf(detailTarget)}>
+                                        Cetak PDF
+                                    </Button>
+                                )}
                             </div>
                             {rutePengajuan && (
                                 <Button size="sm" variant="plain" onClick={() => bukaHalaman(detailTarget)}>
@@ -581,9 +635,6 @@ export default function PersetujuanSayaPage() {
                             </Tag>
                             <Tag className={KEPUTUSAN_TAG[riwayatDetail.keputusan_saya]}>
                                 Keputusan Saya: {KEPUTUSAN_LABEL[riwayatDetail.keputusan_saya]}
-                            </Tag>
-                            <Tag className={STATUS_AKHIR_TAG[riwayatDetail.status_pengajuan] ?? 'bg-gray-100 text-gray-600'}>
-                                Status Akhir: {STATUS_AKHIR_LABEL[riwayatDetail.status_pengajuan] ?? riwayatDetail.status_pengajuan}
                             </Tag>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
@@ -624,6 +675,30 @@ export default function PersetujuanSayaPage() {
                             <p className={LABEL_CLASS}>Keterangan</p>
                             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{riwayatDetail.keterangan_referensi ?? '-'}</p>
                         </div>
+                        <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center justify-between gap-3 mb-1">
+                                <p className="text-sm font-semibold">Timeline Approval</p>
+                                {riwayatApproval && (
+                                    <Tag className={`${STATUS_AKHIR_TAG[riwayatApproval.status] ?? 'bg-gray-100 text-gray-600'} border-0 font-semibold`}>
+                                        {STATUS_AKHIR_LABEL[riwayatApproval.status] ?? riwayatApproval.status}
+                                    </Tag>
+                                )}
+                            </div>
+                            {riwayatApproval && (
+                                <p className="text-xs text-gray-400 mb-3">
+                                    {riwayatApproval.progress.disetujui} dari {riwayatApproval.progress.total} approver menyetujui
+                                </p>
+                            )}
+                            {riwayatApprovalLoading ? (
+                                <div className="flex justify-center py-6"><Spinner size={24} /></div>
+                            ) : riwayatApproval ? (
+                                <div className="max-h-[40vh] overflow-y-auto pr-1">
+                                    <ApprovalTimeline info={riwayatApproval} />
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-400 py-2">Timeline approval tidak tersedia.</p>
+                            )}
+                        </div>
                         {riwayatDetail.catatan_saya && (
                             <div>
                                 <p className={LABEL_CLASS}>Catatan Saya</p>
@@ -635,6 +710,13 @@ export default function PersetujuanSayaPage() {
                                 <Button size="sm" variant="default" icon={<HiOutlineClipboardList />}
                                     onClick={() => openLog(riwayatDetail)}>
                                     Log
+                                </Button>
+                            )}
+                            {riwayatDetail.kode_event_type && PDF_EXPORT_ROUTE[riwayatDetail.kode_event_type] && (
+                                <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                                    loading={downloadingPdfId === riwayatDetail.id_referensi}
+                                    onClick={() => cetakPdf(riwayatDetail)}>
+                                    Cetak PDF
                                 </Button>
                             )}
                             {riwayatDetail.kode_event_type && DETAIL_ROUTE[riwayatDetail.kode_event_type] && (

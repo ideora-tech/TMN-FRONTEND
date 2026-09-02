@@ -23,6 +23,15 @@ export interface TripTerkaitInvoiceVendor {
     status: string
 }
 
+export interface PengajuanPembayaranInvoiceVendor {
+    id_pengajuan: string
+    nomor_pengajuan: string
+    tanggal_pengajuan: string
+    nominal: number
+    status: string
+    alasan_ditolak: string | null
+}
+
 export interface PembayaranVendor {
     id_pembayaran_vendor: string
     tanggal_bayar: string
@@ -67,6 +76,7 @@ export interface InvoiceVendor {
     total_dibayar?: number
     sisa?: number
     pembayaran?: PembayaranVendor[]
+    pengajuan_pembayaran?: PengajuanPembayaranInvoiceVendor[]
     trip_terkait?: TripTerkaitInvoiceVendor[]
 }
 
@@ -178,6 +188,10 @@ export const invoiceVendorService = {
             },
         })
         return data.data as TripSiapTagihVendor[]
+    },
+    async ajukanPembayaran(idInvoice: string, payload: { nominal: number; catatan?: string | null }) {
+        const { data } = await axios.post(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN_AJUKAN(idInvoice), payload)
+        return data.data as { id_pengajuan: string; nomor_pengajuan: string; status: string; nominal: number }
     },
     async listPembayaran(idInvoice: string) {
         const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN(idInvoice))

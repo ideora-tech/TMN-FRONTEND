@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
 export type KeputusanApproval = 'setuju' | 'tolak'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'lainnya'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -31,6 +31,7 @@ export interface PengajuanKeuanganInfo {
     nomor_pengajuan: string
     status: string
     nominal: number
+    url_bukti?: string | null
     riwayat: RiwayatPengajuanKeuangan[]
 }
 
@@ -55,6 +56,7 @@ export interface PengajuanPengeluaran {
     id_armada_perawatan?: string | null
     id_pembelian: string | null
     id_periode: string | null
+    id_invoice_vendor?: string | null
     id_supir: string | null
     id_proyek: string | null
     periode_dari: string | null

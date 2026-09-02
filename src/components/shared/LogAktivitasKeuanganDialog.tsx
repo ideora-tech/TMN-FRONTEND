@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
 import {
     HiOutlinePaperAirplane, HiOutlineSearch, HiOutlineClock,
-    HiOutlineCheck, HiOutlineX, HiOutlineCash,
+    HiOutlineCheck, HiOutlineX, HiOutlineCash, HiOutlinePaperClip,
 } from 'react-icons/hi'
 import { formatRupiah } from '@/utils/formatNumber'
 import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
@@ -114,6 +114,12 @@ export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, load
                                         <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
                                             {r.keterangan}
                                         </div>
+                                    )}
+                                    {r.status === 'ditransfer' && info?.url_bukti && (
+                                        <a href={info.url_bukti} target="_blank" rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                            <HiOutlinePaperClip className="text-base" /> Lihat bukti transfer
+                                        </a>
                                     )}
                                 </div>
                             </div>

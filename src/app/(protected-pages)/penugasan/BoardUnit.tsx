@@ -46,6 +46,12 @@ const unitPaketVendor = (u: BoardUnitRow | null) =>
 const kontrakBelumDisetujui = (u: BoardUnitRow | null) =>
     !!u && u.tipe === 'vendor' && (u.status_kontrak === 'draft' || u.status_kontrak === 'menunggu_approval')
 
+// Unit vendor yang id_kontrak_vendor-nya tidak resolve ke kontrak manapun (kontraknya
+// sudah dihapus atau memang belum pernah ditautkan) — backend TIDAK LAGI meminjam
+// kontrak lain milik vendor yang sama, jadi ini genuinely "tidak ada kontrak".
+const tidakAdaKontrak = (u: BoardUnitRow | null) =>
+    !!u && u.tipe === 'vendor' && !u.id_kontrak_vendor
+
 /**
  * suffix WAJIB selalu berupa node yang sama (bukan undefined saat kosong) —
  * Input.tsx merender struktur DOM berbeda (bare <input> vs dibungkus span
@@ -582,6 +588,11 @@ export default function BoardUnit() {
                                                                 Kontrak Habis
                                                             </Tag>
                                                         )}
+                                                        {tidakAdaKontrak(u) && (
+                                                            <Tag className="text-[10px] shrink-0 bg-gray-200 text-gray-600 dark:bg-gray-600/40 dark:text-gray-300">
+                                                                Tidak Ada Kontrak
+                                                            </Tag>
+                                                        )}
                                                     </div>
                                                     <p className="text-xs text-gray-400 truncate">
                                                         {u.nama_jenis ?? '—'}
@@ -668,6 +679,10 @@ export default function BoardUnit() {
                 {kontrakBelumDisetujui(assignUnit) ? (
                     <p className="text-xs text-red-600 dark:text-red-400 -mt-3 mb-4">
                         Kontrak vendor unit ini {assignUnit?.status_kontrak === 'draft' ? 'masih draft' : 'sedang menunggu approval'} — ajukan dan selesaikan approval kontrak dahulu sebelum menugaskan unit ini.
+                    </p>
+                ) : tidakAdaKontrak(assignUnit) ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 -mt-3 mb-4">
+                        Unit vendor ini tidak punya kontrak yang tertaut (mungkin baru dibuat atau kontraknya sudah dihapus) — penugasan tetap bisa disimpan, tapi rate/tarif tidak bisa diambil otomatis dari kontrak.
                     </p>
                 ) : assignUnit?.tipe === 'vendor' && assignUnit?.kontrak_habis && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 -mt-3 mb-4">
@@ -978,7 +993,11 @@ export default function BoardUnit() {
                     {aksiUnit?.nopol} — {aksiAssignment?.kode_proyek ?? '—'}
                     {aksiAssignment && ` · ${dayjs(aksiAssignment.tanggal).format('dddd, DD MMMM YYYY')}`}
                 </p>
-                {aksiUnit?.tipe === 'vendor' && aksiUnit?.kontrak_habis && (
+                {tidakAdaKontrak(aksiUnit) ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 -mt-3 mb-4">
+                        Unit vendor ini tidak punya kontrak yang tertaut — perubahan tetap bisa disimpan, tapi rate/tarif tidak bisa diambil otomatis dari kontrak.
+                    </p>
+                ) : aksiUnit?.tipe === 'vendor' && aksiUnit?.kontrak_habis && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 -mt-3 mb-4">
                         Kontrak vendor unit ini sudah habis — perubahan tetap bisa disimpan.
                     </p>

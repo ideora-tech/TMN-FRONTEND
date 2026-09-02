@@ -7,9 +7,8 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
-import UploadBerkas from '@/components/shared/UploadBerkas'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -17,6 +16,9 @@ import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { invoiceVendorService, InvoiceVendor, PembayaranVendor } from '@/services/invoice-vendor.service'
+import { arusKasService, PengajuanKeuanganInfo } from '@/services/arusKas.service'
+import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
+import { STATUS_LABEL as STATUS_PENGAJUAN_LABEL, STATUS_TAG as STATUS_PENGAJUAN_TAG } from '../../arus-kas/pengajuanMeta'
 import { KontrakVendor } from '@/services/vendor.service'
 import { tipePembayaranService, TipePembayaran } from '@/services/tipe-pembayaran.service'
 import { STATUS_TAG, STATUS_LABEL, BAYAR_TAG, BAYAR_LABEL } from '../DaftarInvoiceTab'
@@ -35,12 +37,6 @@ const TRIP_STATUS_CLASS: Record<string, string> = {
 const TRIP_STATUS_LABEL: Record<string, string> = {
     belum_mulai: 'Belum Mulai', berjalan: 'Berjalan', selesai: 'Selesai', dibatalkan: 'Dibatalkan',
 }
-
-const METODE_OPTIONS = [
-    { value: 'transfer', label: 'Transfer' },
-    { value: 'tunai',    label: 'Tunai' },
-    { value: 'giro',     label: 'Giro' },
-]
 
 const METODE_LABEL: Record<string, string> = {
     transfer: 'Transfer', tunai: 'Tunai', giro: 'Giro',
@@ -84,10 +80,23 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const [showBayar, setShowBayar]     = useState(false)
     const [bayarForm, setBayarForm]     = useState({ ...BAYAR_FORM_KOSONG })
     const [bayarErrors, setBayarErrors] = useState<Record<string, string>>({})
-    const [buktiFile, setBuktiFile]     = useState<File | null>(null)
     const [savingBayar, setSavingBayar] = useState(false)
     const [deleteBayarTarget, setDeleteBayarTarget] = useState<PembayaranVendor | null>(null)
     const [deletingBayar, setDeletingBayar]         = useState(false)
+
+    const [logPengajuanOpen, setLogPengajuanOpen] = useState(false)
+    const [logPengajuanInfo, setLogPengajuanInfo] = useState<PengajuanKeuanganInfo | null>(null)
+    const [logPengajuanLoading, setLogPengajuanLoading] = useState(false)
+
+    const bukaLogPengajuan = (idPengajuan: string) => {
+        setLogPengajuanOpen(true)
+        setLogPengajuanInfo(null)
+        setLogPengajuanLoading(true)
+        arusKasService.riwayatPengajuan(idPengajuan)
+            .then(setLogPengajuanInfo)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => setLogPengajuanLoading(false))
+    }
 
     const toFormState = (d: InvoiceVendor) => ({
         id_kontrak_vendor: d.id_kontrak_vendor ?? '',
@@ -272,34 +281,30 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const sisa         = data?.sisa ?? 0
     const totalDibayar = data?.total_dibayar ?? 0
     const pembayaran   = data?.pembayaran ?? []
-
-    const validateBayar = () => {
-        const e: Record<string, string> = {}
-        if (!bayarForm.tanggal_bayar) e.tanggal_bayar = 'Tanggal bayar wajib diisi'
-        if (!bayarForm.nominal || Number(bayarForm.nominal) <= 0) e.nominal = 'Nominal wajib diisi'
-        else if (Number(bayarForm.nominal) > sisa) e.nominal = 'Nominal melebihi sisa tagihan'
-        if (!bayarForm.metode) e.metode = 'Metode wajib dipilih'
-        setBayarErrors(e)
-        return Object.keys(e).length === 0
-    }
+    const pengajuanPembayaran = data?.pengajuan_pembayaran ?? []
+    const pengajuanBerjalan = pengajuanPembayaran.filter(p => p.status !== 'ditransfer')
+    const idPengajuanByNomor: Record<string, string> = Object.fromEntries(
+        pengajuanPembayaran.map(p => [p.nomor_pengajuan, p.id_pengajuan])
+    )
 
     const handleSimpanBayar = async () => {
-        if (!validateBayar()) return
+        const e: Record<string, string> = {}
+        if (!bayarForm.nominal || Number(bayarForm.nominal) <= 0) e.nominal = 'Nominal wajib diisi'
+        else if (Number(bayarForm.nominal) > sisa) e.nominal = 'Nominal melebihi sisa tagihan'
+        setBayarErrors(e)
+        if (Object.keys(e).length > 0) return
+
         setSavingBayar(true)
         try {
-            await invoiceVendorService.createPembayaran(id, {
-                tanggal_bayar: bayarForm.tanggal_bayar,
+            const hasil = await invoiceVendorService.ajukanPembayaran(id, {
                 nominal: Number(bayarForm.nominal),
-                metode: bayarForm.metode as 'transfer' | 'tunai' | 'giro',
-                bank_pengirim: bayarForm.bank_pengirim.trim() || null,
-                no_referensi: bayarForm.no_referensi.trim() || null,
                 catatan: bayarForm.catatan.trim() || null,
-            }, buktiFile)
-            toast.push(<Notification type="success" title="Pembayaran berhasil dicatat" />)
+            })
+            toast.push(<Notification type="success"
+                title={`Pengajuan ${hasil.nomor_pengajuan} dibuat — pantau di menu Proses Pembayaran`} />)
             setShowBayar(false)
             setBayarForm({ ...BAYAR_FORM_KOSONG })
             setBayarErrors({})
-            setBuktiFile(null)
             fetchDetail()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -350,11 +355,9 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    {!editing && (
-                        <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingPdf} onClick={handleExportPdf}>
-                            Export PDF
-                        </Button>
-                    )}
+                    <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingPdf} onClick={handleExportPdf}>
+                        Export PDF
+                    </Button>
                     {!editing && (
                         <Button variant="default" size="sm" onClick={() => setLogOpen(true)}>
                             Log Approval
@@ -677,18 +680,18 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Pembayaran</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Pencatatan pembayaran hanya untuk invoice terverifikasi</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Pembayaran diajukan lewat alur Proses Pembayaran — tercatat otomatis setelah ditransfer</p>
                     </div>
                     {bisaBayar ? (
                         <Button size="sm" variant="solid" icon={<HiPlusCircle />}
-                            onClick={() => { setShowBayar(true); setBayarForm({ ...BAYAR_FORM_KOSONG }); setBayarErrors({}); setBuktiFile(null) }}>
-                            Catat Pembayaran
+                            onClick={() => { setShowBayar(true); setBayarForm({ ...BAYAR_FORM_KOSONG }); setBayarErrors({}) }}>
+                            Ajukan Pembayaran
                         </Button>
                     ) : (
                         <Tooltip title={data.status !== 'diverifikasi' ? 'Invoice belum diverifikasi' : 'Tagihan sudah lunas'}>
                             <span>
                                 <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled>
-                                    Catat Pembayaran
+                                    Ajukan Pembayaran
                                 </Button>
                             </span>
                         </Tooltip>
@@ -710,7 +713,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
 
-                {pembayaran.length === 0 ? (
+                {pembayaran.length === 0 && pengajuanBerjalan.length === 0 ? (
                     <p className="text-gray-400 text-sm py-6 text-center">Belum ada pembayaran tercatat</p>
                 ) : (
                     <div className="overflow-x-auto">
@@ -727,6 +730,39 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {pengajuanBerjalan.map(p => (
+                                    <tr key={p.id_pengajuan} className="bg-gray-50/60 dark:bg-gray-800/40">
+                                        <td className="py-3 pr-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
+                                            {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}
+                                        </td>
+                                        <td className="py-3 pr-4 text-right tabular-nums font-semibold text-gray-800 dark:text-gray-200">
+                                            {formatRupiah(p.nominal)}
+                                        </td>
+                                        <td className="py-3 pr-4">
+                                            <Tag className={`${STATUS_PENGAJUAN_TAG[p.status as keyof typeof STATUS_PENGAJUAN_TAG] ?? 'bg-gray-100 text-gray-600'} font-semibold`}>
+                                                {STATUS_PENGAJUAN_LABEL[p.status as keyof typeof STATUS_PENGAJUAN_LABEL] ?? p.status}
+                                            </Tag>
+                                            {p.status === 'ditolak' && p.alasan_ditolak && (
+                                                <p className="text-xs text-red-500 mt-1">{p.alasan_ditolak}</p>
+                                            )}
+                                        </td>
+                                        <td className="py-3 pr-4"><span className="text-gray-400">—</span></td>
+                                        <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{p.nomor_pengajuan}</td>
+                                        <td className="py-3 pr-4"><span className="text-gray-400 text-xs">—</span></td>
+                                        <td className="py-3 text-right whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Tooltip title="Log Aktivitas">
+                                                    <span
+                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                                        onClick={() => bukaLogPengajuan(p.id_pengajuan)}
+                                                    >
+                                                        <HiOutlineClipboardList className="text-lg" />
+                                                    </span>
+                                                </Tooltip>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
                                 {pembayaran.map(p => (
                                     <tr key={p.id_pembayaran_vendor}>
                                         <td className="py-3 pr-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
@@ -749,6 +785,16 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
+                                                {p.no_referensi != null && idPengajuanByNomor[p.no_referensi] && (
+                                                    <Tooltip title="Log Aktivitas">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                                            onClick={() => bukaLogPengajuan(idPengajuanByNomor[p.no_referensi as string])}
+                                                        >
+                                                            <HiOutlineClipboardList className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                )}
                                                 <Tooltip title="Cetak Kwitansi PDF">
                                                     <span
                                                         className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors ${downloadingTermin === p.id_pembayaran_vendor ? 'opacity-50 pointer-events-none' : ''}`}
@@ -780,57 +826,27 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 )}
             </Card>
 
-            <Dialog isOpen={showBayar} onRequestClose={() => setShowBayar(false)} onClose={() => setShowBayar(false)}>
-                <h5 className="font-bold mb-1">Catat Pembayaran</h5>
+            <Dialog isOpen={showBayar} onRequestClose={() => setShowBayar(false)} onClose={() => setShowBayar(false)} width={480}>
+                <h5 className="font-bold mb-1">Ajukan Pembayaran</h5>
                 <p className="text-sm text-gray-500 mb-4">{data.nomor_invoice} · Sisa tagihan {formatRupiah(sisa)}</p>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanBayar() }}>
-                    <div className="max-h-[65vh] overflow-y-auto pr-1">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Tanggal Bayar" asterisk invalid={!!bayarErrors.tanggal_bayar} errorMessage={bayarErrors.tanggal_bayar}>
-                                <DatePicker inputFormat="DD/MM/YYYY"
-                                    value={bayarForm.tanggal_bayar ? dayjs(bayarForm.tanggal_bayar).toDate() : null}
-                                    onChange={date => setBayarForm(p => ({ ...p, tanggal_bayar: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                            </FormItem>
-                            <FormItem label="Nominal" asterisk invalid={!!bayarErrors.nominal} errorMessage={bayarErrors.nominal}
-                                extra={<span className="text-xs text-gray-400">Sisa tagihan {formatRupiah(sisa)}</span>}>
-                                <Input prefix="Rp" placeholder="0" invalid={!!bayarErrors.nominal}
-                                    value={bayarForm.nominal ? formatNum(Number(bayarForm.nominal)) : ''}
-                                    onChange={e => setBayarForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
-                            </FormItem>
-                            <FormItem label="Metode" asterisk invalid={!!bayarErrors.metode} errorMessage={bayarErrors.metode}>
-                                <Select isSearchable={false} placeholder="Pilih metode..."
-                                    options={METODE_OPTIONS}
-                                    value={METODE_OPTIONS.find(o => o.value === bayarForm.metode) ?? null}
-                                    onChange={opt => setBayarForm(p => ({ ...p, metode: opt?.value ?? '' }))} />
-                            </FormItem>
-                            <FormItem label="Bank Pengirim">
-                                <Input placeholder="Contoh: BCA" value={bayarForm.bank_pengirim}
-                                    onChange={e => setBayarForm(p => ({ ...p, bank_pengirim: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="No. Referensi">
-                                <Input placeholder="Nomor referensi transfer" value={bayarForm.no_referensi}
-                                    onChange={e => setBayarForm(p => ({ ...p, no_referensi: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Bukti Pembayaran">
-                                <UploadBerkas
-                                    file={buktiFile}
-                                    accept=".pdf,.jpg,.jpeg,.png"
-                                    hint="PDF/JPG/PNG"
-                                    onChange={setBuktiFile}
-                                />
-                            </FormItem>
-                            <div className="sm:col-span-2">
-                                <FormItem label="Catatan">
-                                    <Input textArea rows={2} placeholder="Catatan pembayaran..."
-                                        value={bayarForm.catatan}
-                                        onChange={e => setBayarForm(p => ({ ...p, catatan: e.target.value }))} />
-                                </FormItem>
-                            </div>
-                        </div>
-                    </div>
+                    <FormItem label="Nominal" asterisk invalid={!!bayarErrors.nominal} errorMessage={bayarErrors.nominal}
+                        extra={<span className="text-xs text-gray-400">Sisa tagihan {formatRupiah(sisa)}</span>}>
+                        <Input prefix="Rp" placeholder="0" invalid={!!bayarErrors.nominal}
+                            value={bayarForm.nominal ? formatNum(Number(bayarForm.nominal)) : ''}
+                            onChange={e => setBayarForm(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Catatan">
+                        <Input textArea rows={2} placeholder="Contoh: termin pertama..."
+                            value={bayarForm.catatan}
+                            onChange={e => setBayarForm(p => ({ ...p, catatan: e.target.value }))} />
+                    </FormItem>
+                    <p className="text-xs text-gray-400">
+                        Pengajuan masuk ke menu Proses Pembayaran (approval → verifikasi → transfer). Pembayaran tercatat otomatis di invoice ini setelah ditransfer.
+                    </p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setShowBayar(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={savingBayar}>Simpan</Button>
+                        <Button type="submit" variant="solid" loading={savingBayar}>Ajukan</Button>
                     </div>
                 </form>
             </Dialog>
@@ -840,6 +856,13 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 confirmButtonProps={{ loading: deletingBayar }}>
                 <p>Hapus pembayaran {deleteBayarTarget ? formatRupiah(deleteBayarTarget.nominal) : ''} tanggal {deleteBayarTarget ? dayjs(deleteBayarTarget.tanggal_bayar).format('DD MMM YYYY') : ''}? Status pembayaran invoice akan dihitung ulang.</p>
             </ConfirmDialog>
+
+            <LogAktivitasKeuanganDialog
+                isOpen={logPengajuanOpen}
+                info={logPengajuanInfo}
+                loading={logPengajuanLoading}
+                onClose={() => setLogPengajuanOpen(false)}
+            />
 
             <LogApprovalDialog
                 isOpen={logOpen}

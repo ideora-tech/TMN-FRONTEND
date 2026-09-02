@@ -176,6 +176,7 @@ export const API_ENDPOINTS = {
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,
     INVOICE_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/invoice-vendor/${id}/ajukan-approval`,
     INVOICE_VENDOR_PEMBAYARAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran`,
+    INVOICE_VENDOR_PEMBAYARAN_AJUKAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/ajukan`,
     INVOICE_VENDOR_PEMBAYARAN_DELETE: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}`,
     INVOICE_VENDOR_EXPORT_PDF: (id: string) => `/api/proxy/invoice-vendor/${id}/export/pdf`,
     INVOICE_VENDOR_PEMBAYARAN_EXPORT_PDF: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}/export/pdf`,
