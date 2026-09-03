@@ -94,7 +94,10 @@ export default function PembelianDetailPage() {
                 toast.push(<Notification type="success" title="Pengajuan dihapus" />)
                 router.push(ROUTES.PEMBELIAN_SPAREPART)
             })
-            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .catch(err => {
+                toast.push(<Notification type="danger" title={parseApiError(err)} />)
+                setHapusOpen(false)
+            })
             .finally(() => setSubmitting(false))
     }
 
@@ -414,7 +417,7 @@ export default function PembelianDetailPage() {
                 onClose={() => setHapusBuktiTarget(null)}
                 onConfirm={() => {
                     if (!hapusBuktiTarget) return
-                    jalankan(() => pembelianSparepartService.hapusBukti(id, hapusBuktiTarget), 'Bukti dihapus', () => setHapusBuktiTarget(null))
+                    jalankan(() => pembelianSparepartService.hapusBukti(id, hapusBuktiTarget), 'Bukti dihapus').finally(() => setHapusBuktiTarget(null))
                 }}
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus bukti nota ini?</p>

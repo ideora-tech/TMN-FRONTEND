@@ -336,6 +336,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             muatKontrak()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setKontrakHapus(null)
         } finally {
             setKontrakDeleting(false)
         }
@@ -394,6 +395,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             muatDokumen()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDokumenHapus(null)
         } finally {
             setDokumenDeleting(false)
         }

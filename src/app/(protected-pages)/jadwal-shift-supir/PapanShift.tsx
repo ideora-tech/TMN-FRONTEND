@@ -278,6 +278,7 @@ export default function PapanShift({
             fetchShiftList()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setShiftHapus(null)
         } finally {
             setMenghapusShift(false)
         }
@@ -435,6 +436,7 @@ export default function PapanShift({
             fetchBoard()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteTarget(null)
         } finally {
             setDeleting(false)
         }

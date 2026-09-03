@@ -216,6 +216,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             muatKontrak()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusUnit(null)
         } finally {
             setMenghapusUnit(false)
         }

@@ -165,6 +165,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             fetchData()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteTarget(null)
         } finally {
             setDeleting(false)
         }

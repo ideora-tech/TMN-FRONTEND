@@ -50,6 +50,7 @@ export default function KategoriTab() {
             fetchData()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteTarget(null)
         } finally {
             setSubmitting(false)
         }

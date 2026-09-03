@@ -398,6 +398,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             setDeleteDocTarget(null); fetchDokumen()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteDocTarget(null)
         } finally { setDeletingDoc(false) }
     }
 
@@ -464,6 +465,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             setDeleteRawatTarget(null); setAlasanHapusRawat(''); fetchPerawatan(); fetchPrediksi()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteRawatTarget(null)
         } finally { setDeletingRawat(false) }
     }
 

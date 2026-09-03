@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Select, Tooltip, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -13,7 +13,8 @@ import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
-import RuteTarifFields, {
+import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
+import {
     RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
     ruteTarifValid, toProyekRutePayload,
 } from '@/components/shared/RuteTarifFields'
@@ -29,12 +30,6 @@ const TIPE_HARGA_OPTIONS: { value: TipeHargaProyek; label: string }[] = [
     { value: 'per_rit',  label: 'Per Rit' },
     { value: 'borongan', label: 'Borongan' },
 ]
-
-type StagedRute = {
-    tarif: RuteTarifState
-    namaRute: string
-    namaJenis: string
-}
 
 export default function ProjectBaruPage() {
     const router       = useRouter()
@@ -59,9 +54,9 @@ export default function ProjectBaruPage() {
     // Rute Proyek manual (hanya saat proyek dibuat manual, bukan dari penawaran)
     const [ruteOptionsMaster, setRuteOptionsMaster] = useState<RuteOption[]>([])
     const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
-    const [showManualRuteForm, setShowManualRuteForm] = useState(false)
-    const [manualRuteTarif, setManualRuteTarif] = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
-    const [manualRuteList, setManualRuteList] = useState<StagedRute[]>([])
+    const [manualRuteRows, setManualRuteRows] = useState<RuteTarifState[]>([])
+    const [ruteRowsError, setRuteRowsError] = useState('')
+    const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
 
     useEffect(() => {
         klienService.list(1).then(res =>
@@ -96,10 +91,6 @@ export default function ProjectBaruPage() {
             .catch(() => {})
     }, [fromPenawaran])
 
-    useEffect(() => {
-        if (form.id_klien && manualRuteList.length === 0) setShowManualRuteForm(true)
-    }, [form.id_klien, manualRuteList.length])
-
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
         if (!form.id_klien)           e.id_klien    = 'Klien wajib dipilih'
@@ -108,33 +99,36 @@ export default function ProjectBaruPage() {
         return Object.keys(e).length === 0
     }
 
-    const openAddManualRute = () => {
-        setManualRuteTarif(EMPTY_RUTE_TARIF_STATE)
-        setShowManualRuteForm(true)
+    const tambahBarisRute = () =>
+        setManualRuteRows(prev => [...prev, { ...EMPTY_RUTE_TARIF_STATE }])
+
+    const updateRuteRow = (index: number, patch: Partial<RuteTarifState>) => {
+        setManualRuteRows(prev => prev.map((row, i) => i === index ? { ...row, ...patch } : row))
+        if (ruteRowsError) setRuteRowsError('')
     }
 
-    const tambahKeDaftarRute = () => {
-        if (!ruteTarifValid(manualRuteTarif)) return
-        setManualRuteList(prev => [...prev, {
-            tarif: manualRuteTarif,
-            namaRute: ruteOptionsMaster.find(o => o.value === manualRuteTarif.id_rute)?.label ?? 'Rute',
-            namaJenis: jenisOptionsMaster.find(o => o.value === manualRuteTarif.id_jenis_kendaraan)?.label ?? 'Semua jenis',
-        }])
-        setShowManualRuteForm(false)
-    }
+    const hapusBarisRute = (index: number) =>
+        setManualRuteRows(prev => prev.filter((_, i) => i !== index))
 
-    const hapusDariDaftarRute = (index: number) =>
-        setManualRuteList(prev => prev.filter((_, i) => i !== index))
+    const tambahRuteDariDialog = (pilihan: PilihanItemRute) =>
+        setManualRuteRows(prev => [...prev, { ...EMPTY_RUTE_TARIF_STATE, id_rute: pilihan.id_rute }])
+
+    const validateManualRuteRows = () => {
+        if (manualRuteRows.length === 0) return true
+        const invalid = manualRuteRows.some(row => !ruteTarifValid(row))
+        setRuteRowsError(invalid ? 'Setiap baris rute wajib memilih rute' : '')
+        return !invalid
+    }
 
     const handleSubmit = async () => {
-        if (!validate()) {
+        if (!validate() || !validateManualRuteRows()) {
             toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
             window.scrollTo({ top: 0, behavior: 'smooth' })
             return
         }
         setLoading(true)
         try {
-            const rute: ProyekRutePayload[] = manualRuteList.map(staged => toProyekRutePayload(staged.tarif))
+            const rute: ProyekRutePayload[] = manualRuteRows.map(row => toProyekRutePayload(row))
 
             await projectService.create({
                 id_klien: form.id_klien, nama_proyek: form.nama_proyek,
@@ -243,91 +237,138 @@ export default function ProjectBaruPage() {
                         <div className="flex items-center justify-between mb-1">
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute Proyek (opsional)</p>
-                                <p className="text-xs text-gray-400 mt-0.5">{manualRuteList.length} rute akan ditambahkan</p>
+                                <p className="text-xs text-gray-400 mt-0.5">{manualRuteRows.length} rute akan ditambahkan</p>
                             </div>
-                            <Tooltip title={form.id_klien ? '' : 'Pilih klien dulu sebelum menambah rute'}>
-                                <span>
-                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                        disabled={!form.id_klien}
-                                        onClick={openAddManualRute}>
-                                        Tambah Rute
-                                    </Button>
-                                </span>
-                            </Tooltip>
+                            <div className="flex items-center gap-2">
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlineViewList />}
+                                    disabled={!form.id_klien}
+                                    onClick={() => setDialogRuteTerbuka(true)}>
+                                    Daftar Rute
+                                </Button>
+                                <Tooltip title={form.id_klien ? '' : 'Pilih klien dulu sebelum menambah rute'}>
+                                    <span>
+                                        <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                            disabled={!form.id_klien}
+                                            onClick={tambahBarisRute}>
+                                            Tambah Rute
+                                        </Button>
+                                    </span>
+                                </Tooltip>
+                            </div>
                         </div>
                         {!form.id_klien && <p className="text-xs text-amber-500 mt-1">Pilih klien dulu sebelum menambah rute</p>}
+                        {ruteRowsError && <p className="text-red-500 text-sm mt-2">{ruteRowsError}</p>}
 
-                        {showManualRuteForm && (
-                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                <RuteTarifFields value={manualRuteTarif} onChange={setManualRuteTarif}
-                                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
-                                    onRuteCreated={muatRuteOptions} />
-                                <div className="flex justify-end gap-2 mt-4">
-                                    <Button type="button" size="sm" variant="plain" onClick={() => setShowManualRuteForm(false)}>Batal</Button>
-                                    <Button type="button" size="sm" variant="solid"
-                                        disabled={!ruteTarifValid(manualRuteTarif)}
-                                        onClick={tambahKeDaftarRute}>Tambah ke daftar</Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {manualRuteList.length > 0 && (
+                        {manualRuteRows.length > 0 && (
                             <div className="overflow-x-auto mt-4">
                                 <table className="w-full text-sm">
                                     <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Rute</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis Kendaraan</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Harga Penawaran</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Ritase</th>
-                                            <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Subtotal</th>
-                                            <th className="py-2.5" />
+                                        <tr className="text-left text-gray-600 dark:text-gray-300">
+                                            <th className="px-3 py-2 font-semibold min-w-[220px]">Rute</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[160px]">Jenis Kendaraan</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[140px]">Harga Penawaran</th>
+                                            <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi Tol</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi BBM</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[130px]">Biaya Lain</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[130px]">Uang Jalan</th>
+                                            <th className="px-3 py-2 font-semibold min-w-[160px]">Keterangan</th>
+                                            <th className="px-3 py-2 font-semibold text-right min-w-[130px]">Subtotal</th>
+                                            <th className="px-3 py-2 w-12"></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {manualRuteList.map((staged, i) => {
-                                            const payload = toProyekRutePayload(staged.tarif)
-                                            const ritase = payload.estimasi_ritase || 1
+                                    <tbody>
+                                        {manualRuteRows.map((row, i) => {
+                                            const ritase = Number(row.estimasi_ritase) || 1
+                                            const harga = row.harga_penawaran ? Number(row.harga_penawaran) : 0
+                                            const uangJalan = (Number(row.estimasi_tol) || 0) + (Number(row.estimasi_bbm) || 0) + (Number(row.estimasi_biaya_lain) || 0)
                                             return (
-                                                <tr key={i}>
-                                                    <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{staged.namaRute}</td>
-                                                    <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">{staged.namaJenis}</td>
-                                                    <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">
-                                                        {payload.harga_penawaran != null ? formatRupiah(payload.harga_penawaran) : '—'}
-                                                    </td>
-                                                    <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{ritase}</td>
-                                                    <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                                        {payload.harga_penawaran != null ? formatRupiah(payload.harga_penawaran * ritase) : '—'}
-                                                    </td>
-                                                    <td className="py-3 text-right">
-                                                        <Tooltip title="Hapus">
-                                                            <span
-                                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                                onClick={() => hapusDariDaftarRute(i)}
-                                                            >
-                                                                <HiOutlineTrash className="text-lg" />
-                                                            </span>
+                                                <tr key={i} className="border-b border-gray-100 dark:border-gray-700 align-top">
+                                                    <td className="px-3 py-2">
+                                                        <Tooltip title={ruteOptionsMaster.find(o => o.value === row.id_rute)?.label ?? ''}>
+                                                            <div>
+                                                            <Select isSearchable placeholder="Pilih rute..."
+                                                                options={ruteOptionsMaster}
+                                                                value={ruteOptionsMaster.find(o => o.value === row.id_rute) ?? null}
+                                                                menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                                onChange={opt => updateRuteRow(i, { id_rute: opt?.value ?? '' })} />
+                                                            </div>
                                                         </Tooltip>
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Tooltip title={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan)?.label ?? ''}>
+                                                            <div>
+                                                            <Select isSearchable isClearable placeholder="Semua jenis"
+                                                                options={jenisOptionsMaster}
+                                                                value={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan) ?? null}
+                                                                menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                                onChange={opt => updateRuteRow(i, { id_jenis_kendaraan: opt?.value ?? '' })} />
+                                                            </div>
+                                                        </Tooltip>
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" placeholder="0"
+                                                            value={row.harga_penawaran ? formatNum(Number(row.harga_penawaran)) : ''}
+                                                            onChange={e => updateRuteRow(i, { harga_penawaran: e.target.value.replace(/\D/g, '') })} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input type="number" min="1"
+                                                            value={row.estimasi_ritase}
+                                                            onChange={e => updateRuteRow(i, { estimasi_ritase: e.target.value })} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" placeholder="0"
+                                                            value={row.estimasi_tol ? formatNum(Number(row.estimasi_tol)) : ''}
+                                                            onChange={e => updateRuteRow(i, { estimasi_tol: e.target.value.replace(/\D/g, '') })} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" placeholder="0"
+                                                            value={row.estimasi_bbm ? formatNum(Number(row.estimasi_bbm)) : ''}
+                                                            onChange={e => updateRuteRow(i, { estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" placeholder="0"
+                                                            value={row.estimasi_biaya_lain ? formatNum(Number(row.estimasi_biaya_lain)) : ''}
+                                                            onChange={e => updateRuteRow(i, { estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input prefix="Rp" disabled value={formatNum(uangJalan)} />
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        <Input placeholder="Keterangan"
+                                                            value={row.keterangan}
+                                                            onChange={e => updateRuteRow(i, { keterangan: e.target.value })} />
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
+                                                        {harga > 0 ? formatRupiah(harga * ritase) : '—'}
+                                                    </td>
+                                                    <td className="px-3 py-2 pt-3">
+                                                        <span
+                                                            className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 cursor-pointer transition-colors"
+                                                            onClick={() => hapusBarisRute(i)}
+                                                        ><HiOutlineTrash /></span>
                                                     </td>
                                                 </tr>
                                             )
                                         })}
                                     </tbody>
-                                    <tfoot>
-                                        <tr className="border-t border-gray-200 dark:border-gray-600">
-                                            <td colSpan={4} className="py-3 pr-4 text-right font-semibold text-gray-800 dark:text-gray-100">Total Nilai Penawaran</td>
-                                            <td className="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                                                {formatRupiah(manualRuteList.reduce((sum, s) => {
-                                                    const payload = toProyekRutePayload(s.tarif)
-                                                    return sum + (payload.harga_penawaran ?? 0) * (payload.estimasi_ritase || 1)
-                                                }, 0))}
-                                            </td>
-                                            <td />
-                                        </tr>
-                                    </tfoot>
                                 </table>
+                                <div className="flex justify-end mt-3">
+                                    <p className="text-sm">Total Nilai Penawaran:{' '}
+                                        <span className="font-bold text-base">
+                                            {formatRupiah(manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0))}
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
                         )}
+
+                        <PilihRuteDialog isOpen={dialogRuteTerbuka} konteks="proyek"
+                            onClose={() => setDialogRuteTerbuka(false)}
+                            onPilih={tambahRuteDariDialog}
+                            onRuteBaru={() => muatRuteOptions()} />
                     </div>
                 )}
 

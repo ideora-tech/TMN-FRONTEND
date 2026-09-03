@@ -54,6 +54,7 @@ export default function RutePage() {
             load()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteId(null)
         } finally {
             setDeleteLoading(false)
         }

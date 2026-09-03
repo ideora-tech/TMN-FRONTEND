@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -21,6 +21,7 @@ import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { penawaranService, Penawaran } from '@/services/penawaran.service'
+import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
 import RuteTarifFields, {
     RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
     ruteTarifValid, toProyekRutePayload, stateFromProyekRute,
@@ -119,11 +120,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     // Rute Proyek
     const [ruteProyekList, setRuteProyekList]   = useState<ProyekRute[]>([])
     const [ruteProyekLoading, setRuteProyekLoading] = useState(false)
-    const [showRuteForm, setShowRuteForm]       = useState(false)
-    const [ruteTarif, setRuteTarif]             = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
+    const [ruteRows, setRuteRows]               = useState<RuteTarifState[]>([])
+    const [ruteRowsError, setRuteRowsError]     = useState('')
+    const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
+    const [savingRuteRows, setSavingRuteRows]   = useState(false)
     const [ruteOptionsMaster, setRuteOptionsMaster] = useState<RuteOption[]>([])
     const [jenisOptionsMaster, setJenisOptionsMaster] = useState<{ value: string; label: string }[]>([])
-    const [addingRute, setAddingRute]           = useState(false)
     const [editRuteTarget, setEditRuteTarget]   = useState<ProyekRute | null>(null)
     const [editRuteTarif, setEditRuteTarif]     = useState<RuteTarifState>(EMPTY_RUTE_TARIF_STATE)
     const [updatingRute, setUpdatingRute]       = useState(false)
@@ -248,23 +250,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     const jenisOptionsSemua = useMemo(() => [JENIS_SEMUA, ...jenisOptionsMaster], [jenisOptionsMaster])
 
-    const openAddRute = () => {
-        setRuteTarif(EMPTY_RUTE_TARIF_STATE)
-        setShowRuteForm(true)
+    const tambahBarisRute = () =>
+        setRuteRows(prev => [...prev, { ...EMPTY_RUTE_TARIF_STATE }])
+
+    const updateRuteRow = (index: number, patch: Partial<RuteTarifState>) => {
+        setRuteRows(prev => prev.map((row, i) => i === index ? { ...row, ...patch } : row))
+        if (ruteRowsError) setRuteRowsError('')
     }
 
-    const handleAddRute = async () => {
-        if (!ruteTarifValid(ruteTarif)) return
-        setAddingRute(true)
+    const hapusBarisRute = (index: number) =>
+        setRuteRows(prev => prev.filter((_, i) => i !== index))
+
+    const tambahRuteDariDialog = (pilihan: PilihanItemRute) =>
+        setRuteRows(prev => [...prev, { ...EMPTY_RUTE_TARIF_STATE, id_rute: pilihan.id_rute }])
+
+    const handleSimpanRuteRows = async () => {
+        if (ruteRows.length === 0) return
+        if (ruteRows.some(row => !ruteTarifValid(row))) {
+            setRuteRowsError('Setiap baris rute wajib memilih rute')
+            return
+        }
+        setSavingRuteRows(true)
         try {
-            await proyekRuteService.create(id, toProyekRutePayload(ruteTarif))
+            for (const row of ruteRows) {
+                await proyekRuteService.create(id, toProyekRutePayload(row))
+            }
             toast.push(<Notification type="success" title="Rute proyek berhasil ditambahkan" />)
-            setShowRuteForm(false)
+            setRuteRows([])
             fetchRuteProyek()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
-            setAddingRute(false)
+            setSavingRuteRows(false)
         }
     }
 
@@ -710,22 +727,121 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs text-gray-400 mt-0.5">{ruteProyekList.length} rute terdaftar</p>
                     </div>
                     {!hargaTerkunci && (
-                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openAddRute}>
-                            Tambah Rute
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button size="sm" variant="default" icon={<HiOutlineViewList />} onClick={() => setDialogRuteTerbuka(true)}>
+                                Daftar Rute
+                            </Button>
+                            <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={tambahBarisRute}>
+                                Tambah Rute
+                            </Button>
+                        </div>
                     )}
                 </div>
 
-                {showRuteForm && (
+                {ruteRows.length > 0 && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <RuteTarifFields value={ruteTarif} onChange={setRuteTarif}
-                            ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
-                            onRuteCreated={muatRuteOptions} />
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="text-left text-gray-600 dark:text-gray-300">
+                                        <th className="px-3 py-2 font-semibold min-w-[220px]">Rute</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[160px]">Jenis Kendaraan</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[140px]">Harga Penawaran</th>
+                                        <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi Tol</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi BBM</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[130px]">Biaya Lain</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[130px]">Uang Jalan</th>
+                                        <th className="px-3 py-2 font-semibold min-w-[160px]">Keterangan</th>
+                                        <th className="px-3 py-2 font-semibold text-right min-w-[130px]">Subtotal</th>
+                                        <th className="px-3 py-2 w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ruteRows.map((row, i) => {
+                                        const ritase = Number(row.estimasi_ritase) || 1
+                                        const harga = row.harga_penawaran ? Number(row.harga_penawaran) : 0
+                                        const uangJalan = (Number(row.estimasi_tol) || 0) + (Number(row.estimasi_bbm) || 0) + (Number(row.estimasi_biaya_lain) || 0)
+                                        return (
+                                            <tr key={i} className="border-b border-gray-100 dark:border-gray-700 align-top">
+                                                <td className="px-3 py-2">
+                                                    <Tooltip title={ruteOptionsMaster.find(o => o.value === row.id_rute)?.label ?? ''}>
+                                                        <div>
+                                                        <Select isSearchable placeholder="Pilih rute..."
+                                                            options={ruteOptionsMaster}
+                                                            value={ruteOptionsMaster.find(o => o.value === row.id_rute) ?? null}
+                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            onChange={opt => updateRuteRow(i, { id_rute: opt?.value ?? '' })} />
+                                                        </div>
+                                                    </Tooltip>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Tooltip title={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan)?.label ?? ''}>
+                                                        <div>
+                                                        <Select isSearchable isClearable placeholder="Semua jenis"
+                                                            options={jenisOptionsMaster}
+                                                            value={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan) ?? null}
+                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            onChange={opt => updateRuteRow(i, { id_jenis_kendaraan: opt?.value ?? '' })} />
+                                                        </div>
+                                                    </Tooltip>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input prefix="Rp" placeholder="0"
+                                                        value={row.harga_penawaran ? formatNum(Number(row.harga_penawaran)) : ''}
+                                                        onChange={e => updateRuteRow(i, { harga_penawaran: e.target.value.replace(/\D/g, '') })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input type="number" min="1"
+                                                        value={row.estimasi_ritase}
+                                                        onChange={e => updateRuteRow(i, { estimasi_ritase: e.target.value })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input prefix="Rp" placeholder="0"
+                                                        value={row.estimasi_tol ? formatNum(Number(row.estimasi_tol)) : ''}
+                                                        onChange={e => updateRuteRow(i, { estimasi_tol: e.target.value.replace(/\D/g, '') })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input prefix="Rp" placeholder="0"
+                                                        value={row.estimasi_bbm ? formatNum(Number(row.estimasi_bbm)) : ''}
+                                                        onChange={e => updateRuteRow(i, { estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input prefix="Rp" placeholder="0"
+                                                        value={row.estimasi_biaya_lain ? formatNum(Number(row.estimasi_biaya_lain)) : ''}
+                                                        onChange={e => updateRuteRow(i, { estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input prefix="Rp" disabled value={formatNum(uangJalan)} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input placeholder="Keterangan"
+                                                        value={row.keterangan}
+                                                        onChange={e => updateRuteRow(i, { keterangan: e.target.value })} />
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
+                                                    {harga > 0 ? formatRupiah(harga * ritase) : '—'}
+                                                </td>
+                                                <td className="px-3 py-2 pt-3">
+                                                    <span
+                                                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 cursor-pointer transition-colors"
+                                                        onClick={() => hapusBarisRute(i)}
+                                                    ><HiOutlineTrash /></span>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        {ruteRowsError && <p className="text-red-500 text-sm mt-2">{ruteRowsError}</p>}
                         <div className="flex justify-end gap-2 mt-4">
-                            <Button size="sm" variant="plain" onClick={() => setShowRuteForm(false)}>Batal</Button>
-                            <Button size="sm" variant="solid" loading={addingRute}
-                                disabled={!ruteTarifValid(ruteTarif)}
-                                onClick={handleAddRute}>Simpan</Button>
+                            <Button type="button" size="sm" variant="plain"
+                                onClick={() => { setRuteRows([]); setRuteRowsError('') }}>Batal</Button>
+                            <Button type="button" size="sm" variant="solid" loading={savingRuteRows}
+                                onClick={handleSimpanRuteRows}>Simpan</Button>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
                     </div>
@@ -813,6 +929,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                 )}
             </Card>
+
+            <PilihRuteDialog isOpen={dialogRuteTerbuka} konteks="proyek"
+                onClose={() => setDialogRuteTerbuka(false)}
+                onPilih={tambahRuteDariDialog}
+                onRuteBaru={() => muatRuteOptions()} />
 
             {/* Dialog Edit Rute Proyek */}
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={800}>

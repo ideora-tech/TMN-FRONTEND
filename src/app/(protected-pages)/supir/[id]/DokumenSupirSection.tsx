@@ -104,6 +104,7 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
             muat()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapus(null)
         } finally {
             setDeleting(false)
         }

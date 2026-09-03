@@ -71,6 +71,7 @@ export default function PenawaranPage() {
             load()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteId(null)
         } finally {
             setDeleteLoading(false)
         }

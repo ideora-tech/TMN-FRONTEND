@@ -103,6 +103,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
             router.push(ROUTES.SPAREPART)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteOpen(false)
             setDeleting(false)
         }
     }

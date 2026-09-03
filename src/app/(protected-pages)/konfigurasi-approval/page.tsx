@@ -183,6 +183,7 @@ export default function KonfigurasiApprovalPage() {
             setEventTypes(data)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusEventTypeOpen(false)
         } finally {
             setDeletingEventType(false)
         }
@@ -271,6 +272,7 @@ export default function KonfigurasiApprovalPage() {
             fetchList(eventTypeTerpilih.id_event_type)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusTarget(null)
         } finally {
             setDeleting(false)
         }

@@ -303,6 +303,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
             await fetchLaporan()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteFotoTarget(null)
         } finally {
             setDeletingFoto(false)
         }

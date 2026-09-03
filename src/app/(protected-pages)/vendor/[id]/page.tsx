@@ -316,6 +316,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
             setDeleteDocTarget(null); fetchDokumen()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteDocTarget(null)
         } finally { setDeletingDoc(false) }
     }
 
@@ -372,6 +373,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
             setDeleteRekTarget(null); fetchRekening()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteRekTarget(null)
         } finally { setDeletingRek(false) }
     }
 

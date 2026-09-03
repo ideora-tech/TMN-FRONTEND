@@ -75,6 +75,7 @@ export default function PembelianForm({ mode, initial }: Props) {
             toast.push(<Notification type="success" title="Lampiran dihapus" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusBuktiTarget(null)
         } finally {
             setMenghapusBukti(false)
         }

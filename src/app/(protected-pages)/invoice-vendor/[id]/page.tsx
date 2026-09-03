@@ -312,6 +312,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
             fetchDetail()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteBayarTarget(null)
         } finally {
             setDeletingBayar(false)
         }

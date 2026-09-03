@@ -434,6 +434,7 @@ export default function BoardUnit() {
             fetchBoard()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusTarget(null)
         } finally {
             setMenghapus(false)
         }

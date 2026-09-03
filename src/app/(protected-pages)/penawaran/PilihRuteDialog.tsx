@@ -15,13 +15,14 @@ type Props = {
     onClose: () => void
     onPilih: (pilihan: PilihanItemRute) => void
     onRuteBaru: (rute: Rute) => void
+    konteks?: string
 }
 
 type Tampilan = 'daftar' | 'buat' | 'edit'
 
 const LIMIT_RUTE = 20
 
-export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }: Props) {
+export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, konteks = 'penawaran' }: Props) {
     const [tampilan, setTampilan] = useState<Tampilan>('daftar')
     const [ruteEdit, setRuteEdit] = useState<Rute | null>(null)
     const [ruteBaruDibuat, setRuteBaruDibuat] = useState<Rute | null>(null)
@@ -83,7 +84,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
 
     const pilihRute = (idRute: string) => {
         onPilih({ id_rute: idRute })
-        toast.push(<Notification type="success" title="Item ditambahkan ke penawaran" />)
+        toast.push(<Notification type="success" title={`Item ditambahkan ke ${konteks}`} />)
     }
 
     const bukaFormBuat = () => setTampilan('buat')
@@ -96,7 +97,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
     const ruteBaruTersimpan = (rute: Rute) => {
         onRuteBaru(rute)
         setRuteBaruDibuat(rute)
-        toast.push(<Notification type="success" title="Rute berhasil dibuat — pilih dari daftar untuk menambahkannya ke penawaran" />)
+        toast.push(<Notification type="success" title={`Rute berhasil dibuat — pilih dari daftar untuk menambahkannya ke ${konteks}`} />)
         setCari('')
         setCariDebounced('')
         setVersiDaftar(v => v + 1)
@@ -118,7 +119,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
                 <>
                     <h5 className="text-base font-semibold mb-1">Daftar Rute</h5>
                     <p className="text-xs text-gray-400 mb-4">
-                        Pilih rute untuk menambah item ke penawaran, atau buat rute baru tanpa pindah halaman
+                        Pilih rute untuk menambah item ke {konteks}, atau buat rute baru tanpa pindah halaman
                     </p>
                     <div className="flex items-center gap-2 mb-4">
                         <div className="flex-1">
@@ -207,7 +208,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru }
                     <p className="text-xs text-gray-400 mb-4 ml-9">
                         {tampilan === 'edit'
                             ? `Perubahan berlaku untuk rute ${ruteEdit?.nama_rute ?? ''} di semua tempat rute ini dipakai`
-                            : 'Setelah disimpan, rute muncul di daftar — pilih dari daftar untuk menambahkannya ke penawaran'}
+                            : `Setelah disimpan, rute muncul di daftar — pilih dari daftar untuk menambahkannya ke ${konteks}`}
                     </p>
                     {tampilan === 'edit' ? (
                         <RuteBaruForm key={ruteEdit?.id_rute}

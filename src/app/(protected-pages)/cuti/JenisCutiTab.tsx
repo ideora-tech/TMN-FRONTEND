@@ -86,6 +86,7 @@ export default function JenisCutiTab() {
             fetchData()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setHapusTarget(null)
         } finally {
             setDeleting(false)
         }

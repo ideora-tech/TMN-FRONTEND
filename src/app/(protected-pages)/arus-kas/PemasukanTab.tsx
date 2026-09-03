@@ -156,7 +156,7 @@ export default function PemasukanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
 
     const handleDelete = () => {
         if (!deleteTarget) return
-        jalankan(() => arusKasService.deletePemasukan(deleteTarget.id), 'Pemasukan berhasil dihapus', () => setDeleteTarget(null))
+        jalankan(() => arusKasService.deletePemasukan(deleteTarget.id), 'Pemasukan berhasil dihapus').finally(() => setDeleteTarget(null))
     }
 
     const bukaDetail = (p: PemasukanRow) => {
