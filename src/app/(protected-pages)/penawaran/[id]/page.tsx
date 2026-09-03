@@ -7,6 +7,7 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
 import { penawaranService, Penawaran, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
@@ -153,7 +154,6 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [pendingStatus, setPendingStatus] = useState<PenawaranStatus | null>(null)
     const [statusLoading, setStatusLoading] = useState(false)
     const [downloadingPdf, setDownloadingPdf] = useState(false)
-    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     useEffect(() => {
         penawaranService.get(id)
@@ -240,18 +240,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
-    const handleAjukanApproval = async () => {
-        setAjukanLoading(true)
-        try {
-            const updated = await penawaranService.ajukanApproval(id)
-            setData(updated)
-            toast.push(<Notification type="success" title="Penawaran diajukan untuk approval" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setAjukanLoading(false)
-        }
-    }
+    const [ajukanOpen, setAjukanOpen] = useState(false)
 
     const handleDownloadPdf = async () => {
         if (!data) return
@@ -375,7 +364,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
                             <p className="text-xs text-gray-400 mt-0.5">Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim</p>
                         </div>
-                        <Button size="sm" variant="solid" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                        <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
                             Ajukan Approval
                         </Button>
                     </div>
@@ -777,6 +766,19 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 onClose={() => setDialogRuteTerbuka(false)}
                 onPilih={tambahItemDariDialog}
                 onRuteBaru={tambahRuteOption}
+            />
+
+            <AjukanApprovalDialog
+                isOpen={ajukanOpen}
+                onClose={() => setAjukanOpen(false)}
+                kode="penawaran"
+                idReferensi={id}
+                nomor={data.nomor_penawaran}
+                onAjukan={async () => {
+                    const updated = await penawaranService.ajukanApproval(id)
+                    setData(updated)
+                }}
+                onSukses={() => { }}
             />
         </div>
     )

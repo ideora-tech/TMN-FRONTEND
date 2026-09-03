@@ -398,6 +398,7 @@ export const API_ENDPOINTS = {
     APPROVAL_RIWAYAT_SAYA:  '/api/proxy/approval-pengajuan/riwayat-saya',
     APPROVAL_EXPORT_SAYA:   '/api/proxy/approval-pengajuan/export-saya',
     APPROVAL_STATUS_REFERENSI: '/api/proxy/approval-pengajuan/status-referensi',
+    APPROVAL_LAMPIRAN:      '/api/proxy/approval-pengajuan/lampiran',
 
     // Pengaturan Kode
     PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',

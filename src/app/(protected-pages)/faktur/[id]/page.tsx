@@ -5,6 +5,7 @@ import axios from 'axios'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -85,7 +86,6 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [loading, setLoading]   = useState(true)
     const [updating, setUpdating] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
-    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     const [downloadingExport, setDownloadingExport] = useState(false)
 
@@ -172,18 +172,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         }
     }
 
-    const handleAjukanApproval = async () => {
-        setAjukanLoading(true)
-        try {
-            const updated = await fakturService.ajukanApproval(id)
-            setFaktur(updated)
-            toast.push(<Notification type="success" title="Invoice diajukan untuk approval" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setAjukanLoading(false)
-        }
-    }
+    const [ajukanOpen, setAjukanOpen] = useState(false)
 
     const handleExportPdf = async () => {
         setDownloadingExport(true)
@@ -254,7 +243,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
                             <p className="text-xs text-gray-400 mt-0.5">Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim</p>
                         </div>
-                        <Button size="sm" variant="solid" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                        <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
                             Ajukan Approval
                         </Button>
                     </div>
@@ -632,6 +621,19 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 kode="faktur"
                 idReferensi={id}
                 emptyMessage="Belum ada pengajuan approval untuk invoice ini — ajukan dari tombol Ajukan Approval."
+            />
+
+            <AjukanApprovalDialog
+                isOpen={ajukanOpen}
+                onClose={() => setAjukanOpen(false)}
+                kode="faktur"
+                idReferensi={id}
+                nomor={faktur.nomor_faktur}
+                onAjukan={async () => {
+                    const updated = await fakturService.ajukanApproval(id)
+                    setFaktur(updated)
+                }}
+                onSukses={() => { }}
             />
         </div>
     )

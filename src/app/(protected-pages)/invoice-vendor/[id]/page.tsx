@@ -7,6 +7,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import axios from 'axios'
@@ -71,7 +72,6 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
 
     const [rekapKonsolidasi, setRekapKonsolidasi] = useState<KonsolidasiRekap | null>(null)
 
-    const [ajukanLoading, setAjukanLoading] = useState(false)
 
     const [downloadingPdf, setDownloadingPdf] = useState(false)
     const [downloadingTermin, setDownloadingTermin] = useState<string | null>(null)
@@ -227,18 +227,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         }
     }
 
-    const handleAjukanApproval = async () => {
-        setAjukanLoading(true)
-        try {
-            await invoiceVendorService.ajukanApproval(id)
-            await fetchDetail()
-            toast.push(<Notification type="success" title="Invoice diajukan untuk approval" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setAjukanLoading(false)
-        }
-    }
+    const [ajukanOpen, setAjukanOpen] = useState(false)
 
     const handleExportPdf = async () => {
         setDownloadingPdf(true)
@@ -364,7 +353,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         </Button>
                     )}
                     {data.status === 'draft' && !editing && (
-                        <Button variant="solid" size="sm" loading={ajukanLoading} onClick={handleAjukanApproval}>
+                        <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
                             Ajukan Approval
                         </Button>
                     )}
@@ -870,6 +859,19 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 kode="invoice_vendor"
                 idReferensi={id}
                 emptyMessage="Belum ada pengajuan approval untuk invoice ini — ajukan dari tombol Ajukan Approval."
+            />
+
+            <AjukanApprovalDialog
+                isOpen={ajukanOpen}
+                onClose={() => setAjukanOpen(false)}
+                kode="invoice_vendor"
+                idReferensi={id}
+                nomor={data.nomor_invoice}
+                onAjukan={async () => {
+                    await invoiceVendorService.ajukanApproval(id)
+                    await fetchDetail()
+                }}
+                onSukses={() => { }}
             />
         </div>
     )

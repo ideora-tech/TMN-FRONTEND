@@ -10,7 +10,7 @@ import ApprovalTimeline, { type StatusApprovalReferensi } from '@/components/sha
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
-import { HiOutlineCheck, HiOutlineX, HiOutlineEye, HiOutlineSearch, HiOutlineClipboardList, HiOutlineDownload } from 'react-icons/hi'
+import { HiOutlineCheck, HiOutlineX, HiOutlineEye, HiOutlineSearch, HiOutlineClipboardList, HiOutlineDownload, HiOutlinePaperClip } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -113,6 +113,17 @@ export default function PersetujuanSayaPage() {
             .catch(() => setRiwayatApproval(null))
             .finally(() => setRiwayatApprovalLoading(false))
     }, [riwayatDetail])
+
+    const [detailApproval, setDetailApproval] = useState<StatusApprovalReferensi | null>(null)
+
+    useEffect(() => {
+        if (!detailTarget) { setDetailApproval(null); return }
+        axios.get(API_ENDPOINTS.APPROVAL_STATUS_REFERENSI, {
+            params: { kode: detailTarget.kode_event_type, id_referensi: detailTarget.id_referensi },
+        })
+            .then(r => setDetailApproval(r.data.data as StatusApprovalReferensi | null))
+            .catch(() => setDetailApproval(null))
+    }, [detailTarget])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -594,6 +605,20 @@ export default function PersetujuanSayaPage() {
                             <p className={LABEL_CLASS}>Keterangan</p>
                             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{detailTarget.keterangan_referensi ?? '-'}</p>
                         </div>
+                        {(detailApproval?.lampiran?.length ?? 0) > 0 && (
+                            <div>
+                                <p className={LABEL_CLASS}>Lampiran</p>
+                                <div className="flex flex-col gap-1 mt-1">
+                                    {detailApproval!.lampiran!.map(l => (
+                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} target="_blank" rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                            <HiOutlinePaperClip className="text-base shrink-0" />
+                                            <span className="truncate">{l.nama_file}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
                             <div className="flex items-center gap-2">

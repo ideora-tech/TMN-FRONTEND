@@ -9,6 +9,7 @@ import axios from 'axios'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -71,7 +72,6 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [editing, setEditing] = useState(false)
     const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; pajak_str?: string; termin_str?: string }>({})
     const [saving, setSaving]   = useState(false)
-    const [mengajukan, setMengajukan] = useState(false)
     const [unitTerikat, setUnitTerikat]   = useState<ArmadaVendor[]>([])
     const [supirTerikat, setSupirTerikat] = useState<SupirVendor[]>([])
     const [dialogTambah, setDialogTambah] = useState<'' | 'unit' | 'supir'>('')
@@ -158,19 +158,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         }
     }
 
-    const ajukanApproval = async () => {
-        setMengajukan(true)
-        try {
-            const updated = await kontrakVendorService.ajukanApproval(id)
-            setData(updated)
-            setForm(toFormState(updated))
-            toast.push(<Notification type="success" title="Kontrak diajukan untuk approval" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setMengajukan(false)
-        }
-    }
+    const [ajukanOpen, setAjukanOpen] = useState(false)
 
     const handleExport = async () => {
         setDownloadingExport(true)
@@ -475,7 +463,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     </span>
                                 )}
                                 {data.status === 'draft' && (
-                                    <Button variant="solid" size="sm" loading={mengajukan} onClick={ajukanApproval}>
+                                    <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
                                         Ajukan Approval
                                     </Button>
                                 )}
@@ -932,6 +920,19 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 emptyMessage="Belum ada pengajuan approval untuk kontrak ini — ajukan dari tombol Ajukan Approval."
             />
 
+            <AjukanApprovalDialog
+                isOpen={ajukanOpen}
+                onClose={() => setAjukanOpen(false)}
+                kode="kontrak_vendor"
+                idReferensi={id}
+                nomor={data.nomor_kontrak}
+                onAjukan={async () => {
+                    const updated = await kontrakVendorService.ajukanApproval(id)
+                    setData(updated)
+                    setForm(toFormState(updated))
+                }}
+                onSukses={() => { }}
+            />
         </div>
     )
 }

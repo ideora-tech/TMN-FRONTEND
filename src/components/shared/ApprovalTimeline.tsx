@@ -1,13 +1,19 @@
 'use client'
 import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
-import { HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheck, HiOutlineX } from 'react-icons/hi'
+import { HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlinePaperClip } from 'react-icons/hi'
 
 type ApproverRow = {
     nama: string
     status: 'menunggu' | 'disetujui' | 'ditolak'
     catatan: string | null
     waktu_aksi: string | null
+}
+
+type LampiranRow = {
+    id_lampiran: string
+    nama_file: string
+    url_file: string | null
 }
 
 export type StatusApprovalReferensi = {
@@ -17,6 +23,7 @@ export type StatusApprovalReferensi = {
     diajukan_oleh: string | null
     diajukan_pada: string | null
     progress: { disetujui: number; total: number }
+    lampiran?: LampiranRow[]
     approver: ApproverRow[]
 }
 
@@ -80,6 +87,18 @@ export default function ApprovalTimeline({ info }: { info: StatusApprovalReferen
                                     ? 'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
                                     : 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 border-gray-100 dark:border-gray-700'}`}>
                                     {r.catatan}
+                                </div>
+                            )}
+                            {r.key === 'diajukan' && (info.lampiran?.length ?? 0) > 0 && (
+                                <div className="mt-2 flex flex-col gap-1">
+                                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Lampiran</p>
+                                    {info.lampiran!.map(l => (
+                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} target="_blank" rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                            <HiOutlinePaperClip className="text-base shrink-0" />
+                                            <span className="truncate">{l.nama_file}</span>
+                                        </a>
+                                    ))}
                                 </div>
                             )}
                         </div>
