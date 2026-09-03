@@ -43,6 +43,7 @@ export interface BoardAssignment {
     estimasi_biaya: number | null
     id_pengajuan: string | null
     status: StatusPenugasan
+    keterangan?: string | null
     trips: BoardAssignmentTrip[]
 }
 
@@ -62,6 +63,7 @@ export interface AssignHarianPayload {
     id_rute: string
     uang_jalan?: number | null
     titik_drop?: TitikDropInput[]
+    keterangan?: string | null
 }
 
 export interface AssignHarianGagal {

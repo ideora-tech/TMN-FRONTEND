@@ -28,8 +28,8 @@ const STATUS_OPTIONS: Option[] = [
 
 const STATUS_PEMBAYARAN_OPTIONS: Option[] = [
     { value: '',         label: 'Semua Pembayaran' },
-    { value: 'belum',    label: 'Belum' },
-    { value: 'sebagian', label: 'Sebagian' },
+    { value: 'belum',    label: 'Belum Dibayar' },
+    { value: 'sebagian', label: 'Dibayar Sebagian' },
     { value: 'lunas',    label: 'Lunas' },
 ]
 
@@ -54,8 +54,8 @@ export const BAYAR_TAG: Record<string, string> = {
 }
 
 export const BAYAR_LABEL: Record<string, string> = {
-    belum:    'Belum',
-    sebagian: 'Sebagian',
+    belum:    'Belum Dibayar',
+    sebagian: 'Dibayar Sebagian',
     lunas:    'Lunas',
 }
 

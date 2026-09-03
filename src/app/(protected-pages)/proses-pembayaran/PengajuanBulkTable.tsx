@@ -121,6 +121,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     const [bulkErrAlasan, setBulkErrAlasan] = useState('')
     const [bulkTransferOpen, setBulkTransferOpen] = useState(false)
     const [bulkTanggalTransfer, setBulkTanggalTransfer] = useState('')
+    const [bulkBuktiTransfer, setBulkBuktiTransfer] = useState<File | null>(null)
     const [bulkSubmitting, setBulkSubmitting] = useState(false)
     const [hasilBulk, setHasilBulk] = useState<{ sukses: number; gagal: HasilGagalBulk[]; dilewati: number } | null>(null)
 
@@ -157,7 +158,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     }
 
     const handleTransferSatuan = async () => {
-        if (!transferTarget || !tanggalTransferSatuan) return
+        if (!transferTarget || !tanggalTransferSatuan || !buktiTransferSatuan) return
         setAksiSatuLoading(true)
         try {
             await arusKasService.transfer(transferTarget.id_pengajuan, tanggalTransferSatuan, buktiTransferSatuan)
@@ -218,13 +219,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
     }
 
     const jalankanTransferBulk = async () => {
-        if (!bulkTanggalTransfer) return
+        if (!bulkTanggalTransfer || !bulkBuktiTransfer) return
         const eligible = selectedRows.filter(p => eligibleFor(p, 'transfer'))
         const dilewati = selectedRows.length - eligible.length
         setBulkSubmitting(true)
         try {
             const results = await Promise.allSettled(eligible.map(p =>
-                arusKasService.transfer(p.id_pengajuan, bulkTanggalTransfer, null)
+                arusKasService.transfer(p.id_pengajuan, bulkTanggalTransfer, bulkBuktiTransfer)
             ))
             const gagal: HasilGagalBulk[] = []
             results.forEach((r, i) => {
@@ -233,6 +234,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
             const sukses = results.length - gagal.length
             setBulkTransferOpen(false)
             setBulkTanggalTransfer('')
+            setBulkBuktiTransfer(null)
             clearSelection()
             onRefresh()
             if (gagal.length === 0 && dilewati === 0) {
@@ -525,12 +527,12 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             value={tanggalTransferSatuan ? dayjs(tanggalTransferSatuan).toDate() : null}
                             onChange={date => setTanggalTransferSatuan(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </FormItem>
-                    <FormItem label="Bukti Transfer (opsional)">
+                    <FormItem label="Bukti Transfer" asterisk>
                         <UploadBerkas file={buktiTransferSatuan} onChange={f => validasiFile(f, setBuktiTransferSatuan)} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={aksiSatuLoading} disabled={!tanggalTransferSatuan}>Transfer</Button>
+                        <Button type="submit" variant="solid" loading={aksiSatuLoading} disabled={!tanggalTransferSatuan || !buktiTransferSatuan}>Transfer</Button>
                     </div>
                 </form>
             </Dialog>
@@ -568,7 +570,9 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                 )}
             </ConfirmDialog>
 
-            <Dialog isOpen={bulkTransferOpen} onRequestClose={() => setBulkTransferOpen(false)} onClose={() => setBulkTransferOpen(false)} width={420}>
+            <Dialog isOpen={bulkTransferOpen}
+                onRequestClose={() => { setBulkTransferOpen(false); setBulkBuktiTransfer(null) }}
+                onClose={() => { setBulkTransferOpen(false); setBulkBuktiTransfer(null) }} width={420}>
                 <h5 className="text-base font-semibold mb-1">Transfer Pengajuan Terpilih</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {eligibleCountUntuk('transfer')} pengajuan akan ditransfer dengan tanggal yang sama.
@@ -580,10 +584,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             value={bulkTanggalTransfer ? dayjs(bulkTanggalTransfer).toDate() : null}
                             onChange={date => setBulkTanggalTransfer(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
                     </FormItem>
-                    <p className="text-xs text-gray-400 mt-1">Transfer massal tidak melampirkan bukti. Untuk melampirkan bukti transfer, gunakan tombol transfer di baris masing-masing.</p>
+                    <FormItem label="Bukti Transfer" asterisk>
+                        <UploadBerkas file={bulkBuktiTransfer} onChange={f => validasiFile(f, setBulkBuktiTransfer)} />
+                    </FormItem>
+                    <p className="text-xs text-gray-400 mt-1">Bukti yang sama (mis. rekap transfer massal dari bank) dilampirkan ke semua pengajuan terpilih.</p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setBulkTransferOpen(false)}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={bulkSubmitting} disabled={!bulkTanggalTransfer}>Transfer</Button>
+                        <Button type="button" variant="plain" onClick={() => { setBulkTransferOpen(false); setBulkBuktiTransfer(null) }}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={bulkSubmitting} disabled={!bulkTanggalTransfer || !bulkBuktiTransfer}>Transfer</Button>
                     </div>
                 </form>
             </Dialog>

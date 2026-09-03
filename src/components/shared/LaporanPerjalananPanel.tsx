@@ -236,6 +236,10 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
     // }
 
     const handleSubmitLaporan = async () => {
+        if (!laporan && laporanFotoFiles.length === 0) {
+            toast.push(<Notification type="danger" title="Laporan wajib menyertakan minimal 1 foto bukti" />)
+            return
+        }
         setSavingLaporan(true)
         try {
             const payload = {
@@ -419,7 +423,10 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                     </div>
 
                     <div className="mt-2">
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Dokumentasi Foto</p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                            <span className="text-red-500">*</span> Dokumentasi Foto
+                            <span className="normal-case font-normal ml-1">(minimal 1 foto)</span>
+                        </p>
                         <Upload
                             accept=".jpg,.jpeg,.png"
                             multiple

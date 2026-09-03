@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload } from 'react-icons/hi'
+import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -89,6 +90,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [downloadingExport, setDownloadingExport] = useState(false)
 
     const [logOpen, setLogOpen]             = useState(false)
+    const [logApprovalOpen, setLogApprovalOpen] = useState(false)
 
     const [editOpen, setEditOpen]           = useState(false)
     const [editTanggal, setEditTanggal]     = useState('')
@@ -223,9 +225,14 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran invoice</p>
                     </div>
                 </div>
-                <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={downloadingExport} onClick={handleExportPdf}>
-                    Export PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={downloadingExport} onClick={handleExportPdf}>
+                        Export PDF
+                    </Button>
+                    <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)}>
+                        Log Approval
+                    </Button>
+                </div>
             </div>
 
             {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (
@@ -618,6 +625,14 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     <Button variant="default" onClick={() => setLogOpen(false)}>Tutup</Button>
                 </div>
             </Dialog>
+
+            <LogApprovalDialog
+                isOpen={logApprovalOpen}
+                onClose={() => setLogApprovalOpen(false)}
+                kode="faktur"
+                idReferensi={id}
+                emptyMessage="Belum ada pengajuan approval untuk invoice ini — ajukan dari tombol Ajukan Approval."
+            />
         </div>
     )
 }

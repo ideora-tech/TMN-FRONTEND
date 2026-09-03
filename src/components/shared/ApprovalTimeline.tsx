@@ -76,7 +76,9 @@ export default function ApprovalTimeline({ info }: { info: StatusApprovalReferen
                                 <p className="text-xs text-gray-400 uppercase tracking-wide mt-0.5">{r.oleh}</p>
                             )}
                             {r.catatan && (
-                                <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
+                                <div className={`mt-2 text-sm rounded-lg px-3 py-2 border ${r.ikon === 'ditolak'
+                                    ? 'text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
+                                    : 'text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 border-gray-100 dark:border-gray-700'}`}>
                                     {r.catatan}
                                 </div>
                             )}

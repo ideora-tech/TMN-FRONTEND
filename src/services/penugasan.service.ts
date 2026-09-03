@@ -39,6 +39,7 @@ export interface Penugasan {
     titik_drop?: string[]
     /** Sama isinya dengan titik_drop, tapi menyertakan uang_jalan_tambahan per titik. */
     titik_drop_detail?: TitikDropInput[]
+    keterangan?: string | null
     dibuat_pada: string
     diubah_pada: string
 }

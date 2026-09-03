@@ -97,6 +97,7 @@ export default function BoardUnit() {
     const [assignRuteRows, setAssignRuteRows] = useState<ProyekRute[]>([])
     const [assignUangJalan, setAssignUangJalan] = useState('')
     const [assignTitikDrop, setAssignTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
+    const [assignKeterangan, setAssignKeterangan] = useState('')
     const [assignSubmitting, setAssignSubmitting] = useState(false)
     const [hasilAssign, setHasilAssign] = useState<HasilAssign | null>(null)
 
@@ -115,6 +116,7 @@ export default function BoardUnit() {
     const [aksiRuteRows, setAksiRuteRows] = useState<ProyekRute[]>([])
     const [aksiUangJalan, setAksiUangJalan] = useState('')
     const [aksiTitikDrop, setAksiTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
+    const [aksiKeterangan, setAksiKeterangan] = useState('')
     const [aksiSaving, setAksiSaving] = useState(false)
 
     const [hapusTarget, setHapusTarget] = useState<BoardAssignment | null>(null)
@@ -274,6 +276,7 @@ export default function BoardUnit() {
         setAssignRuteRows([])
         setAssignUangJalan('')
         setAssignTitikDrop(emptyTitikDrop())
+        setAssignKeterangan('')
         setAssignDialogOpen(true)
     }
 
@@ -305,6 +308,7 @@ export default function BoardUnit() {
                 uang_jalan: assignUangJalan !== '' ? Number(assignUangJalan) : null,
                 ...(assignUnit.tipe === 'internal' ? { id_armada: assignUnit.id_armada } : { id_armada_vendor: assignUnit.id_armada_vendor }),
                 ...(titikDropBersih.length > 0 ? { titik_drop: titikDropBersih } : {}),
+                keterangan: assignKeterangan.trim() || null,
             })
             setAssignDialogOpen(false)
             fetchBoard()
@@ -364,6 +368,7 @@ export default function BoardUnit() {
         setAksiRuteId(assignment.id_rute)
         setAksiUangJalan(assignment.estimasi_biaya != null ? String(Math.round(assignment.estimasi_biaya)) : '')
         setAksiTitikDrop(emptyTitikDrop())
+        setAksiKeterangan(assignment.keterangan ?? '')
         setAksiRuteRows([])
         setAksiDialogOpen(true)
         aksiFetchRef.current = assignment.id_penugasan
@@ -406,6 +411,7 @@ export default function BoardUnit() {
                 titik_drop:     aksiTitikDrop
                     .filter(r => r.lokasi.trim())
                     .map(r => ({ lokasi: r.lokasi.trim(), uang_jalan_tambahan: r.uang_jalan_tambahan ? Number(r.uang_jalan_tambahan) : 0 })),
+                keterangan:     aksiKeterangan.trim() || null,
             })
             toast.push(<Notification type="success" title="Penugasan berhasil diperbarui" />)
             setAksiDialogOpen(false)
@@ -773,6 +779,11 @@ export default function BoardUnit() {
                             ))}
                         </div>
                     </div>
+                    <FormItem label="Keterangan (opsional)" className="mt-3">
+                        <Input textArea rows={2} maxLength={500} placeholder="Catatan tambahan untuk penugasan ini..."
+                            value={assignKeterangan}
+                            onChange={e => setAssignKeterangan(e.target.value)} />
+                    </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => setAssignDialogOpen(false)}>Batal</Button>
                         <Button type="submit" variant="solid" loading={assignSubmitting}
@@ -867,6 +878,12 @@ export default function BoardUnit() {
                             {detailAssignment?.estimasi_biaya != null ? formatRupiah(detailAssignment.estimasi_biaya) : <span className="text-gray-400">—</span>}
                         </p>
                     </div>
+                    {detailAssignment?.keterangan && (
+                        <div className="sm:col-span-2">
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Keterangan</p>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{detailAssignment.keterangan}</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -1059,6 +1076,11 @@ export default function BoardUnit() {
                             ))}
                         </div>
                     </div>
+                    <FormItem label="Keterangan (opsional)" className="mt-3">
+                        <Input textArea rows={2} maxLength={500} placeholder="Catatan tambahan untuk penugasan ini..."
+                            value={aksiKeterangan}
+                            onChange={e => setAksiKeterangan(e.target.value)} />
+                    </FormItem>
                     <div className="flex flex-wrap justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={tutupAksi}>Batal</Button>
                         <Button type="button" variant="solid" className="bg-red-600 hover:bg-red-700"
