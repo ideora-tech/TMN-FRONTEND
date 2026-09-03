@@ -19,6 +19,8 @@ export interface Penawaran {
     catatan: string | null
     alasan_ditolak_internal: string | null
     id_proyek: string | null
+    proyek_status?: string | null
+    kode_proyek?: string | null
     id_penawaran_induk: string | null
     aktif: boolean
     dibuat_pada: string

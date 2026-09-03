@@ -316,6 +316,22 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 </div>
             </div>
 
+            {data.proyek_status === 'batal' && (
+                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+                    <div className="flex items-start gap-3">
+                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                                Proyek dari penawaran ini sudah dibatalkan{data.kode_proyek ? ` (${data.kode_proyek})` : ''}
+                            </p>
+                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">
+                                Penawaran tetap tersimpan sebagai riwayat kesepakatan, tapi proyeknya tidak lagi berjalan.
+                            </p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {data.status === 'draft' && data.alasan_ditolak_internal && (
                 <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
                     <div className="flex items-start gap-3">
