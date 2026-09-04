@@ -14,18 +14,20 @@ import dayjs from 'dayjs'
 type StatusOption = { value: string; label: string }
 
 const STATUS_OPTIONS: StatusOption[] = [
-    { value: '',       label: 'Semua Status' },
-    { value: 'draft',  label: 'Draft' },
-    { value: 'aktif',  label: 'Aktif' },
-    { value: 'selesai', label: 'Selesai' },
-    { value: 'batal',  label: 'Batal' },
+    { value: '',                  label: 'Semua Status' },
+    { value: 'draft',             label: 'Draft' },
+    { value: 'menunggu_approval', label: 'Menunggu Approval' },
+    { value: 'aktif',             label: 'Aktif' },
+    { value: 'selesai',           label: 'Selesai' },
+    { value: 'batal',             label: 'Batal' },
 ]
 
 const STATUS_TAG: Record<string, string> = {
-    draft:   'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
-    aktif:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    selesai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-    batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',
+    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+    aktif:             'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    selesai:           'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    batal:             'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
 export default function ProjectPage() {
@@ -118,7 +120,7 @@ export default function ProjectPage() {
             header: 'Status', accessorKey: 'status', size: 120,
             cell: ({ row }: CellContext<Project, unknown>) => (
                 <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {row.original.status}
+                    {STATUS_OPTIONS.find(o => o.value === row.original.status)?.label ?? row.original.status}
                 </Tag>
             ),
         },

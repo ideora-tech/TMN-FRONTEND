@@ -21,7 +21,7 @@ export interface Project {
     nama_proyek: string
     tanggal_mulai?: string
     tanggal_selesai?: string
-    status: 'draft' | 'aktif' | 'selesai' | 'batal'
+    status: 'draft' | 'menunggu_approval' | 'aktif' | 'selesai' | 'batal'
     tipe_harga: TipeHargaProyek
     keterangan?: string
     harga_penawaran?: number | null
@@ -75,6 +75,10 @@ export const projectService = {
     },
     async updateStatus(id: string, status: string) {
         const { data } = await axios.patch(API_ENDPOINTS.PROYEK_STATUS(id), { status })
+        return data.data as Project
+    },
+    async ajukanApproval(id: string) {
+        const { data } = await axios.post(`${API_ENDPOINTS.PROYEK_DETAIL(id)}/ajukan-approval`)
         return data.data as Project
     },
     async delete(id: string) {

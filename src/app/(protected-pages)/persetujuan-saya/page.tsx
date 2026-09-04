@@ -20,6 +20,7 @@ import { KODE_PENGAJUAN_PENGELUARAN, isKodePengeluaran } from '@/constants/penge
 
 const DETAIL_ROUTE: Record<string, (id: string) => string> = {
     penawaran:      (id) => ROUTES.PENAWARAN_DETAIL(id),
+    proyek:         (id) => ROUTES.PROYEK_DETAIL(id),
     faktur:         (id) => ROUTES.FAKTUR_DETAIL(id),
     invoice_vendor: (id) => ROUTES.INVOICE_VENDOR_DETAIL(id),
     ...Object.fromEntries(KODE_PENGAJUAN_PENGELUARAN.map((kode): [string, () => string] => [kode, () => ROUTES.PROSES_PEMBAYARAN])),
@@ -27,6 +28,7 @@ const DETAIL_ROUTE: Record<string, (id: string) => string> = {
 
 const PDF_EXPORT_ROUTE: Record<string, (id: string) => string> = {
     penawaran:      (id) => API_ENDPOINTS.PENAWARAN_PDF(id),
+    proyek:         (id) => API_ENDPOINTS.PROYEK_PDF(id),
     faktur:         (id) => API_ENDPOINTS.FAKTUR_EXPORT_PDF(id),
     invoice_vendor: (id) => API_ENDPOINTS.INVOICE_VENDOR_EXPORT_PDF(id),
     kontrak_vendor: (id) => API_ENDPOINTS.KONTRAK_VENDOR_EXPORT_PDF(id),

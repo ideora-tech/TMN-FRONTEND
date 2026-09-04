@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
+import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -35,17 +37,19 @@ const STATUS_OPTIONS = [
 ]
 
 const STATUS_CLASS: Record<string, string> = {
-    draft:   'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    aktif:   'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    selesai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
+    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+    menunggu_approval: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
+    aktif:             'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    selesai:           'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+    batal:             'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
 const STATUS_LABEL: Record<string, string> = {
-    draft:   'Draft',
-    aktif:   'Aktif',
-    selesai: 'Selesai',
-    batal:   'Batal',
+    draft:             'Draft',
+    menunggu_approval: 'Menunggu Approval',
+    aktif:             'Aktif',
+    selesai:           'Selesai',
+    batal:             'Batal',
 }
 
 const TIPE_HARGA_LABEL: Record<string, string> = {
@@ -63,10 +67,11 @@ const PENAWARAN_STATUS_CLASS: Record<string, string> = {
 
 // Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
 const NEXT_STATUS: Record<string, string[]> = {
-    draft:   ['aktif', 'batal'],
-    aktif:   ['selesai', 'batal'],
-    selesai: [],
-    batal:   [],
+    draft:             ['aktif', 'batal'],
+    menunggu_approval: [],
+    aktif:             ['selesai', 'batal'],
+    selesai:           [],
+    batal:             [],
 }
 
 const PENUGASAN_STATUS_CLASS: Record<string, string> = {
@@ -107,6 +112,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [downloadingPdf, setDownloadingPdf] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
     const [errors, setErrors]     = useState<Partial<Record<keyof Project, string>>>({})
+    const [ajukanOpen, setAjukanOpen] = useState(false)
+    const [logApprovalOpen, setLogApprovalOpen] = useState(false)
 
     // penugasan
     const [penugasanList, setPenugasanList]   = useState<Penugasan[]>([])
@@ -315,6 +322,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             fetchRuteProyek()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteRuteTarget(null)
         } finally {
             setDeletingRute(false)
         }
@@ -527,6 +535,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             setDeletePenugasanTarget(null); fetchPenugasan()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeletePenugasanTarget(null)
         } finally { setDeletingPenugasan(false) }
     }
 
@@ -534,7 +543,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     if (!project) return <div className="p-6 text-red-500">Proyek tidak ditemukan.</div>
 
     const initial = project.nama_proyek?.charAt(0).toUpperCase() ?? 'P'
-    const nextStatuses = NEXT_STATUS[project.status] ?? []
+    const proyekManual = !penawaranLoading && penawaranList.length === 0
+    const nextStatuses = (NEXT_STATUS[project.status] ?? [])
+        .filter(s => !(s === 'aktif' && project.status === 'draft' && proyekManual))
     const isPerRit = project.tipe_harga !== 'borongan'
     const totalNilaiRute = ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? 0) * (r.estimasi_ritase || 1)), 0)
 
@@ -553,7 +564,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Ubah status proyek — gaya sama dengan halaman Penawaran */}
-            {nextStatuses.length > 0 && (
+            {(nextStatuses.length > 0 || (project.status === 'draft' && proyekManual)) && (
                 <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex-1">
@@ -562,9 +573,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
                                 Status saat ini: <span className="font-semibold">{STATUS_LABEL[project.status] ?? project.status}</span>
+                                {project.status === 'draft' && proyekManual && ' — proyek tanpa penawaran perlu approval sebelum aktif'}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
+                            {project.status === 'draft' && proyekManual && (
+                                <>
+                                    <Button size="sm" variant="plain" onClick={() => setLogApprovalOpen(true)}>
+                                        Log Approval
+                                    </Button>
+                                    <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
+                                        Ajukan Approval
+                                    </Button>
+                                </>
+                            )}
                             {nextStatuses.map(s => (
                                 <Button
                                     key={s}
@@ -577,6 +599,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </Button>
                             ))}
                         </div>
+                    </div>
+                </Card>
+            )}
+
+            {project.status === 'menunggu_approval' && (
+                <Card className="border border-amber-200 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                Proyek sedang menunggu approval
+                            </p>
+                            <p className="text-xs text-amber-600/80 dark:text-amber-300/80 mt-0.5">
+                                Status akan berubah otomatis setelah approver memutuskan.
+                            </p>
+                        </div>
+                        <Button size="sm" variant="default" onClick={() => setLogApprovalOpen(true)}>
+                            Log Approval
+                        </Button>
                     </div>
                 </Card>
             )}
@@ -1294,6 +1334,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         : '—'}
                 </strong> akan dihapus.</p>
             </ConfirmDialog>
+
+            <AjukanApprovalDialog
+                isOpen={ajukanOpen}
+                onClose={() => setAjukanOpen(false)}
+                kode="proyek"
+                idReferensi={id}
+                nomor={project.kode_proyek}
+                onAjukan={async () => {
+                    const updated = await projectService.ajukanApproval(id)
+                    setProject(updated)
+                    setForm(updated)
+                }}
+                onSukses={() => { }}
+            />
+
+            <LogApprovalDialog
+                isOpen={logApprovalOpen}
+                onClose={() => setLogApprovalOpen(false)}
+                kode="proyek"
+                idReferensi={id}
+                emptyMessage="Belum ada pengajuan approval untuk proyek ini."
+            />
         </div>
     )
 }
