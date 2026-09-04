@@ -57,6 +57,7 @@ export default function ProjectBaruPage() {
     const [manualRuteRows, setManualRuteRows] = useState<RuteTarifState[]>([])
     const [ruteRowsError, setRuteRowsError] = useState('')
     const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
+    const [hargaDiketikManual, setHargaDiketikManual] = useState({ penawaran: false, proyek: false })
 
     useEffect(() => {
         klienService.list(1).then(res =>
@@ -90,6 +91,17 @@ export default function ProjectBaruPage() {
             .then(res => setJenisOptionsMaster(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
     }, [fromPenawaran])
+
+    useEffect(() => {
+        if (fromPenawaran) return
+        const total = manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0)
+        const nilai = total > 0 ? String(total) : ''
+        setForm(p => ({
+            ...p,
+            harga_penawaran: hargaDiketikManual.penawaran ? p.harga_penawaran : nilai,
+            harga_proyek:    hargaDiketikManual.proyek    ? p.harga_proyek    : nilai,
+        }))
+    }, [manualRuteRows, fromPenawaran, hargaDiketikManual])
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
@@ -210,12 +222,20 @@ export default function ProjectBaruPage() {
                     <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)'}>
                         <Input prefix="Rp" placeholder="0"
                             value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
-                            onChange={(e) => setForm(p => ({ ...p, harga_penawaran: e.target.value.replace(/\D/g, '') }))} />
+                            onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, '')
+                                setHargaDiketikManual(m => ({ ...m, penawaran: v !== '' }))
+                                setForm(p => ({ ...p, harga_penawaran: v }))
+                            }} />
                     </FormItem>
                     <FormItem label="Harga Proyek (opsional)">
                         <Input prefix="Rp" placeholder="0"
                             value={form.harga_proyek ? formatNum(Number(form.harga_proyek)) : ''}
-                            onChange={(e) => setForm(p => ({ ...p, harga_proyek: e.target.value.replace(/\D/g, '') }))} />
+                            onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, '')
+                                setHargaDiketikManual(m => ({ ...m, proyek: v !== '' }))
+                                setForm(p => ({ ...p, harga_proyek: v }))
+                            }} />
                     </FormItem>
                     <FormItem label="Status">
                         <Select options={STATUS_OPTIONS}
