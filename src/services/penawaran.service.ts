@@ -20,6 +20,7 @@ export interface Penawaran {
     alasan_ditolak_internal: string | null
     id_proyek: string | null
     proyek_status?: string | null
+    approval_aktif?: boolean | null
     kode_proyek?: string | null
     id_penawaran_induk: string | null
     aktif: boolean

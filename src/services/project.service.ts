@@ -27,6 +27,7 @@ export interface Project {
     harga_penawaran?: number | null
     harga_proyek?: number | null
     realisasi?: RealisasiProyek | null
+    approval_aktif?: boolean | null
     dibuat_pada?: string | null
 }
 

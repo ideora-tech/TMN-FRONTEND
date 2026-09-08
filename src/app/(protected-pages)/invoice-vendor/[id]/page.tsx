@@ -9,7 +9,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -345,13 +345,13 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                     </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingPdf} onClick={handleExportPdf}>
-                        Export PDF
-                    </Button>
+                    <Tooltip title="Export PDF">
+                        <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleExportPdf} />
+                    </Tooltip>
                     {!editing && (
-                        <Button variant="default" size="sm" onClick={() => setLogOpen(true)}>
-                            Log Approval
-                        </Button>
+                        <Tooltip title="Log Approval">
+                            <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
+                        </Tooltip>
                     )}
                     {data.status === 'draft' && !editing && (
                         <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
@@ -359,15 +359,15 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         </Button>
                     )}
                     {(data.status === 'draft' || data.status === 'ditolak') && !editing && (
-                        <Button variant="default" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
-                            setEditing(true)
-                            setPpnPersen('')
-                            setPphPersen('')
-                            ppnManual.current = false
-                            pphManual.current = false
-                        }}>
-                            Edit
-                        </Button>
+                        <Tooltip title="Edit">
+                            <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
+                                setEditing(true)
+                                setPpnPersen('')
+                                setPphPersen('')
+                                ppnManual.current = false
+                                pphManual.current = false
+                            }} />
+                        </Tooltip>
                     )}
                 </div>
             </div>

@@ -10,11 +10,9 @@ import { ROUTES } from '@/constants/route.constant'
 import { vendorService } from '@/services/vendor.service'
 
 const JENIS_VENDOR_OPTIONS = [
-    { value: 'Transporter',       label: 'Transporter' },
-    { value: 'Supplier',          label: 'Supplier' },
-    { value: 'Freight Forwarder', label: 'Freight Forwarder' },
-    { value: 'Ekspedisi',         label: 'Ekspedisi' },
-    { value: 'Lainnya',           label: 'Lainnya' },
+    { value: 'PT',         label: 'PT' },
+    { value: 'CV',         label: 'CV' },
+    { value: 'Perorangan', label: 'Perorangan' },
 ]
 
 export default function VendorBaruPage() {

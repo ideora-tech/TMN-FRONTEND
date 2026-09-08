@@ -1,6 +1,16 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
+export interface KontrakVendorTurunan {
+    id_kontrak_vendor: string
+    nomor_kontrak: string | null
+    mekanisme: 'unit_only' | 'unit_driver' | 'full'
+    tanggal_mulai: string | null
+    tanggal_selesai: string | null
+    nilai_kontrak: number | null
+    status: string | null
+}
+
 export interface KontrakVendor {
     id_kontrak_vendor: string
     id_vendor: string
@@ -19,6 +29,15 @@ export interface KontrakVendor {
     dibuat_pada: string
     diubah_pada: string
     vendor?: { id_vendor: string; nama_vendor: string }
+    id_kontrak_induk?: string | null
+    nomor_kontrak_induk?: string | null
+    id_permintaan?: string | null
+    nomor_permintaan?: string | null
+    id_proyek?: string | null
+    nama_proyek?: string | null
+    jumlah_turunan?: number
+    turunan?: KontrakVendorTurunan[]
+    total_nilai_turunan?: number
 }
 
 export interface KontrakUnitInput {
@@ -58,11 +77,11 @@ export const kontrakVendorService = {
         const { data } = await axios.get(API_ENDPOINTS.KONTRAK_VENDOR_DETAIL(id))
         return data.data as KontrakVendor
     },
-    async create(payload: { id_vendor: string; mekanisme: string; nomor_kontrak?: string | null; jenis_layanan?: string | null; rate?: number | null; satuan?: string | null; pajak_persen?: number | null; termin_pembayaran_hari?: number | null; nilai_kontrak?: number | null; tanggal_mulai?: string | null; tanggal_selesai?: string | null; unit?: KontrakUnitInput[]; supir?: KontrakSupirInput[]; salin_dari_kontrak?: string | null }) {
+    async create(payload: { id_vendor: string; mekanisme: string; id_proyek?: string | null; nomor_kontrak?: string | null; jenis_layanan?: string | null; rate?: number | null; satuan?: string | null; pajak_persen?: number | null; termin_pembayaran_hari?: number | null; nilai_kontrak?: number | null; tanggal_mulai?: string | null; tanggal_selesai?: string | null; unit?: KontrakUnitInput[]; supir?: KontrakSupirInput[]; salin_dari_kontrak?: string | null; id_permintaan?: string | null; id_kontrak_induk?: string | null }) {
         const { data } = await axios.post(API_ENDPOINTS.KONTRAK_VENDOR, payload)
         return { ...(data.data as KontrakVendor), _pesan: data.message as string | undefined }
     },
-    async update(id: string, payload: Partial<{ mekanisme: string; nomor_kontrak: string | null; jenis_layanan: string | null; rate: number | null; satuan: string | null; pajak_persen: number | null; termin_pembayaran_hari: number | null; nilai_kontrak: number | null; tanggal_mulai: string | null; tanggal_selesai: string | null; status: string | null }>) {
+    async update(id: string, payload: Partial<{ mekanisme: string; nomor_kontrak: string | null; jenis_layanan: string | null; rate: number | null; satuan: string | null; pajak_persen: number | null; termin_pembayaran_hari: number | null; nilai_kontrak: number | null; tanggal_mulai: string | null; tanggal_selesai: string | null; status: string | null; id_kontrak_induk: string | null }>) {
         const { data } = await axios.put(API_ENDPOINTS.KONTRAK_VENDOR_DETAIL(id), payload)
         return data.data as KontrakVendor
     },

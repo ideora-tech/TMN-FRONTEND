@@ -29,11 +29,9 @@ const AKTIF_OPTIONS = [
 ]
 
 const JENIS_VENDOR_OPTIONS = [
-    { value: 'Transporter',       label: 'Transporter' },
-    { value: 'Supplier',          label: 'Supplier' },
-    { value: 'Freight Forwarder', label: 'Freight Forwarder' },
-    { value: 'Ekspedisi',         label: 'Ekspedisi' },
-    { value: 'Lainnya',           label: 'Lainnya' },
+    { value: 'PT',         label: 'PT' },
+    { value: 'CV',         label: 'CV' },
+    { value: 'Perorangan', label: 'Perorangan' },
 ]
 
 const JENIS_DOKUMEN_OPTIONS = [

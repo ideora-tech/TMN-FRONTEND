@@ -154,7 +154,7 @@ export default function PenawaranPage() {
                                 <HiOutlineEye className="text-base" />
                             </span>
                         </Tooltip>
-                        {row.status === 'draft' && (
+                        {(row.status === 'draft' || row.status === 'menunggu_approval') && (
                             <Tooltip title="Hapus">
                                 <span
                                     className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-200 cursor-pointer transition-colors"
@@ -221,7 +221,7 @@ export default function PenawaranPage() {
                 onConfirm={handleDelete}
                 confirmButtonProps={{ loading: deleteLoading }}
             >
-                <p>Penawaran draft ini akan dihapus. Lanjutkan?</p>
+                <p>Penawaran ini akan dihapus. Bila sedang menunggu approval, pengajuan approval-nya ikut dibatalkan. Lanjutkan?</p>
             </ConfirmDialog>
         </div>
     )

@@ -6,7 +6,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDownload, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -296,11 +296,11 @@ export default function RekapTab() {
                     </div>
                     {loading && <Spinner size={20} />}
                     <div className="flex-1" />
-                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                        disabled={!rekap || transaksi.length === 0}
-                        loading={exporting} onClick={handleExport}>
-                        Export Excel
-                    </Button>
+                    <Tooltip title="Export Excel">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                            disabled={!rekap || transaksi.length === 0}
+                            loading={exporting} onClick={handleExport} />
+                    </Tooltip>
                 </div>
 
                 {loading && !rekap ? (

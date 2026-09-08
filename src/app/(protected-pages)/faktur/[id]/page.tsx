@@ -2,11 +2,11 @@
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -215,12 +215,12 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={downloadingExport} onClick={handleExportPdf}>
-                        Export PDF
-                    </Button>
-                    <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)}>
-                        Log Approval
-                    </Button>
+                    <Tooltip title="Export PDF">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingExport} onClick={handleExportPdf} />
+                    </Tooltip>
+                    <Tooltip title="Log Approval">
+                        <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
+                    </Tooltip>
                 </div>
             </div>
 

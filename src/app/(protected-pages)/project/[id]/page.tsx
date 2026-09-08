@@ -2,12 +2,13 @@
 import { use, useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Tooltip } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification, Spinner, Dialog, Tooltip, Checkbox } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
+import TambahPenugasanDialog from './TambahPenugasanDialog'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -81,6 +82,19 @@ const PENUGASAN_STATUS_CLASS: Record<string, string> = {
     batal:   'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
 
+const kunciUnitPenugasan = (p: Penugasan) =>
+    `${p.id_supir ?? p.id_karyawan ?? p.id_supir_vendor ?? '-'}|${p.id_armada ?? p.id_armada_vendor ?? '-'}`
+
+type UnitPenugasanGroup = {
+    key: string
+    contoh: Penugasan
+    ids: string[]
+    jumlahHari: number
+    tanggalMin: string | null
+    tanggalMax: string | null
+    statusCount: Record<string, number>
+}
+
 type RevisiItemForm = {
     id_rute: string
     id_jenis_kendaraan: string
@@ -118,8 +132,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     // penugasan
     const [penugasanList, setPenugasanList]   = useState<Penugasan[]>([])
     const [penugasanLoading, setPenugasanLoading] = useState(false)
-    const [deletePenugasanTarget, setDeletePenugasanTarget] = useState<Penugasan | null>(null)
+    const [deletePenugasanTarget, setDeletePenugasanTarget] = useState<{ ids: string[]; label: string } | null>(null)
     const [deletingPenugasan, setDeletingPenugasan] = useState(false)
+    const [penugasanChecked, setPenugasanChecked] = useState<Record<string, boolean>>({})
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+    const [bulkDeleting, setBulkDeleting] = useState(false)
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
     const [armadaMap, setArmadaMap]             = useState<Record<string, Armada>>({})
     const [supirList, setSupirList]             = useState<Supir[]>([])
@@ -198,7 +215,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const fetchPenugasan = useCallback(async () => {
         setPenugasanLoading(true)
         try {
-            const res = await penugasanService.list(id)
+            const res = await penugasanService.list(id, 1, undefined, 1000)
             setPenugasanList(res.data)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -526,17 +543,42 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
     }
 
+    const hapusPenugasanIds = async (ids: string[]) => {
+        let sukses = 0
+        const gagal: string[] = []
+        for (const idPenugasan of ids) {
+            try {
+                await penugasanService.delete(idPenugasan)
+                sukses += 1
+            } catch (err) {
+                gagal.push(parseApiError(err))
+            }
+        }
+        if (sukses > 0) {
+            toast.push(<Notification type="success" title={`${sukses} penugasan harian berhasil dihapus`} />)
+        }
+        if (gagal.length > 0) {
+            toast.push(<Notification type="danger" title={`${gagal.length} penugasan gagal dihapus`}>{gagal[0]}</Notification>)
+        }
+        fetchPenugasan()
+    }
+
     const handleDeletePenugasan = async () => {
         if (!deletePenugasanTarget) return
         setDeletingPenugasan(true)
-        try {
-            await penugasanService.delete(deletePenugasanTarget.id_penugasan)
-            toast.push(<Notification type="success" title="Penugasan berhasil dihapus" />)
-            setDeletePenugasanTarget(null); fetchPenugasan()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-            setDeletePenugasanTarget(null)
-        } finally { setDeletingPenugasan(false) }
+        await hapusPenugasanIds(deletePenugasanTarget.ids)
+        setDeletePenugasanTarget(null)
+        setDeletingPenugasan(false)
+    }
+
+    const handleBulkDeletePenugasan = async () => {
+        const ids = penugasanList.filter(p => penugasanChecked[kunciUnitPenugasan(p)]).map(p => p.id_penugasan)
+        if (ids.length === 0) return
+        setBulkDeleting(true)
+        await hapusPenugasanIds(ids)
+        setBulkDeleteOpen(false)
+        setPenugasanChecked({})
+        setBulkDeleting(false)
     }
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
@@ -544,10 +586,38 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     const initial = project.nama_proyek?.charAt(0).toUpperCase() ?? 'P'
     const proyekManual = !penawaranLoading && penawaranList.length === 0
+    const perluApprovalProyek = proyekManual && project.approval_aktif !== false
     const nextStatuses = (NEXT_STATUS[project.status] ?? [])
-        .filter(s => !(s === 'aktif' && project.status === 'draft' && proyekManual))
+        .filter(s => !(s === 'aktif' && project.status === 'draft' && perluApprovalProyek))
     const isPerRit = project.tipe_harga !== 'borongan'
     const totalNilaiRute = ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? 0) * (r.estimasi_ritase || 1)), 0)
+    const unitGroups: UnitPenugasanGroup[] = (() => {
+        const map = new Map<string, UnitPenugasanGroup>()
+        for (const p of penugasanList) {
+            const key = kunciUnitPenugasan(p)
+            let g = map.get(key)
+            if (!g) {
+                g = { key, contoh: p, ids: [], jumlahHari: 0, tanggalMin: null, tanggalMax: null, statusCount: {} }
+                map.set(key, g)
+            }
+            g.ids.push(p.id_penugasan)
+            g.jumlahHari += 1
+            if (p.tanggal_tugas) {
+                if (!g.tanggalMin || p.tanggal_tugas < g.tanggalMin) g.tanggalMin = p.tanggal_tugas
+                if (!g.tanggalMax || p.tanggal_tugas > g.tanggalMax) g.tanggalMax = p.tanggal_tugas
+            }
+            g.statusCount[p.status] = (g.statusCount[p.status] ?? 0) + 1
+        }
+        return [...map.values()]
+    })()
+    const grupTerpilih = unitGroups.filter(g => penugasanChecked[g.key])
+    const jumlahPenugasanTerpilih = grupTerpilih.length
+    const totalPenugasanTerpilih = grupTerpilih.reduce((s, g) => s + g.ids.length, 0)
+    const semuaPenugasanTercentang = unitGroups.length > 0 && grupTerpilih.length === unitGroups.length
+    const labelSupirPenugasan = (p: Penugasan) =>
+        (p.id_supir ? supirList.find(s => s.id_supir === p.id_supir)?.nama : undefined)
+            ?? karyawanOptions.find(o => o.value === p.id_karyawan)?.label?.split(' — ')[1]
+            ?? null
 
     return (
         <div className="flex flex-col gap-4">
@@ -564,7 +634,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Ubah status proyek — gaya sama dengan halaman Penawaran */}
-            {(nextStatuses.length > 0 || (project.status === 'draft' && proyekManual)) && (
+            {(nextStatuses.length > 0 || (project.status === 'draft' && perluApprovalProyek)) && (
                 <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex-1">
@@ -573,15 +643,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
                                 Status saat ini: <span className="font-semibold">{STATUS_LABEL[project.status] ?? project.status}</span>
-                                {project.status === 'draft' && proyekManual && ' — proyek tanpa penawaran perlu approval sebelum aktif'}
+                                {project.status === 'draft' && perluApprovalProyek && ' — proyek tanpa penawaran perlu approval sebelum aktif'}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {project.status === 'draft' && proyekManual && (
+                            {project.status === 'draft' && perluApprovalProyek && (
                                 <>
-                                    <Button size="sm" variant="plain" onClick={() => setLogApprovalOpen(true)}>
-                                        Log Approval
-                                    </Button>
+                                    <Tooltip title="Log Approval">
+                                        <Button size="sm" variant="plain" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
+                                    </Tooltip>
                                     <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
                                         Ajukan Approval
                                     </Button>
@@ -614,9 +684,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 Status akan berubah otomatis setelah approver memutuskan.
                             </p>
                         </div>
-                        <Button size="sm" variant="default" onClick={() => setLogApprovalOpen(true)}>
-                            Log Approval
-                        </Button>
+                        <Tooltip title="Log Approval">
+                            <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
+                        </Tooltip>
                     </div>
                 </Card>
             )}
@@ -657,10 +727,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <Tag className={`text-xs font-semibold ${STATUS_CLASS[project.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                     {project.status}
                                 </Tag>
-                                <Button size="sm" variant="default" loading={downloadingPdf} onClick={handleDownloadPdf}>
-                                    Download PDF
-                                </Button>
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Download PDF">
+                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleDownloadPdf} />
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
 
@@ -1235,12 +1307,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center justify-between mb-1">
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Penugasan Harian</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{penugasanList.length} penugasan terdaftar</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{unitGroups.length} unit · {penugasanList.length} penugasan harian</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.PENUGASAN)}>
-                        Tambah Penugasan
-                    </Button>
                 </div>
+
+                <TambahPenugasanDialog
+                    idProyek={id}
+                    tanggalMulai={project.tanggal_mulai || null}
+                    tanggalSelesai={project.tanggal_selesai || null}
+                    onSukses={fetchPenugasan}
+                />
 
                 {penugasanLoading ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
@@ -1251,57 +1327,86 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <table className="w-full text-sm">
                             <thead className="bg-blue-50 dark:bg-blue-500/10">
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
+                                    <th className="py-2.5 pl-3 pr-2 w-10">
+                                        <Checkbox checked={semuaPenugasanTercentang}
+                                            onChange={checked => setPenugasanChecked(Object.fromEntries(unitGroups.map(g => [g.key, checked])))} />
+                                    </th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Armada</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Periode</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Hari</th>
+                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Uang Jalan/Hari</th>
                                     <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="py-2.5" />
+                                    <th className="py-2.5 pr-2 text-right">
+                                        {jumlahPenugasanTerpilih > 0 && (
+                                            <Button type="button" size="xs" variant="solid" icon={<HiOutlineTrash />}
+                                                customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
+                                                onClick={() => setBulkDeleteOpen(true)}>
+                                                Hapus Terpilih ({jumlahPenugasanTerpilih})
+                                            </Button>
+                                        )}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {penugasanList.map(p => (
-                                    <tr key={p.id_penugasan}>
-                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
-                                            {(p.id_supir ? supirList.find(s => s.id_supir === p.id_supir)?.nama : undefined)
-                                                ?? karyawanOptions.find(o => o.value === p.id_karyawan)?.label?.split(' — ')[1]
-                                                ?? <span className="text-gray-400">—</span>}
+                                {unitGroups.map(g => (
+                                    <tr key={g.key}>
+                                        <td className="py-3 pl-3 pr-2">
+                                            <Checkbox checked={!!penugasanChecked[g.key]}
+                                                onChange={checked => setPenugasanChecked(prev => ({ ...prev, [g.key]: checked }))} />
                                         </td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
-                                            {p.id_armada ? (
-                                                armadaMap[p.id_armada] ? (
+                                            {labelSupirPenugasan(g.contoh) ?? <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
+                                            {g.contoh.id_armada ? (
+                                                armadaMap[g.contoh.id_armada] ? (
                                                     <div>
-                                                        <p className="font-medium text-gray-800 dark:text-gray-200">{armadaMap[p.id_armada].nopol}</p>
+                                                        <p className="font-medium text-gray-800 dark:text-gray-200">{armadaMap[g.contoh.id_armada].nopol}</p>
                                                         <p className="text-xs text-gray-400">
-                                                            {[armadaMap[p.id_armada].nama_jenis, armadaMap[p.id_armada].merk].filter(Boolean).join(' · ')}
+                                                            {[armadaMap[g.contoh.id_armada].nama_jenis, armadaMap[g.contoh.id_armada].merk].filter(Boolean).join(' · ')}
                                                         </p>
                                                     </div>
-                                                ) : p.id_armada.slice(0, 8)
+                                                ) : g.contoh.id_armada.slice(0, 8)
                                             ) : <span className="text-gray-400">—</span>}
                                         </td>
+                                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                            {g.tanggalMin && g.tanggalMax
+                                                ? `${dayjs(g.tanggalMin).format('DD MMM')} – ${dayjs(g.tanggalMax).format('DD MMM YYYY')}`
+                                                : <span className="text-gray-400">—</span>}
+                                        </td>
+                                        <td className="py-3 pr-4 text-gray-700 dark:text-gray-300">{g.jumlahHari}</td>
                                         <td className="py-3 pr-4 text-gray-600 dark:text-gray-400">
-                                            {p.estimasi_biaya != null
-                                                ? formatRupiah(p.estimasi_biaya)
+                                            {g.contoh.estimasi_biaya != null
+                                                ? formatRupiah(g.contoh.estimasi_biaya)
                                                 : <span className="text-gray-400">—</span>}
                                         </td>
                                         <td className="py-3 pr-4">
-                                            <Tag className={`text-xs font-semibold ${PENUGASAN_STATUS_CLASS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                {p.status}
-                                            </Tag>
+                                            <div className="flex flex-wrap gap-1">
+                                                {Object.entries(g.statusCount).map(([status, jumlah]) => (
+                                                    <Tag key={status} className={`text-xs font-semibold ${PENUGASAN_STATUS_CLASS[status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                        {jumlah > 1 ? `${status} (${jumlah})` : status}
+                                                    </Tag>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Tooltip title="Detail">
+                                                <Tooltip title="Lihat di Papan Penugasan">
                                                     <span
                                                         className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                                                        onClick={() => router.push(ROUTES.PENUGASAN_DETAIL(p.id_penugasan))}
+                                                        onClick={() => router.push(ROUTES.PENUGASAN)}
                                                     >
                                                         <HiOutlineEye className="text-lg" />
                                                     </span>
                                                 </Tooltip>
-                                                <Tooltip title="Hapus">
+                                                <Tooltip title="Hapus semua penugasan unit ini">
                                                     <span
                                                         className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                        onClick={() => setDeletePenugasanTarget(p)}
+                                                        onClick={() => setDeletePenugasanTarget({
+                                                            ids: g.ids,
+                                                            label: `${labelSupirPenugasan(g.contoh) ?? '—'} · ${(g.contoh.id_armada && armadaMap[g.contoh.id_armada]?.nopol) || '—'}`,
+                                                        })}
                                                     >
                                                         <HiOutlineTrash className="text-lg" />
                                                     </span>
@@ -1328,11 +1433,18 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 onCancel={() => setDeletePenugasanTarget(null)}
                 onConfirm={handleDeletePenugasan}
                 confirmButtonProps={{ loading: deletingPenugasan }}>
-                <p>Penugasan tanggal <strong>
-                    {deletePenugasanTarget?.tanggal_tugas
-                        ? dayjs(deletePenugasanTarget.tanggal_tugas).format('DD MMM YYYY')
-                        : '—'}
-                </strong> akan dihapus.</p>
+                <p>Semua penugasan harian unit <strong>{deletePenugasanTarget?.label}</strong> ({deletePenugasanTarget?.ids.length} hari) akan dihapus.</p>
+            </ConfirmDialog>
+
+            {/* Confirm Hapus Massal Penugasan */}
+            <ConfirmDialog isOpen={bulkDeleteOpen} type="danger" title="Hapus Penugasan Terpilih?"
+                confirmText="Ya, Hapus Semua" cancelText="Batal"
+                onClose={() => setBulkDeleteOpen(false)}
+                onCancel={() => setBulkDeleteOpen(false)}
+                onConfirm={handleBulkDeletePenugasan}
+                confirmButtonProps={{ loading: bulkDeleting, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}>
+                <p><strong>{jumlahPenugasanTerpilih}</strong> unit ({totalPenugasanTerpilih} penugasan harian) akan dihapus sekaligus.</p>
+                <p className="text-sm text-gray-500 mt-2">Penugasan yang tripnya sudah jalan/selesai akan ditolak sistem dan dilaporkan sebagai gagal.</p>
             </ConfirmDialog>
 
             <AjukanApprovalDialog
@@ -1356,6 +1468,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 idReferensi={id}
                 emptyMessage="Belum ada pengajuan approval untuk proyek ini."
             />
+
         </div>
     )
 }

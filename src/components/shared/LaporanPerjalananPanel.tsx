@@ -83,6 +83,7 @@ const emptyLaporanForm = () => ({
     uang_tol:         '',
     jarak_tempuh_km:  '',
     catatan_insiden:  '',
+    no_surat_jalan:   '',
     id_jenis_bbm:     '',
     jumlah_liter:     '',
     biaya_lain:       [] as BiayaLainRow[],
@@ -175,6 +176,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
             uang_tol:        String(laporan.uang_tol ?? ''),
             jarak_tempuh_km: String(laporan.jarak_tempuh_km ?? ''),
             catatan_insiden: laporan.catatan_insiden ?? '',
+            no_surat_jalan:  laporan.no_surat_jalan ?? '',
             id_jenis_bbm:    laporan.id_jenis_bbm ?? '',
             jumlah_liter:    laporan.jumlah_liter != null ? String(laporan.jumlah_liter) : '',
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
@@ -248,6 +250,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                 uang_tol:        sembunyikanBiayaOps ? 0 : Number(laporanForm.uang_tol) || 0,
                 jarak_tempuh_km: Number(laporanForm.jarak_tempuh_km) || 0,
                 catatan_insiden: laporanForm.catatan_insiden || null,
+                no_surat_jalan:  laporanForm.no_surat_jalan || null,
                 id_jenis_bbm:    sembunyikanBiayaOps ? null : laporanForm.id_jenis_bbm || null,
                 jumlah_liter:    sembunyikanBiayaOps ? null : Number(laporanForm.jumlah_liter) || null,
                 biaya_lain: sembunyikanBiayaOps ? [] : laporanForm.biaya_lain
@@ -409,6 +412,13 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                 placeholder="0"
                                 value={laporanForm.jarak_tempuh_km}
                                 onChange={e => setLaporanForm(p => ({ ...p, jarak_tempuh_km: e.target.value }))}
+                            />
+                        </FormItem>
+                        <FormItem label="No Surat Jalan">
+                            <Input
+                                placeholder="Contoh: SJ-2026-0001 (opsional)"
+                                value={laporanForm.no_surat_jalan}
+                                onChange={e => setLaporanForm(p => ({ ...p, no_surat_jalan: e.target.value }))}
                             />
                         </FormItem>
                         <div className="sm:col-span-2">
@@ -582,6 +592,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                             { label: 'Uang Jalan',     value: formatRupiah(laporan.uang_jalan) },
                             { label: 'Uang Tol',       value: formatRupiah(laporan.uang_tol) },
                             { label: 'Jarak Tempuh',   value: laporan.jarak_tempuh_km != null ? `${formatNum(laporan.jarak_tempuh_km)} km` : '-' },
+                            { label: 'No Surat Jalan',  value: laporan.no_surat_jalan || '-' },
                             { label: 'Catatan Insiden', value: laporan.catatan_insiden || '-' },
                         ].map(({ label, value }) => (
                             <div key={label}>

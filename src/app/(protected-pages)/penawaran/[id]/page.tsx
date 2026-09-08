@@ -241,6 +241,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     }
 
     const [ajukanOpen, setAjukanOpen] = useState(false)
+    const [tandaiTerkirimOpen, setTandaiTerkirimOpen] = useState(false)
+    const [menandaiTerkirim, setMenandaiTerkirim] = useState(false)
 
     const handleDownloadPdf = async () => {
         if (!data) return
@@ -378,11 +380,21 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex-1">
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
-                            <p className="text-xs text-gray-400 mt-0.5">Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {data.approval_aktif === false
+                                    ? 'Approval internal sedang nonaktif — penawaran bisa langsung ditandai terkirim'
+                                    : 'Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim'}
+                            </p>
                         </div>
-                        <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
-                            Ajukan Approval
-                        </Button>
+                        {data.approval_aktif === false ? (
+                            <Button size="sm" variant="solid" onClick={() => setTandaiTerkirimOpen(true)}>
+                                Tandai Terkirim
+                            </Button>
+                        ) : (
+                            <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
+                                Ajukan Approval
+                            </Button>
+                        )}
                     </div>
                 </Card>
             )}
@@ -783,6 +795,32 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 onPilih={tambahItemDariDialog}
                 onRuteBaru={tambahRuteOption}
             />
+
+            <ConfirmDialog
+                isOpen={tandaiTerkirimOpen}
+                type="info"
+                title="Tandai Terkirim"
+                confirmText="Ya, Tandai Terkirim"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: menandaiTerkirim }}
+                onClose={() => setTandaiTerkirimOpen(false)}
+                onCancel={() => setTandaiTerkirimOpen(false)}
+                onConfirm={async () => {
+                    setMenandaiTerkirim(true)
+                    try {
+                        const updated = await penawaranService.ajukanApproval(id)
+                        setData(updated)
+                        toast.push(<Notification type="success" title="Penawaran ditandai terkirim" />)
+                    } catch (err) {
+                        toast.push(<Notification type="danger" title={parseApiError(err)} />)
+                    } finally {
+                        setMenandaiTerkirim(false)
+                        setTandaiTerkirimOpen(false)
+                    }
+                }}
+            >
+                <p className="text-sm">Approval internal sedang nonaktif, jadi <span className="font-semibold">{data.nomor_penawaran}</span> akan langsung berstatus Terkirim tanpa melalui approver. Lanjutkan?</p>
+            </ConfirmDialog>
 
             <AjukanApprovalDialog
                 isOpen={ajukanOpen}

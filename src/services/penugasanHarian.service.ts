@@ -71,6 +71,20 @@ export interface AssignHarianGagal {
     alasan: string
 }
 
+export interface ParseUnitBaris {
+    id_armada: string
+    nopol: string
+    id_supir: string
+    nama_supir: string
+    id_rute: string
+    label_rute: string
+}
+
+export interface ParseUnitHasil {
+    baris_valid: ParseUnitBaris[]
+    baris_gagal: { baris: number; alasan: string }[]
+}
+
 export interface AssignHarianHasil {
     sukses: number
     gagal: AssignHarianGagal[]
@@ -90,6 +104,13 @@ export const penugasanHarianService = {
     async assign(payload: AssignHarianPayload) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN_HARIAN, payload)
         return data.data as AssignHarianHasil
+    },
+    async parseUnitExcel(file: File, idProyek: string) {
+        const form = new FormData()
+        form.append('file', file)
+        form.append('id_proyek', idProyek)
+        const { data } = await axios.post(API_ENDPOINTS.PENUGASAN_PARSE_UNIT, form)
+        return data.data as ParseUnitHasil
     },
     async hapus(idPenugasan: string) {
         await penugasanService.delete(idPenugasan)

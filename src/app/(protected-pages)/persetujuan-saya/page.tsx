@@ -23,6 +23,7 @@ const DETAIL_ROUTE: Record<string, (id: string) => string> = {
     proyek:         (id) => ROUTES.PROYEK_DETAIL(id),
     faktur:         (id) => ROUTES.FAKTUR_DETAIL(id),
     invoice_vendor: (id) => ROUTES.INVOICE_VENDOR_DETAIL(id),
+    permintaan_vendor: (id) => ROUTES.PERMINTAAN_VENDOR_DETAIL(id),
     ...Object.fromEntries(KODE_PENGAJUAN_PENGELUARAN.map((kode): [string, () => string] => [kode, () => ROUTES.PROSES_PEMBAYARAN])),
 }
 

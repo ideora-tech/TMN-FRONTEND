@@ -129,7 +129,7 @@ export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, load
             )}
 
             <div className="flex justify-center mt-4">
-                <Button variant="default" onClick={onClose}>Kembali</Button>
+                <Button variant="default" onClick={onClose}>Batal</Button>
             </div>
         </Dialog>
     )

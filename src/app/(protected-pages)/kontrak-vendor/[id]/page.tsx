@@ -1,12 +1,12 @@
 ﻿'use client'
 import { use, useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, Upload, Progress, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
@@ -91,6 +91,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [menghapusUnit, setMenghapusUnit] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
     const [downloadingExport, setDownloadingExport] = useState(false)
+    const [kontrakPayungOptions, setKontrakPayungOptions] = useState<{ value: string; label: string }[]>([])
 
     const toFormState = (d: KontrakVendor) => ({
         ...d,
@@ -131,6 +132,18 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
 
     useEffect(() => { muatTerikat() }, [muatTerikat])
 
+    useEffect(() => {
+        if (!data?.id_vendor) { setKontrakPayungOptions([]); return }
+        kontrakVendorService.list(1, { id_vendor: data.id_vendor, limit: '200' })
+            .then(res => setKontrakPayungOptions(res.data
+                .filter(k => !k.id_kontrak_induk && k.id_kontrak_vendor !== id)
+                .map(k => ({
+                    value: k.id_kontrak_vendor,
+                    label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+                }))))
+            .catch(() => {})
+    }, [data?.id_vendor, id])
+
     const handleSave = async () => {
         setSaving(true)
         try {
@@ -146,6 +159,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 tanggal_mulai:   form.tanggal_mulai ?? null,
                 tanggal_selesai: form.tanggal_selesai ?? null,
                 status:          form.status ?? null,
+                id_kontrak_induk: form.id_kontrak_induk ?? null,
             })
             setData(updated)
             setForm(toFormState(updated))
@@ -431,6 +445,12 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const idDriverTerpakai = new Set(unitTerikat.map(u => u.id_supir_vendor_default).filter(Boolean))
     const driverCadangan = supirTerikat.filter(s => !idDriverTerpakai.has(s.id_supir_vendor))
     const initial = vendorName.charAt(0).toUpperCase()
+    const adalahPayung = (data.jumlah_turunan ?? 0) > 0
+    const turunanList = data.turunan ?? []
+    const totalNilaiTurunan = data.total_nilai_turunan ?? 0
+    const nilaiPayung = data.nilai_kontrak ?? 0
+    const persenPakaiPlafon = nilaiPayung > 0 ? Math.round((totalNilaiTurunan / nilaiPayung) * 100) : 0
+    const melebihiPlafon = nilaiPayung > 0 && totalNilaiTurunan > nilaiPayung
 
     return (
         <div className="flex flex-col gap-4">
@@ -458,6 +478,19 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
+                                {data.id_kontrak_induk && (
+                                    <span
+                                        className="cursor-pointer px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 transition-colors"
+                                        onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(data.id_kontrak_induk!))}
+                                    >
+                                        Turunan dari {data.nomor_kontrak_induk || `Kontrak ${data.id_kontrak_induk.slice(0, 8)}`}
+                                    </span>
+                                )}
+                                {adalahPayung && (
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300">
+                                        Payung · {data.jumlah_turunan} turunan
+                                    </span>
+                                )}
                                 {data.status && (
                                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${KONTRAK_STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                         {KONTRAK_STATUS_LABEL[data.status] ?? data.status}
@@ -468,10 +501,16 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         Ajukan Approval
                                     </Button>
                                 )}
-                                <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingExport}
-                                    onClick={handleExport}>Export PDF</Button>
-                                <Button variant="default" size="sm" onClick={() => setLogOpen(true)}>Log Approval</Button>
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Export PDF">
+                                    <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingExport}
+                                        onClick={handleExport} />
+                                </Tooltip>
+                                <Tooltip title="Log Approval">
+                                    <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
                         {data.status === 'draft' && data.alasan_ditolak_internal && (
@@ -490,6 +529,16 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 { label: 'Vendor',            value: vendorName },
                                 { label: 'Mekanisme',         value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
                                 { label: 'No. Kontrak',       value: data.nomor_kontrak ?? <span className="text-gray-400">—</span> },
+                                ...(data.nama_proyek ? [{ label: 'Proyek', value: data.nama_proyek }] : []),
+                                ...(data.nomor_permintaan && data.id_permintaan ? [{
+                                    label: 'No. Permintaan',
+                                    value: (
+                                        <span className="cursor-pointer text-teal-600 dark:text-teal-400 hover:underline"
+                                            onClick={() => router.push(ROUTES.PERMINTAAN_VENDOR_DETAIL(data.id_permintaan as string))}>
+                                            {data.nomor_permintaan}
+                                        </span>
+                                    ),
+                                }] : []),
                                 { label: 'Nilai Kontrak',     value: data.nilai_kontrak ? formatRupiah(data.nilai_kontrak) : <span className="text-gray-400">—</span> },
                                 { label: 'Rate',              value: data.rate ? formatRupiah(data.rate) : <span className="text-gray-400">—</span> },
                                 { label: 'Satuan Kontrak',    value: data.satuan ?? <span className="text-gray-400">—</span> },
@@ -567,6 +616,21 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.tanggal_selesai ? dayjs(form.tanggal_selesai).toDate() : null}
                                     onChange={date => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : null }))} />
                             </FormItem>
+                            <FormItem label="Kontrak Payung (opsional)" className="sm:col-span-2">
+                                <Select isSearchable isClearable
+                                    isDisabled={adalahPayung || kontrakPayungOptions.length === 0}
+                                    placeholder={adalahPayung
+                                        ? 'Kontrak ini adalah payung'
+                                        : kontrakPayungOptions.length === 0
+                                            ? 'Vendor ini belum punya kontrak yang bisa jadi payung'
+                                            : 'Pilih kontrak payung...'}
+                                    options={kontrakPayungOptions}
+                                    value={kontrakPayungOptions.find(o => o.value === form.id_kontrak_induk) ?? null}
+                                    onChange={opt => setForm(p => ({ ...p, id_kontrak_induk: opt?.value ?? null }))} />
+                                {adalahPayung && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Kontrak ini adalah payung — tidak bisa dijadikan turunan kontrak lain.</p>
+                                )}
+                            </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => {
@@ -585,6 +649,78 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 )}
             </Card>
 
+            {adalahPayung && (
+                <Card>
+                    <p className="font-semibold mb-4">Kontrak Turunan ({data.jumlah_turunan})</p>
+                    <div className="mb-5">
+                        <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-gray-500">Total Nilai Turunan</span>
+                            <span className={`font-semibold tabular-nums ${melebihiPlafon ? 'text-red-500' : 'text-gray-700 dark:text-gray-200'}`}>
+                                {formatRupiah(totalNilaiTurunan)}{nilaiPayung > 0 ? ` dari ${formatRupiah(nilaiPayung)}` : ''}
+                            </span>
+                        </div>
+                        {nilaiPayung > 0 ? (
+                            <>
+                                <Progress percent={Math.min(persenPakaiPlafon, 100)} showInfo={false} size="sm"
+                                    customColorClass={melebihiPlafon ? 'bg-red-500' : 'bg-emerald-500'} />
+                                <p className={`text-xs mt-1 ${melebihiPlafon ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                                    {melebihiPlafon
+                                        ? `Melebihi plafon kontrak payung — terpakai ${persenPakaiPlafon}%`
+                                        : `${persenPakaiPlafon}% dari plafon kontrak payung terpakai`}
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-xs text-gray-400 mt-1">Kontrak payung ini belum punya nilai kontrak — plafon tidak dapat dihitung, hanya total turunan yang ditampilkan.</p>
+                        )}
+                    </div>
+                    {turunanList.length === 0 ? (
+                        <p className="text-sm text-gray-400">Belum ada kontrak turunan.</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead>
+                                    <tr className="text-left text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                                        <th className="py-2 pr-3 font-medium">No. Kontrak</th>
+                                        <th className="py-2 pr-3 font-medium">Mekanisme</th>
+                                        <th className="py-2 pr-3 font-medium">Periode</th>
+                                        <th className="py-2 pr-3 font-medium">Nilai</th>
+                                        <th className="py-2 pr-3 font-medium">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {turunanList.map(t => (
+                                        <tr key={t.id_kontrak_vendor} className="border-b border-gray-100 dark:border-gray-700">
+                                            <td className="py-2.5 pr-3 whitespace-nowrap">
+                                                <span className="cursor-pointer font-mono font-semibold text-blue-600 hover:underline"
+                                                    onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(t.id_kontrak_vendor))}>
+                                                    {t.nomor_kontrak || `Kontrak ${t.id_kontrak_vendor.slice(0, 8)}`}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 pr-3">{MEKANISME_LABEL[t.mekanisme] ?? t.mekanisme}</td>
+                                            <td className="py-2.5 pr-3 whitespace-nowrap">
+                                                {t.tanggal_mulai && t.tanggal_selesai
+                                                    ? `${dayjs(t.tanggal_mulai).format('DD MMM YYYY')} — ${dayjs(t.tanggal_selesai).format('DD MMM YYYY')}`
+                                                    : <span className="text-gray-400">—</span>}
+                                            </td>
+                                            <td className="py-2.5 pr-3 font-semibold tabular-nums whitespace-nowrap">
+                                                {t.nilai_kontrak ? formatRupiah(t.nilai_kontrak) : <span className="text-gray-400">—</span>}
+                                            </td>
+                                            <td className="py-2.5 pr-3">
+                                                {t.status
+                                                    ? <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${KONTRAK_STATUS_CLASS[t.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                                                        {KONTRAK_STATUS_LABEL[t.status] ?? t.status}
+                                                    </span>
+                                                    : <span className="text-gray-400">—</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            )}
+
             <Card>
                 <p className="font-semibold mb-4">Unit & Supir Kontrak Ini</p>
                 <div className={`grid grid-cols-1 gap-x-8 gap-y-6 ${kontrakPaket && driverCadangan.length > 0 ? 'sm:grid-cols-2' : ''}`}>
@@ -597,21 +733,21 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                             </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
-                                loading={downloadingTemplate === 'unit'}
-                                onClick={() => unduhTemplate('unit')}>
-                                Unduh Template
-                            </Button>
+                            <Tooltip title="Unduh Template">
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
+                                    loading={downloadingTemplate === 'unit'}
+                                    onClick={() => unduhTemplate('unit')} />
+                            </Tooltip>
                             <Upload accept=".xlsx" showList={false} uploadLimit={1} onChange={files => pilihFileTimpa('unit', files)}>
-                                <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
-                                    loading={uploading === 'unit'}>
-                                    Upload Excel (Timpa)
-                                </Button>
+                                <Tooltip title="Upload Excel (Timpa)">
+                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
+                                        loading={uploading === 'unit'} />
+                                </Tooltip>
                             </Upload>
-                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                onClick={() => setDraftUnits(prev => [...prev, emptyTambahUnit()])}>
-                                {kontrakPaket ? 'Tambah Pasangan' : 'Tambah Unit'}
-                            </Button>
+                            <Tooltip title={kontrakPaket ? 'Tambah Pasangan' : 'Tambah Unit'}>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                    onClick={() => setDraftUnits(prev => [...prev, emptyTambahUnit()])} />
+                            </Tooltip>
                         </div>
                         {unitTerikat.length === 0 && draftUnits.length === 0 ? (
                             <p className="text-sm text-gray-400">Belum ada unit tertaut ke kontrak ini.</p>

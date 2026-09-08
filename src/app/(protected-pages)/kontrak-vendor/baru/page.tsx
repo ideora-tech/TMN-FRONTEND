@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Card, Button, Dialog, FormItem, Input, Upload, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
@@ -12,9 +12,11 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { kontrakVendorService, KontrakUnitInput, KontrakSupirInput, BarisGagal } from '@/services/kontrak-vendor.service'
+import { kontrakVendorService, KontrakVendor, KontrakUnitInput, KontrakSupirInput, BarisGagal } from '@/services/kontrak-vendor.service'
+import { permintaanVendorService, PermintaanVendor, ringkasanUnitDiminta } from '@/services/permintaan-vendor.service'
 import { Vendor } from '@/services/vendor.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+import { projectService } from '@/services/project.service'
 
 const MEKANISME_OPTIONS = [
     { value: 'unit_only',   label: 'Unit Only' },
@@ -73,12 +75,16 @@ const TAMPILKAN_SUPIR_CADANGAN = false
 
 export default function KontrakVendorBaruPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const idPermintaan = searchParams.get('id_permintaan')
+    const [permintaanAsal, setPermintaanAsal] = useState<PermintaanVendor | null>(null)
     const [form, setForm] = useState({
         id_vendor: '', mekanisme: 'unit_only', nilai_kontrak: '',
         nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '',
         pajak_persen: '', termin_pembayaran_hari: '',
-        tanggal_mulai: '', tanggal_selesai: '',
+        tanggal_mulai: '', tanggal_selesai: '', id_proyek: '',
     })
+    const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [vendorOptions, setVendorOptions] = useState<{ value: string; label: string }[]>([])
@@ -87,6 +93,8 @@ export default function KontrakVendorBaruPage() {
     const [supirRows, setSupirRows] = useState<SupirRow[]>([])
     const [salinDari, setSalinDari] = useState('')
     const [kontrakLamaOptions, setKontrakLamaOptions] = useState<{ value: string; label: string }[]>([])
+    const [kontrakVendorList, setKontrakVendorList] = useState<KontrakVendor[]>([])
+    const [idKontrakInduk, setIdKontrakInduk] = useState('')
     const [downloadingTemplate, setDownloadingTemplate] = useState<'' | 'unit' | 'supir'>('')
     const [parsing, setParsing] = useState<'' | 'unit' | 'supir'>('')
     const [parseGagal, setParseGagal] = useState<{ judul: string; daftar: BarisGagal[] } | null>(null)
@@ -95,25 +103,56 @@ export default function KontrakVendorBaruPage() {
     const pakaiSupir = form.mekanisme !== 'unit_only'
 
     useEffect(() => {
+        if (!idPermintaan) return
+        permintaanVendorService.get(idPermintaan)
+            .then(p => {
+                setPermintaanAsal(p)
+                setForm(prev => ({
+                    ...prev,
+                    mekanisme: p.mekanisme || prev.mekanisme,
+                    tanggal_mulai: p.periode_dari ?? prev.tanggal_mulai,
+                    tanggal_selesai: p.periode_sampai ?? prev.tanggal_selesai,
+                    id_proyek: p.id_proyek ?? prev.id_proyek,
+                }))
+            })
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+    }, [idPermintaan])
+
+    useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 999 } })
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
             .catch(() => {})
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisKendaraanOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
+        projectService.list(1, 200)
+            .then(res => setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: p.nama_proyek }))))
+            .catch(() => {})
     }, [])
 
     useEffect(() => {
         setSalinDari('')
         setKontrakLamaOptions([])
+        setKontrakVendorList([])
+        setIdKontrakInduk('')
         if (!form.id_vendor) return
         kontrakVendorService.list(1, { id_vendor: form.id_vendor, limit: '200' })
-            .then(res => setKontrakLamaOptions(res.data.map(k => ({
-                value: k.id_kontrak_vendor,
-                label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
-            }))))
+            .then(res => {
+                setKontrakVendorList(res.data)
+                setKontrakLamaOptions(res.data.map(k => ({
+                    value: k.id_kontrak_vendor,
+                    label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+                })))
+            })
             .catch(() => {})
     }, [form.id_vendor])
+
+    const kontrakPayungOptions = kontrakVendorList
+        .filter(k => !k.id_kontrak_induk)
+        .map(k => ({
+            value: k.id_kontrak_vendor,
+            label: `${k.nomor_kontrak || `Kontrak ${k.id_kontrak_vendor.slice(0, 8)}`} — ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
+        }))
 
     const ubahUnitRow = (i: number, patch: Partial<UnitRow>) =>
         setUnitRows(prev => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)))
@@ -277,6 +316,9 @@ export default function KontrakVendorBaruPage() {
                     }
                 })(),
                 ...(salinDari ? { salin_dari_kontrak: salinDari } : {}),
+                ...(idPermintaan ? { id_permintaan: idPermintaan } : {}),
+                ...(idKontrakInduk ? { id_kontrak_induk: idKontrakInduk } : {}),
+                ...(form.id_proyek ? { id_proyek: form.id_proyek } : {}),
             })
             if (dibuat._pesan?.includes('diambil alih')) {
                 toast.push(<Notification type="warning" duration={8000} title={dibuat._pesan} />)
@@ -303,6 +345,21 @@ export default function KontrakVendorBaruPage() {
                     <p className="text-gray-500 text-sm mt-0.5">Buat kontrak baru dengan vendor</p>
                 </div>
             </div>
+            {permintaanAsal && (
+                <Card className="border border-teal-200 bg-teal-50 dark:border-teal-500/30 dark:bg-teal-500/10">
+                    <p className="text-sm font-semibold text-teal-700 dark:text-teal-400">
+                        Dari Permintaan {permintaanAsal.nomor_permintaan}
+                    </p>
+                    <p className="text-sm text-teal-700 dark:text-teal-400 mt-1">
+                        {ringkasanUnitDiminta(permintaanAsal)} · {MEKANISME_LABEL[permintaanAsal.mekanisme] ?? permintaanAsal.mekanisme}
+                        {permintaanAsal.nama_proyek ? ` · Proyek ${permintaanAsal.nama_proyek}` : ''}
+                        — mekanisme & periode sudah terisi otomatis, kontrak akan tertaut ke permintaan ini.
+                    </p>
+                    {permintaanAsal.catatan && (
+                        <p className="text-xs text-teal-600 dark:text-teal-300 mt-1 whitespace-pre-line">Catatan permintaan: {permintaanAsal.catatan}</p>
+                    )}
+                </Card>
+            )}
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
@@ -321,6 +378,14 @@ export default function KontrakVendorBaruPage() {
                                 if (mekanisme === 'unit_only') setSupirRows([])
                             }} />
                     </FormItem>
+                    <div className="sm:col-span-2">
+                        <FormItem label="Proyek (opsional)">
+                            <Select isSearchable isClearable placeholder="Pilih proyek..."
+                                options={proyekOptions}
+                                value={proyekOptions.find(o => o.value === form.id_proyek) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, id_proyek: opt?.value ?? '' }))} />
+                        </FormItem>
+                    </div>
                     <FormItem label="No. Kontrak" asterisk invalid={!!errors.nomor_kontrak} errorMessage={errors.nomor_kontrak}>
                         <Input placeholder="Nomor kontrak" value={form.nomor_kontrak}
                             onChange={e => setForm(p => ({ ...p, nomor_kontrak: e.target.value }))} />
@@ -382,6 +447,22 @@ export default function KontrakVendorBaruPage() {
                     </FormItem>
                 </div>
 
+                {form.id_vendor && (
+                    <div className="mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <FormItem label="Kontrak Payung (opsional)">
+                            <p className="text-xs text-gray-400 -mt-1 mb-2">Tautkan kontrak ini sebagai turunan dari kontrak payung vendor yang sama — plafon nilai payung bersifat monitoring, tidak memblokir</p>
+                            <Select isSearchable isClearable
+                                isDisabled={kontrakPayungOptions.length === 0}
+                                placeholder={kontrakPayungOptions.length === 0
+                                    ? 'Vendor ini belum punya kontrak yang bisa jadi payung'
+                                    : 'Pilih kontrak payung...'}
+                                options={kontrakPayungOptions}
+                                value={kontrakPayungOptions.find(o => o.value === idKontrakInduk) ?? null}
+                                onChange={opt => setIdKontrakInduk(opt?.value ?? '')} />
+                        </FormItem>
+                    </div>
+                )}
+
                 <div className="mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <div>
@@ -389,28 +470,28 @@ export default function KontrakVendorBaruPage() {
                             <p className="text-xs text-gray-400 mt-0.5">{pakaiSupir ? 'Satu baris = satu paket: unit beserta driver bawaannya dari vendor' : 'Unit baru milik vendor yang langsung terikat ke kontrak ini'}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
-                                loading={downloadingTemplate === 'unit'}
-                                onClick={() => unduhTemplate('unit')}>
-                                Unduh Template
-                            </Button>
+                            <Tooltip title="Unduh Template">
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
+                                    loading={downloadingTemplate === 'unit'}
+                                    onClick={() => unduhTemplate('unit')} />
+                            </Tooltip>
                             <Upload accept=".xlsx" showList={false} uploadLimit={1} onChange={uploadExcelUnit}>
-                                <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
-                                    loading={parsing === 'unit'}>
-                                    Upload Excel (Timpa)
-                                </Button>
+                                <Tooltip title="Upload Excel (Timpa)">
+                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
+                                        loading={parsing === 'unit'} />
+                                </Tooltip>
                             </Upload>
                             {unitRows.length > 0 && (
-                                <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
-                                    className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
-                                    onClick={() => setHapusSemuaTarget('unit')}>
-                                    Hapus Semua
-                                </Button>
+                                <Tooltip title="Hapus Semua">
+                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
+                                        className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                        onClick={() => setHapusSemuaTarget('unit')} />
+                                </Tooltip>
                             )}
-                            <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                onClick={() => setUnitRows(prev => [...prev, emptyUnitRow()])}>
-                                {pakaiSupir ? 'Tambah Pasangan' : 'Tambah Unit'}
-                            </Button>
+                            <Tooltip title={pakaiSupir ? 'Tambah Pasangan' : 'Tambah Unit'}>
+                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                    onClick={() => setUnitRows(prev => [...prev, emptyUnitRow()])} />
+                            </Tooltip>
                         </div>
                     </div>
                     {unitRows.length === 0 ? (
@@ -527,28 +608,28 @@ export default function KontrakVendorBaruPage() {
                                 <p className="text-xs text-gray-400 mt-0.5">Driver vendor tanpa unit bawaan — pengganti/rotasi; driver utama diisi langsung di baris pasangan di atas</p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                                <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
-                                    loading={downloadingTemplate === 'supir'}
-                                    onClick={() => unduhTemplate('supir')}>
-                                    Unduh Template
-                                </Button>
+                                <Tooltip title="Unduh Template">
+                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineDownload />}
+                                        loading={downloadingTemplate === 'supir'}
+                                        onClick={() => unduhTemplate('supir')} />
+                                </Tooltip>
                                 <Upload accept=".xlsx" showList={false} uploadLimit={1} onChange={uploadExcelSupir}>
-                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
-                                        loading={parsing === 'supir'}>
-                                        Upload Excel (Timpa)
-                                    </Button>
+                                    <Tooltip title="Upload Excel (Timpa)">
+                                        <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />}
+                                            loading={parsing === 'supir'} />
+                                    </Tooltip>
                                 </Upload>
                                 {supirRows.length > 0 && (
-                                    <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
-                                        className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
-                                        onClick={() => setHapusSemuaTarget('supir')}>
-                                        Hapus Semua
-                                    </Button>
+                                    <Tooltip title="Hapus Semua">
+                                        <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
+                                            className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                                            onClick={() => setHapusSemuaTarget('supir')} />
+                                    </Tooltip>
                                 )}
-                                <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                    onClick={() => setSupirRows(prev => [...prev, emptySupirRow()])}>
-                                    Tambah Supir
-                                </Button>
+                                <Tooltip title="Tambah Supir">
+                                    <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                                        onClick={() => setSupirRows(prev => [...prev, emptySupirRow()])} />
+                                </Tooltip>
                             </div>
                         </div>
                         {supirRows.length === 0 ? (

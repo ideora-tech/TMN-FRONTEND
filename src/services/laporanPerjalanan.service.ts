@@ -27,6 +27,7 @@ export interface LaporanPerjalanan {
     uang_jalan: number
     uang_tol: number
     catatan_insiden: string | null
+    no_surat_jalan: string | null
     id_jenis_bbm: string | null
     jumlah_liter: number | null
     biaya_lain: BiayaLain[]
@@ -40,6 +41,7 @@ export type LaporanPerjalananPayload = {
     uang_jalan: number
     uang_tol: number
     catatan_insiden?: string | null
+    no_surat_jalan?: string | null
     id_jenis_bbm?: string | null
     jumlah_liter?: number | null
     biaya_lain: { nama_biaya: string; nominal: number }[]
@@ -53,6 +55,7 @@ function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[]):
     fd.append('uang_jalan', String(payload.uang_jalan))
     fd.append('uang_tol', String(payload.uang_tol))
     if (payload.catatan_insiden) fd.append('catatan_insiden', payload.catatan_insiden)
+    if (payload.no_surat_jalan) fd.append('no_surat_jalan', payload.no_surat_jalan)
     if (payload.id_jenis_bbm) fd.append('id_jenis_bbm', payload.id_jenis_bbm)
     if (payload.jumlah_liter != null) fd.append('jumlah_liter', String(payload.jumlah_liter))
     payload.biaya_lain.forEach((b, i) => {

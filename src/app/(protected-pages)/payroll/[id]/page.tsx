@@ -352,16 +352,16 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 </div>
                 <div className="flex items-center gap-2">
                     {draft && (
-                        <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingTemplate}
-                            onClick={handleDownloadTemplate}>
-                            Unduh Template
-                        </Button>
+                        <Tooltip title="Unduh Template">
+                            <Button variant="default" size="sm" icon={<HiOutlineDownload />} loading={downloadingTemplate}
+                                onClick={handleDownloadTemplate} />
+                        </Tooltip>
                     )}
                     {draft && (
                         <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
-                            <Button type="button" variant="default" size="sm" icon={<HiOutlineUpload />} loading={importing}>
-                                Import Excel
-                            </Button>
+                            <Tooltip title="Import Excel">
+                                <Button type="button" variant="default" size="sm" icon={<HiOutlineUpload />} loading={importing} />
+                            </Tooltip>
                         </Upload>
                     )}
                     {draft && (

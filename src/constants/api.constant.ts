@@ -128,6 +128,11 @@ export const API_ENDPOINTS = {
     VENDOR_IMPORT_TEMPLATE: '/api/proxy/vendor/import/template',
     VENDOR_IMPORT:          '/api/proxy/vendor/import',
 
+    // Permintaan Vendor
+    PERMINTAAN_VENDOR:        '/api/proxy/permintaan-vendor',
+    PERMINTAAN_VENDOR_DETAIL: (id: string) => `/api/proxy/permintaan-vendor/${id}`,
+    PERMINTAAN_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/permintaan-vendor/${id}/ajukan-approval`,
+
     // Kontrak Vendor
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
@@ -227,6 +232,8 @@ export const API_ENDPOINTS = {
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
     PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
     PENUGASAN_HARIAN: '/api/proxy/penugasan/harian',
+    PENUGASAN_TEMPLATE_UNIT: '/api/proxy/penugasan/template-unit',
+    PENUGASAN_PARSE_UNIT: '/api/proxy/penugasan/parse-unit',
     PENUGASAN_BOARD:  '/api/proxy/penugasan/board',
     PENUGASAN_BOARD_AKTIVITAS: '/api/proxy/penugasan/board/aktivitas',
 

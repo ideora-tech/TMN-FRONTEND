@@ -232,30 +232,30 @@ export default function SupirPage() {
                     <p className="text-gray-500 text-sm mt-0.5">Data master supir</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button
-                        size="sm" variant="default"
-                        icon={<HiOutlineDownload />}
-                        loading={downloadingTemplate}
-                        onClick={handleDownloadTemplate}
-                    >
-                        Unduh Template
-                    </Button>
-                    <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
+                    <Tooltip title="Unduh Template">
                         <Button
-                            type="button" size="sm" variant="default"
-                            icon={<HiOutlineUpload />}
-                            loading={importing}
-                        >
-                            Import Excel
-                        </Button>
+                            size="sm" variant="default"
+                            icon={<HiOutlineDownload />}
+                            loading={downloadingTemplate}
+                            onClick={handleDownloadTemplate}
+                        />
+                    </Tooltip>
+                    <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
+                        <Tooltip title="Import Excel">
+                            <Button
+                                type="button" size="sm" variant="default"
+                                icon={<HiOutlineUpload />}
+                                loading={importing}
+                            />
+                        </Tooltip>
                     </Upload>
-                    <Button
-                        variant="solid" size="sm"
-                        icon={<HiPlusCircle />}
-                        onClick={() => router.push(ROUTES.SUPIR_BARU)}
-                    >
-                        Tambah Supir
-                    </Button>
+                    <Tooltip title="Tambah Supir">
+                        <Button
+                            variant="solid" size="sm"
+                            icon={<HiPlusCircle />}
+                            onClick={() => router.push(ROUTES.SUPIR_BARU)}
+                        />
+                    </Tooltip>
                 </div>
             </div>
             <Card bodyClass="p-0">

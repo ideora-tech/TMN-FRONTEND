@@ -8,7 +8,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDownload, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineDocumentDownload, HiPlusCircle } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -321,11 +321,11 @@ export default function KonsolidasiKlienPage() {
                     />
                     {loading && <Spinner size={20} />}
                     <div className="flex-1" />
-                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                        disabled={!rekap || rekap.trips.length === 0}
-                        loading={exporting} onClick={handleExport}>
-                        Export Excel
-                    </Button>
+                    <Tooltip title="Export Excel">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                            disabled={!rekap || rekap.trips.length === 0}
+                            loading={exporting} onClick={handleExport} />
+                    </Tooltip>
                 </div>
 
                 {!selectedKlien ? (

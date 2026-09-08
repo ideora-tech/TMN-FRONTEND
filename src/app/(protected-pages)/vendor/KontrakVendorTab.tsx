@@ -79,10 +79,28 @@ export default function KontrakVendorTab() {
             ),
         },
         {
-            header: 'No. Kontrak', accessorKey: 'nomor_kontrak', size: 160,
-            cell: ({ row }) => row.original.nomor_kontrak
-                ? <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.original.nomor_kontrak}</span>
-                : <span className="text-gray-400">—</span>,
+            header: 'No. Kontrak', accessorKey: 'nomor_kontrak', size: 200,
+            cell: ({ row }) => (
+                <div>
+                    <div className="flex items-center flex-wrap gap-1.5">
+                        {row.original.nomor_kontrak
+                            ? <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.original.nomor_kontrak}</span>
+                            : <span className="text-gray-400">—</span>}
+                        {(row.original.jumlah_turunan ?? 0) > 0 && (
+                            <Tag className="bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300">Payung</Tag>
+                        )}
+                        {row.original.id_kontrak_induk && (
+                            <Tag className="bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">Turunan</Tag>
+                        )}
+                    </div>
+                    {row.original.nomor_permintaan && row.original.id_permintaan && (
+                        <p className="text-xs text-teal-600 dark:text-teal-400 mt-0.5 cursor-pointer hover:underline"
+                            onClick={() => router.push(ROUTES.PERMINTAAN_VENDOR_DETAIL(row.original.id_permintaan as string))}>
+                            Dari {row.original.nomor_permintaan}
+                        </p>
+                    )}
+                </div>
+            ),
         },
         {
             header: 'Mekanisme', accessorKey: 'mekanisme', size: 160,

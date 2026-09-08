@@ -71,7 +71,7 @@ export default function LogApprovalDialog({ isOpen, onClose, kode, idReferensi, 
             )}
 
             <div className="flex justify-center mt-4">
-                <Button variant="default" onClick={onClose}>Kembali</Button>
+                <Button variant="default" onClick={onClose}>Batal</Button>
             </div>
         </Dialog>
     )
