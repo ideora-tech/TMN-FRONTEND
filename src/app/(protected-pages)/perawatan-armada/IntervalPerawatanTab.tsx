@@ -5,7 +5,7 @@ import { Card, Input, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import { intervalPerawatanService, IntervalPerawatan } from '@/services/intervalPerawatan.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -95,11 +95,11 @@ export default function IntervalPerawatanTab() {
                 const row = props.row.original
                 return (
                     <div className="flex items-center justify-end gap-1">
-                        <Tooltip title="Edit">
+                        <Tooltip title="Lihat Detail">
                             <span
-                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 cursor-pointer transition-colors"
+                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
                                 onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN_DETAIL(row.id_interval_perawatan))}
-                            ><HiOutlinePencilAlt className="text-base" /></span>
+                            ><HiOutlineEye className="text-base" /></span>
                         </Tooltip>
                         <Tooltip title="Hapus">
                             <span

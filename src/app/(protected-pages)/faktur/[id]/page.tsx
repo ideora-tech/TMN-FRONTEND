@@ -6,15 +6,17 @@ import { Card, Button, Dialog, FormItem, Input, DatePicker, Tooltip, toast, Noti
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import { HiPlusCircle, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { fakturService, Faktur } from '@/services/faktur.service'
+import { fakturService, Faktur, FakturPajak } from '@/services/faktur.service'
 
 type EditItemRow = { deskripsi: string; qty: string; harga_satuan: string }
+type EditPajakRow = { nama: string; persen: string }
+const MAKS_PAJAK = 10
 
 const STATUS_CLASS: Record<string, string> = {
     draft:             'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
@@ -31,7 +33,7 @@ const STATUS_LABEL: Record<string, string> = {
 // Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
 const NEXT_STATUS: Record<string, string[]> = {
     draft:             ['batal'],
-    menunggu_approval: [],
+    menunggu_approval: ['batal'],
     terkirim:          ['lunas', 'batal'],
     lunas:              [],
     batal:              [],
@@ -96,8 +98,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [editTanggal, setEditTanggal]     = useState('')
     const [editJatuhTempo, setEditJatuhTempo] = useState('')
     const [editItems, setEditItems]         = useState<EditItemRow[]>([])
-    const [editNamaPajak, setEditNamaPajak]     = useState('')
-    const [editPersenPajak, setEditPersenPajak] = useState('')
+    const [editPajak, setEditPajak]         = useState<EditPajakRow[]>([])
     const [savingEdit, setSavingEdit]       = useState(false)
 
     const openEdit = () => {
@@ -109,8 +110,11 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             qty: String(it.qty),
             harga_satuan: String(it.harga_satuan),
         })))
-        setEditNamaPajak(faktur.nama_pajak ?? '')
-        setEditPersenPajak(faktur.persen_pajak != null ? String(faktur.persen_pajak) : '')
+        setEditPajak(
+            faktur.pajak && faktur.pajak.length > 0
+                ? faktur.pajak.map(p => ({ nama: p.nama, persen: String(p.persen) }))
+                : (faktur.persen_pajak ? [{ nama: faktur.nama_pajak ?? '', persen: String(faktur.persen_pajak) }] : [])
+        )
         setEditOpen(true)
     }
 
@@ -120,21 +124,35 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const tambahEditRow = () => setEditItems(prev => [...prev, { deskripsi: '', qty: '1', harga_satuan: '' }])
     const hapusEditRow  = (index: number) => setEditItems(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
 
+    const setEditPajakRow = (index: number, patch: Partial<EditPajakRow>) =>
+        setEditPajak(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)))
+
+    const tambahEditPajak = () => setEditPajak(prev => (prev.length >= MAKS_PAJAK ? prev : [...prev, { nama: '', persen: '' }]))
+    const hapusEditPajak  = (index: number) => setEditPajak(prev => prev.filter((_, i) => i !== index))
+
     const subtotalEdit = editItems.reduce((sum, r) => sum + (Number(r.qty) || 0) * (Number(r.harga_satuan) || 0), 0)
-    const persenPajakEdit = Number(editPersenPajak) || 0
-    const nominalPajakEdit = subtotalEdit * persenPajakEdit / 100
-    const totalEdit = subtotalEdit + nominalPajakEdit
-    const editValid = editItems.length > 0 && editItems.every(r => r.deskripsi.trim() !== '' && (Number(r.qty) || 0) > 0)
+    const nominalPajakEdit = (persen: number) => subtotalEdit * persen / 100
+    const totalPajakEdit = editPajak.reduce((sum, r) => sum + nominalPajakEdit(Number(r.persen) || 0), 0)
+    const totalEdit = subtotalEdit + totalPajakEdit
+
+    const namaPajakLower = editPajak.map(r => r.nama.trim().toLowerCase())
+    const pajakDuplikat = (index: number) => namaPajakLower[index] !== '' && namaPajakLower.filter(n => n === namaPajakLower[index]).length > 1
+    const pajakValid = editPajak.every((row, i) => {
+        const nama = row.nama.trim()
+        const persen = row.persen === '' ? NaN : Number(row.persen)
+        return nama !== '' && !Number.isNaN(persen) && persen >= 0 && persen <= 100 && !pajakDuplikat(i)
+    })
+    const editValid = editItems.length > 0 && editItems.every(r => r.deskripsi.trim() !== '' && (Number(r.qty) || 0) > 0) && pajakValid
 
     const handleSaveEdit = async () => {
         if (!editValid) return
         setSavingEdit(true)
         try {
+            const pajakPayload: FakturPajak[] = editPajak.map(r => ({ nama: r.nama.trim(), persen: Number(r.persen) || 0 }))
             const updated = await fakturService.update(id, {
                 tanggal_faktur: editTanggal || null,
                 jatuh_tempo: editJatuhTempo || null,
-                nama_pajak: editNamaPajak.trim() || null,
-                persen_pajak: editPersenPajak ? Number(editPersenPajak) : null,
+                pajak: pajakPayload,
                 items: editItems.map(r => ({
                     deskripsi: r.deskripsi.trim(),
                     qty: Number(r.qty),
@@ -197,6 +215,10 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     if (!faktur) return <div className="p-6 text-red-500">Invoice tidak ditemukan.</div>
 
     const initial = faktur.nomor_faktur?.charAt(0).toUpperCase() ?? 'F'
+    const subtotalItems = (faktur.items ?? []).reduce((s, i) => s + i.subtotal, 0)
+    const pajakList: FakturPajak[] = faktur.pajak && faktur.pajak.length > 0
+        ? faktur.pajak
+        : (faktur.persen_pajak ? [{ nama: faktur.nama_pajak || 'Pajak', persen: faktur.persen_pajak }] : [])
 
     return (
         <div className="flex flex-col gap-4">
@@ -213,14 +235,6 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <h3 className="font-bold">{faktur.nomor_faktur}</h3>
                         <p className="text-gray-500 text-sm mt-0.5">Informasi dan pembayaran invoice</p>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Tooltip title="Export PDF">
-                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingExport} onClick={handleExportPdf} />
-                    </Tooltip>
-                    <Tooltip title="Log Approval">
-                        <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
-                    </Tooltip>
                 </div>
             </div>
 
@@ -253,7 +267,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             {faktur.status === 'menunggu_approval' && (
                 <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
                     <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien.
+                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.
                     </p>
                 </Card>
             )}
@@ -320,9 +334,12 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLASS[faktur.status] ?? 'bg-gray-100 text-gray-700'}`}>
                             {STATUS_LABEL[faktur.status] ?? faktur.status}
                         </span>
-                        {!!faktur.riwayat_status?.length && (
-                            <Button size="sm" variant="default" onClick={() => setLogOpen(true)}>Log</Button>
-                        )}
+                        <Tooltip title="Export PDF">
+                            <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingExport} onClick={handleExportPdf} />
+                        </Tooltip>
+                        <Tooltip title="Log Approval">
+                            <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
+                        </Tooltip>
                     </div>
                 </div>
 
@@ -397,7 +414,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 <Card>
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Item Invoice</p>
-                        {faktur.status === 'draft' && (
+                        {['draft', 'menunggu_approval'].includes(faktur.status) && (
                             <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={openEdit}>
                                 Edit Invoice
                             </Button>
@@ -424,25 +441,27 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                                 ))}
                             </tbody>
                             <tfoot>
-                                {!!faktur.persen_pajak && (
+                                {pajakList.length > 0 && (
                                     <>
                                         <tr className="border-t border-gray-200 dark:border-gray-600">
                                             <td colSpan={3} className="pt-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Subtotal</td>
                                             <td className="pt-3 text-right text-gray-600 dark:text-gray-400">
-                                                {formatRupiah(faktur.items.reduce((s, i) => s + i.subtotal, 0))}
+                                                {formatRupiah(subtotalItems)}
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <td colSpan={3} className="pt-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                                {faktur.nama_pajak || 'Pajak'} ({faktur.persen_pajak}%)
-                                            </td>
-                                            <td className="pt-1 text-right text-gray-600 dark:text-gray-400">
-                                                {formatRupiah(faktur.total - faktur.items.reduce((s, i) => s + i.subtotal, 0))}
-                                            </td>
-                                        </tr>
+                                        {pajakList.map((p, i) => (
+                                            <tr key={i}>
+                                                <td colSpan={3} className="pt-1 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                                    {p.nama || 'Pajak'} ({p.persen}%)
+                                                </td>
+                                                <td className="pt-1 text-right text-gray-600 dark:text-gray-400">
+                                                    {formatRupiah(subtotalItems * p.persen / 100)}
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </>
                                 )}
-                                <tr className={faktur.persen_pajak ? '' : 'border-t border-gray-200 dark:border-gray-600'}>
+                                <tr className={pajakList.length > 0 ? '' : 'border-t border-gray-200 dark:border-gray-600'}>
                                     <td colSpan={3} className="pt-2 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</td>
                                     <td className="pt-2 text-right font-bold text-gray-900 dark:text-gray-100">{formatRupiah(faktur.total)}</td>
                                 </tr>
@@ -553,30 +572,53 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                             </div>
 
                             <div className="mt-4">
-                                <p className="text-sm font-semibold mb-2">Pajak (opsional)</p>
-                                <div className="grid grid-cols-12 gap-2 items-center">
-                                    <div className="col-span-8 sm:col-span-9">
-                                        <Input placeholder="Nama pajak (mis. PPN)" value={editNamaPajak}
-                                            onChange={e => setEditNamaPajak(e.target.value)} />
-                                    </div>
-                                    <div className="col-span-4 sm:col-span-3">
-                                        <Input suffix="%" placeholder="0" value={editPersenPajak}
-                                            onChange={e => setEditPersenPajak(e.target.value.replace(/[^\d.]/g, ''))} />
-                                    </div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm font-semibold">Pajak (opsional)</p>
+                                    <button type="button" onClick={tambahEditPajak} disabled={editPajak.length >= MAKS_PAJAK}
+                                        className="inline-flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                                        <HiOutlinePlus /> Tambah Pajak
+                                    </button>
                                 </div>
+                                <div className="flex flex-col gap-2">
+                                    {editPajak.map((row, index) => (
+                                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                                            <div className="col-span-12 sm:col-span-7">
+                                                <Input placeholder="Nama pajak (mis. PPN)" value={row.nama}
+                                                    invalid={row.nama.trim() === '' || pajakDuplikat(index)}
+                                                    onChange={e => setEditPajakRow(index, { nama: e.target.value })} />
+                                            </div>
+                                            <div className="col-span-9 sm:col-span-4">
+                                                <Input suffix="%" placeholder="0" value={row.persen}
+                                                    invalid={row.persen === '' || Number(row.persen) < 0 || Number(row.persen) > 100}
+                                                    onChange={e => setEditPajakRow(index, { persen: e.target.value.replace(/[^\d.]/g, '') })} />
+                                            </div>
+                                            <div className="col-span-3 sm:col-span-1 flex justify-end">
+                                                <button type="button" onClick={() => hapusEditPajak(index)}
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                    <HiOutlineTrash />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {editPajak.some((row, i) => pajakDuplikat(i)) && (
+                                    <p className="text-red-500 text-xs mt-1">Nama pajak tidak boleh sama dengan baris lain</p>
+                                )}
                             </div>
 
                             <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3 flex flex-col gap-1">
-                                {persenPajakEdit > 0 && (
+                                {editPajak.length > 0 && (
                                     <>
                                         <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                                             <span>Subtotal</span>
                                             <span className="tabular-nums">{formatRupiah(subtotalEdit)}</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                                            <span>{editNamaPajak.trim() || 'Pajak'} ({persenPajakEdit}%)</span>
-                                            <span className="tabular-nums">{formatRupiah(nominalPajakEdit)}</span>
-                                        </div>
+                                        {editPajak.map((row, i) => (
+                                            <div key={i} className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                                <span>{row.nama.trim() || 'Pajak'} ({Number(row.persen) || 0}%)</span>
+                                                <span className="tabular-nums">{formatRupiah(nominalPajakEdit(Number(row.persen) || 0))}</span>
+                                            </div>
+                                        ))}
                                     </>
                                 )}
                                 <div className="flex items-center justify-between">

@@ -81,6 +81,7 @@ export interface PengajuanPengeluaran {
     dibuat_pada: string
     diubah_pada: string | null
     approval: ApprovalPengajuan[]
+    approval_transfer?: ApprovalPengajuan[]
     approval_progress: ApprovalProgress | null
     bisa_approve: boolean
 }

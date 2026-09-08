@@ -245,6 +245,25 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
+                    {(p.approval_transfer ?? []).length > 0 && (
+                        <div className="mt-5">
+                            <p className={`${LABEL_CLASS} mb-2`}>Persetujuan Transfer</p>
+                            <div className="flex flex-col gap-2">
+                                {(p.approval_transfer ?? []).map(a => (
+                                    <div key={a.id_pengguna}
+                                        className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{a.nama}</span>
+                                            <Tag className={`text-xs font-semibold ${STATUS_APPROVAL_TAG[a.status]}`}>{STATUS_APPROVAL_LABEL[a.status]}</Tag>
+                                        </div>
+                                        {a.waktu_aksi && <p className="text-xs text-gray-400 mt-1">{dayjs(a.waktu_aksi).format('DD/MM/YYYY HH:mm')}</p>}
+                                        {a.catatan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{a.catatan}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="mt-5">
                         <p className={`${LABEL_CLASS} mb-2`}>Bukti Transfer</p>
                         {p.url_bukti ? (

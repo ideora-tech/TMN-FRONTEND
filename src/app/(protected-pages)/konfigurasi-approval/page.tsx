@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Button, Input, Select, Tag, Tooltip, Dialog, FormItem, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Select, Tag, Tooltip, Dialog, FormItem, Switcher, toast, Notification } from '@/components/ui'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -59,6 +59,7 @@ export default function KonfigurasiApprovalPage() {
 
     const [hapusTarget, setHapusTarget] = useState<ApprovalConfigApprover | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const [wajibManual, setWajibManual] = useState(false)
 
     const fetchList = useCallback(async (idEventType: string) => {
         setLoading(true)
@@ -75,8 +76,9 @@ export default function KonfigurasiApprovalPage() {
     const fetchBatas = useCallback(async () => {
         setLoadingBatas(true)
         try {
-            const batas = await approvalKeuanganService.getBatas()
-            setBatasInput(String(batas))
+            const pengaturan = await approvalKeuanganService.getPengaturan()
+            setBatasInput(String(pengaturan.batas))
+            setWajibManual(pengaturan.wajib_approval_manual ?? false)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -214,8 +216,8 @@ export default function KonfigurasiApprovalPage() {
         setSavingBatas(true)
         try {
             const nilai = Number(batasInput) || 0
-            await approvalKeuanganService.setBatas(nilai)
-            toast.push(<Notification type="success" title="Batas approval berhasil disimpan" />)
+            await approvalKeuanganService.setPengaturan(nilai, wajibManual)
+            toast.push(<Notification type="success" title="Pengaturan approval berhasil disimpan" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -333,25 +335,25 @@ export default function KonfigurasiApprovalPage() {
                                 if (found) fetchList(found.id_event_type)
                             }} />
                     </div>
-                    <Button size="sm" variant="default" icon={<HiPlusCircle />} onClick={bukaTambahEventType}>
-                        Tambah Jenis Pengajuan
-                    </Button>
-                    <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />}
-                        disabled={!eventTypeTerpilih} onClick={bukaEditEventType}>
-                        Edit
-                    </Button>
-                    <Button size="sm" variant="default"
-                        className={eventTypeTerpilih?.aktif
-                            ? 'text-amber-600 border-amber-300 hover:bg-amber-50'
-                            : 'text-emerald-600 border-emerald-300 hover:bg-emerald-50'}
-                        icon={eventTypeTerpilih?.aktif ? <HiOutlineBan /> : <HiOutlineCheckCircle />}
-                        disabled={!eventTypeTerpilih} onClick={() => setToggleAktifOpen(true)}>
-                        {eventTypeTerpilih?.aktif ? 'Nonaktifkan' : 'Aktifkan'}
-                    </Button>
-                    <Button size="sm" variant="default" className="text-red-500 border-red-300 hover:bg-red-50"
-                        icon={<HiOutlineTrash />} disabled={!eventTypeTerpilih} onClick={() => setHapusEventTypeOpen(true)}>
-                        Hapus
-                    </Button>
+                    <Tooltip title="Tambah Jenis Pengajuan">
+                        <Button size="sm" variant="default" icon={<HiPlusCircle />} onClick={bukaTambahEventType} />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />}
+                            disabled={!eventTypeTerpilih} onClick={bukaEditEventType} />
+                    </Tooltip>
+                    <Tooltip title={eventTypeTerpilih?.aktif ? 'Nonaktifkan' : 'Aktifkan'}>
+                        <Button size="sm" variant="default"
+                            className={eventTypeTerpilih?.aktif
+                                ? 'text-amber-600 border-amber-300 hover:bg-amber-50'
+                                : 'text-emerald-600 border-emerald-300 hover:bg-emerald-50'}
+                            icon={eventTypeTerpilih?.aktif ? <HiOutlineBan /> : <HiOutlineCheckCircle />}
+                            disabled={!eventTypeTerpilih} onClick={() => setToggleAktifOpen(true)} />
+                    </Tooltip>
+                    <Tooltip title="Hapus">
+                        <Button size="sm" variant="default" className="text-red-500 border-red-300 hover:bg-red-50"
+                            icon={<HiOutlineTrash />} disabled={!eventTypeTerpilih} onClick={() => setHapusEventTypeOpen(true)} />
+                    </Tooltip>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
                     Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, lainnya</span> — kalau jenisnya tidak ada/nonaktif, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor, kontrak_vendor) dipakai oleh modulnya masing-masing.
@@ -371,6 +373,16 @@ export default function KonfigurasiApprovalPage() {
                                 onChange={e => setBatasInput(e.target.value.replace(/\D/g, ''))} />
                         </FormItem>
                         <Button type="submit" variant="solid" loading={savingBatas} disabled={loadingBatas}>Simpan</Button>
+                    </div>
+                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Switcher checked={wajibManual} disabled={loadingBatas}
+                            onChange={checked => setWajibManual(checked)} />
+                        <div>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Pengajuan manual wajib approval</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                Berlaku untuk pengajuan yang dibuat dari dialog Tambah Pengajuan di Proses Pembayaran — nonaktif berarti pengajuan manual langsung masuk tahap verifikasi tanpa approval. Simpan untuk menerapkan.
+                            </p>
+                        </div>
                     </div>
                 </form>
             </Card>
