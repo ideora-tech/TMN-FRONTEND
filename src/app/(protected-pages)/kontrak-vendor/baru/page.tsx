@@ -431,6 +431,7 @@ export default function KontrakVendorBaruPage() {
                     </FormItem>
                 </div>
 
+                {false && (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <FormItem label="Salin dari Kontrak Sebelumnya">
                         <p className="text-xs text-gray-400 -mt-1 mb-2">Unit & supir kontrak lama vendor ini yang belum berpindah akan ditautkan ke kontrak baru</p>
@@ -446,6 +447,7 @@ export default function KontrakVendorBaruPage() {
                             onChange={opt => setSalinDari(opt?.value ?? '')} />
                     </FormItem>
                 </div>
+                )}
 
                 {form.id_vendor && (
                     <div className="mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
