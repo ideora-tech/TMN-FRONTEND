@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
-// import Select from '@/components/ui/Select' — nonaktif bareng field Jenis BBM, buka lagi kalau dibutuhkan
+import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -77,6 +77,8 @@ function LocalFotoPreview({ file }: { file: File }) {
 type BiayaLainRow = { nama_biaya: string; nominal: string }
 type BiayaTagihanRow = { nama_biaya: string; nominal: string }
 
+const LABEL_FOTO_LAPORAN = ['Surat Jalan', 'BBM', 'Uang Tol', 'Insiden', 'Lainnya']
+
 const emptyLaporanForm = () => ({
     biaya_bbm:        '',
     uang_jalan:       '',
@@ -109,7 +111,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
     const [laporanLoading, setLaporanLoading] = useState(true)
     const [showLaporanForm, setShowLaporanForm] = useState(false)
     const [laporanForm, setLaporanForm]       = useState(emptyLaporanForm())
-    const [laporanFotoFiles, setLaporanFotoFiles] = useState<File[]>([])
+    const [laporanFotoLabel, setLaporanFotoLabel] = useState<Record<string, File[]>>({})
     const [savingLaporan, setSavingLaporan]   = useState(false)
 
     const [fotoFiles, setFotoFiles]           = useState<File[]>([])
@@ -164,7 +166,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
 
     const handleOpenCreateLaporan = () => {
         setLaporanForm(emptyLaporanForm())
-        setLaporanFotoFiles([])
+        setLaporanFotoLabel({})
         setShowLaporanForm(true)
     }
 
@@ -182,7 +184,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
             biaya_tagihan:   laporan.biaya_tagihan.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
         })
-        setLaporanFotoFiles([])
+        setLaporanFotoLabel({})
         setShowLaporanForm(true)
     }
 
@@ -238,7 +240,8 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
     // }
 
     const handleSubmitLaporan = async () => {
-        if (!laporan && laporanFotoFiles.length === 0) {
+        const semuaFotoBaru = LABEL_FOTO_LAPORAN.flatMap(l => (laporanFotoLabel[l] ?? []).map(file => ({ file, label: l })))
+        if (!laporan && semuaFotoBaru.length === 0) {
             toast.push(<Notification type="danger" title="Laporan wajib menyertakan minimal 1 foto bukti" />)
             return
         }
@@ -263,14 +266,14 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                 }),
             }
             if (laporan) {
-                await laporanPerjalananService.update(laporan.id_laporan, payload, laporanFotoFiles)
+                await laporanPerjalananService.update(laporan.id_laporan, payload, semuaFotoBaru.map(f => f.file), semuaFotoBaru.map(f => f.label))
                 toast.push(<Notification type="success" title="Laporan perjalanan berhasil diperbarui" />)
             } else {
-                await laporanPerjalananService.create(idTrip, payload, laporanFotoFiles)
+                await laporanPerjalananService.create(idTrip, payload, semuaFotoBaru.map(f => f.file), semuaFotoBaru.map(f => f.label))
                 toast.push(<Notification type="success" title="Laporan perjalanan berhasil disimpan" />)
             }
             setShowLaporanForm(false)
-            setLaporanFotoFiles([])
+            setLaporanFotoLabel({})
             await fetchLaporan()
             onSaved?.()
         } catch (err) {
@@ -438,35 +441,50 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                             <span className="text-red-500">*</span> Dokumentasi Foto
                             <span className="normal-case font-normal ml-1">(minimal 1 foto)</span>
                         </p>
-                        <Upload
-                            accept=".jpg,.jpeg,.png"
-                            multiple
-                            showList={false}
-                            fileList={laporanFotoFiles}
-                            beforeUpload={validasiUkuranFoto}
-                            onChange={files => setLaporanFotoFiles(files)}
-                        >
-                            <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
-                                Pilih foto (bisa lebih dari satu, maks. 10MB/file)
-                            </Button>
-                        </Upload>
-                        {laporanFotoFiles.length > 0 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                                {laporanFotoFiles.map((file, idx) => (
-                                    <div key={`${file.name}-${idx}`} className="relative group">
-                                        <LocalFotoPreview file={file} />
-                                        <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
-                                        <button
-                                            type="button"
-                                            className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
-                                            onClick={() => setLaporanFotoFiles(prev => prev.filter((_, i) => i !== idx))}
-                                        >
-                                            <HiOutlineTrash className="text-xs" />
-                                        </button>
+                        <div className="flex flex-col gap-3">
+                            {LABEL_FOTO_LAPORAN.map(label => {
+                                const files = laporanFotoLabel[label] ?? []
+                                return (
+                                    <div key={label} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                                {label}
+                                                {files.length > 0 && <span className="text-gray-400 font-normal ml-1">({files.length} foto)</span>}
+                                            </p>
+                                            <Upload
+                                                accept=".jpg,.jpeg,.png"
+                                                multiple
+                                                showList={false}
+                                                fileList={files}
+                                                beforeUpload={validasiUkuranFoto}
+                                                onChange={f => setLaporanFotoLabel(prev => ({ ...prev, [label]: f }))}
+                                            >
+                                                <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
+                                                    Pilih foto
+                                                </Button>
+                                            </Upload>
+                                        </div>
+                                        {files.length > 0 && (
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                                                {files.map((file, idx) => (
+                                                    <div key={`${file.name}-${idx}`} className="relative group">
+                                                        <LocalFotoPreview file={file} />
+                                                        <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
+                                                        <button
+                                                            type="button"
+                                                            className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
+                                                            onClick={() => setLaporanFotoLabel(prev => ({ ...prev, [label]: files.filter((_, i) => i !== idx) }))}
+                                                        >
+                                                            <HiOutlineTrash className="text-xs" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                )
+                            })}
+                        </div>
                     </div>
 
                     {/* Form "Biaya Lain" dan "Biaya Tagihan Klien" dinonaktifkan sementara — buka lagi kalau dibutuhkan:
@@ -568,7 +586,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                     */}
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoFiles([]) }}>
+                        <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoLabel({}) }}>
                             Batal
                         </Button>
                         <Button type="submit" size="sm" variant="solid" loading={savingLaporan}>
@@ -677,12 +695,13 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                         )}
 
                         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-                            <FormItem label="Keterangan Foto" className="flex-1 mb-0">
-                                <Input
+                            <FormItem label="Label Foto" className="flex-1 mb-0">
+                                <Select<{ value: string; label: string }>
                                     size="sm"
-                                    placeholder="Keterangan (opsional)"
-                                    value={fotoKeterangan}
-                                    onChange={e => setFotoKeterangan(e.target.value)}
+                                    placeholder="Pilih label..."
+                                    options={LABEL_FOTO_LAPORAN.map(l => ({ value: l, label: l }))}
+                                    value={fotoKeterangan ? { value: fotoKeterangan, label: fotoKeterangan } : null}
+                                    onChange={opt => setFotoKeterangan(opt?.value ?? '')}
                                 />
                             </FormItem>
                             <FormItem label="File" asterisk className="mb-0">

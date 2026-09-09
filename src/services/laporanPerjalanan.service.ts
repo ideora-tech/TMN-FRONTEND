@@ -48,7 +48,7 @@ export type LaporanPerjalananPayload = {
     biaya_tagihan?: { nama_biaya: string; nominal: number }[]
 }
 
-function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[]): FormData {
+function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[], fotoKeterangan?: (string | null)[]): FormData {
     const fd = new FormData()
     fd.append('biaya_bbm', String(payload.biaya_bbm))
     fd.append('jarak_tempuh_km', String(payload.jarak_tempuh_km))
@@ -66,7 +66,10 @@ function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[]):
         fd.append(`biaya_tagihan[${i}][nama_biaya]`, b.nama_biaya)
         fd.append(`biaya_tagihan[${i}][nominal]`, String(b.nominal))
     })
-    files.forEach(file => fd.append('foto[]', file))
+    files.forEach((file, i) => {
+        fd.append('foto[]', file)
+        fd.append('foto_keterangan[]', fotoKeterangan?.[i] ?? '')
+    })
     return fd
 }
 
@@ -88,15 +91,15 @@ export const laporanPerjalananService = {
         }
     },
 
-    async create(idTrip: string, payload: LaporanPerjalananPayload, files: File[] = []) {
-        const body = files.length > 0 ? buildLaporanFormData(payload, files) : payload
+    async create(idTrip: string, payload: LaporanPerjalananPayload, files: File[] = [], fotoKeterangan?: (string | null)[]) {
+        const body = files.length > 0 ? buildLaporanFormData(payload, files, fotoKeterangan) : payload
         const { data } = await axios.post(API_ENDPOINTS.TRIP_LAPORAN_PERJALANAN(idTrip), body)
         return data.data as LaporanPerjalanan
     },
 
-    async update(id: string, payload: LaporanPerjalananPayload, files: File[] = []) {
+    async update(id: string, payload: LaporanPerjalananPayload, files: File[] = [], fotoKeterangan?: (string | null)[]) {
         if (files.length > 0) {
-            const fd = buildLaporanFormData(payload, files)
+            const fd = buildLaporanFormData(payload, files, fotoKeterangan)
             fd.append('_method', 'PUT')
             const { data } = await axios.post(API_ENDPOINTS.LAPORAN_PERJALANAN_DETAIL(id), fd)
             return data.data as LaporanPerjalanan
