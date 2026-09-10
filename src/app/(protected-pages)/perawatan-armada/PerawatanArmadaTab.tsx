@@ -607,15 +607,20 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
 
                         {(detailData?.bukti?.length ?? 0) > 0 && (
                             <div className="mt-5">
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Bukti</p>
-                                <ul className="space-y-1">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                    Bukti ({detailData?.bukti?.length})
+                                </p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {detailData?.bukti?.map(b => (
-                                        <li key={b.id_bukti}>
-                                            <a href={b.url_file} target="_blank" rel="noreferrer"
-                                                className="text-sm text-blue-600 dark:text-blue-400 hover:underline">{b.nama_asli}</a>
-                                        </li>
+                                        <div key={b.id_bukti}>
+                                            <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                                <img src={b.url_file} alt={b.nama_asli}
+                                                    className="w-full h-28 object-cover rounded-lg border border-gray-100 dark:border-gray-700 hover:opacity-90 transition-opacity" />
+                                            </a>
+                                            <p className="text-xs text-gray-400 truncate mt-1">{b.nama_asli}</p>
+                                        </div>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
                         )}
 
