@@ -8,37 +8,42 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { perawatanArmadaService, PerawatanArmada, StatusPerawatan, PerawatanSparepartInput, BuktiPerawatan } from '@/services/perawatanArmada.service'
-import { jenisPerawatanService } from '@/services/jenisPerawatan.service'
+import { perawatanArmadaService, PerawatanArmada, StatusPerawatan, SumberSparepart, PerawatanSparepartInput, BuktiPerawatan } from '@/services/perawatanArmada.service'
+import { intervalPerawatanService, IntervalPerawatan } from '@/services/intervalPerawatan.service'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
 import { armadaService, Armada } from '@/services/armada.service'
-import { intervalPerawatanService } from '@/services/intervalPerawatan.service'
-import { paketPerawatanSparepartService } from '@/services/paketPerawatanSparepart.service'
+import { supplierService } from '@/services/supplier.service'
 
 type Option = { value: string; label: string }
 
 const STATUS_OPTIONS: { value: StatusPerawatan; label: string }[] = [
-    { value: 'terjadwal',    label: 'Terjadwal' },
+    { value: 'terjadwal',    label: 'Direncanakan' },
     { value: 'dalam_proses', label: 'Dalam Proses' },
     { value: 'selesai',      label: 'Selesai' },
 ]
 
-type ItemRow = { id_sparepart: string; qty: string; harga: string }
+const SUMBER_OPTIONS: { value: SumberSparepart; label: string }[] = [
+    { value: 'bengkel',      label: 'Dari Bengkel' },
+    { value: 'stok_sendiri', label: 'Stok Sendiri' },
+]
+
+type ItemRow = { sumber: SumberSparepart; id_sparepart: string; nama_sparepart: string; qty: string; harga: string }
 
 type FormState = {
     id_armada: string
-    id_jenis_perawatan: string | null
+    id_interval_perawatan: string
     tanggal: string
     biaya: string
     km_odometer: string
     status: StatusPerawatan
     jadwal_servis_berikutnya: string
     keterangan: string
+    id_supplier: string
 }
 
 const emptyForm = (): FormState => ({
-    id_armada: '', id_jenis_perawatan: null, tanggal: '', biaya: '', km_odometer: '',
-    status: 'dalam_proses', jadwal_servis_berikutnya: '', keterangan: '',
+    id_armada: '', id_interval_perawatan: '', tanggal: '', biaya: '', km_odometer: '',
+    status: 'dalam_proses', jadwal_servis_berikutnya: '', keterangan: '', id_supplier: '',
 })
 
 const MAX_BUKTI = 10
@@ -69,11 +74,15 @@ function FotoBuktiBaru({ file, onRemove }: { file: File; onRemove: () => void })
     )
 }
 
-export default function PerawatanForm({ editId, editArmadaId }: { editId?: string; editArmadaId?: string }) {
+export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, presetIntervalPerawatanId, rutin }: { editId?: string; editArmadaId?: string; presetArmadaId?: string; presetIntervalPerawatanId?: string; rutin?: boolean }) {
     const router = useRouter()
     const isEdit = !!editId
 
-    const [form, setForm]   = useState<FormState>(emptyForm())
+    const [form, setForm]   = useState<FormState>(() => ({
+        ...emptyForm(),
+        ...(presetArmadaId ? { id_armada: presetArmadaId } : {}),
+        ...(presetIntervalPerawatanId ? { id_interval_perawatan: presetIntervalPerawatanId } : {}),
+    }))
     const [items, setItems] = useState<ItemRow[]>([])
     const [loading, setLoading] = useState(isEdit)
     const [saving, setSaving]   = useState(false)
@@ -85,24 +94,25 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
 
     const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
     const [armadaList, setArmadaList] = useState<Armada[]>([])
-    const [jenisOptions, setJenisOptions]   = useState<Option[]>([])
+    const [intervalList, setIntervalList]   = useState<IntervalPerawatan[]>([])
     const [sparepartList, setSparepartList] = useState<Sparepart[]>([])
+    const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
     // true setelah user mengedit sparepart manual — auto-fill paket berhenti mengikuti dropdown
     const sparepartLocked = useRef(false)
 
     useEffect(() => {
         Promise.all([
             armadaService.list(1, 100),
-            jenisPerawatanService.list(1, 100),
             sparepartService.list({ page: 1, limit: 100 }),
-        ]).then(([armada, jenis, sp]) => {
+            supplierService.list({ limit: 999, aktif: 1 }),
+        ]).then(([armada, sp, supplier]) => {
             setArmadaOptions(armada.data.map((a: Armada) => ({
                 value: a.id_armada,
                 label: a.nama_jenis ? `${a.nopol} — ${a.nama_jenis}` : a.nopol,
             })))
             setArmadaList(armada.data)
-            setJenisOptions(jenis.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_perawatan, label: j.nama })))
             setSparepartList(sp.data.filter(s => s.aktif))
+            setSupplierOptions(supplier.data.map(s => ({ value: s.id_supplier, label: s.nama })))
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [])
 
@@ -112,16 +122,19 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             .then((p: PerawatanArmada) => {
                 setForm({
                     id_armada: p.id_armada,
-                    id_jenis_perawatan: p.id_jenis_perawatan,
+                    id_interval_perawatan: p.id_interval_perawatan ?? '',
                     tanggal: p.tanggal,
                     biaya: String(p.biaya ?? ''),
                     km_odometer: p.km_odometer != null ? String(p.km_odometer) : '',
                     status: p.status,
                     jadwal_servis_berikutnya: p.jadwal_servis_berikutnya ?? '',
                     keterangan: p.keterangan ?? '',
+                    id_supplier: p.id_supplier ?? '',
                 })
                 setItems((p.sparepart ?? []).map(it => ({
-                    id_sparepart: it.id_sparepart,
+                    sumber: it.sumber ?? 'stok_sendiri',
+                    id_sparepart: it.id_sparepart ?? '',
+                    nama_sparepart: it.nama_sparepart ?? '',
                     qty: String(it.qty),
                     harga: String(it.harga),
                 })))
@@ -131,67 +144,61 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
             .finally(() => setLoading(false))
     }, [isEdit, editId, editArmadaId])
 
-    // Auto-fill Jadwal Servis Berikutnya dari interval — hanya saat CREATE (isEdit=false),
-    // supaya tidak menimpa jadwal yang sudah tersimpan saat user membuka form edit.
     useEffect(() => {
-        if (isEdit) return
         const armada = armadaList.find(a => a.id_armada === form.id_armada)
-        if (!armada?.id_jenis_kendaraan || !form.id_jenis_perawatan || !form.tanggal) return
+        if (!armada?.id_jenis_kendaraan) { setIntervalList([]); return }
 
         let aktif = true
-        intervalPerawatanService.resolusi({
-            id_jenis_perawatan: form.id_jenis_perawatan,
-            id_jenis_kendaraan: armada.id_jenis_kendaraan,
-        })
-            .then(res => {
-                if (aktif && res && res.interval_hari != null) {
-                    const jadwal = dayjs(form.tanggal).add(res.interval_hari, 'day').format('YYYY-MM-DD')
-                    setForm(p => ({ ...p, jadwal_servis_berikutnya: jadwal }))
-                }
-            })
-            .catch(() => {})
+        intervalPerawatanService.list({ id_jenis_kendaraan: armada.id_jenis_kendaraan, limit: 100 })
+            .then(res => { if (aktif) setIntervalList(res.data) })
+            .catch(() => { if (aktif) setIntervalList([]) })
         return () => { aktif = false }
-    }, [isEdit, form.id_armada, form.id_jenis_perawatan, form.tanggal, armadaList])
+    }, [form.id_armada, armadaList])
 
-    // Auto-fill daftar sparepart dari paket standar — hanya saat CREATE dan selama user belum
-    // mengedit sparepart manual (sparepartLocked). Sengaja TERUS mengikuti tiap kali dropdown
-    // Jenis Perawatan berganti (bukan cuma sekali saat kosong), supaya ganti jenis perawatan
-    // beberapa kali tetap menampilkan paket yang sesuai — bukan sisa paket jenis sebelumnya.
+    // Auto-fill daftar sparepart dari paket servis terpilih — hanya saat CREATE dan selama user
+    // belum mengedit sparepart manual (sparepartLocked). Sengaja TERUS mengikuti tiap kali pilihan
+    // Paket Servis berganti, supaya ganti paket beberapa kali tetap menampilkan sparepart yang
+    // sesuai — bukan sisa paket sebelumnya.
     useEffect(() => {
         if (isEdit || sparepartLocked.current) return
-        const armada = armadaList.find(a => a.id_armada === form.id_armada)
-        if (!armada?.id_jenis_kendaraan || !form.id_jenis_perawatan) return
+        if (!form.id_interval_perawatan) return
+        const interval = intervalList.find(iv => iv.id_interval_perawatan === form.id_interval_perawatan)
+        if (!interval) return
 
-        let aktif = true
-        paketPerawatanSparepartService.resolusi({
-            id_jenis_perawatan: form.id_jenis_perawatan,
-            id_jenis_kendaraan: armada.id_jenis_kendaraan,
-        })
-            .then(res => {
-                if (aktif) {
-                    setItems(res.map(r => ({
-                        id_sparepart: r.id_sparepart,
-                        qty: String(r.qty_standar),
-                        harga: String(r.harga_standar),
-                    })))
-                }
-            })
-            .catch(() => {})
-        return () => { aktif = false }
-    }, [isEdit, form.id_armada, form.id_jenis_perawatan, armadaList])
+        setItems((interval.sparepart ?? []).map(sp => {
+            const master = sparepartList.find(s => s.id_sparepart === sp.id_sparepart)
+            return {
+                sumber: 'bengkel',
+                id_sparepart: sp.id_sparepart,
+                nama_sparepart: sp.nama_sparepart ?? master?.nama ?? '',
+                qty: String(sp.qty_standar),
+                harga: master ? String(master.harga_standar) : '',
+            }
+        }))
+    }, [isEdit, form.id_interval_perawatan, intervalList, sparepartList])
+
+    const intervalOptions: Option[] = intervalList.map(iv => ({ value: iv.id_interval_perawatan, label: iv.label }))
 
     const sparepartOptions: Option[] = sparepartList.map(s => ({
         value: s.id_sparepart,
         label: `${s.nama} (stok: ${formatNum(s.stok)} ${s.satuan})`,
     }))
 
-    const addItem = () => { sparepartLocked.current = true; setItems(p => [...p, { id_sparepart: '', qty: '1', harga: '' }]) }
+    const addItem = () => { sparepartLocked.current = true; setItems(p => [...p, { sumber: 'bengkel', id_sparepart: '', nama_sparepart: '', qty: '1', harga: '' }]) }
     const removeItem = (idx: number) => { sparepartLocked.current = true; setItems(p => p.filter((_, i) => i !== idx)) }
-    const updateItem = (idx: number, field: keyof ItemRow, value: string) => {
+    const updateItem = (idx: number, field: 'qty' | 'harga', value: string) => {
         sparepartLocked.current = true
         setItems(p => {
             const next = [...p]
             next[idx] = { ...next[idx], [field]: value }
+            return next
+        })
+    }
+    const updateSumber = (idx: number, sumber: SumberSparepart) => {
+        sparepartLocked.current = true
+        setItems(p => {
+            const next = [...p]
+            next[idx] = { ...next[idx], sumber, id_sparepart: '', nama_sparepart: '' }
             return next
         })
     }
@@ -205,6 +212,14 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                 id_sparepart: idSparepart,
                 harga: next[idx].harga || (sp ? String(sp.harga_standar) : ''),
             }
+            return next
+        })
+    }
+    const isiNamaPartBebas = (idx: number, nama: string) => {
+        sparepartLocked.current = true
+        setItems(p => {
+            const next = [...p]
+            next[idx] = { ...next[idx], id_sparepart: '', nama_sparepart: nama }
             return next
         })
     }
@@ -246,8 +261,13 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
 
     const totalSparepart = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.harga) || 0), 0)
 
-    const canSubmit = !!form.id_armada && !!form.tanggal && !!form.id_jenis_perawatan
-        && items.every(it => it.id_sparepart && Number(it.qty) > 0)
+    const itemValid = (it: ItemRow) => {
+        if (!(Number(it.qty) > 0)) return false
+        if (it.sumber === 'stok_sendiri') return !!it.id_sparepart
+        return !!it.id_sparepart || !!it.nama_sparepart.trim()
+    }
+
+    const canSubmit = !!form.id_armada && !!form.tanggal && items.every(itemValid)
 
     const handleSubmit = async () => {
         if (!canSubmit) return
@@ -255,17 +275,16 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
         try {
             const payload = {
                 tanggal: form.tanggal,
-                id_jenis_perawatan: form.id_jenis_perawatan,
+                id_interval_perawatan: form.id_interval_perawatan || null,
                 biaya: Number(form.biaya) || 0,
                 km_odometer: form.km_odometer ? Number(form.km_odometer) : null,
                 status: form.status,
                 jadwal_servis_berikutnya: form.jadwal_servis_berikutnya || null,
                 keterangan: form.keterangan || null,
-                sparepart: items.map((it): PerawatanSparepartInput => ({
-                    id_sparepart: it.id_sparepart,
-                    qty: Number(it.qty),
-                    harga: Number(it.harga) || 0,
-                })),
+                id_supplier: form.id_supplier || null,
+                sparepart: items.map((it): PerawatanSparepartInput => it.sumber === 'stok_sendiri'
+                    ? { sumber: 'stok_sendiri', id_sparepart: it.id_sparepart, qty: Number(it.qty), harga: Number(it.harga) || 0 }
+                    : { sumber: 'bengkel', id_sparepart: it.id_sparepart || null, nama_sparepart: it.nama_sparepart.trim(), qty: Number(it.qty), harga: Number(it.harga) || 0 }),
             }
             let idPerawatan: string
             let idArmadaTujuan: string
@@ -287,7 +306,7 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     toast.push(<Notification type="warning" title={`Perawatan tersimpan, tapi upload bukti gagal: ${parseApiError(err)}. Buka Edit untuk unggah ulang.`} />)
                 }
             }
-            router.push(ROUTES.PERAWATAN_ARMADA)
+            router.push(`${ROUTES.PERAWATAN_ARMADA}?tab=${form.status === 'selesai' ? 'riwayat' : 'berjalan'}`)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -305,7 +324,14 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
-                    <h3 className="font-bold">{isEdit ? 'Edit Perawatan' : 'Catat Perawatan'}</h3>
+                    <h3 className="font-bold flex items-center gap-2">
+                        {isEdit ? 'Edit Perawatan' : 'Catat Perawatan'}
+                        {rutin && !isEdit && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                                Servis Rutin
+                            </span>
+                        )}
+                    </h3>
                     <p className="text-gray-500 text-sm mt-0.5">{isEdit ? 'Perbarui data perawatan armada' : 'Catat perawatan armada baru'}</p>
                 </div>
             </div>
@@ -320,11 +346,13 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                                 value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
                                 onChange={opt => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))} />
                         </FormItem>
-                        <FormItem label="Jenis Perawatan" asterisk>
-                            <Select placeholder="Pilih jenis perawatan..."
-                                options={jenisOptions}
-                                value={jenisOptions.find(o => o.value === form.id_jenis_perawatan) ?? null}
-                                onChange={opt => setForm(p => ({ ...p, id_jenis_perawatan: (opt as Option | null)?.value ?? null }))} />
+                        <FormItem label="Paket Servis (opsional)"
+                            extra={<span className="text-xs text-gray-400">Pilih bila ini servis rutin sesuai jadwal; kosongkan untuk perbaikan insidental</span>}>
+                            <Select<Option> isClearable isSearchable placeholder={form.id_armada ? 'Pilih paket servis...' : 'Pilih armada dahulu...'}
+                                isDisabled={!form.id_armada}
+                                options={intervalOptions}
+                                value={intervalOptions.find(o => o.value === form.id_interval_perawatan) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, id_interval_perawatan: (opt as Option | null)?.value ?? '' }))} />
                         </FormItem>
                         <FormItem label="Tanggal" asterisk>
                             <DatePicker
@@ -346,10 +374,18 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                                 value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
                                 onChange={opt => opt && setForm(p => ({ ...p, status: (opt as { value: StatusPerawatan }).value }))} />
                         </FormItem>
-                        <FormItem label="Jadwal Servis Berikutnya">
+                        <FormItem label="Jadwal Servis Berikutnya"
+                            extra={<span className="text-xs text-gray-400">Kosongkan untuk dihitung otomatis dari interval bulan paket servis terpilih</span>}>
                             <DatePicker
                                 value={form.jadwal_servis_berikutnya ? new Date(form.jadwal_servis_berikutnya) : null}
                                 onChange={date => setForm(p => ({ ...p, jadwal_servis_berikutnya: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                        </FormItem>
+                        <FormItem label="Bengkel (opsional)"
+                            extra={<span className="text-xs text-gray-400">Bengkel/vendor tempat servis dikerjakan</span>}>
+                            <Select isClearable placeholder="Pilih bengkel..."
+                                options={supplierOptions}
+                                value={supplierOptions.find(o => o.value === form.id_supplier) ?? null}
+                                onChange={opt => setForm(p => ({ ...p, id_supplier: (opt as Option | null)?.value ?? '' }))} />
                         </FormItem>
                         <div className="sm:col-span-2">
                             <FormItem label="Keterangan">
@@ -407,11 +443,24 @@ export default function PerawatanForm({ editId, editArmadaId }: { editId?: strin
                             <div className="flex flex-col gap-2">
                                 {items.map((it, idx) => (
                                     <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                        <div className="w-full sm:w-36 shrink-0">
+                                            <Select isSearchable={false}
+                                                options={SUMBER_OPTIONS}
+                                                value={SUMBER_OPTIONS.find(o => o.value === it.sumber) ?? SUMBER_OPTIONS[0]}
+                                                onChange={opt => opt && updateSumber(idx, (opt as { value: SumberSparepart }).value)} />
+                                        </div>
                                         <div className="flex-1 min-w-0">
-                                            <Select placeholder="Pilih spare part..."
-                                                options={sparepartOptions}
-                                                value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
-                                                onChange={opt => pilihSparepart(idx, (opt as Option | null)?.value ?? '')} />
+                                            {it.sumber === 'stok_sendiri' ? (
+                                                <Select placeholder="Pilih spare part..."
+                                                    options={sparepartOptions}
+                                                    value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
+                                                    onChange={opt => pilihSparepart(idx, (opt as Option | null)?.value ?? '')} />
+                                            ) : (
+                                                <Input placeholder="Ketik nama part dari bengkel..."
+                                                    maxLength={150}
+                                                    value={it.nama_sparepart}
+                                                    onChange={e => isiNamaPartBebas(idx, e.target.value)} />
+                                            )}
                                         </div>
                                         <Input className="w-full sm:w-24" type="number" min={1} placeholder="Qty"
                                             value={it.qty}

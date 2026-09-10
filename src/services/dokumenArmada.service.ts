@@ -8,7 +8,19 @@ export interface DokumenArmada {
     nomor: string | null
     berlaku_sampai: string | null
     url_file: string | null
+    aktif: boolean
+    id_dokumen_sebelumnya: string | null
     dibuat_pada: string
+}
+
+export interface DokumenArmadaWithArmada extends DokumenArmada {
+    armada_nopol: string | null
+    armada_merk: string | null
+}
+
+export interface DokumenArmadaDetail extends DokumenArmadaWithArmada {
+    riwayat: DokumenArmadaWithArmada[]
+    id_dokumen_pengganti: string | null
 }
 
 type DocPayload = {
@@ -18,6 +30,19 @@ type DocPayload = {
     url_file?: string | null
 }
 
+export type DokumenBatchItem = {
+    jenis_dokumen: string
+    nomor: string | null
+    berlaku_sampai: string | null
+    file: File
+}
+
+export type PerpanjangPayload = {
+    nomor: string | null
+    berlaku_sampai: string
+    file: File
+}
+
 function buildFormData(payload: DocPayload, file: File): FormData {
     const fd = new FormData()
     fd.append('jenis_dokumen', payload.jenis_dokumen)
@@ -25,11 +50,6 @@ function buildFormData(payload: DocPayload, file: File): FormData {
     if (payload.berlaku_sampai) fd.append('berlaku_sampai', payload.berlaku_sampai)
     fd.append('file', file)
     return fd
-}
-
-export interface DokumenArmadaWithArmada extends DokumenArmada {
-    armada_nopol: string | null
-    armada_merk: string | null
 }
 
 export const dokumenArmadaService = {
@@ -43,9 +63,35 @@ export const dokumenArmadaService = {
         return data.data as DokumenArmada[]
     },
 
+    async get(id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA_DETAIL(id))
+        return data.data as DokumenArmadaDetail
+    },
+
     async create(idArmada: string, payload: DocPayload, file?: File | null) {
         const body = file ? buildFormData(payload, file) : payload
         const { data } = await axios.post(API_ENDPOINTS.ARMADA_DOKUMEN(idArmada), body)
+        return data.data as DokumenArmada
+    },
+
+    async createBatch(idArmada: string, items: DokumenBatchItem[]) {
+        const fd = new FormData()
+        items.forEach((it, idx) => {
+            fd.append(`dokumen[${idx}][jenis_dokumen]`, it.jenis_dokumen)
+            if (it.nomor) fd.append(`dokumen[${idx}][nomor]`, it.nomor)
+            if (it.berlaku_sampai) fd.append(`dokumen[${idx}][berlaku_sampai]`, it.berlaku_sampai)
+            fd.append(`dokumen[${idx}][file]`, it.file)
+        })
+        const { data } = await axios.post(API_ENDPOINTS.ARMADA_DOKUMEN_BATCH(idArmada), fd)
+        return data.data as DokumenArmada[]
+    },
+
+    async perpanjang(idArmada: string, id: string, payload: PerpanjangPayload) {
+        const fd = new FormData()
+        fd.append('nomor', payload.nomor ?? '')
+        fd.append('berlaku_sampai', payload.berlaku_sampai)
+        fd.append('file', payload.file)
+        const { data } = await axios.post(API_ENDPOINTS.ARMADA_DOKUMEN_PERPANJANG(idArmada, id), fd)
         return data.data as DokumenArmada
     },
 

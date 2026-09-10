@@ -4,17 +4,22 @@ import type { PengajuanKeuanganInfo } from './arusKas.service'
 
 export type StatusPerawatan = 'terjadwal' | 'dalam_proses' | 'selesai' | 'dibatalkan'
 
+export type SumberSparepart = 'bengkel' | 'stok_sendiri'
+
 export interface PerawatanSparepartItem {
     id_perawatan_sparepart: string
-    id_sparepart: string
+    id_sparepart: string | null
     nama_sparepart: string
     qty: number
     harga: number
     subtotal: number
+    sumber: SumberSparepart
 }
 
 export type PerawatanSparepartInput = {
-    id_sparepart: string
+    sumber: SumberSparepart
+    id_sparepart?: string | null
+    nama_sparepart?: string
     qty: number
     harga: number
 }
@@ -28,31 +33,33 @@ export interface BuktiPerawatan {
 export interface PerawatanArmada {
     id_perawatan: string
     id_armada: string
-    id_jenis_perawatan: string | null
+    id_interval_perawatan: string | null
+    interval_label: string | null
     sparepart?: PerawatanSparepartItem[]
     bukti?: BuktiPerawatan[]
     tanggal: string
-    jenis_perawatan: string
     biaya: number
     km_odometer: number | null
     status: StatusPerawatan
     alasan_batal: string | null
     jadwal_servis_berikutnya: string | null
     keterangan: string | null
+    id_supplier: string | null
+    nama_supplier: string | null
     dibuat_pada: string
     diubah_pada: string
 }
 
 type PerawatanPayload = {
     tanggal: string
-    jenis_perawatan?: string
-    id_jenis_perawatan?: string | null
+    id_interval_perawatan?: string | null
     sparepart?: PerawatanSparepartInput[]
     biaya: number
     km_odometer?: number | null
     status?: StatusPerawatan
     jadwal_servis_berikutnya?: string | null
     keterangan?: string | null
+    id_supplier?: string | null
 }
 
 export interface PerawatanArmadaWithArmada extends PerawatanArmada {
@@ -86,6 +93,32 @@ async function unduhBlob(url: string, filename: string, params?: ParamPeriode) {
     URL.revokeObjectURL(href)
 }
 
+export type StatusJatuhTempoUnit = 'segera' | 'lewat_jatuh_tempo'
+
+export interface PapanUnitServisTerakhir {
+    tanggal: string
+    label: string
+}
+
+export interface PapanUnitJatuhTempo {
+    id_interval_perawatan: string
+    label: string
+    basis: 'hari' | 'km'
+    status: StatusJatuhTempoUnit
+    keterangan: string
+}
+
+export interface PapanUnitRow {
+    id_armada: string
+    nopol: string
+    nama_jenis_kendaraan: string | null
+    status_armada: string
+    servis_terakhir: PapanUnitServisTerakhir | null
+    jumlah_interval: number
+    jatuh_tempo: PapanUnitJatuhTempo[]
+    belum_pernah_servis: boolean
+}
+
 export type StatusPrediksi = 'lewat_jatuh_tempo' | 'segera' | 'aman' | 'belum_pernah'
 
 export interface PrediksiSparepartStandar {
@@ -97,9 +130,9 @@ export interface PrediksiSparepartStandar {
 }
 
 export interface PrediksiPerawatanItem {
-    id_jenis_perawatan: string
-    nama_jenis_perawatan: string
-    interval_hari: number | null
+    id_interval_perawatan: string
+    label: string
+    interval_bulan: number | null
     interval_km: number | null
     tanggal_servis_terakhir: string | null
     jadwal_servis_berikutnya: string | null
@@ -110,13 +143,17 @@ export interface PrediksiPerawatanItem {
     status_km: StatusPrediksi | null
     status: StatusPrediksi
     sisa_hari: number | null
-    sparepart_standar: PrediksiSparepartStandar[]
+    sparepart_standar?: PrediksiSparepartStandar[]
 }
 
 export const perawatanArmadaService = {
     async listAll(params?: { page?: number; limit?: number; id_armada?: string; status?: string; jatuh_tempo?: '1'; search?: string; tanggal_dari?: string; tanggal_sampai?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_ARMADA, { params })
         return data as { data: PerawatanArmadaWithArmada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    },
+    async papanUnit(params?: { page?: number; limit?: number; search?: string; hanya_jatuh_tempo?: '1' }) {
+        const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_ARMADA_PAPAN_UNIT, { params })
+        return data as { data: PapanUnitRow[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(idArmada: string, id: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN_DETAIL(idArmada, id))
@@ -155,6 +192,12 @@ export const perawatanArmadaService = {
             API_ENDPOINTS.ARMADA_PERAWATAN_EXPORT(idArmada, format),
             `perawatan-${nopol.replace(/\s/g, '')}.${ekstensi}`,
             params,
+        )
+    },
+    async downloadDetailPdf(idArmada: string, id: string, nopol: string, tanggal: string) {
+        await unduhBlob(
+            API_ENDPOINTS.ARMADA_PERAWATAN_DETAIL_PDF(idArmada, id),
+            `perawatan-${nopol.replace(/\s/g, '')}-${tanggal.slice(0, 10).replace(/-/g, '')}.pdf`,
         )
     },
     async downloadRekapPerUnit(format: FormatLaporan, params?: ParamPeriode) {

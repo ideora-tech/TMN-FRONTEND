@@ -1,48 +1,30 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Fragment, useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, Button, Input, Tag, Tooltip, Pagination, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DataTable from '@/components/shared/DataTable'
-import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import UploadBerkas from '@/components/shared/UploadBerkas'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineRefresh, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi'
+import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { ROUTES } from '@/constants/route.constant'
 import { dokumenArmadaService, DokumenArmadaWithArmada } from '@/services/dokumenArmada.service'
 import { armadaService, Armada } from '@/services/armada.service'
-
-type Option = { value: string; label: string }
-
-// Selaras dengan rule backend: 'file' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'] (KB)
-const MAX_FILE_SIZE = 5 * 1024 * 1024
-
-const JENIS_DOKUMEN_OPTIONS: Option[] = [
-    { value: 'STNK',     label: 'STNK' },
-    { value: 'KIR',      label: 'KIR' },
-    { value: 'Asuransi', label: 'Asuransi' },
-    { value: 'BPKB',     label: 'BPKB' },
-    { value: 'Pajak',    label: 'Pajak Kendaraan' },
-    { value: 'Lainnya',  label: 'Lainnya' },
-]
+import { JENIS_DOKUMEN_OPTIONS, getExpiryInfo, labelJenisDokumen, type Option } from './dokumenArmada.shared'
 
 const JENIS_FILTER_OPTIONS: Option[] = [{ value: '', label: 'Semua Jenis' }, ...JENIS_DOKUMEN_OPTIONS]
 
-function getExpiryInfo(berlakuSampai: string | null): { label: string; className: string } {
-    if (!berlakuSampai) return { label: '—', className: 'bg-gray-100 text-gray-400' }
-    const days = Math.ceil((new Date(berlakuSampai).getTime() - Date.now()) / 86400000)
-    if (days < 0)   return { label: 'Habis Masa Berlaku', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
-    if (days <= 14) return { label: `${days} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' }
-    if (days <= 30) return { label: `${days} hari lagi`, className: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' }
-    if (days <= 60) return { label: `${days} hari lagi`, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' }
-    return { label: `${days} hari lagi`, className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' }
-}
+const PAGE_SIZE_OPTIONS = [
+    { value: 10, label: '10 / halaman' },
+    { value: 20, label: '20 / halaman' },
+    { value: 50, label: '50 / halaman' },
+]
 
-type DocForm = { id_armada: string; jenis_dokumen: string; nomor: string; berlaku_sampai: string }
-
-const emptyForm = (): DocForm => ({ id_armada: '', jenis_dokumen: '', nomor: '', berlaku_sampai: '' })
+const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
 export default function DokumenArmadaPage() {
+    const router = useRouter()
     const [list, setList]       = useState<DokumenArmadaWithArmada[]>([])
     const [loading, setLoading] = useState(false)
     const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
@@ -55,13 +37,9 @@ export default function DokumenArmadaPage() {
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
 
-    const [showForm, setShowForm]         = useState(false)
-    const [form, setForm]                 = useState<DocForm>(emptyForm())
-    const [file, setFile]                 = useState<File | null>(null)
-    const [saving, setSaving]             = useState(false)
-    const [editTarget, setEditTarget]     = useState<DokumenArmadaWithArmada | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<DokumenArmadaWithArmada | null>(null)
     const [deleting, setDeleting]         = useState(false)
+    const [grupTerbuka, setGrupTerbuka]   = useState<Record<string, boolean>>({})
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -92,47 +70,6 @@ export default function DokumenArmadaPage() {
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
-    const openAdd = () => { setForm(emptyForm()); setFile(null); setShowForm(true) }
-
-    const openEdit = (d: DokumenArmadaWithArmada) => {
-        setEditTarget(d)
-        setForm({
-            id_armada: d.id_armada,
-            jenis_dokumen: d.jenis_dokumen,
-            nomor: d.nomor ?? '',
-            berlaku_sampai: d.berlaku_sampai ?? '',
-        })
-        setFile(null)
-    }
-
-    const closeForm = () => { setShowForm(false); setEditTarget(null) }
-
-    const handleSubmit = async () => {
-        if (!form.id_armada || !form.jenis_dokumen) return
-        if (!editTarget && !file) return
-        setSaving(true)
-        try {
-            const payload = {
-                jenis_dokumen: form.jenis_dokumen,
-                nomor: form.nomor || null,
-                berlaku_sampai: form.berlaku_sampai || null,
-            }
-            if (editTarget) {
-                await dokumenArmadaService.update(editTarget.id_armada, editTarget.id_dokumen_armada, payload, file ?? undefined)
-                toast.push(<Notification type="success" title="Dokumen berhasil diperbarui" />)
-            } else {
-                await dokumenArmadaService.create(form.id_armada, payload, file)
-                toast.push(<Notification type="success" title="Dokumen berhasil ditambahkan" />)
-            }
-            closeForm()
-            fetchData()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setSaving(false)
-        }
-    }
-
     const handleDelete = async () => {
         if (!deleteTarget) return
         setDeleting(true)
@@ -149,69 +86,20 @@ export default function DokumenArmadaPage() {
         }
     }
 
-    const columns: ColumnDef<DokumenArmadaWithArmada>[] = [
-        {
-            header: 'No', id: 'no', size: 60,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) =>
-                (currentPage - 1) * pageSize + row.index + 1,
-        },
-        {
-            header: 'Armada', accessorKey: 'armada_nopol', size: 130,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) => (
-                <span className="font-mono text-xs font-semibold">{row.original.armada_nopol ?? '—'}</span>
-            ),
-        },
-        { header: 'Jenis Dokumen', accessorKey: 'jenis_dokumen', size: 140 },
-        {
-            header: 'Nomor', accessorKey: 'nomor', size: 150,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) => (
-                <span className="font-mono text-xs">{row.original.nomor ?? '—'}</span>
-            ),
-        },
-        {
-            header: 'Berlaku Sampai', accessorKey: 'berlaku_sampai', size: 180,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) => {
-                const tgl = row.original.berlaku_sampai
-                const expiry = getExpiryInfo(tgl)
-                return (
-                    <div>
-                        <p className="text-xs">{tgl ? dayjs(tgl).format('DD MMM YYYY') : '—'}</p>
-                        <Tag className={`text-xs font-semibold mt-1 ${expiry.className}`}>{expiry.label}</Tag>
-                    </div>
-                )
-            },
-        },
-        {
-            header: 'File', accessorKey: 'url_file', size: 90,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) =>
-                row.original.url_file
-                    ? <a href={row.original.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
-                    : <span className="text-gray-400 text-xs">—</span>,
-        },
-        {
-            header: '', id: 'action', size: 90,
-            cell: ({ row }: CellContext<DokumenArmadaWithArmada, unknown>) => (
-                <div className="flex items-center justify-end gap-1">
-                    <Tooltip title="Edit">
-                        <span
-                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                            onClick={() => openEdit(row.original)}>
-                            <HiOutlinePencilAlt className="text-lg" />
-                        </span>
-                    </Tooltip>
-                    <Tooltip title="Hapus">
-                        <span
-                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
-                            onClick={() => setDeleteTarget(row.original)}>
-                            <HiOutlineTrash className="text-lg" />
-                        </span>
-                    </Tooltip>
-                </div>
-            ),
-        },
-    ]
+    const groups: { idArmada: string; nopol: string; merk: string | null; rows: DokumenArmadaWithArmada[] }[] = []
+    list.forEach(d => {
+        const last = groups[groups.length - 1]
+        if (last && last.idArmada === d.id_armada) {
+            last.rows.push(d)
+        } else {
+            groups.push({ idArmada: d.id_armada, nopol: d.armada_nopol ?? '—', merk: d.armada_merk ?? null, rows: [d] })
+        }
+    })
 
-    const isFormOpen = showForm || editTarget !== null
+    let nomorBaris = (currentPage - 1) * pageSize
+    const semuaTerbuka = groups.length > 0 && groups.every(g => grupTerbuka[g.idArmada])
+    const toggleGrup = (idArmada: string) => setGrupTerbuka(prev => ({ ...prev, [idArmada]: !prev[idArmada] }))
+    const toggleSemua = () => setGrupTerbuka(semuaTerbuka ? {} : Object.fromEntries(groups.map(g => [g.idArmada, true])))
 
     return (
         <div className="flex flex-col gap-4">
@@ -220,7 +108,7 @@ export default function DokumenArmadaPage() {
                     <h3 className="font-bold">Dokumen Armada</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kelola dokumen seluruh armada — STNK, KIR, Asuransi, dll</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={openAdd}>Tambah Dokumen</Button>
+                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.DOKUMEN_ARMADA_BARU)}>Tambah Dokumen</Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
@@ -254,73 +142,128 @@ export default function DokumenArmadaPage() {
                         />
                     </div>
                 </div>
-                <DataTable
-                    columns={columns}
-                    data={list as unknown[]}
-                    loading={loading}
-                    noData={!loading && list.length === 0}
-                    pagingData={{ total, pageIndex: currentPage, pageSize }}
-                    onPaginationChange={setCurrentPage}
-                    onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
-                />
-            </Card>
-
-            <Dialog isOpen={isFormOpen} onRequestClose={closeForm} onClose={closeForm} width={600}>
-                <h5 className="text-base font-semibold mb-5">{editTarget ? 'Edit Dokumen' : 'Tambah Dokumen'}</h5>
-                <div className="max-h-[65vh] overflow-y-auto pr-1">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <div className="sm:col-span-2">
-                            <FormItem label="Armada" asterisk>
-                                <Select
-                                    placeholder="Pilih armada..."
-                                    isDisabled={!!editTarget}
-                                    options={armadaOptions}
-                                    value={armadaOptions.find(o => o.value === form.id_armada) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, id_armada: (opt as Option | null)?.value ?? '' }))}
-                                />
-                            </FormItem>
-                        </div>
-                        <FormItem label="Jenis Dokumen" asterisk>
-                            <Select isSearchable={false} placeholder="Pilih jenis..."
-                                options={JENIS_DOKUMEN_OPTIONS}
-                                value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === form.jenis_dokumen) ?? null}
-                                onChange={opt => setForm(p => ({ ...p, jenis_dokumen: (opt as Option | null)?.value ?? '' }))} />
-                        </FormItem>
-                        <FormItem label="Nomor Dokumen">
-                            <Input placeholder="Contoh: B 1234 XYZ" value={form.nomor}
-                                onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} />
-                        </FormItem>
-                        <FormItem label="Berlaku Sampai">
-                            <DatePicker
-                                value={form.berlaku_sampai ? new Date(form.berlaku_sampai) : null}
-                                onChange={date => setForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                        </FormItem>
-                        <FormItem label="File Dokumen" asterisk={!editTarget}>
-                            <UploadBerkas
-                                file={file}
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                label={editTarget ? 'Ganti file (opsional)' : 'Pilih file'}
-                                hint="PDF/JPG/PNG · maksimal 5 MB"
-                                existingUrl={editTarget?.url_file ?? null}
-                                existingLabel="File saat ini"
-                                onChange={f => {
-                                    if (f && f.size > MAX_FILE_SIZE) {
-                                        toast.push(<Notification type="danger" title={`Ukuran file maksimal 5 MB (file dipilih: ${(f.size / 1024 / 1024).toFixed(1)} MB)`} />)
-                                        return
-                                    }
-                                    setFile(f)
-                                }}
-                            />
-                        </FormItem>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-blue-50 dark:bg-blue-500/10">
+                            <tr className="border-b border-gray-100 dark:border-gray-700">
+                                <th className={`${TH_CLASS} w-12`}>No</th>
+                                <th className={TH_CLASS}>Jenis Dokumen</th>
+                                <th className={TH_CLASS}>Nomor</th>
+                                <th className={TH_CLASS}>Berlaku Sampai</th>
+                                <th className={TH_CLASS}>File</th>
+                                <th className="py-2.5 px-3 text-right">
+                                    {groups.length > 0 && (
+                                        <button type="button" onClick={toggleSemua}
+                                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+                                            {semuaTerbuka ? 'Tutup semua' : 'Buka semua'}
+                                        </button>
+                                    )}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={6} className="py-10 text-center">
+                                        <Spinner className="inline-block" size={28} />
+                                    </td>
+                                </tr>
+                            ) : list.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="py-10 text-center text-gray-400">Tidak ada dokumen</td>
+                                </tr>
+                            ) : (
+                                groups.map(g => {
+                                    const terbuka = !!grupTerbuka[g.idArmada]
+                                    if (!terbuka) nomorBaris += g.rows.length
+                                    return (
+                                        <Fragment key={`${g.idArmada}-${g.rows[0].id_dokumen_armada}`}>
+                                            <tr className="bg-gray-50 dark:bg-gray-700/40 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60"
+                                                onClick={() => toggleGrup(g.idArmada)}>
+                                                <td colSpan={6} className="py-2 px-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <HiOutlineChevronDown className={`text-gray-400 transition-transform ${terbuka ? '' : '-rotate-90'}`} />
+                                                        <span
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 font-mono text-sm font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
+                                                            onClick={e => { e.stopPropagation(); router.push(ROUTES.ARMADA_DETAIL(g.idArmada)) }}>
+                                                            <PiTruckDuotone className="text-base" />
+                                                            {g.nopol}
+                                                        </span>
+                                                        {g.merk && <span className="text-xs text-gray-500">{g.merk}</span>}
+                                                        <span className="text-xs text-gray-400">{g.rows.length} dokumen</span>
+                                                        {g.rows.some(d => !!d.berlaku_sampai && dayjs(d.berlaku_sampai).diff(dayjs(), 'day') <= 30) && (
+                                                            <Tag className="text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                                                                Perlu perhatian
+                                                            </Tag>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {terbuka && g.rows.map(d => {
+                                                nomorBaris += 1
+                                                const expiry = getExpiryInfo(d.berlaku_sampai)
+                                                return (
+                                                    <tr key={d.id_dokumen_armada}>
+                                                        <td className="py-2.5 px-3">{nomorBaris}</td>
+                                                        <td className="py-2.5 px-3">{labelJenisDokumen(d.jenis_dokumen)}</td>
+                                                        <td className="py-2.5 px-3"><span className="font-mono text-xs">{d.nomor ?? '—'}</span></td>
+                                                        <td className="py-2.5 px-3">
+                                                            <p className="text-xs">{d.berlaku_sampai ? dayjs(d.berlaku_sampai).format('DD MMM YYYY') : '—'}</p>
+                                                            <Tag className={`text-xs font-semibold mt-1 ${expiry.className}`}>{expiry.label}</Tag>
+                                                        </td>
+                                                        <td className="py-2.5 px-3">
+                                                            {d.url_file
+                                                                ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                                : <span className="text-gray-400 text-xs">—</span>}
+                                                        </td>
+                                                        <td className="py-2.5 px-3">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Tooltip title="Lihat Detail">
+                                                                    <span
+                                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                                                        onClick={() => router.push(ROUTES.DOKUMEN_ARMADA_DETAIL(d.id_dokumen_armada))}>
+                                                                        <HiOutlineEye className="text-lg" />
+                                                                    </span>
+                                                                </Tooltip>
+                                                                <Tooltip title="Perpanjang">
+                                                                    <span
+                                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 transition-colors"
+                                                                        onClick={() => router.push(ROUTES.DOKUMEN_ARMADA_PERPANJANG(d.id_dokumen_armada))}>
+                                                                        <HiOutlineRefresh className="text-lg" />
+                                                                    </span>
+                                                                </Tooltip>
+                                                                <Tooltip title="Hapus">
+                                                                    <span
+                                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                                                                        onClick={() => setDeleteTarget(d)}>
+                                                                        <HiOutlineTrash className="text-lg" />
+                                                                    </span>
+                                                                </Tooltip>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </Fragment>
+                                    )
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                    <Pagination currentPage={currentPage} pageSize={pageSize} total={total} onChange={setCurrentPage} />
+                    <div className="w-40">
+                        <Select
+                            size="sm"
+                            isSearchable={false}
+                            options={PAGE_SIZE_OPTIONS}
+                            value={PAGE_SIZE_OPTIONS.find(o => o.value === pageSize) ?? PAGE_SIZE_OPTIONS[0]}
+                            onChange={opt => { setPageSize((opt as { value: number } | null)?.value ?? 10); setCurrentPage(1) }}
+                        />
                     </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={closeForm}>Batal</Button>
-                    <Button variant="solid" loading={saving}
-                        disabled={!form.id_armada || !form.jenis_dokumen || (!editTarget && !file)}
-                        onClick={handleSubmit}>Simpan</Button>
-                </div>
-            </Dialog>
+            </Card>
 
             <ConfirmDialog
                 isOpen={!!deleteTarget}
@@ -333,7 +276,10 @@ export default function DokumenArmadaPage() {
                 onConfirm={handleDelete}
                 confirmButtonProps={{ loading: deleting }}
             >
-                <p>Hapus dokumen <strong>{deleteTarget?.jenis_dokumen}</strong> untuk armada {deleteTarget?.armada_nopol}?</p>
+                <p>
+                    Hapus dokumen <strong>{deleteTarget ? labelJenisDokumen(deleteTarget.jenis_dokumen) : ''}</strong> untuk armada {deleteTarget?.armada_nopol}?
+                    {deleteTarget?.id_dokumen_sebelumnya && ' Dokumen sebelumnya akan kembali menjadi dokumen yang berlaku.'}
+                </p>
             </ConfirmDialog>
         </div>
     )

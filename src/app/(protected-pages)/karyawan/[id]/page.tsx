@@ -474,7 +474,9 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${karyawan.aktif ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
                                     {karyawan.aktif ? 'Aktif' : 'Nonaktif'}
                                 </span>
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />

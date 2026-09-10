@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { Card, Button, Input, Tag, Tooltip, Dialog, FormItem, toast, Notification, Switcher } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef } from '@/components/shared/DataTable'
@@ -105,7 +105,7 @@ export default function SupplierTab() {
                     <Tooltip title="Edit">
                         <span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 transition-colors"
                             onClick={() => bukaEdit(row.original)}>
-                            <HiOutlinePencil className="text-lg" />
+                            <HiOutlinePencilAlt className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Hapus">

@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, toast, Notification, Tag } from '@/components/ui'
+import { Card, Button, FormItem, Input, toast, Notification, Tag, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { ruteService, Rute, RutePayload } from '@/services/rute.service'
@@ -127,7 +127,9 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                     ? <Tag className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-0">Aktif</Tag>
                                     : <Tag className="bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400 border-0">Nonaktif</Tag>
                                 }
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />

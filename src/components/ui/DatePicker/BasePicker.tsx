@@ -24,7 +24,6 @@ import {
     useId,
     autoUpdate,
     offset,
-    flip,
     shift,
 } from '@floating-ui/react'
 
@@ -142,9 +141,6 @@ const BasePicker = (props: BasePickerProps) => {
         placement: 'bottom-start',
         middleware: [
             offset(10),
-            flip({
-                fallbackAxisSideDirection: 'start',
-            }),
             shift(),
         ],
         whileElementsMounted: autoUpdate,

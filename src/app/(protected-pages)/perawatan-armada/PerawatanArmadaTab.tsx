@@ -1,11 +1,11 @@
 'use client'
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
+import { Button, Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineChevronDown, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineDocumentDownload, HiOutlineChevronDown, HiOutlineClipboardList } from 'react-icons/hi'
 import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -19,7 +19,7 @@ type Option = { value: string; label: string }
 
 const STATUS_OPTIONS: { value: StatusPerawatan | ''; label: string }[] = [
     { value: '',             label: 'Semua Status' },
-    { value: 'terjadwal',    label: 'Terjadwal' },
+    { value: 'terjadwal',    label: 'Direncanakan' },
     { value: 'dalam_proses', label: 'Dalam Proses' },
 ]
 
@@ -40,7 +40,7 @@ const STATUS_CLASS: Record<string, string> = {
 }
 
 const STATUS_UBAH: { value: StatusPerawatan; label: string; dot: string }[] = [
-    { value: 'terjadwal',    label: 'Terjadwal',    dot: 'bg-blue-500' },
+    { value: 'terjadwal',    label: 'Direncanakan', dot: 'bg-blue-500' },
     { value: 'dalam_proses', label: 'Dalam Proses', dot: 'bg-emerald-500' },
     { value: 'selesai',      label: 'Selesai',      dot: 'bg-purple-500' },
     { value: 'dibatalkan',   label: 'Dibatalkan',   dot: 'bg-red-500' },
@@ -83,6 +83,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
     const [detailTarget, setDetailTarget] = useState<PerawatanArmadaWithArmada | null>(null)
     const [detailData, setDetailData]     = useState<PerawatanArmada | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
+    const [downloadingPdf, setDownloadingPdf] = useState(false)
     const [logOpen, setLogOpen]         = useState(false)
     const [logInfo, setLogInfo]         = useState<PengajuanKeuanganInfo | null>(null)
     const [logLoading, setLogLoading]   = useState(false)
@@ -107,6 +108,18 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             .finally(() => setDetailLoading(false))
     }
 
+    const handleUnduhPdf = async () => {
+        if (!detailTarget) return
+        setDownloadingPdf(true)
+        try {
+            await perawatanArmadaService.downloadDetailPdf(detailTarget.id_armada, detailTarget.id_perawatan, detailTarget.armada_nopol ?? 'armada', detailTarget.tanggal)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingPdf(false)
+        }
+    }
+
     useEffect(() => {
         if (initialDetail) {
             setDetailTarget(initialDetail)
@@ -116,6 +129,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
     const [deleting, setDeleting]         = useState(false)
     const [alasanHapus, setAlasanHapus]   = useState('')
 
+    const [grupTerbuka, setGrupTerbuka] = useState<Record<string, boolean>>({})
     const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
     const [selesaiTarget, setSelesaiTarget]       = useState<PerawatanArmadaWithArmada | null>(null)
     const [batalTarget, setBatalTarget]           = useState<PerawatanArmadaWithArmada | null>(null)
@@ -224,6 +238,9 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
     })
 
     let nomorBaris = (currentPage - 1) * pageSize
+    const semuaTerbuka = groups.length > 0 && groups.every(g => grupTerbuka[g.idArmada])
+    const toggleGrup = (idArmada: string) => setGrupTerbuka(prev => ({ ...prev, [idArmada]: !prev[idArmada] }))
+    const toggleSemua = () => setGrupTerbuka(semuaTerbuka ? {} : Object.fromEntries(groups.map(g => [g.idArmada, true])))
 
     return (
         <div className="flex flex-col gap-4">
@@ -231,7 +248,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
-                        placeholder="Cari jenis perawatan atau nopol... (tekan Enter)"
+                        placeholder="Cari paket servis atau nopol... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -284,12 +301,19 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                             <tr className="border-b border-gray-100 dark:border-gray-700">
                                 <th className={`${TH_CLASS} w-12`}>No</th>
                                 <th className={TH_CLASS}>Tanggal</th>
-                                <th className={TH_CLASS}>Jenis Perawatan</th>
+                                <th className={TH_CLASS}>Paket Servis</th>
                                 <th className={TH_CLASS}>Biaya</th>
                                 <th className={TH_CLASS}>KM Odometer</th>
                                 <th className={TH_CLASS}>Servis Berikutnya</th>
                                 <th className={TH_CLASS}>Status</th>
-                                <th className="py-2.5 px-3" />
+                                <th className="py-2.5 px-3 text-right">
+                                    {groups.length > 0 && (
+                                        <button type="button" onClick={toggleSemua}
+                                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap normal-case">
+                                            {semuaTerbuka ? 'Tutup semua' : 'Buka semua'}
+                                        </button>
+                                    )}
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -306,21 +330,26 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                     </td>
                                 </tr>
                             ) : (
-                                groups.map(g => (
+                                groups.map(g => {
+                                    const terbuka = !!grupTerbuka[g.idArmada]
+                                    if (!terbuka) nomorBaris += g.rows.length
+                                    return (
                                     <Fragment key={`${g.idArmada}-${g.rows[0].id_perawatan}`}>
-                                        <tr className="bg-gray-50 dark:bg-gray-700/40">
+                                        <tr className="bg-gray-50 dark:bg-gray-700/40 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60"
+                                            onClick={() => toggleGrup(g.idArmada)}>
                                             <td colSpan={8} className="py-2 px-3">
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="flex items-center gap-2">
+                                                        <HiOutlineChevronDown className={`text-gray-400 transition-transform ${terbuka ? '' : '-rotate-90'}`} />
                                                         <span
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 font-mono text-sm font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
-                                                            onClick={() => router.push(ROUTES.ARMADA_DETAIL(g.idArmada))}>
+                                                            onClick={e => { e.stopPropagation(); router.push(ROUTES.ARMADA_DETAIL(g.idArmada)) }}>
                                                             <PiTruckDuotone className="text-base" />
                                                             {g.nopol}
                                                         </span>
                                                         <span className="text-xs text-gray-400">{g.rows.length} perawatan</span>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                                                         <Tooltip title="Unduh laporan Excel unit ini">
                                                             <span
                                                                 className="cursor-pointer inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
@@ -339,13 +368,13 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                                 </div>
                                             </td>
                                         </tr>
-                                        {g.rows.map(p => {
+                                        {terbuka && g.rows.map(p => {
                                             nomorBaris += 1
                                             return (
                                                 <tr key={p.id_perawatan}>
                                                     <td className="py-2.5 px-3">{nomorBaris}</td>
                                                     <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(p.tanggal).format('DD MMM YYYY')}</td>
-                                                    <td className="py-2.5 px-3">{p.jenis_perawatan}</td>
+                                                    <td className="py-2.5 px-3">{p.interval_label ?? <span className="text-gray-400">—</span>}</td>
                                                     <td className="py-2.5 px-3 whitespace-nowrap">{formatRupiah(p.biaya)}</td>
                                                     <td className="py-2.5 px-3">
                                                         {p.km_odometer != null
@@ -450,7 +479,8 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                             )
                                         })}
                                     </Fragment>
-                                ))
+                                    )
+                                })
                             )}
                         </tbody>
                     </table>
@@ -472,8 +502,15 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             </Card>
 
             <Dialog isOpen={!!detailTarget} onRequestClose={() => setDetailTarget(null)} onClose={() => setDetailTarget(null)} width={640}>
-                <h5 className="text-base font-semibold mb-1">Detail Perawatan</h5>
-                <p className="text-xs text-gray-400 mb-4">{detailTarget?.armada_nopol ?? '—'}{detailTarget?.armada_merk ? ` · ${detailTarget.armada_merk}` : ''}</p>
+                <div className="flex items-start justify-between gap-3 pr-8 mb-4">
+                    <div>
+                        <h5 className="text-base font-semibold mb-1">Detail Perawatan</h5>
+                        <p className="text-xs text-gray-400">{detailTarget?.armada_nopol ?? '—'}{detailTarget?.armada_merk ? ` · ${detailTarget.armada_merk}` : ''}</p>
+                    </div>
+                    <Tooltip title="Export PDF">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} disabled={detailLoading} onClick={handleUnduhPdf} />
+                    </Tooltip>
+                </div>
                 {detailLoading ? (
                     <div className="flex justify-center py-8"><Spinner size={28} /></div>
                 ) : (
@@ -492,8 +529,10 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                 )}
                             </div>
                             <div>
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Jenis Perawatan</p>
-                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget?.jenis_perawatan ?? '—'}</p>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Paket Servis</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                    {detailData?.interval_label ?? detailTarget?.interval_label ?? '—'}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Biaya Jasa</p>
@@ -506,6 +545,10 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Servis Berikutnya</p>
                                 <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailTarget?.jadwal_servis_berikutnya ? dayjs(detailTarget.jadwal_servis_berikutnya).format('DD MMM YYYY') : '—'}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Bengkel</p>
+                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailData?.nama_supplier ?? detailTarget?.nama_supplier ?? '—'}</p>
                             </div>
                         </div>
 
@@ -529,6 +572,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                     <table className="w-full text-sm">
                                         <thead className="bg-blue-50 dark:bg-blue-500/10">
                                             <tr className="border-b border-gray-100 dark:border-gray-700">
+                                                <th className="py-2 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Sumber</th>
                                                 <th className="py-2 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Nama</th>
                                                 <th className="py-2 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Qty</th>
                                                 <th className="py-2 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Harga</th>
@@ -538,6 +582,11 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                             {detailData?.sparepart?.map(s => (
                                                 <tr key={s.id_perawatan_sparepart}>
+                                                    <td className="py-2 px-3">
+                                                        <Tag className={`text-xs font-semibold whitespace-nowrap ${s.sumber === 'bengkel' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100'}`}>
+                                                            {s.sumber === 'bengkel' ? 'Bengkel' : 'Stok'}
+                                                        </Tag>
+                                                    </td>
                                                     <td className="py-2 px-3">{s.nama_sparepart}</td>
                                                     <td className="py-2 px-3 text-right">{formatNum(s.qty)}</td>
                                                     <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(s.harga)}</td>
@@ -545,7 +594,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                                 </tr>
                                             ))}
                                             <tr className="border-t border-gray-200 dark:border-gray-600">
-                                                <td colSpan={3} className="py-2 px-3 text-right font-semibold text-gray-800 dark:text-gray-100">Total Biaya (jasa + sparepart)</td>
+                                                <td colSpan={4} className="py-2 px-3 text-right font-semibold text-gray-800 dark:text-gray-100">Total Biaya (jasa + sparepart)</td>
                                                 <td className="py-2 px-3 text-right font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
                                                     {formatRupiah((detailTarget?.biaya ?? 0) + (detailData?.sparepart?.reduce((acc, s) => acc + s.subtotal, 0) ?? 0))}
                                                 </td>
@@ -593,7 +642,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                 onConfirm={handleDelete}
                 confirmButtonProps={{ loading: deleting, disabled: !alasanHapus.trim() }}
             >
-                <p>Hapus data perawatan &quot;{deleteTarget?.jenis_perawatan}&quot; untuk armada {deleteTarget?.armada_nopol}?</p>
+                <p>Hapus data perawatan{deleteTarget?.interval_label ? ` "${deleteTarget.interval_label}"` : ''} untuk armada {deleteTarget?.armada_nopol}?</p>
                 <div className="mt-3">
                     <p className="text-sm font-semibold mb-1">Alasan penghapusan <span className="text-red-500">*</span></p>
                     <Input textArea rows={3} placeholder="Tulis alasan kenapa data ini dihapus..."
@@ -617,7 +666,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                 }}
             >
                 <p className="text-sm">
-                    Perawatan &quot;{selesaiTarget?.jenis_perawatan}&quot; armada {selesaiTarget?.armada_nopol} akan
+                    Perawatan{selesaiTarget?.interval_label ? ` "${selesaiTarget.interval_label}"` : ''} armada {selesaiTarget?.armada_nopol} akan
                     ditandai selesai dan pindah ke tab Riwayat. Setelah selesai, data tidak bisa diedit atau dihapus lagi.
                 </p>
             </ConfirmDialog>
@@ -634,7 +683,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                 confirmButtonProps={{ loading: membatalkan, disabled: !alasanBatal.trim() }}
             >
                 <p className="text-sm">
-                    Perawatan &quot;{batalTarget?.jenis_perawatan}&quot; armada {batalTarget?.armada_nopol} akan
+                    Perawatan{batalTarget?.interval_label ? ` "${batalTarget.interval_label}"` : ''} armada {batalTarget?.armada_nopol} akan
                     dibatalkan. Stok sparepart yang sudah dipotong dikembalikan otomatis, dan data tetap tampil
                     di tab Riwayat dengan status dibatalkan.
                 </p>

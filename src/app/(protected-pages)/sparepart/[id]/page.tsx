@@ -2,7 +2,7 @@
 import { use, useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, Tag, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
@@ -155,10 +155,14 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                     <div className="flex gap-2">
                         {!editing && (
                             <>
-                                <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
-                                <Button size="sm" variant="solid"
-                                    customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
-                                    icon={<HiOutlineTrash />} onClick={() => setDeleteOpen(true)}>Hapus</Button>
+                                <Tooltip title="Hapus">
+                                    <Button size="sm" variant="default" icon={<HiOutlineTrash />}
+                                        customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'}
+                                        onClick={() => setDeleteOpen(true)} />
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                    <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                                 <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => { setStokForm({ qty: '', harga: '', keterangan: '' }); setStokSubmitted(false); setStokOpen(true) }}>Penyesuaian Stok</Button>
                             </>
                         )}

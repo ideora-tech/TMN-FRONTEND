@@ -35,6 +35,9 @@ export const API_ENDPOINTS = {
     ARMADA_DOKUMEN_UPDATE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     ARMADA_DOKUMEN_DELETE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     DOKUMEN_ARMADA:        '/api/proxy/dokumen-armada',
+    DOKUMEN_ARMADA_DETAIL: (id: string) => `/api/proxy/dokumen-armada/${id}`,
+    ARMADA_DOKUMEN_BATCH:  (idArmada: string) => `/api/proxy/armada/${idArmada}/dokumen/batch`,
+    ARMADA_DOKUMEN_PERPANJANG: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}/perpanjang`,
 
     // Perawatan Armada (nested)
     ARMADA_PERAWATAN:       (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan`,
@@ -43,8 +46,10 @@ export const API_ENDPOINTS = {
     ARMADA_PERAWATAN_BUKTI: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti`,
     ARMADA_PERAWATAN_BUKTI_DETAIL: (idArmada: string, id: string, idBukti: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/bukti/${idBukti}`,
     ARMADA_PERAWATAN_PENGAJUAN: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/pengajuan`,
+    ARMADA_PERAWATAN_DETAIL_PDF: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/perawatan/${id}/export/pdf`,
     ARMADA_PREDIKSI_PERAWATAN: (idArmada: string) => `/api/proxy/armada/${idArmada}/prediksi-perawatan`,
     PERAWATAN_ARMADA:       '/api/proxy/perawatan-armada',
+    PERAWATAN_ARMADA_PAPAN_UNIT: '/api/proxy/perawatan-armada/papan-unit',
     PERAWATAN_REKAP_PER_UNIT: '/api/proxy/perawatan-armada/rekap-per-unit',
     PERAWATAN_REKAP_EXPORT: (format: 'excel' | 'pdf') => `/api/proxy/perawatan-armada/rekap-per-unit/export/${format}`,
     ARMADA_PERAWATAN_EXPORT: (idArmada: string, format: 'excel' | 'pdf') => `/api/proxy/armada/${idArmada}/perawatan/export/${format}`,

@@ -1,30 +1,37 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
+export interface IntervalPerawatanSparepart {
+    id_sparepart: string
+    nama_sparepart: string | null
+    satuan_sparepart: string | null
+    qty_standar: number
+}
+
 export interface IntervalPerawatan {
     id_interval_perawatan: string
-    id_perusahaan: string
-    id_jenis_perawatan: string
     id_jenis_kendaraan: string
-    nama_jenis_perawatan: string | null
     nama_jenis_kendaraan: string | null
-    interval_hari: number | null
     interval_km: number | null
-    aktif: boolean
-    dibuat_pada: string
-    diubah_pada: string | null
+    interval_bulan: number | null
+    label: string
+    sparepart: IntervalPerawatanSparepart[]
+}
+
+export type IntervalPerawatanSparepartInput = {
+    id_sparepart: string
+    qty_standar: number
 }
 
 export type IntervalPerawatanPayload = {
-    id_jenis_perawatan: string
     id_jenis_kendaraan: string
-    interval_hari?: number | null
-    interval_km: number
-    aktif?: boolean
+    interval_km?: number | null
+    interval_bulan?: number | null
+    sparepart?: IntervalPerawatanSparepartInput[]
 }
 
 export const intervalPerawatanService = {
-    async list(params?: { page?: number; limit?: number; id_jenis_perawatan?: string; id_jenis_kendaraan?: string; search?: string }) {
+    async list(params?: { page?: number; limit?: number; id_jenis_kendaraan?: string; search?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.INTERVAL_PERAWATAN, { params })
         return data as { data: IntervalPerawatan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
@@ -42,9 +49,5 @@ export const intervalPerawatanService = {
     },
     async delete(id: string) {
         await axios.delete(API_ENDPOINTS.INTERVAL_PERAWATAN_DETAIL(id))
-    },
-    async resolusi(params: { id_jenis_perawatan: string; id_jenis_kendaraan: string }): Promise<{ interval_hari: number | null } | null> {
-        const { data } = await axios.get(API_ENDPOINTS.INTERVAL_PERAWATAN_RESOLUSI, { params })
-        return data?.data ?? null
     },
 }

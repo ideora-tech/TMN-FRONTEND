@@ -230,7 +230,9 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 <Tag className={`text-xs font-semibold ${statusClass[supir.status] ?? 'bg-gray-100 text-gray-700'}`}>
                                     {supir.status}
                                 </Tag>
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />

@@ -1,14 +1,14 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, Dialog, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineDocumentDownload, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
 import { penawaranService, Penawaran, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
 import { projectService } from '@/services/project.service'
@@ -454,18 +454,15 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 <Tag className={`${STATUS_CLASS[data.status] ?? ''} border-0`}>
                                     {STATUS_LABEL[data.status] ?? data.status}
                                 </Tag>
-                                <Button size="sm" variant="default" loading={downloadingPdf} onClick={handleDownloadPdf}>
-                                    Download PDF
-                                </Button>
+                                <Tooltip title="Download PDF">
+                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                                        loading={downloadingPdf} onClick={handleDownloadPdf} />
+                                </Tooltip>
                                 {data.status === 'draft' && (
-                                    <Button
-                                        variant="solid"
-                                        size="sm"
-                                        icon={<HiOutlinePencilAlt />}
-                                        onClick={() => setEditing(true)}
-                                    >
-                                        Edit
-                                    </Button>
+                                    <Tooltip title="Edit">
+                                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />}
+                                            onClick={() => setEditing(true)} />
+                                    </Tooltip>
                                 )}
                             </div>
                         </div>

@@ -231,31 +231,31 @@ export default function SupirPage() {
                     <h3 className="font-bold">Supir</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master supir</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Tooltip title="Unduh Template">
-                        <Button
-                            size="sm" variant="default"
-                            icon={<HiOutlineDownload />}
-                            loading={downloadingTemplate}
-                            onClick={handleDownloadTemplate}
-                        />
-                    </Tooltip>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        size="sm" variant="default"
+                        icon={<HiOutlineDownload />}
+                        loading={downloadingTemplate}
+                        onClick={handleDownloadTemplate}
+                    >
+                        Unduh Template
+                    </Button>
                     <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
-                        <Tooltip title="Import Excel">
-                            <Button
-                                type="button" size="sm" variant="default"
-                                icon={<HiOutlineUpload />}
-                                loading={importing}
-                            />
-                        </Tooltip>
-                    </Upload>
-                    <Tooltip title="Tambah Supir">
                         <Button
-                            variant="solid" size="sm"
-                            icon={<HiPlusCircle />}
-                            onClick={() => router.push(ROUTES.SUPIR_BARU)}
-                        />
-                    </Tooltip>
+                            type="button" size="sm" variant="default"
+                            icon={<HiOutlineUpload />}
+                            loading={importing}
+                        >
+                            Import Excel
+                        </Button>
+                    </Upload>
+                    <Button
+                        variant="solid" size="sm"
+                        icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.SUPIR_BARU)}
+                    >
+                        Tambah Supir
+                    </Button>
                 </div>
             </div>
             <Card bodyClass="p-0">

@@ -27,7 +27,7 @@ const EMPTY: DashboardArmada = {
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
     dalam_proses: { label: 'Dalam Proses', className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
-    terjadwal:    { label: 'Terjadwal',    className: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
+    terjadwal:    { label: 'Direncanakan', className: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
 }
 
 const TH_CLASS = 'px-4 py-2 text-left font-semibold'
@@ -53,7 +53,7 @@ export default function DashboardArmadaTab() {
         { label: 'Tersedia',         value: statistik.tersedia,       icon: <PiGarageDuotone className="text-3xl text-emerald-500" />,      bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
         { label: 'Digunakan',        value: statistik.digunakan,      icon: <PiSteeringWheelDuotone className="text-3xl text-violet-500" />, bg: 'bg-violet-50 dark:bg-violet-500/10',  text: 'text-violet-600 dark:text-violet-400' },
         { label: 'Dalam Perawatan',  value: statistik.dalamPerawatan, icon: <PiWrenchDuotone className="text-3xl text-amber-500" />,        bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400' },
-        { label: 'Terjadwal Servis', value: statistik.terjadwal,      icon: <PiCalendarCheckDuotone className="text-3xl text-blue-500" />,  bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400' },
+        { label: 'Rencana Servis', value: statistik.terjadwal,      icon: <PiCalendarCheckDuotone className="text-3xl text-blue-500" />,  bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400' },
         { label: 'Harus Diservis',   value: statistik.harusServis,    icon: <PiWarningCircleDuotone className="text-3xl text-red-500" />,   bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400' },
     ]
 

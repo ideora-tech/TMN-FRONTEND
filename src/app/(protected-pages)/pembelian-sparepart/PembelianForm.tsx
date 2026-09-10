@@ -114,8 +114,8 @@ export default function PembelianForm({ mode, initial }: Props) {
     useEffect(() => {
         if (!idArmada) { setPerawatanOptions([]); return }
         axios.get(API_ENDPOINTS.ARMADA_PERAWATAN(idArmada), { params: { limit: 999 } })
-            .then(r => setPerawatanOptions((r.data.data as { id_perawatan: string; tanggal: string; jenis_perawatan: string }[])
-                .map(p => ({ value: p.id_perawatan, label: `${dayjs(p.tanggal).format('DD MMM YYYY')} — ${p.jenis_perawatan}` }))))
+            .then(r => setPerawatanOptions((r.data.data as { id_perawatan: string; tanggal: string; interval_label?: string | null }[])
+                .map(p => ({ value: p.id_perawatan, label: `${dayjs(p.tanggal).format('DD MMM YYYY')} — ${p.interval_label ?? 'Perbaikan'}` }))))
             .catch(() => setPerawatanOptions([]))
     }, [idArmada])
 

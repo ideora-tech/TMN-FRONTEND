@@ -7,15 +7,13 @@ import Tabs from '@/components/ui/Tabs'
 import { ROUTES } from '@/constants/route.constant'
 import SparepartTab from './SparepartTab'
 import KategoriTab from './KategoriTab'
-import PaketTab from './PaketTab'
 
-const TAB_VALUES = ['sparepart', 'kategori', 'paket'] as const
+const TAB_VALUES = ['sparepart', 'kategori'] as const
 type TabValue = (typeof TAB_VALUES)[number]
 
 const TAB_META: Record<TabValue, { addLabel: string; addRoute: string }> = {
     sparepart: { addLabel: 'Tambah Spare Part', addRoute: ROUTES.SPAREPART_BARU },
     kategori:  { addLabel: 'Tambah Kategori', addRoute: ROUTES.KATEGORI_SPAREPART_BARU },
-    paket:     { addLabel: 'Tambah Paket', addRoute: ROUTES.PAKET_PERAWATAN_SPAREPART_BARU },
 }
 
 export default function SparepartPage() {
@@ -41,12 +39,10 @@ export default function SparepartPage() {
                 <Tabs.TabList>
                     <Tabs.TabNav value="sparepart">Spare Part</Tabs.TabNav>
                     <Tabs.TabNav value="kategori">Kategori</Tabs.TabNav>
-                    <Tabs.TabNav value="paket">Paket Spare Part</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="sparepart"><SparepartTab /></Tabs.TabContent>
                     <Tabs.TabContent value="kategori"><KategoriTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="paket"><PaketTab /></Tabs.TabContent>
                 </div>
             </Tabs>
         </div>

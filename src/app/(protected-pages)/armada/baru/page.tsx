@@ -176,7 +176,8 @@ export default function ArmadaBaruPage() {
                     </FormItem>
 
                     <SectionTitle>Pembelian</SectionTitle>
-                    <FormItem label="Tanggal Beli">
+                    <FormItem label="Tanggal Beli"
+                        extra={<span className="text-xs text-gray-400">Dipakai sebagai titik mulai jadwal servis pertama bila unit belum punya riwayat perawatan</span>}>
                         <DatePicker
                             value={form.tanggal_beli ? new Date(form.tanggal_beli) : null}
                             onChange={date => setForm(p => ({ ...p, tanggal_beli: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />

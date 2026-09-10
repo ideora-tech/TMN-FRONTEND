@@ -1,13 +1,12 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, Dialog, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, Upload, toast, Notification } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import UploadBerkas from '@/components/shared/UploadBerkas'
-import { PENGAJUAN_LABEL, PENGAJUAN_TAG } from '@/components/shared/LogAktivitasKeuanganDialog'
+import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencil, HiOutlineTrash, HiOutlineShoppingCart } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineClipboardList, HiOutlinePaperClip } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -30,6 +29,7 @@ export default function PembelianDetailPage() {
     const [errRealisasi, setErrRealisasi] = useState('')
     const [hapusOpen, setHapusOpen] = useState(false)
     const [hapusBuktiTarget, setHapusBuktiTarget] = useState<string | null>(null)
+    const [logOpen, setLogOpen] = useState(false)
 
     const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
     const punyaPeran = (...roles: string[]) => roles.some(r => authority.includes(r))
@@ -127,26 +127,43 @@ export default function PembelianDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <Tooltip title="Log Approval">
+                        <Button variant="default" size="sm" icon={<HiOutlineClipboardList />}
+                            onClick={() => {
+                                if (!data.pengajuan_keuangan) {
+                                    toast.push(<Notification type="info" title={data.id_perawatan
+                                        ? 'Approval pembelian ini mengikuti pengajuan perawatan terkait'
+                                        : 'Belum ada pengajuan pengeluaran untuk pembelian ini'} />)
+                                    return
+                                }
+                                setLogOpen(true)
+                            }} />
+                    </Tooltip>
                     {bolehDiubahAtauDihapus(data.status, data.id_perawatan) && bolehKelola && (
                         <>
-                            <Button size="sm" icon={<HiOutlinePencil />}
-                                onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_EDIT(id))}>Edit</Button>
-                            <Button size="sm" customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'}
-                                icon={<HiOutlineTrash />} onClick={() => setHapusOpen(true)}>Hapus</Button>
+                            <Tooltip title="Hapus">
+                                <Button variant="default" size="sm" icon={<HiOutlineTrash />}
+                                    customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'}
+                                    onClick={() => setHapusOpen(true)} />
+                            </Tooltip>
+                            <Tooltip title="Edit">
+                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />}
+                                    onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_EDIT(id))} />
+                            </Tooltip>
                         </>
+                    )}
+                    {(data.status === 'disetujui_finance' || data.status === 'dibeli') && bolehKelola && (
+                        <Upload accept=".jpg,.jpeg,.png,.webp,.pdf" showList={false} multiple disabled={submitting}
+                            onChange={(semua, sebelumnya) => handleUpload(semua.slice(sebelumnya.length))}>
+                            <Tooltip title="Upload Nota">
+                                <Button type="button" variant="default" size="sm" icon={<HiOutlinePaperClip />} loading={submitting} />
+                            </Tooltip>
+                        </Upload>
                     )}
                     {data.status === 'disetujui_finance' && bolehKelola && (
-                        <>
-                            <UploadBerkas file={null} multiple loading={submitting} label="Upload Nota" hint={null}
-                                accept=".jpg,.jpeg,.png,.webp,.pdf" onFiles={handleUpload} />
-                            <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
-                                Realisasi
-                            </Button>
-                        </>
-                    )}
-                    {data.status === 'dibeli' && bolehKelola && (
-                        <UploadBerkas file={null} multiple loading={submitting} label="Upload Nota" hint={null}
-                            accept=".jpg,.jpeg,.png,.webp,.pdf" onFiles={handleUpload} />
+                        <Tooltip title="Realisasi">
+                            <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi} />
+                        </Tooltip>
                     )}
                 </div>
             </div>
@@ -173,18 +190,6 @@ export default function PembelianDetailPage() {
                     <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Armada Terkait</p>
                         <p className="text-sm font-semibold mt-0.5">{data.nopol_armada ?? '—'}</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Disetujui Manager</p>
-                        <p className="text-sm font-semibold mt-0.5">
-                            {data.disetujui_manager_pada ? dayjs(data.disetujui_manager_pada).format('DD MMM YYYY HH:mm') : '—'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Disetujui Finance</p>
-                        <p className="text-sm font-semibold mt-0.5">
-                            {data.disetujui_finance_pada ? dayjs(data.disetujui_finance_pada).format('DD MMM YYYY HH:mm') : '—'}
-                        </p>
                     </div>
                     <div>
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Tanggal Pembelian</p>
@@ -345,32 +350,19 @@ export default function PembelianDetailPage() {
                 )}
             </Card>
 
-            <Card>
-                <div className="flex flex-wrap justify-between items-center gap-3">
-                    <div>
-                        <h5>Approval Pengajuan Pengeluaran</h5>
-                        {data.pengajuan_keuangan ? (
-                            <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                                {data.pengajuan_keuangan.nomor_pengajuan} — {formatRupiah(data.pengajuan_keuangan.nominal)}
-                            </p>
-                        ) : (
-                            <p className="text-sm text-gray-400 mt-0.5">
-                                {data.id_perawatan
-                                    ? 'Pengajuan pengeluaran pembelian ini mengikuti pengajuan perawatan terkait.'
-                                    : 'Belum ada pengajuan pengeluaran.'}
-                            </p>
-                        )}
-                    </div>
-                    {data.pengajuan_keuangan && (
-                        <Tag className={`${PENGAJUAN_TAG[data.pengajuan_keuangan.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0 font-semibold`}>
-                            {PENGAJUAN_LABEL[data.pengajuan_keuangan.status] ?? data.pengajuan_keuangan.status}
-                        </Tag>
-                    )}
-                </div>
-                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Batal</Button>
-                </div>
-            </Card>
+            <div className="flex justify-end">
+                <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Batal</Button>
+            </div>
+
+            {data.pengajuan_keuangan && (
+                <LogApprovalDialog
+                    isOpen={logOpen}
+                    onClose={() => setLogOpen(false)}
+                    kode="sparepart"
+                    idReferensi={data.pengajuan_keuangan.id_pengajuan}
+                    emptyMessage="Belum ada pengajuan approval untuk pembelian ini."
+                />
+            )}
 
             <Dialog isOpen={realisasiOpen} onClose={() => setRealisasiOpen(false)} onRequestClose={() => setRealisasiOpen(false)}>
                 <h5 className="mb-4">Realisasi Pembelian</h5>

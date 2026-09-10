@@ -1,7 +1,7 @@
 ﻿'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Select, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Select, toast, Notification, Tooltip } from '@/components/ui'
 import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -99,7 +99,9 @@ export default function PerusahaanDetailPage({ params }: { params: Promise<{ id:
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${perusahaan.aktif ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
                                     {perusahaan.aktif ? 'Aktif' : 'Nonaktif'}
                                 </span>
-                                <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>Edit</Button>
+                                <Tooltip title="Edit">
+                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
+                                </Tooltip>
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />

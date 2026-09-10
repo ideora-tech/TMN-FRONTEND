@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -125,18 +125,18 @@ export default function RutePage() {
             cell: (props: CellContext<Rute, unknown>) => {
                 const id = props.row.original.id_rute
                 return (
-                    <div className="flex items-center justify-end gap-1">
-                        <Tooltip title="Edit">
-                            <span
-                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 cursor-pointer transition-colors"
-                                onClick={() => router.push(ROUTES.RUTE_DETAIL(id))}
-                            ><HiOutlinePencilAlt className="text-base" /></span>
+                    <div className="flex items-center justify-end gap-2">
+                        <Tooltip title="Detail">
+                            <span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
+                                onClick={() => router.push(ROUTES.RUTE_DETAIL(id))}>
+                                <HiOutlineEye className="text-lg" />
+                            </span>
                         </Tooltip>
                         <Tooltip title="Hapus">
-                            <span
-                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-200 cursor-pointer transition-colors"
-                                onClick={() => setDeleteId(id)}
-                            ><HiOutlineTrash className="text-base" /></span>
+                            <span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                onClick={() => setDeleteId(id)}>
+                                <HiOutlineTrash className="text-lg" />
+                            </span>
                         </Tooltip>
                     </div>
                 )

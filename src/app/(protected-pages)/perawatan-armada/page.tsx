@@ -8,19 +8,20 @@ import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
 import { perawatanArmadaService, PerawatanArmadaWithArmada } from '@/services/perawatanArmada.service'
 import { armadaService } from '@/services/armada.service'
+import PapanUnitTab from './PapanUnitTab'
 import PerawatanArmadaTab from './PerawatanArmadaTab'
 import IntervalPerawatanTab from './IntervalPerawatanTab'
-import JenisPerawatanTab from './JenisPerawatanTab'
 import LaporanPerUnitTab from './LaporanPerUnitTab'
 
-const TAB_VALUES = ['armada', 'riwayat', 'interval', 'jenis', 'laporan'] as const
+const TAB_VALUES = ['armada', 'berjalan', 'riwayat', 'interval', 'laporan'] as const
 type TabValue = (typeof TAB_VALUES)[number]
+type ActiveTabValue = TabValue
 
 const TAB_META: Record<TabValue, { addLabel: string; addRoute: string } | null> = {
     armada:   { addLabel: 'Catat Perawatan', addRoute: ROUTES.PERAWATAN_ARMADA_BARU },
+    berjalan: { addLabel: 'Catat Perawatan', addRoute: ROUTES.PERAWATAN_ARMADA_BARU },
     riwayat:  null,
-    interval: { addLabel: 'Tambah Interval', addRoute: ROUTES.INTERVAL_PERAWATAN_BARU },
-    jenis:    { addLabel: 'Tambah Jenis Perawatan', addRoute: ROUTES.JENIS_PERAWATAN_BARU },
+    interval: { addLabel: 'Tambah Paket Servis', addRoute: ROUTES.INTERVAL_PERAWATAN_BARU },
     laporan:  null,
 }
 
@@ -29,10 +30,20 @@ export default function PerawatanArmadaPage() {
     const searchParams = useSearchParams()
     const tabParam = searchParams.get('tab')
     const initialTab: TabValue = TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'armada'
-    const [activeTab, setActiveTab] = useState<TabValue>(initialTab)
+    const [activeTab, setActiveTab] = useState<ActiveTabValue>(initialTab)
     const detailParam = searchParams.get('detail')
     const armadaParam = searchParams.get('armada')
     const [initialDetail, setInitialDetail] = useState<PerawatanArmadaWithArmada | null>(null)
+    const [jumlah, setJumlah] = useState<{ berjalan: number | null; riwayat: number | null }>({ berjalan: null, riwayat: null })
+
+    useEffect(() => {
+        Promise.all([
+            perawatanArmadaService.listAll({ page: 1, limit: 1, status: 'terjadwal,dalam_proses' }),
+            perawatanArmadaService.listAll({ page: 1, limit: 1, status: 'selesai,dibatalkan' }),
+        ])
+            .then(([berjalan, riwayat]) => setJumlah({ berjalan: berjalan.meta.total, riwayat: riwayat.meta.total }))
+            .catch(() => {})
+    }, [activeTab])
 
     useEffect(() => {
         if (!detailParam || !armadaParam) return
@@ -41,41 +52,40 @@ export default function PerawatanArmadaPage() {
             armadaService.get(armadaParam),
         ])
             .then(([perawatan, armada]) => {
-                setActiveTab(perawatan.status === 'selesai' || perawatan.status === 'dibatalkan' ? 'riwayat' : 'armada')
+                setActiveTab(perawatan.status === 'selesai' || perawatan.status === 'dibatalkan' ? 'riwayat' : 'berjalan')
                 setInitialDetail({ ...perawatan, armada_nopol: armada.nopol, armada_merk: armada.merk })
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [detailParam, armadaParam])
 
-    const detailRiwayat = initialDetail ? initialDetail.status === 'selesai' || initialDetail.status === 'dibatalkan' : false
 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Perawatan Armada</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Riwayat perawatan seluruh armada</p>
+                    <p className="text-gray-500 text-sm mt-0.5">Status servis dan pemberitahuan perawatan seluruh unit armada</p>
                 </div>
-                {TAB_META[activeTab] && (
+                {TAB_META[activeTab as TabValue] && (
                     <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                        onClick={() => router.push(TAB_META[activeTab]!.addRoute)}>
-                        {TAB_META[activeTab]!.addLabel}
+                        onClick={() => router.push(TAB_META[activeTab as TabValue]!.addRoute)}>
+                        {TAB_META[activeTab as TabValue]!.addLabel}
                     </Button>
                 )}
             </div>
-            <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
+            <Tabs value={activeTab} onChange={val => setActiveTab(val as ActiveTabValue)}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="armada">Perawatan Armada</Tabs.TabNav>
-                    <Tabs.TabNav value="riwayat">Riwayat</Tabs.TabNav>
+                    <Tabs.TabNav value="berjalan">Sedang Berjalan{jumlah.berjalan !== null ? ` (${jumlah.berjalan})` : ''}</Tabs.TabNav>
+                    <Tabs.TabNav value="riwayat">Riwayat{jumlah.riwayat !== null ? ` (${jumlah.riwayat})` : ''}</Tabs.TabNav>
                     <Tabs.TabNav value="interval">Interval Perawatan</Tabs.TabNav>
-                    <Tabs.TabNav value="jenis">Jenis Perawatan</Tabs.TabNav>
                     <Tabs.TabNav value="laporan">Laporan per Unit</Tabs.TabNav>
                 </Tabs.TabList>
                 <div>
-                    <Tabs.TabContent value="armada"><PerawatanArmadaTab initialDetail={!detailRiwayat ? initialDetail : null} /></Tabs.TabContent>
-                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" initialDetail={detailRiwayat ? initialDetail : null} /></Tabs.TabContent>
+                    <Tabs.TabContent value="armada"><PapanUnitTab onGoToInterval={() => setActiveTab('interval')} /></Tabs.TabContent>
+                    <Tabs.TabContent value="berjalan"><PerawatanArmadaTab mode="aktif" initialDetail={initialDetail && initialDetail.status !== 'selesai' && initialDetail.status !== 'dibatalkan' ? initialDetail : null} /></Tabs.TabContent>
+                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" initialDetail={initialDetail && (initialDetail.status === 'selesai' || initialDetail.status === 'dibatalkan') ? initialDetail : null} /></Tabs.TabContent>
                     <Tabs.TabContent value="interval"><IntervalPerawatanTab /></Tabs.TabContent>
-                    <Tabs.TabContent value="jenis"><JenisPerawatanTab /></Tabs.TabContent>
                     <Tabs.TabContent value="laporan"><LaporanPerUnitTab /></Tabs.TabContent>
                 </div>
             </Tabs>
