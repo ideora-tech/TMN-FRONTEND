@@ -18,6 +18,7 @@ import {
     HiOutlineClipboardList,
 } from 'react-icons/hi'
 import DetailPengajuanDialog from '../arus-kas/DetailPengajuanDialog'
+import { useLogPengajuan } from '../arus-kas/useLogPengajuan'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
@@ -36,7 +37,6 @@ type Props = {
     onRefresh: () => void
     onEdit?: (p: PengajuanPengeluaran) => void
     onDelete?: (p: PengajuanPengeluaran) => void
-    onShowLog?: (p: PengajuanPengeluaran) => void
 }
 
 type HasilGagalBulk = { nomor: string; alasan: string }
@@ -47,7 +47,8 @@ const BULK_LABEL: Record<BulkAction, string> = {
     cek: 'Verifikasi', setuju: 'Setujui', tolak: 'Tolak', transfer: 'Transfer',
 }
 
-export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete, onShowLog }: Props) {
+export default function PengajuanBulkTable({ list, loading, bulkActions, showStatusColumn, extraColumn, onRefresh, onEdit, onDelete }: Props) {
+    const { bukaLog, dialogLog } = useLogPengajuan()
     const { session } = useCurrentSession()
     const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
     const punyaPeran = (...roles: string[]) => roles.some(r => authority.includes(r))
@@ -360,15 +361,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 <HiOutlineEye className="text-lg" />
                             </span>
                         </Tooltip>
-                        {onShowLog && (
-                            <Tooltip title="Log Aktivitas">
-                                <span
-                                    className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
-                                    onClick={() => onShowLog(p)}>
-                                    <HiOutlineClipboardList className="text-lg" />
-                                </span>
-                            </Tooltip>
-                        )}
+                        <Tooltip title="Log Aktivitas Approval">
+                            <span
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                onClick={() => bukaLog(p.id_pengajuan)}>
+                                <HiOutlineClipboardList className="text-lg" />
+                            </span>
+                        </Tooltip>
                         {p.status === 'disetujui' && bolehKeuangan && (
                             <Tooltip title="Verifikasi">
                                 <span
@@ -477,6 +476,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
             />
 
             <DetailPengajuanDialog pengajuan={detailTarget} onClose={() => setDetailTarget(null)} onRefresh={onRefresh} />
+            {dialogLog}
 
             <ConfirmDialog
                 isOpen={!!cekTarget}

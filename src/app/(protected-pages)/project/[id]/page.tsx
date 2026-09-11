@@ -16,6 +16,7 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { projectService, Project } from '@/services/project.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
+import { penugasanHarianService, PeriodeSinkron, PratinjauSinkron } from '@/services/penugasanHarian.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import { supirService, Supir } from '@/services/supir.service'
@@ -123,6 +124,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [form, setForm]         = useState<Partial<Project>>({})
     const [saving, setSaving]     = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [sinkron, setSinkron]   = useState<{ periode: PeriodeSinkron; pratinjau: PratinjauSinkron } | null>(null)
+    const [menyinkron, setMenyinkron] = useState(false)
     const [downloadingPdf, setDownloadingPdf] = useState(false)
     const [pendingStatus, setPendingStatus] = useState<string | null>(null)
     const [errors, setErrors]     = useState<Partial<Record<keyof Project, string>>>({})
@@ -504,12 +507,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         return Object.keys(e).length === 0
     }
 
-    const handleSave = async () => {
-        if (!validate()) {
-            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-            return
-        }
+    const simpanProyek = async (): Promise<boolean> => {
         setSaving(true)
         try {
             const updated = await projectService.update(id, {
@@ -524,10 +522,85 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             })
             setProject(updated); setForm(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Proyek berhasil diperbarui" />)
+            return true
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            return false
         } finally { setSaving(false) }
     }
+
+    const keTanggal = (v?: string | null) => (v ? dayjs(v).format('YYYY-MM-DD') : null)
+
+    const handleSave = async () => {
+        if (!validate()) {
+            toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+        }
+
+        const lamaMulai = keTanggal(project?.tanggal_mulai)
+        const baruMulai = keTanggal(form.tanggal_mulai) ?? lamaMulai
+        if (lamaMulai && baruMulai && penugasanList.length > 0) {
+            const periode: PeriodeSinkron = {
+                lama_mulai:   lamaMulai,
+                lama_selesai: keTanggal(project?.tanggal_selesai),
+                baru_mulai:   baruMulai,
+                baru_selesai: keTanggal(form.tanggal_selesai) ?? keTanggal(project?.tanggal_selesai),
+            }
+            if (periode.lama_mulai !== periode.baru_mulai || periode.lama_selesai !== periode.baru_selesai) {
+                setSaving(true)
+                const pratinjau = await penugasanHarianService.pratinjauSinkronProyek(id, periode).catch(() => null)
+                setSaving(false)
+                if (pratinjau && pratinjau.total_tambah + pratinjau.total_hapus + pratinjau.total_terkunci > 0) {
+                    setSinkron({ periode, pratinjau })
+                    return
+                }
+            }
+        }
+
+        await simpanProyek()
+    }
+
+    const simpanTanpaSinkron = async () => {
+        setSinkron(null)
+        await simpanProyek()
+    }
+
+    const simpanDanSinkron = async () => {
+        if (!sinkron) return
+        setMenyinkron(true)
+        if (await simpanProyek()) {
+            try {
+                const hasil = await penugasanHarianService.sinkronProyek(id, sinkron.periode)
+                const ringkasan = [
+                    hasil.dibuat > 0 ? `${hasil.dibuat} penugasan ditambah` : null,
+                    hasil.dihapus > 0 ? `${hasil.dihapus} penugasan dihapus` : null,
+                ].filter(Boolean).join(' · ')
+                toast.push(<Notification type="success" title={ringkasan || 'Penugasan sudah sesuai periode proyek'} />)
+                if (hasil.gagal.length > 0) {
+                    const g = hasil.gagal[0]
+                    toast.push(
+                        <Notification type="warning" title={`${hasil.gagal.length} penugasan gagal disesuaikan`}>
+                            {`${g.unit ?? '—'} (${g.tanggal}): ${g.alasan}`}
+                        </Notification>,
+                    )
+                }
+            } catch (err) {
+                toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            }
+            fetchPenugasan()
+        }
+        setMenyinkron(false)
+        setSinkron(null)
+    }
+
+    const labelPeriode = (mulai: string, selesai: string | null) =>
+        selesai && selesai !== mulai
+            ? `${dayjs(mulai).format('DD MMM YYYY')} — ${dayjs(selesai).format('DD MMM YYYY')}`
+            : dayjs(mulai).format('DD MMM YYYY')
+
+    const labelRentang = (dari: string, sampai: string) =>
+        dari === sampai ? dayjs(dari).format('DD MMM') : `${dayjs(dari).format('DD MMM')} – ${dayjs(sampai).format('DD MMM YYYY')}`
 
     const handleStatus = async (status: string) => {
         setUpdating(true)
@@ -1121,15 +1194,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <p className="text-xs text-gray-400 mt-0.5">{penawaranList.length} penawaran tercatat</p>
                     </div>
                     {adaPenawaranDisetujui ? (
-                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openRevisiDialog}>
-                            Buat Penawaran Revisi
-                        </Button>
+                        <Tooltip title="Buat Penawaran Revisi">
+                            <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openRevisiDialog} />
+                        </Tooltip>
                     ) : (
                         <Tooltip title="Buat penawaran revisi setelah proyek punya penawaran yang disetujui">
                             <span>
-                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled>
-                                    Buat Penawaran Revisi
-                                </Button>
+                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled />
                             </span>
                         </Tooltip>
                     )}
@@ -1446,6 +1517,74 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <p><strong>{jumlahPenugasanTerpilih}</strong> unit ({totalPenugasanTerpilih} penugasan harian) akan dihapus sekaligus.</p>
                 <p className="text-sm text-gray-500 mt-2">Penugasan yang tripnya sudah jalan/selesai akan ditolak sistem dan dilaporkan sebagai gagal.</p>
             </ConfirmDialog>
+
+            <Dialog isOpen={!!sinkron} width={640}
+                onClose={() => { if (!menyinkron) setSinkron(null) }}
+                onRequestClose={() => { if (!menyinkron) setSinkron(null) }}>
+                {sinkron && (
+                    <>
+                        <h5 className="text-base font-semibold mb-1">Sesuaikan Penugasan Harian?</h5>
+                        <p className="text-xs text-gray-400 mb-4">
+                            Periode proyek berubah dari <span className="font-semibold text-gray-600 dark:text-gray-300">{labelPeriode(sinkron.periode.lama_mulai, sinkron.periode.lama_selesai)}</span> menjadi <span className="font-semibold text-gray-600 dark:text-gray-300">{labelPeriode(sinkron.periode.baru_mulai, sinkron.periode.baru_selesai)}</span>.
+                        </p>
+
+                        {sinkron.pratinjau.tambah.length > 0 && (
+                            <div className="mb-4">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                    Ditambah · {sinkron.pratinjau.total_tambah} penugasan
+                                </p>
+                                <ul className="space-y-1.5">
+                                    {sinkron.pratinjau.tambah.map((t, i) => (
+                                        <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-sm">
+                                            <span><span className="font-semibold">{t.nopol ?? '—'}</span> · {t.nama_supir ?? '—'}</span>
+                                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                                {labelRentang(t.dari, t.sampai)} ({t.jumlah_hari} hari)
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="text-xs text-gray-400 mt-2">Supir, rute, dan titik drop mengikuti penugasan terakhir tiap unit. Pengajuan uang jalan dibuat otomatis.</p>
+                            </div>
+                        )}
+
+                        {sinkron.pratinjau.hapus.length > 0 && (
+                            <div className="mb-4">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                    Dihapus · {sinkron.pratinjau.total_hapus} penugasan di luar periode baru
+                                </p>
+                                <ul className="space-y-1.5">
+                                    {sinkron.pratinjau.hapus.map((h, i) => (
+                                        <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm">
+                                            <span><span className="font-semibold">{h.nopol ?? '—'}</span> · {h.nama_supir ?? '—'}</span>
+                                            <span className="text-xs font-medium text-red-600 dark:text-red-400 whitespace-nowrap">
+                                                {labelRentang(h.dari, h.sampai)} ({h.jumlah} hari)
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {sinkron.pratinjau.total_terkunci > 0 && (
+                            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                                {sinkron.pratinjau.total_terkunci} penugasan di luar periode baru sudah punya trip, jadi tidak dihapus dan tetap tersimpan.
+                            </p>
+                        )}
+
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <Button type="button" variant="plain" disabled={menyinkron} onClick={() => setSinkron(null)}>Batal</Button>
+                            {sinkron.pratinjau.total_tambah + sinkron.pratinjau.total_hapus > 0 ? (
+                                <>
+                                    <Button type="button" variant="default" disabled={menyinkron} onClick={simpanTanpaSinkron}>Simpan Tanggal Saja</Button>
+                                    <Button type="button" variant="solid" loading={menyinkron} onClick={simpanDanSinkron}>Simpan &amp; Sesuaikan</Button>
+                                </>
+                            ) : (
+                                <Button type="button" variant="solid" onClick={simpanTanpaSinkron}>Simpan</Button>
+                            )}
+                        </div>
+                    </>
+                )}
+            </Dialog>
 
             <AjukanApprovalDialog
                 isOpen={ajukanOpen}

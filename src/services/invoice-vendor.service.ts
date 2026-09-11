@@ -67,6 +67,7 @@ export interface InvoiceVendor {
     status: 'draft' | 'menunggu_approval' | 'diverifikasi' | 'ditolak'
     status_pembayaran: 'belum' | 'sebagian' | 'lunas'
     catatan_verifikasi: string | null
+    approval_aktif?: boolean | null
     diverifikasi_oleh?: string | null
     diverifikasi_pada?: string | null
     dibuat_pada?: string

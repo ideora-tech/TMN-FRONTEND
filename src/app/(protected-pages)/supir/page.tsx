@@ -159,7 +159,7 @@ export default function SupirPage() {
             header: 'Armada', accessorKey: 'armada_default', size: 130,
             cell: ({ row }: CellContext<Supir, unknown>) =>
                 row.original.armada_default
-                    ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{row.original.armada_default}</span>
+                    ? <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{row.original.armada_default.nopol}</span>
                     : <span className="text-gray-400">—</span>,
         },
         {

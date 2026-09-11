@@ -54,6 +54,11 @@ const PAGE_SIZE_OPTIONS = [
 
 const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
+const JAM_TANDA_BARU = 24
+
+const baruDiinput = (dibuatPada?: string | null) =>
+    !!dibuatPada && dayjs().diff(dayjs(dibuatPada), 'hour') < JAM_TANDA_BARU
+
 function getServisBadge(tanggal: string | null): { label: string; className: string } | null {
     if (!tanggal) return null
     const days = Math.ceil((new Date(tanggal).getTime() - Date.now()) / 86400000)
@@ -373,7 +378,16 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                             return (
                                                 <tr key={p.id_perawatan}>
                                                     <td className="py-2.5 px-3">{nomorBaris}</td>
-                                                    <td className="py-2.5 px-3 whitespace-nowrap">{dayjs(p.tanggal).format('DD MMM YYYY')}</td>
+                                                    <td className="py-2.5 px-3 whitespace-nowrap">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{dayjs(p.tanggal).format('DD MMM YYYY')}</span>
+                                                            {baruDiinput(p.dibuat_pada) && (
+                                                                <Tooltip title={`Diinput ${dayjs(p.dibuat_pada).format('DD MMM YYYY HH:mm')}`}>
+                                                                    <Tag className="text-xs font-semibold bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 cursor-help">Baru</Tag>
+                                                                </Tooltip>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                     <td className="py-2.5 px-3">{p.interval_label ?? <span className="text-gray-400">—</span>}</td>
                                                     <td className="py-2.5 px-3 whitespace-nowrap">{formatRupiah(p.biaya)}</td>
                                                     <td className="py-2.5 px-3">

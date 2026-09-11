@@ -11,7 +11,7 @@ import {
     arusKasService,
     PengajuanPengeluaran,
 } from '@/services/arusKas.service'
-import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG, STATUS_APPROVAL_LABEL, STATUS_APPROVAL_TAG } from './pengajuanMeta'
+import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG } from './pengajuanMeta'
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
@@ -139,13 +139,6 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
         }
     }
 
-    const riwayat = p ? [
-        { label: 'Diajukan',     waktu: p.dibuat_pada,     keterangan: `Tanggal pengajuan ${dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}` },
-        { label: 'Disetujui',    waktu: p.disetujui_pada,  keterangan: null },
-        { label: 'Diverifikasi Keuangan', waktu: p.dicek_pada, keterangan: null },
-        { label: 'Ditransfer',   waktu: p.ditransfer_pada, keterangan: p.tanggal_transfer ? `Tanggal transfer ${dayjs(p.tanggal_transfer).format('DD MMM YYYY')}` : null },
-    ].filter(r => r.waktu) : []
-
     return (
         <>
         <Dialog isOpen={!!p} onRequestClose={onClose} onClose={onClose} width={640}>
@@ -163,7 +156,14 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                         <div>
                             <p className={LABEL_CLASS}>Status</p>
-                            <Tag className={`text-xs font-semibold ${STATUS_TAG[p.status]}`}>{STATUS_LABEL[p.status]}</Tag>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Tag className={`text-xs font-semibold ${STATUS_TAG[p.status]}`}>{STATUS_LABEL[p.status]}</Tag>
+                                {p.approval_progress && p.approval_progress.total > 0 && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        Approval {p.approval_progress.disetujui}/{p.approval_progress.total}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div>
                             <p className={LABEL_CLASS}>Nominal</p>
@@ -196,74 +196,6 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {riwayat.length > 0 && (
-                        <div className="mt-5">
-                            <p className={`${LABEL_CLASS} mb-2`}>Riwayat Proses</p>
-                            <div className="flex flex-col gap-2">
-                                {riwayat.map(r => (
-                                    <div key={r.label} className="flex items-start gap-3">
-                                        <span className="mt-1.5 w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{r.label}
-                                                <span className="text-xs text-gray-400 font-normal ml-2">{dayjs(r.waktu).format('DD MMM YYYY HH:mm')}</span>
-                                            </p>
-                                            {r.keterangan && <p className="text-xs text-gray-400">{r.keterangan}</p>}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {p.approval.length > 0 && (
-                        <div className="mt-5">
-                            <p className={`${LABEL_CLASS} mb-2`}>Approval BOD</p>
-                            <div className="flex flex-col gap-2">
-                                {p.approval.map(a => (
-                                    <div key={a.id_pengguna}
-                                        className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{a.nama}</span>
-                                            <Tag className={`text-xs font-semibold ${STATUS_APPROVAL_TAG[a.status]}`}>{STATUS_APPROVAL_LABEL[a.status]}</Tag>
-                                        </div>
-                                        {a.waktu_aksi && <p className="text-xs text-gray-400 mt-1">{dayjs(a.waktu_aksi).format('DD/MM/YYYY HH:mm')}</p>}
-                                        {a.catatan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{a.catatan}</p>}
-                                    </div>
-                                ))}
-                            </div>
-                            {p.bisa_approve && !readOnly && (
-                                <div className="flex justify-end gap-2 mt-3">
-                                    <Button size="sm" variant="solid" loading={memproses} onClick={bukaApprove}>
-                                        Approve
-                                    </Button>
-                                    <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
-                                        onClick={bukaTolak}>
-                                        Tolak
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {(p.approval_transfer ?? []).length > 0 && (
-                        <div className="mt-5">
-                            <p className={`${LABEL_CLASS} mb-2`}>Persetujuan Transfer</p>
-                            <div className="flex flex-col gap-2">
-                                {(p.approval_transfer ?? []).map(a => (
-                                    <div key={a.id_pengguna}
-                                        className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{a.nama}</span>
-                                            <Tag className={`text-xs font-semibold ${STATUS_APPROVAL_TAG[a.status]}`}>{STATUS_APPROVAL_LABEL[a.status]}</Tag>
-                                        </div>
-                                        {a.waktu_aksi && <p className="text-xs text-gray-400 mt-1">{dayjs(a.waktu_aksi).format('DD/MM/YYYY HH:mm')}</p>}
-                                        {a.catatan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{a.catatan}</p>}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     <div className="mt-5">
                         <p className={`${LABEL_CLASS} mb-2`}>Bukti Transfer</p>
                         {p.url_bukti ? (
@@ -285,6 +217,17 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                             <p className="text-xs text-gray-400 italic">Belum ada bukti diunggah.</p>
                         )}
                     </div>
+                </div>
+            )}
+            {p && p.bisa_approve && !readOnly && (
+                <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
+                        onClick={bukaTolak}>
+                        Tolak
+                    </Button>
+                    <Button size="sm" variant="solid" loading={memproses} onClick={bukaApprove}>
+                        Approve
+                    </Button>
                 </div>
             )}
         </Dialog>

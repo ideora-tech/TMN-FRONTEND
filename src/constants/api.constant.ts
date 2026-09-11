@@ -242,6 +242,8 @@ export const API_ENDPOINTS = {
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
     PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
     PENUGASAN_HARIAN: '/api/proxy/penugasan/harian',
+    PROYEK_SINKRON_PENUGASAN_PRATINJAU: (idProyek: string) => `/api/proxy/proyek/${idProyek}/sinkron-penugasan/pratinjau`,
+    PROYEK_SINKRON_PENUGASAN:           (idProyek: string) => `/api/proxy/proyek/${idProyek}/sinkron-penugasan`,
     PENUGASAN_TEMPLATE_UNIT: '/api/proxy/penugasan/template-unit',
     PENUGASAN_PARSE_UNIT: '/api/proxy/penugasan/parse-unit',
     PENUGASAN_BOARD:  '/api/proxy/penugasan/board',

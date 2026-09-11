@@ -4,7 +4,7 @@ import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePick
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineEye, HiOutlinePencilAlt, HiX } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlinePlus, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineEye, HiOutlinePencilAlt, HiX, HiCheck } from 'react-icons/hi'
 import dayjs, { Dayjs } from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -121,6 +121,12 @@ export default function BoardUnit() {
 
     const [hapusTarget, setHapusTarget] = useState<BoardAssignment | null>(null)
     const [menghapus, setMenghapus] = useState(false)
+
+    const [terpilih, setTerpilih] = useState<Record<string, { a: BoardAssignment; u: BoardUnitRow }>>({})
+    const pilihTerakhir = useRef<{ key: string; tanggal: string } | null>(null)
+    const [hapusMassalOpen, setHapusMassalOpen] = useState(false)
+    const [menghapusMassal, setMenghapusMassal] = useState(false)
+    const [hasilHapusMassal, setHasilHapusMassal] = useState<{ sukses: number; gagal: string[] } | null>(null)
 
     const [batalTripTarget, setBatalTripTarget] = useState<string | null>(null)
     const [membatalkanTrip, setMembatalkanTrip] = useState(false)
@@ -423,6 +429,72 @@ export default function BoardUnit() {
         }
     }
 
+    const daftarTerpilih = useMemo(() => Object.values(terpilih), [terpilih])
+
+    useEffect(() => {
+        setTerpilih({})
+        pilihTerakhir.current = null
+    }, [bulan])
+
+    const togglePilih = (e: React.MouseEvent, a: BoardAssignment, u: BoardUnitRow) => {
+        e.stopPropagation()
+        const key = unitKey(u)
+        const terakhir = pilihTerakhir.current
+        pilihTerakhir.current = { key, tanggal: a.tanggal }
+
+        if (e.shiftKey && terakhir) {
+            const iU1 = unitsTampil.findIndex(x => unitKey(x) === terakhir.key)
+            const iU2 = unitsTampil.findIndex(x => unitKey(x) === key)
+            const iT1 = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === terakhir.tanggal)
+            const iT2 = tanggalList.findIndex(t => t.format('YYYY-MM-DD') === a.tanggal)
+            if (iU1 >= 0 && iU2 >= 0 && iT1 >= 0 && iT2 >= 0) {
+                const [u1, u2] = [Math.min(iU1, iU2), Math.max(iU1, iU2)]
+                const [t1, t2] = [Math.min(iT1, iT2), Math.max(iT1, iT2)]
+                setTerpilih(prev => {
+                    const next = { ...prev }
+                    for (let i = u1; i <= u2; i++) {
+                        const unit = unitsTampil[i]
+                        for (let j = t1; j <= t2; j++) {
+                            for (const item of assignMap[unitKey(unit)]?.[tanggalList[j].format('YYYY-MM-DD')] ?? []) {
+                                next[item.id_penugasan] = { a: item, u: unit }
+                            }
+                        }
+                    }
+                    return next
+                })
+                return
+            }
+        }
+
+        setTerpilih(prev => {
+            const next = { ...prev }
+            if (next[a.id_penugasan]) delete next[a.id_penugasan]
+            else next[a.id_penugasan] = { a, u }
+            return next
+        })
+    }
+
+    const handleHapusMassal = async () => {
+        setMenghapusMassal(true)
+        let sukses = 0
+        const gagal: string[] = []
+        for (const { a, u } of daftarTerpilih) {
+            try {
+                await penugasanHarianService.hapus(a.id_penugasan)
+                sukses++
+            } catch (err) {
+                gagal.push(`${u.nopol} · ${dayjs(a.tanggal).format('DD MMM')} · ${a.kode_proyek ?? '—'} — ${parseApiError(err)}`)
+            }
+        }
+        setMenghapusMassal(false)
+        setHapusMassalOpen(false)
+        setTerpilih({})
+        pilihTerakhir.current = null
+        if (gagal.length > 0) setHasilHapusMassal({ sukses, gagal })
+        else toast.push(<Notification type="success" title={`${sukses} penugasan berhasil dihapus`} />)
+        fetchBoard()
+    }
+
     const handleHapus = async () => {
         if (!hapusTarget) return
         setMenghapus(true)
@@ -527,6 +599,21 @@ export default function BoardUnit() {
                 </div>
             </div>
 
+            {daftarTerpilih.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
+                    <span className="text-sm font-semibold">{daftarTerpilih.length} penugasan terpilih</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Tahan Shift lalu klik kotak centang untuk memilih rentang sekaligus</span>
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button size="xs" variant="plain" onClick={() => { setTerpilih({}); pilihTerakhir.current = null }}>Batal</Button>
+                        <Button type="button" size="xs" variant="solid" icon={<HiOutlineTrash />}
+                            customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
+                            onClick={() => setHapusMassalOpen(true)}>
+                            Hapus Terpilih ({daftarTerpilih.length})
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {loading ? (
                 <div className="flex justify-center py-16"><Spinner size={36} /></div>
             ) : units.length === 0 ? (
@@ -625,11 +712,21 @@ export default function BoardUnit() {
                                                                 : selesaiSemua
                                                                 ? 'border-purple-300 dark:border-purple-500/50 bg-purple-50 dark:bg-purple-500/10'
                                                                 : 'border-blue-200 dark:border-blue-500/30 bg-blue-50/60 dark:bg-blue-500/10'
+                                                            const dipilih = !!terpilih[a.id_penugasan]
                                                             return (
-                                                                <div key={a.id_penugasan} className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna}`}
+                                                                <div key={a.id_penugasan} className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna} ${dipilih ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
                                                                     onClick={() => bukaDetail(a, u)}>
                                                                     <div className="flex items-center justify-between gap-1">
                                                                         <span className="flex items-center gap-1 min-w-0">
+                                                                            <span role="checkbox" aria-checked={dipilih} title="Pilih untuk hapus massal (Shift + klik: pilih rentang)"
+                                                                                className={`shrink-0 inline-flex items-center justify-center w-3.5 h-3.5 rounded border transition-colors ${
+                                                                                    dipilih
+                                                                                        ? 'bg-blue-600 border-blue-600 text-white'
+                                                                                        : 'bg-white border-gray-300 hover:border-blue-500 dark:bg-gray-800 dark:border-gray-500'
+                                                                                }`}
+                                                                                onClick={e => togglePilih(e, a, u)}>
+                                                                                {dipilih && <HiCheck className="w-3 h-3" />}
+                                                                            </span>
                                                                             <span className="text-sm font-bold text-blue-600 dark:text-blue-300 truncate">
                                                                                 {a.kode_proyek ?? '—'}
                                                                             </span>
@@ -676,6 +773,35 @@ export default function BoardUnit() {
                     </table>
                 </div>
             )}
+
+            <ConfirmDialog isOpen={hapusMassalOpen} type="danger" title="Hapus Penugasan Terpilih?"
+                confirmText="Ya, Hapus Semua" cancelText="Batal"
+                onClose={() => setHapusMassalOpen(false)}
+                onCancel={() => setHapusMassalOpen(false)}
+                onConfirm={handleHapusMassal}
+                confirmButtonProps={{ loading: menghapusMassal, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}>
+                <p><strong>{daftarTerpilih.length}</strong> penugasan harian akan dihapus sekaligus.</p>
+                <p className="text-sm text-gray-500 mt-2">Penugasan yang tripnya sudah jalan/selesai akan ditolak sistem dan dilaporkan sebagai gagal.</p>
+            </ConfirmDialog>
+
+            <Dialog isOpen={!!hasilHapusMassal} onRequestClose={() => setHasilHapusMassal(null)} onClose={() => setHasilHapusMassal(null)} width={560}>
+                <h5 className="text-base font-semibold mb-1">Hasil Hapus Massal</h5>
+                {hasilHapusMassal && (
+                    <>
+                        <p className="text-sm text-gray-500 mb-3">
+                            {hasilHapusMassal.sukses} penugasan berhasil dihapus, {hasilHapusMassal.gagal.length} tidak bisa dihapus:
+                        </p>
+                        <ul className="max-h-[50vh] overflow-y-auto flex flex-col gap-1.5">
+                            {hasilHapusMassal.gagal.map((g, i) => (
+                                <li key={i} className="text-sm rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2">{g}</li>
+                            ))}
+                        </ul>
+                    </>
+                )}
+                <div className="flex justify-end mt-4">
+                    <Button size="sm" variant="solid" onClick={() => setHasilHapusMassal(null)}>Tutup</Button>
+                </div>
+            </Dialog>
 
             <Dialog isOpen={assignDialogOpen} onRequestClose={() => setAssignDialogOpen(false)} onClose={() => setAssignDialogOpen(false)} width={720}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan Harian</h5>

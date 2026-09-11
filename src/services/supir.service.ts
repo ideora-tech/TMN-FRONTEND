@@ -10,7 +10,7 @@ export interface Supir {
     telepon?: string
     status: 'aktif' | 'nonaktif'
     id_armada_default?: string | null
-    armada_default?: string | null
+    armada_default?: { id_armada: string; nopol: string; merk: string | null; model: string | null } | null
     id_karyawan?: string | null
     id_pengguna?: string | null
     username_pengguna?: string | null

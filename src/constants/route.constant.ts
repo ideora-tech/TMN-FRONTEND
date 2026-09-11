@@ -29,6 +29,7 @@ export const ROUTES = {
     INTERVAL_PERAWATAN:        '/perawatan-armada?tab=interval',
     INTERVAL_PERAWATAN_BARU:   '/interval-perawatan/baru',
     INTERVAL_PERAWATAN_DETAIL: (id: string) => `/interval-perawatan/${id}`,
+    INTERVAL_PERAWATAN_JENIS:  (idJenis: string) => `/interval-perawatan/jenis/${idJenis}`,
     SPAREPART:              '/sparepart',
     SPAREPART_BARU:         '/sparepart/baru',
     SPAREPART_DETAIL:       (id: string) => `/sparepart/${id}`,

@@ -29,9 +29,14 @@ export interface RiwayatPengajuanKeuangan {
 export interface PengajuanKeuanganInfo {
     id_pengajuan: string
     nomor_pengajuan: string
+    kategori?: string
     status: string
     nominal: number
+    tanggal_pengajuan?: string | null
+    tanggal_transfer?: string | null
     url_bukti?: string | null
+    menunggu?: { tahap: 'approval' | 'transfer'; nama: string[] } | null
+    periode?: { dari: string; sampai: string; tarif_per_hari: number; jumlah_hari: number } | null
     riwayat: RiwayatPengajuanKeuangan[]
 }
 

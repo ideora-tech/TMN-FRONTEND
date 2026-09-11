@@ -13,7 +13,7 @@ import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { kontrakVendorService, KontrakVendor, KontrakUnitInput, KontrakSupirInput, BarisGagal } from '@/services/kontrak-vendor.service'
-import { permintaanVendorService, PermintaanVendor, ringkasanUnitDiminta } from '@/services/permintaan-vendor.service'
+import { permintaanVendorService, PermintaanVendor, ringkasanJenisDiminta } from '@/services/permintaan-vendor.service'
 import { Vendor } from '@/services/vendor.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { projectService } from '@/services/project.service'
@@ -351,7 +351,7 @@ export default function KontrakVendorBaruPage() {
                         Dari Permintaan {permintaanAsal.nomor_permintaan}
                     </p>
                     <p className="text-sm text-teal-700 dark:text-teal-400 mt-1">
-                        {ringkasanUnitDiminta(permintaanAsal)} · {MEKANISME_LABEL[permintaanAsal.mekanisme] ?? permintaanAsal.mekanisme}
+                        {ringkasanJenisDiminta(permintaanAsal)} · {MEKANISME_LABEL[permintaanAsal.mekanisme] ?? permintaanAsal.mekanisme}
                         {permintaanAsal.nama_proyek ? ` · Proyek ${permintaanAsal.nama_proyek}` : ''}
                         — mekanisme & periode sudah terisi otomatis, kontrak akan tertaut ke permintaan ini.
                     </p>

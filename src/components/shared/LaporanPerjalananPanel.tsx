@@ -417,13 +417,6 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                 onChange={e => setLaporanForm(p => ({ ...p, jarak_tempuh_km: e.target.value }))}
                             />
                         </FormItem>
-                        <FormItem label="No Surat Jalan">
-                            <Input
-                                placeholder="Contoh: SJ-2026-0001 (opsional)"
-                                value={laporanForm.no_surat_jalan}
-                                onChange={e => setLaporanForm(p => ({ ...p, no_surat_jalan: e.target.value }))}
-                            />
-                        </FormItem>
                         <div className="sm:col-span-2">
                             <FormItem label="Catatan Insiden">
                                 <Input
@@ -464,6 +457,17 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                                 </Button>
                                             </Upload>
                                         </div>
+                                        {label === 'Surat Jalan' && (
+                                            <div className="mt-3">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Nomor Surat Jalan</p>
+                                                <Input
+                                                    size="sm"
+                                                    placeholder="Contoh: SJ-2026-0001"
+                                                    value={laporanForm.no_surat_jalan}
+                                                    onChange={e => setLaporanForm(p => ({ ...p, no_surat_jalan: e.target.value }))}
+                                                />
+                                            </div>
+                                        )}
                                         {files.length > 0 && (
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                                                 {files.map((file, idx) => (

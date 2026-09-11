@@ -70,9 +70,34 @@ export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, load
                 )}
             </div>
             {info && (
-                <p className="text-xs text-gray-400 font-mono mb-5">
+                <p className="text-xs text-gray-400 font-mono mb-3">
                     {info.nomor_pengajuan} — {formatRupiah(info.nominal)}
                 </p>
+            )}
+            {info && !loading && (info.tanggal_pengajuan || info.tanggal_transfer || info.periode) && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-gray-50 dark:bg-gray-700/40 px-3 py-2.5 mb-4 text-xs">
+                    {info.tanggal_pengajuan && (
+                        <div>
+                            <p className="text-gray-400">Tanggal Pengajuan</p>
+                            <p className="font-semibold text-gray-700 dark:text-gray-200">{dayjs(info.tanggal_pengajuan).format('DD MMM YYYY')}</p>
+                        </div>
+                    )}
+                    {info.tanggal_transfer && (
+                        <div>
+                            <p className="text-gray-400">Tanggal Transfer</p>
+                            <p className="font-semibold text-gray-700 dark:text-gray-200">{dayjs(info.tanggal_transfer).format('DD MMM YYYY')}</p>
+                        </div>
+                    )}
+                    {info.periode && (
+                        <div className="col-span-2">
+                            <p className="text-gray-400">Periode</p>
+                            <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                {dayjs(info.periode.dari).format('DD MMM')} – {dayjs(info.periode.sampai).format('DD MMM YYYY')}
+                                {' · '}{info.periode.jumlah_hari} hari × {formatRupiah(info.periode.tarif_per_hari)}
+                            </p>
+                        </div>
+                    )}
+                </div>
             )}
 
             {loading ? (
@@ -83,6 +108,25 @@ export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, load
                 </p>
             ) : (
                 <div className="max-h-[60vh] overflow-y-auto pr-1 mt-2">
+                    {info.menunggu && info.menunggu.nama.length > 0 && (
+                        <div className="flex gap-3">
+                            <div className="w-16 shrink-0 text-right text-xs text-gray-400 leading-tight pt-1">Saat ini</div>
+                            <div className="flex flex-col items-center">
+                                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 ${IKON.menunggu.className}`}>
+                                    {IKON.menunggu.icon}
+                                </span>
+                                {riwayat.length > 0 && <span className="flex-1 w-px bg-gray-200 dark:bg-gray-600 my-1" />}
+                            </div>
+                            <div className="flex-1 min-w-0 pb-6">
+                                <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                                    {info.menunggu.tahap === 'transfer' ? 'Menunggu Persetujuan Transfer' : 'Menunggu Approval'}
+                                </p>
+                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                    Menunggu keputusan dari: <span className="font-semibold uppercase tracking-wide">{info.menunggu.nama.join(', ')}</span>
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     {riwayat.map((r, i) => {
                         const ikon = IKON[r.status] ?? { icon: <HiOutlineClock />, className: 'bg-gray-100 text-gray-500 dark:bg-gray-500/20 dark:text-gray-300' }
                         const terakhir = i === riwayat.length - 1

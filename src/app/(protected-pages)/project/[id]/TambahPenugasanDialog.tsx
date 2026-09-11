@@ -79,7 +79,7 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
     )
 
     const supirOptions: Option[] = useMemo(
-        () => supirList.map(s => ({ value: s.id_supir, label: s.armada_default ? `${s.nama} — ${s.armada_default}` : s.nama })),
+        () => supirList.map(s => ({ value: s.id_supir, label: s.armada_default ? `${s.nama} — ${s.armada_default.nopol}` : s.nama })),
         [supirList],
     )
 
@@ -87,9 +87,12 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
         setRows(prev => prev.map((row, i) => {
             if (i !== index) return row
             const next = { ...row, ...patch }
-            if (patch.id_armada && !row.id_supir) {
+            if (patch.id_armada && patch.id_armada !== row.id_armada) {
                 const pemegang = supirList.find(s => s.id_armada_default === patch.id_armada)
+                const supirIkutUnitLama = !!row.id_armada
+                    && supirList.find(s => s.id_supir === row.id_supir)?.id_armada_default === row.id_armada
                 if (pemegang) next.id_supir = pemegang.id_supir
+                else if (supirIkutUnitLama) next.id_supir = ''
             }
             return next
         }))
@@ -192,6 +195,7 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
         }
         setSubmitting(true)
         let totalSukses = 0
+        let totalDilewati = 0
         const gagalRows: GagalRow[] = []
         for (const row of rows) {
             const nopol = armadaList.find(a => a.id_armada === row.id_armada)?.nopol ?? '—'
@@ -205,6 +209,7 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
                     id_rute:        row.id_rute,
                 })
                 totalSukses += res.sukses
+                totalDilewati += res.dilewati?.length ?? 0
                 res.gagal.forEach(g => gagalRows.push({ ...g, unit: nopol }))
             } catch (err) {
                 gagalRows.push({ unit: nopol, tanggal: '—', alasan: parseApiError(err) })
@@ -213,7 +218,8 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
         setSubmitting(false)
         if (totalSukses > 0) onSukses()
         if (gagalRows.length === 0) {
-            toast.push(<Notification type="success" title={`${totalSukses} penugasan dibuat untuk ${rows.length} unit`} />)
+            const catatanDilewati = totalDilewati > 0 ? ` · ${totalDilewati} tanggal sudah ada (dilewati)` : ''
+            toast.push(<Notification type="success" title={`${totalSukses} penugasan dibuat untuk ${rows.length} unit${catatanDilewati}`} />)
             hapusSemuaBaris()
         } else {
             setHasil({ sukses: totalSukses, gagal: gagalRows })
@@ -254,11 +260,11 @@ export default function TambahPenugasanSection({ idProyek, tanggalMulai, tanggal
                                     <Button type="button" size="sm" variant="default" icon={<HiOutlineUpload />} loading={parsing} />
                                 </Tooltip>
                             </Upload>
-                            <Button type="button" size="sm" variant="default"
-                                className="text-red-500 border-red-200 hover:border-red-300 dark:border-red-500/40"
-                                icon={<HiOutlineTrash />} onClick={hapusSemuaBaris}>
-                                Hapus Semua
-                            </Button>
+                            <Tooltip title="Hapus Semua">
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlineTrash />}
+                                    customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'}
+                                    onClick={hapusSemuaBaris} />
+                            </Tooltip>
                             <Tooltip title="Tambah Unit">
                                 <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={tambahBaris} />
                             </Tooltip>

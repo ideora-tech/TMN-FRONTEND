@@ -88,8 +88,40 @@ export interface ParseUnitHasil {
 export interface AssignHarianHasil {
     sukses: number
     gagal: AssignHarianGagal[]
+    dilewati: string[]
     peringatan: string[]
     penugasan: Penugasan[]
+}
+
+export interface PeriodeSinkron {
+    lama_mulai: string
+    lama_selesai: string | null
+    baru_mulai: string
+    baru_selesai: string | null
+}
+
+export interface RingkasanUnitSinkron {
+    nopol: string | null
+    nama_supir: string | null
+    jumlah: number
+    dari: string
+    sampai: string
+}
+
+export interface PratinjauSinkron {
+    tambah: { nopol: string | null; nama_supir: string | null; dari: string; sampai: string; jumlah_hari: number }[]
+    total_tambah: number
+    hapus: RingkasanUnitSinkron[]
+    total_hapus: number
+    terkunci: RingkasanUnitSinkron[]
+    total_terkunci: number
+}
+
+export interface HasilSinkron {
+    dibuat: number
+    dihapus: number
+    terkunci: number
+    gagal: { unit: string | null; tanggal: string; alasan: string }[]
 }
 
 export const penugasanHarianService = {
@@ -104,6 +136,14 @@ export const penugasanHarianService = {
     async assign(payload: AssignHarianPayload) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN_HARIAN, payload)
         return data.data as AssignHarianHasil
+    },
+    async pratinjauSinkronProyek(idProyek: string, periode: PeriodeSinkron) {
+        const { data } = await axios.post(API_ENDPOINTS.PROYEK_SINKRON_PENUGASAN_PRATINJAU(idProyek), periode)
+        return data.data as PratinjauSinkron
+    },
+    async sinkronProyek(idProyek: string, periode: PeriodeSinkron) {
+        const { data } = await axios.post(API_ENDPOINTS.PROYEK_SINKRON_PENUGASAN(idProyek), periode)
+        return data.data as HasilSinkron
     },
     async parseUnitExcel(file: File, idProyek: string) {
         const form = new FormData()

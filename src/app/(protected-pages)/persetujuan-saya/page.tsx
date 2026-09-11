@@ -773,11 +773,11 @@ export default function PersetujuanSayaPage() {
                 confirmButtonProps={{ loading: processing }}
                 onClose={() => setTolakTarget(null)} onCancel={() => setTolakTarget(null)} onConfirm={handleTolak}>
                 <p className="mb-3">Tolak pengajuan <strong>{tolakTarget?.nama_event_type}</strong> dari <strong>{tolakTarget?.nama_pengaju ?? '-'}</strong>?</p>
-                <textarea rows={3} placeholder="Alasan penolakan (wajib diisi)..."
+                <p className="text-sm font-semibold mb-1">Alasan penolakan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
                     value={catatanTolak}
-                    onChange={e => { setCatatanTolak(e.target.value); setCatatanError('') }}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none" />
-                {catatanError && <p className="text-red-500 text-xs mt-1">{catatanError}</p>}
+                    onChange={e => { setCatatanTolak(e.target.value); setCatatanError('') }} />
+                {catatanError && <p className="text-xs text-red-500 mt-1">{catatanError}</p>}
             </ConfirmDialog>
 
             <ConfirmDialog isOpen={bulkSetujuOpen} type="info" title="Setujui Pengajuan Terpilih"
@@ -794,11 +794,11 @@ export default function PersetujuanSayaPage() {
                 onCancel={() => { setBulkTolakOpen(false); setBulkCatatanTolak(''); setBulkCatatanError('') }}
                 onConfirm={handleBulkTolak}>
                 <p className="mb-3">Tolak <strong>{selectedIds.length}</strong> pengajuan terpilih?</p>
-                <textarea rows={3} placeholder="Alasan penolakan (wajib diisi, berlaku untuk semua yang dipilih)..."
+                <p className="text-sm font-semibold mb-1">Alasan penolakan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} placeholder="Jelaskan alasan penolakan (berlaku untuk semua yang dipilih)..."
                     value={bulkCatatanTolak}
-                    onChange={e => { setBulkCatatanTolak(e.target.value); setBulkCatatanError('') }}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none" />
-                {bulkCatatanError && <p className="text-red-500 text-xs mt-1">{bulkCatatanError}</p>}
+                    onChange={e => { setBulkCatatanTolak(e.target.value); setBulkCatatanError('') }} />
+                {bulkCatatanError && <p className="text-xs text-red-500 mt-1">{bulkCatatanError}</p>}
             </ConfirmDialog>
 
             <LogAktivitasKeuanganDialog

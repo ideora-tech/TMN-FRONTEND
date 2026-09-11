@@ -33,6 +33,7 @@ export interface Faktur {
     persen_pajak?: number | null
     status: 'draft' | 'menunggu_approval' | 'terkirim' | 'lunas' | 'batal'
     alasan_ditolak_internal: string | null
+    approval_aktif?: boolean | null
     tanggal_faktur?: string
     jatuh_tempo?: string
     id_proyek?: string | null

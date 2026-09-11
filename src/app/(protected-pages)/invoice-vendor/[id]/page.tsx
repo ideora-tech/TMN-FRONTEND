@@ -228,6 +228,8 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     }
 
     const [ajukanOpen, setAjukanOpen] = useState(false)
+    const [verifikasiLangsungOpen, setVerifikasiLangsungOpen] = useState(false)
+    const [memverifikasi, setMemverifikasi] = useState(false)
 
     const handleExportPdf = async () => {
         setDownloadingPdf(true)
@@ -354,9 +356,15 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         </Tooltip>
                     )}
                     {data.status === 'draft' && !editing && (
-                        <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
-                            Ajukan Approval
-                        </Button>
+                        data.approval_aktif === false ? (
+                            <Button variant="solid" size="sm" onClick={() => setVerifikasiLangsungOpen(true)}>
+                                Verifikasi
+                            </Button>
+                        ) : (
+                            <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
+                                Ajukan Approval
+                            </Button>
+                        )
                     )}
                     {(data.status === 'draft' || data.status === 'ditolak') && !editing && (
                         <Tooltip title="Edit">
@@ -845,6 +853,32 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 onClose={() => setDeleteBayarTarget(null)} onConfirm={handleDeleteBayar}
                 confirmButtonProps={{ loading: deletingBayar }}>
                 <p>Hapus pembayaran {deleteBayarTarget ? formatRupiah(deleteBayarTarget.nominal) : ''} tanggal {deleteBayarTarget ? dayjs(deleteBayarTarget.tanggal_bayar).format('DD MMM YYYY') : ''}? Status pembayaran invoice akan dihitung ulang.</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={verifikasiLangsungOpen}
+                type="info"
+                title="Verifikasi Invoice"
+                confirmText="Ya, Verifikasi"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: memverifikasi }}
+                onClose={() => setVerifikasiLangsungOpen(false)}
+                onCancel={() => setVerifikasiLangsungOpen(false)}
+                onConfirm={async () => {
+                    setMemverifikasi(true)
+                    try {
+                        await invoiceVendorService.ajukanApproval(id)
+                        await fetchDetail()
+                        toast.push(<Notification type="success" title="Invoice ditandai diverifikasi" />)
+                    } catch (err) {
+                        toast.push(<Notification type="danger" title={parseApiError(err)} />)
+                    } finally {
+                        setMemverifikasi(false)
+                        setVerifikasiLangsungOpen(false)
+                    }
+                }}
+            >
+                <p className="text-sm">Approval invoice vendor sedang nonaktif, jadi <span className="font-semibold">{data.nomor_invoice}</span> akan langsung berstatus Diverifikasi tanpa melalui approver. Lanjutkan?</p>
             </ConfirmDialog>
 
             <LogAktivitasKeuanganDialog

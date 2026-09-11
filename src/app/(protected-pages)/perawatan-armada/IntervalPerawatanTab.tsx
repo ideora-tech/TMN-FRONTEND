@@ -152,7 +152,7 @@ export default function IntervalPerawatanTab() {
                                         <Fragment key={g.key}>
                                             <tr className="bg-gray-50 dark:bg-gray-800/60 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60"
                                                 onClick={() => toggleGrup(g.key)}>
-                                                <td colSpan={3} className="py-2.5 px-3">
+                                                <td colSpan={2} className="py-2.5 px-3">
                                                     <div className="flex items-center gap-2">
                                                         <HiOutlineChevronDown className={`text-gray-400 transition-transform ${terbuka ? '' : '-rotate-90'}`} />
                                                         <PiTruckDuotone className="text-lg text-blue-500" />
@@ -160,6 +160,16 @@ export default function IntervalPerawatanTab() {
                                                         <Tag className="bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                                                             {g.rows.length} paket servis
                                                         </Tag>
+                                                    </div>
+                                                </td>
+                                                <td className="py-2.5 px-3">
+                                                    <div className="flex items-center justify-end">
+                                                        <Tooltip title="Lihat Detail">
+                                                            <span
+                                                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
+                                                                onClick={e => { e.stopPropagation(); router.push(ROUTES.INTERVAL_PERAWATAN_JENIS(g.key)) }}
+                                                            ><HiOutlineEye className="text-base" /></span>
+                                                        </Tooltip>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -173,12 +183,6 @@ export default function IntervalPerawatanTab() {
                                                     </td>
                                                     <td className="py-3 px-3">
                                                         <div className="flex items-center justify-end gap-1">
-                                                            <Tooltip title="Lihat Detail">
-                                                                <span
-                                                                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
-                                                                    onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN_DETAIL(row.id_interval_perawatan))}
-                                                                ><HiOutlineEye className="text-base" /></span>
-                                                            </Tooltip>
                                                             <Tooltip title="Hapus">
                                                                 <span
                                                                     className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-200 cursor-pointer transition-colors"

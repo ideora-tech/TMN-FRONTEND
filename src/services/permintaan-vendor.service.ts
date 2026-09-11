@@ -57,6 +57,9 @@ export const itemUnitDiminta = (p: PermintaanVendor): UnitDiminta[] =>
 export const ringkasanUnitDiminta = (p: PermintaanVendor): string =>
     itemUnitDiminta(p).map(u => `${u.jumlah_unit} ${u.nama_jenis_kendaraan ?? 'unit'}`).join(' + ')
 
+export const ringkasanJenisDiminta = (p: PermintaanVendor): string =>
+    itemUnitDiminta(p).map(u => `${Number(u.jumlah_unit) > 1 ? `${u.jumlah_unit} ` : ''}${u.nama_jenis_kendaraan ?? 'unit'}`).join(' + ')
+
 export const permintaanVendorService = {
     async list(page = 1, params?: Record<string, string | number | undefined>) {
         const { data } = await axios.get(API_ENDPOINTS.PERMINTAAN_VENDOR, { params: { page, limit: 10, ...params } })

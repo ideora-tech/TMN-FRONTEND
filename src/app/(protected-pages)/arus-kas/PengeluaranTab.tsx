@@ -5,8 +5,9 @@ import { Card, Tag, Tooltip, Spinner, toast, Notification } from '@/components/u
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineEye, HiOutlineExternalLink } from 'react-icons/hi'
+import { HiOutlineEye, HiOutlineExternalLink, HiOutlineClipboardList } from 'react-icons/hi'
 import DetailPengajuanDialog from './DetailPengajuanDialog'
+import { useLogPengajuan } from './useLogPengajuan'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -27,6 +28,7 @@ export default function PengeluaranTab() {
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [detailTarget, setDetailTarget] = useState<PengajuanPengeluaran | null>(null)
+    const { bukaLog, dialogLog } = useLogPengajuan()
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -118,14 +120,21 @@ export default function PengeluaranTab() {
             },
         },
         {
-            header: '', id: 'aksi', size: 60,
+            header: '', id: 'aksi', size: 100,
             cell: ({ row }) => (
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-1">
                     <Tooltip title="Lihat Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
                             onClick={() => setDetailTarget(row.original)}>
                             <HiOutlineEye className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Log Aktivitas Approval">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                            onClick={() => bukaLog(row.original.id_pengajuan)}>
+                            <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
                 </div>
@@ -159,6 +168,7 @@ export default function PengeluaranTab() {
             </Card>
 
             <DetailPengajuanDialog pengajuan={detailTarget} onClose={() => setDetailTarget(null)} readOnly />
+            {dialogLog}
         </div>
     )
 }
