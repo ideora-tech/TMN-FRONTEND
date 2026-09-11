@@ -220,6 +220,7 @@ export const API_ENDPOINTS = {
     // Absensi
     ABSENSI_HARIAN:     '/api/proxy/absensi/harian',
     ABSENSI_REKAP:      '/api/proxy/absensi/rekap',
+    ABSENSI_REKAP_EXPORT_EXCEL: '/api/proxy/absensi/rekap/export/excel',
     ABSENSI_PENGATURAN: '/api/proxy/absensi/pengaturan',
 
     // Payroll

@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Card, Input, toast, Notification } from '@/components/ui'
+import { Card, Input, Button, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineDocumentDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
@@ -32,6 +32,7 @@ export default function RekapBulananTab() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
+    const [exporting, setExporting]     = useState(false)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -55,6 +56,17 @@ export default function RekapBulananTab() {
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const handleExport = async () => {
+        setExporting(true)
+        try {
+            await absensiService.exportRekapExcel({ bulan: `${tahun}-${bulan}`, search: search || undefined })
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setExporting(false)
+        }
+    }
 
     const angka = (v: number, warna: string) =>
         v > 0 ? <span className={`font-semibold ${warna}`}>{v}</span> : <span className="text-gray-300 dark:text-gray-600">0</span>
@@ -142,6 +154,11 @@ export default function RekapBulananTab() {
                             onChange={(opt) => { setTahun((opt as Option).value); setCurrentPage(1) }}
                         />
                     </div>
+                    <Tooltip title="Export Excel">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                            disabled={total === 0}
+                            loading={exporting} onClick={handleExport} />
+                    </Tooltip>
                 </div>
                 <DataTable
                     columns={columns}

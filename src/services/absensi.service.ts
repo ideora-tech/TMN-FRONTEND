@@ -55,6 +55,17 @@ export const absensiService = {
         const { data } = await axios.get(API_ENDPOINTS.ABSENSI_REKAP, { params: { page: 1, limit: 10, ...params } })
         return data as { data: RekapAbsensiRow[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
+    async exportRekapExcel(params: { bulan: string; search?: string }) {
+        const res = await axios.get(API_ENDPOINTS.ABSENSI_REKAP_EXPORT_EXCEL, { responseType: 'blob', params })
+        const href = URL.createObjectURL(res.data)
+        const link = document.createElement('a')
+        link.href = href
+        link.download = `rekap-absensi-${params.bulan}.xlsx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(href)
+    },
     async getPengaturan() {
         const { data } = await axios.get(API_ENDPOINTS.ABSENSI_PENGATURAN)
         return data.data as PengaturanAbsensi
