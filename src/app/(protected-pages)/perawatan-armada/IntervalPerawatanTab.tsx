@@ -3,7 +3,7 @@ import { Fragment, useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Input, Tag, Tooltip, Spinner, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi'
 import { PiTruckDuotone } from 'react-icons/pi'
 import { intervalPerawatanService, IntervalPerawatan } from '@/services/intervalPerawatan.service'
 import { ROUTES } from '@/constants/route.constant'
@@ -49,12 +49,14 @@ export default function IntervalPerawatanTab() {
 
     const [deleteTarget, setDeleteTarget] = useState<IntervalPerawatan | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [grupTerbuka, setGrupTerbuka] = useState<Record<string, boolean>>({})
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
             const res = await intervalPerawatanService.list({ page: 1, limit: 500, search })
             setList(res.data)
+            if (search) setGrupTerbuka(Object.fromEntries(res.data.map(r => [r.id_jenis_kendaraan ?? '-', true])))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -81,6 +83,10 @@ export default function IntervalPerawatanTab() {
             (a.interval_km ?? Infinity) - (b.interval_km ?? Infinity) || (a.interval_bulan ?? Infinity) - (b.interval_bulan ?? Infinity)))
         return hasil
     }, [list])
+
+    const semuaTerbuka = grup.length > 0 && grup.every(g => grupTerbuka[g.key])
+    const toggleGrup = (key: string) => setGrupTerbuka(prev => ({ ...prev, [key]: !prev[key] }))
+    const toggleSemua = () => setGrupTerbuka(semuaTerbuka ? {} : Object.fromEntries(grup.map(g => [g.key, true])))
 
     const handleSearchSubmit = () => setSearch(searchInput)
     const handleSearchClear = () => { setSearchInput(''); setSearch('') }
@@ -131,51 +137,61 @@ export default function IntervalPerawatanTab() {
                                 <tr className="border-b border-gray-100 dark:border-gray-700">
                                     <th className={TH_CLASS}>Paket Servis</th>
                                     <th className={TH_CLASS}>Sparepart</th>
-                                    <th className={`${TH_CLASS} text-right`}>Aksi</th>
+                                    <th className="py-2.5 px-3 text-right">
+                                        <button type="button" onClick={toggleSemua}
+                                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+                                            {semuaTerbuka ? 'Tutup semua' : 'Buka semua'}
+                                        </button>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {grup.map(g => (
-                                    <Fragment key={g.key}>
-                                        <tr className="bg-gray-50 dark:bg-gray-800/60">
-                                            <td colSpan={3} className="py-2.5 px-3">
-                                                <div className="flex items-center gap-2">
-                                                    <PiTruckDuotone className="text-lg text-blue-500" />
-                                                    <span className="font-semibold text-gray-800 dark:text-gray-100">{g.nama_jenis_kendaraan}</span>
-                                                    <Tag className="bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                                                        {g.rows.length} paket servis
-                                                    </Tag>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {g.rows.map(row => (
-                                            <tr key={row.id_interval_perawatan}>
-                                                <td className="py-3 px-3 pl-9 text-gray-800 dark:text-gray-200">
-                                                    {row.label}
-                                                </td>
-                                                <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
-                                                    {ringkasSparepart(row)}
-                                                </td>
-                                                <td className="py-3 px-3">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Tooltip title="Lihat Detail">
-                                                            <span
-                                                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
-                                                                onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN_DETAIL(row.id_interval_perawatan))}
-                                                            ><HiOutlineEye className="text-base" /></span>
-                                                        </Tooltip>
-                                                        <Tooltip title="Hapus">
-                                                            <span
-                                                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-200 cursor-pointer transition-colors"
-                                                                onClick={() => setDeleteTarget(row)}
-                                                            ><HiOutlineTrash className="text-base" /></span>
-                                                        </Tooltip>
+                                {grup.map(g => {
+                                    const terbuka = !!grupTerbuka[g.key]
+                                    return (
+                                        <Fragment key={g.key}>
+                                            <tr className="bg-gray-50 dark:bg-gray-800/60 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60"
+                                                onClick={() => toggleGrup(g.key)}>
+                                                <td colSpan={3} className="py-2.5 px-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <HiOutlineChevronDown className={`text-gray-400 transition-transform ${terbuka ? '' : '-rotate-90'}`} />
+                                                        <PiTruckDuotone className="text-lg text-blue-500" />
+                                                        <span className="font-semibold text-gray-800 dark:text-gray-100">{g.nama_jenis_kendaraan}</span>
+                                                        <Tag className="bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                                                            {g.rows.length} paket servis
+                                                        </Tag>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
-                                    </Fragment>
-                                ))}
+                                            {terbuka && g.rows.map(row => (
+                                                <tr key={row.id_interval_perawatan}>
+                                                    <td className="py-3 px-3 pl-9 text-gray-800 dark:text-gray-200">
+                                                        {row.label}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                                                        {ringkasSparepart(row)}
+                                                    </td>
+                                                    <td className="py-3 px-3">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Tooltip title="Lihat Detail">
+                                                                <span
+                                                                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/30 cursor-pointer transition-colors"
+                                                                    onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN_DETAIL(row.id_interval_perawatan))}
+                                                                ><HiOutlineEye className="text-base" /></span>
+                                                            </Tooltip>
+                                                            <Tooltip title="Hapus">
+                                                                <span
+                                                                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-200 cursor-pointer transition-colors"
+                                                                    onClick={() => setDeleteTarget(row)}
+                                                                ><HiOutlineTrash className="text-base" /></span>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </Fragment>
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>
