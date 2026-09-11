@@ -14,6 +14,7 @@ export const protectedRoutes: Routes = {
         key: 'home',
         authority: [],
     },
+    '/ubah-password': { key: 'ubah-password', authority: [] },
     ...listRoute('klien', 'klien'),
     ...listRoute('project', 'project'),
     ...listRoute('penawaran', 'penawaran'),

@@ -6,7 +6,8 @@ import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import Link from 'next/link'
 import signOut from '@/server/actions/auth/handleSignOut'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
-import { PiUserDuotone, PiSignOutDuotone } from 'react-icons/pi'
+import { PiUserDuotone, PiSignOutDuotone, PiLockKeyDuotone } from 'react-icons/pi'
+import { ROUTES } from '@/constants/route.constant'
 
 import type { JSX } from 'react'
 
@@ -25,7 +26,9 @@ type DropdownList = {
     icon: JSX.Element
 }
 
-const dropdownItemList: DropdownList[] = []
+const dropdownItemList: DropdownList[] = [
+    { label: 'Ubah Password', path: ROUTES.UBAH_PASSWORD, icon: <PiLockKeyDuotone /> },
+]
 
 const _UserDropdown = () => {
     const { session } = useCurrentSession()

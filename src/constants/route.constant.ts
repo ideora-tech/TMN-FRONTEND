@@ -1,5 +1,6 @@
 export const ROUTES = {
     HOME:     '/',
+    UBAH_PASSWORD: '/ubah-password',
     SIGN_IN:  '/sign-in',
 
     KLIEN:        '/klien',

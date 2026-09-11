@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
     AUTH_LOGIN:  '/api/proxy/auth/login',
     AUTH_LOGOUT: '/api/proxy/auth/logout',
     AUTH_ME:     '/api/proxy/auth/me',
+    AUTH_UBAH_PASSWORD: '/api/proxy/auth/ubah-password',
 
     // Klien
     KLIEN:        '/api/proxy/klien',
