@@ -11,7 +11,7 @@ export default function AbsensiPage() {
         <div className="flex flex-col gap-4">
             <div>
                 <h3 className="font-bold">Absensi</h3>
-                <p className="text-gray-500 text-sm mt-0.5">Input kehadiran harian karyawan &amp; rekap bulanan — supir tercatat otomatis dari trip</p>
+                <p className="text-gray-500 text-sm mt-0.5">Input kehadiran harian karyawan &amp; rekap bulanan — absen supir dari aplikasi mobile otomatis tercatat</p>
             </div>
 
             <Tabs value={activeTab} onChange={val => setActiveTab(val as string)}>
