@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
     ARMADA_DOKUMEN_UPDATE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     ARMADA_DOKUMEN_DELETE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     DOKUMEN_ARMADA:        '/api/proxy/dokumen-armada',
+    DOKUMEN_ARMADA_PER_UNIT: '/api/proxy/dokumen-armada/per-unit',
     DOKUMEN_ARMADA_DETAIL: (id: string) => `/api/proxy/dokumen-armada/${id}`,
     ARMADA_DOKUMEN_BATCH:  (idArmada: string) => `/api/proxy/armada/${idArmada}/dokumen/batch`,
     ARMADA_DOKUMEN_PERPANJANG: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}/perpanjang`,
@@ -122,6 +123,8 @@ export const API_ENDPOINTS = {
     // Import Supir
     SUPIR_IMPORT_TEMPLATE: '/api/proxy/supir/import/template',
     SUPIR_IMPORT:          '/api/proxy/supir/import',
+    SUPIR_RIWAYAT_ARMADA_EXPORT: (id: string) => `/api/proxy/supir/${id}/riwayat-armada/export/excel`,
+    SUPIR_RIWAYAT_TRIP_EXPORT:   (id: string) => `/api/proxy/supir/${id}/riwayat-trip/export/excel`,
 
     // Supir Proyek
     SUPIR_PROYEK:        '/api/proxy/supir-proyek',

@@ -24,6 +24,20 @@ export interface OpsiPenggunaSupir {
     nama_supir_tertaut: string | null
 }
 
+async function unduhExcel(url: string, namaFile: string) {
+    const res = await axios.get(url, { responseType: 'blob' })
+    const href = URL.createObjectURL(res.data)
+    const link = document.createElement('a')
+    link.href = href
+    link.download = namaFile
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(href)
+}
+
+const slugNama = (nama: string) => nama.trim().replace(/\s+/g, '-').toLowerCase()
+
 export const supirService = {
     async list(page = 1, limit = 15, search?: string, status?: string) {
         const { data } = await axios.get(API_ENDPOINTS.SUPIR, { params: { page, limit, search: search || undefined, status: status || undefined } })
@@ -47,5 +61,11 @@ export const supirService = {
     async opsiPengguna() {
         const { data } = await axios.get(API_ENDPOINTS.SUPIR_OPSI_PENGGUNA)
         return data.data as OpsiPenggunaSupir[]
+    },
+    async exportRiwayatArmada(id: string, nama: string) {
+        await unduhExcel(API_ENDPOINTS.SUPIR_RIWAYAT_ARMADA_EXPORT(id), `riwayat-armada-${slugNama(nama)}.xlsx`)
+    },
+    async exportRiwayatTrip(id: string, nama: string) {
+        await unduhExcel(API_ENDPOINTS.SUPIR_RIWAYAT_TRIP_EXPORT(id), `riwayat-trip-${slugNama(nama)}.xlsx`)
     },
 }

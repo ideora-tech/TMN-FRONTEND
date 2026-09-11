@@ -23,6 +23,22 @@ export interface DokumenArmadaDetail extends DokumenArmadaWithArmada {
     id_dokumen_pengganti: string | null
 }
 
+export type KondisiDokumenUnit = 'habis' | 'segera' | 'belum_ada' | 'aman'
+
+export interface DokumenPerUnit {
+    id_armada: string
+    nopol: string
+    merk: string | null
+    nama_jenis_kendaraan: string | null
+    status_armada: string
+    kondisi: KondisiDokumenUnit
+    jumlah_dokumen: number
+    terdekat: { jenis_dokumen: string; berlaku_sampai: string } | null
+    dokumen: DokumenArmadaWithArmada[]
+}
+
+export type RingkasanDokumenUnit = Record<KondisiDokumenUnit | 'total', number>
+
 type DocPayload = {
     jenis_dokumen: string
     nomor?: string | null
@@ -53,9 +69,12 @@ function buildFormData(payload: DocPayload, file: File): FormData {
 }
 
 export const dokumenArmadaService = {
-    async listAll(params?: { page?: number; limit?: number; id_armada?: string; jenis_dokumen?: string; search?: string }) {
-        const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA, { params })
-        return data as { data: DokumenArmadaWithArmada[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+    async perUnit(params?: { page?: number; limit?: number; id_armada?: string; jenis_dokumen?: string; search?: string; kondisi?: KondisiDokumenUnit }) {
+        const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA_PER_UNIT, { params })
+        return data as {
+            data: DokumenPerUnit[]
+            meta: { page: number; total: number; totalPages: number; limit: number; ringkasan: RingkasanDokumenUnit }
+        }
     },
 
     async list(idArmada: string) {

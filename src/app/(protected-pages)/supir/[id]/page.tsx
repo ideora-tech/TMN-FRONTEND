@@ -1,9 +1,9 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner, Pagination } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineEye } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineEye, HiOutlineDocumentDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -25,6 +25,8 @@ const statusClass: Record<string, string> = {
     aktif:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
     nonaktif: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
 }
+
+const RIWAYAT_PAGE_SIZE = 10
 
 const TRIP_STATUS_CLASS: Record<string, string> = {
     belum_mulai: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
@@ -49,11 +51,17 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const [tripList, setTripList]       = useState<Trip[]>([])
     const [tripLoading, setTripLoading] = useState(false)
     const [tripTotal, setTripTotal]     = useState(0)
+    const [tripPage, setTripPage]       = useState(1)
+    const [statTrip, setStatTrip]       = useState<{ berjalan: number; selesai: number } | null>(null)
 
     // penugasan (armada) history
     const [penugasanList, setPenugasanList]       = useState<Penugasan[]>([])
     const [penugasanLoading, setPenugasanLoading] = useState(false)
+    const [penugasanTotal, setPenugasanTotal]     = useState(0)
+    const [penugasanPage, setPenugasanPage]       = useState(1)
     const [armadaMap, setArmadaMap]               = useState<Record<string, Armada>>({})
+
+    const [exporting, setExporting] = useState<'armada' | 'trip' | null>(null)
 
     // armada default options
     const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
@@ -104,7 +112,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const fetchTrip = useCallback(async () => {
         setTripLoading(true)
         try {
-            const res = await tripService.list({ id_supir: id, limit: 50 })
+            const res = await tripService.list({ id_supir: id, page: tripPage, limit: RIWAYAT_PAGE_SIZE })
             setTripList(res.data)
             setTripTotal(res.meta.total)
         } catch (err) {
@@ -112,29 +120,51 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
         } finally {
             setTripLoading(false)
         }
-    }, [id])
+    }, [id, tripPage])
 
     useEffect(() => { fetchTrip() }, [fetchTrip])
+
+    useEffect(() => {
+        Promise.all([
+            tripService.list({ id_supir: id, status: 'berjalan', limit: 1 }),
+            tripService.list({ id_supir: id, status: 'selesai', limit: 1 }),
+        ])
+            .then(([berjalan, selesai]) => setStatTrip({ berjalan: berjalan.meta.total, selesai: selesai.meta.total }))
+            .catch(() => {})
+    }, [id])
 
     const fetchPenugasan = useCallback(async () => {
         setPenugasanLoading(true)
         try {
-            const res = await penugasanService.listBySupir(id)
+            const res = await penugasanService.listBySupir(id, penugasanPage, RIWAYAT_PAGE_SIZE)
             setPenugasanList(res.data)
-            // fetch armada details for display
+            setPenugasanTotal(res.meta.total)
             const ids = [...new Set(res.data.map(p => p.id_armada).filter(Boolean))] as string[]
             if (ids.length > 0) {
                 const armadas = await Promise.all(ids.map(aid => armadaService.get(aid).catch(() => null)))
                 const map: Record<string, Armada> = {}
                 armadas.forEach(a => { if (a) map[a.id_armada] = a })
-                setArmadaMap(map)
+                setArmadaMap(prev => ({ ...prev, ...map }))
             }
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally { setPenugasanLoading(false) }
-    }, [id])
+    }, [id, penugasanPage])
 
     useEffect(() => { fetchPenugasan() }, [fetchPenugasan])
+
+    const handleExport = async (jenis: 'armada' | 'trip') => {
+        if (!supir) return
+        setExporting(jenis)
+        try {
+            if (jenis === 'armada') await supirService.exportRiwayatArmada(id, supir.nama)
+            else await supirService.exportRiwayatTrip(id, supir.nama)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setExporting(null)
+        }
+    }
 
     const validate = () => {
         const e: Partial<Record<keyof Supir, string>> = {}
@@ -169,9 +199,6 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const simWarning = daysLeft !== null && daysLeft < 30
     const initial    = supir.nama?.charAt(0).toUpperCase() ?? '?'
 
-    const aktif   = tripList.filter(t => t.status === 'berjalan').length
-    const selesai = tripList.filter(t => t.status === 'selesai').length
-
     return (
         <div className="flex flex-col gap-4">
             {/* Header */}
@@ -197,12 +224,12 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             )}
 
             {/* Ringkasan statistik */}
-            {!tripLoading && tripTotal > 0 && (
+            {tripTotal > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                         { label: 'Total Trip', value: tripTotal, color: 'text-gray-700 dark:text-gray-200' },
-                        { label: 'Sedang Berjalan', value: aktif, color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'Selesai', value: selesai, color: 'text-blue-600 dark:text-blue-400' },
+                        { label: 'Sedang Berjalan', value: statTrip?.berjalan ?? '—', color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'Selesai', value: statTrip?.selesai ?? '—', color: 'text-blue-600 dark:text-blue-400' },
                     ].map(({ label, value, color }) => (
                         <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-4 py-3 text-center">
                             <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -360,9 +387,18 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
 
             {/* Riwayat Armada (Penugasan) */}
             <Card>
-                <div className="mb-1">
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Armada</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Armada yang pernah ditugaskan ke supir ini</p>
+                <div className="mb-1 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            Riwayat Armada{penugasanTotal > 0 ? ` (${penugasanTotal})` : ''}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">Armada yang pernah ditugaskan ke supir ini</p>
+                    </div>
+                    <Tooltip title="Export Excel">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                            disabled={penugasanTotal === 0}
+                            loading={exporting === 'armada'} onClick={() => handleExport('armada')} />
+                    </Tooltip>
                 </div>
 
                 {penugasanLoading ? (
@@ -423,14 +459,33 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                         </table>
                     </div>
                 )}
+                {!penugasanLoading && penugasanTotal > RIWAYAT_PAGE_SIZE && (
+                    <div className="flex justify-end mt-4">
+                        <Pagination
+                            currentPage={penugasanPage}
+                            total={penugasanTotal}
+                            pageSize={RIWAYAT_PAGE_SIZE}
+                            onChange={setPenugasanPage}
+                        />
+                    </div>
+                )}
             </Card>
             </div>
 
             {/* Riwayat Trip */}
             <Card>
-                <div className="mb-1">
-                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Riwayat Trip</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Semua trip yang pernah ditugaskan ke supir ini</p>
+                <div className="mb-1 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            Riwayat Trip{tripTotal > 0 ? ` (${tripTotal})` : ''}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">Semua trip yang pernah ditugaskan ke supir ini</p>
+                    </div>
+                    <Tooltip title="Export Excel">
+                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
+                            disabled={tripTotal === 0}
+                            loading={exporting === 'trip'} onClick={() => handleExport('trip')} />
+                    </Tooltip>
                 </div>
 
                 {tripLoading ? (
@@ -497,6 +552,16 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+                {!tripLoading && tripTotal > RIWAYAT_PAGE_SIZE && (
+                    <div className="flex justify-end mt-4">
+                        <Pagination
+                            currentPage={tripPage}
+                            total={tripTotal}
+                            pageSize={RIWAYAT_PAGE_SIZE}
+                            onChange={setTripPage}
+                        />
                     </div>
                 )}
                 {!editing && (
