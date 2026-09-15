@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tag, Tooltip, Pagination, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import PratinjauBerkasDialog, { type BerkasPratinjau } from '@/components/shared/PratinjauBerkasDialog'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineRefresh, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi'
 import { PiTruckDuotone, PiWarningOctagonDuotone, PiClockCountdownDuotone, PiFileDashedDuotone, PiShieldCheckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
@@ -38,6 +39,10 @@ const sisaHari = (tanggal: string) => dayjs(tanggal).startOf('day').diff(dayjs()
 
 export default function DokumenArmadaPage() {
     const router = useRouter()
+    const [pratinjau, setPratinjau] = useState<BerkasPratinjau | null>(null)
+    const bukaPratinjau = (url: string | null, judul: string, namaUnduh: string) => {
+        if (url) setPratinjau({ url, judul, namaUnduh })
+    }
     const [list, setList]           = useState<DokumenPerUnit[]>([])
     const [ringkasan, setRingkasan] = useState<RingkasanDokumenUnit | null>(null)
     const [loading, setLoading]     = useState(false)
@@ -302,7 +307,7 @@ export default function DokumenArmadaPage() {
                                                         </td>
                                                         <td className="py-2.5 px-3">
                                                             {d.url_file
-                                                                ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                                ? <button type="button" className="text-blue-500 hover:underline text-xs" onClick={() => bukaPratinjau(d.url_file, `${labelJenisDokumen(d.jenis_dokumen)} · ${u.nopol}`, `${labelJenisDokumen(d.jenis_dokumen)}-${u.nopol.replace(/\s/g, '')}`)}>Lihat</button>
                                                                 : <span className="text-gray-400 text-xs">—</span>}
                                                         </td>
                                                         <td className="py-2.5 px-3">
@@ -354,6 +359,7 @@ export default function DokumenArmadaPage() {
                 </div>
             </Card>
 
+            <PratinjauBerkasDialog berkas={pratinjau} onClose={() => setPratinjau(null)} />
             <ConfirmDialog
                 isOpen={!!deleteTarget}
                 type="danger"

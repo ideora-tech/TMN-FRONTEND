@@ -3,6 +3,7 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, toast, Notification } from '@/components/ui'
 import UploadBerkas from '@/components/shared/UploadBerkas'
+import PratinjauBerkasDialog, { type BerkasPratinjau } from '@/components/shared/PratinjauBerkasDialog'
 import { HiArrowLeft, HiOutlineInformationCircle, HiOutlineExclamation } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -22,6 +23,10 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
 export default function PerpanjangDokumenArmadaPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const [pratinjau, setPratinjau] = useState<BerkasPratinjau | null>(null)
+    const bukaPratinjau = (url: string | null, judul: string, namaUnduh: string) => {
+        if (url) setPratinjau({ url, judul, namaUnduh })
+    }
     const [data, setData] = useState<DokumenArmadaDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [notFound, setNotFound] = useState(false)
@@ -101,7 +106,7 @@ export default function PerpanjangDokumenArmadaPage({ params }: { params: Promis
                     </Info>
                     <Info label="File Dokumen">
                         {data.url_file
-                            ? <a href={data.url_file} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat file lama</a>
+                            ? <button type="button" className="text-blue-600 hover:underline" onClick={() => bukaPratinjau(data.url_file, `${labelJenisDokumen(data.jenis_dokumen)} · ${data.armada_nopol ?? ''} (lama)`, `${labelJenisDokumen(data.jenis_dokumen)}-${(data.armada_nopol ?? '').replace(/\s/g, '')}-lama`)}>Lihat file lama</button>
                             : '—'}
                     </Info>
                 </div>
@@ -165,6 +170,7 @@ export default function PerpanjangDokumenArmadaPage({ params }: { params: Promis
                     </form>
                 )}
             </Card>
+            <PratinjauBerkasDialog berkas={pratinjau} onClose={() => setPratinjau(null)} />
         </div>
     )
 }

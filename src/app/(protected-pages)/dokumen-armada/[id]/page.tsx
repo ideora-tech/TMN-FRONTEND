@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import UploadBerkas from '@/components/shared/UploadBerkas'
+import PratinjauBerkasDialog, { type BerkasPratinjau } from '@/components/shared/PratinjauBerkasDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineRefresh, HiOutlineExclamation, HiPlusCircle, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -42,6 +43,10 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
 export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const [pratinjau, setPratinjau] = useState<BerkasPratinjau | null>(null)
+    const bukaPratinjau = (url: string | null, judul: string, namaUnduh: string) => {
+        if (url) setPratinjau({ url, judul, namaUnduh })
+    }
     const [data, setData] = useState<DokumenArmadaDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [notFound, setNotFound] = useState(false)
@@ -226,7 +231,7 @@ export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ 
                             </Info>
                             <Info label="File Dokumen">
                                 {data.url_file
-                                    ? <a href={data.url_file} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Lihat file</a>
+                                    ? <button type="button" className="text-blue-600 hover:underline" onClick={() => bukaPratinjau(data.url_file, `${labelJenisDokumen(data.jenis_dokumen)} · ${data.armada_nopol ?? ''}`, `${labelJenisDokumen(data.jenis_dokumen)}-${(data.armada_nopol ?? '').replace(/\s/g, '')}`)}>Lihat file</button>
                                     : '—'}
                             </Info>
                             <Info label="Dicatat">{dayjs(data.dibuat_pada).format('DD MMM YYYY HH:mm')}</Info>
@@ -264,7 +269,7 @@ export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ 
                                                     <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{dayjs(r.dibuat_pada).format('DD MMM YYYY')}</td>
                                                     <td className="py-2.5 px-3">
                                                         {r.url_file
-                                                            ? <a href={r.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                            ? <button type="button" className="text-blue-500 hover:underline text-xs" onClick={() => bukaPratinjau(r.url_file, `${labelJenisDokumen(r.jenis_dokumen)} · ${data.armada_nopol ?? ''} (riwayat)`, `${labelJenisDokumen(r.jenis_dokumen)}-${(data.armada_nopol ?? '').replace(/\s/g, '')}-riwayat`)}>Lihat</button>
                                                             : <span className="text-gray-400 text-xs">—</span>}
                                                     </td>
                                                 </tr>
@@ -310,7 +315,7 @@ export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ 
                                                         </td>
                                                         <td className="py-2.5 px-3">
                                                             {d.url_file
-                                                                ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                                ? <button type="button" className="text-blue-500 hover:underline text-xs" onClick={() => bukaPratinjau(d.url_file, `${labelJenisDokumen(d.jenis_dokumen)} · ${data.armada_nopol ?? ''}`, `${labelJenisDokumen(d.jenis_dokumen)}-${(data.armada_nopol ?? '').replace(/\s/g, '')}`)}>Lihat</button>
                                                                 : <span className="text-gray-400 text-xs">—</span>}
                                                         </td>
                                                         <td className="py-2.5 px-3 text-right">
@@ -454,6 +459,7 @@ export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ 
                     </form>
                 )}
             </Card>
+            <PratinjauBerkasDialog berkas={pratinjau} onClose={() => setPratinjau(null)} />
         </div>
     )
 }
