@@ -34,7 +34,7 @@ export type { RiwayatPengajuanKeuangan, PengajuanKeuanganInfo } from './arusKas.
 export interface PembelianSparepart {
     id_pembelian: string
     nomor_pengajuan: string
-    id_supplier: string
+    id_supplier: string | null
     nama_supplier: string | null
     id_perawatan: string | null
     nopol_armada: string | null
@@ -57,7 +57,7 @@ export interface PembelianSparepart {
 }
 
 export type PembelianPayload = {
-    id_supplier: string
+    id_supplier: string | null
     id_perawatan?: string | null
     tanggal_pengajuan: string
     keterangan?: string | null
@@ -82,8 +82,19 @@ export const pembelianSparepartService = {
         const { data } = await axios.get(API_ENDPOINTS.PEMBELIAN_SPAREPART_DETAIL(id))
         return data.data as PembelianSparepart
     },
-    async create(payload: PembelianPayload) {
-        const { data } = await axios.post(API_ENDPOINTS.PEMBELIAN_SPAREPART, payload)
+    async create(payload: PembelianPayload, bukti: File[]) {
+        const form = new FormData()
+        if (payload.id_supplier) form.append('id_supplier', payload.id_supplier)
+        if (payload.id_perawatan) form.append('id_perawatan', payload.id_perawatan)
+        form.append('tanggal_pengajuan', payload.tanggal_pengajuan)
+        if (payload.keterangan) form.append('keterangan', payload.keterangan)
+        payload.items.forEach((item, i) => {
+            form.append(`items[${i}][id_sparepart]`, item.id_sparepart)
+            form.append(`items[${i}][qty]`, String(item.qty))
+            form.append(`items[${i}][harga_estimasi]`, String(item.harga_estimasi))
+        })
+        bukti.forEach(f => form.append('bukti[]', f))
+        const { data } = await axios.post(API_ENDPOINTS.PEMBELIAN_SPAREPART, form)
         return data.data as PembelianSparepart
     },
     async update(id: string, payload: PembelianPayload) {

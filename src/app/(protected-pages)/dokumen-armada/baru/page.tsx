@@ -26,7 +26,7 @@ export default function DokumenArmadaBaruPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const presetArmada = searchParams.get('id_armada') ?? ''
-    const halamanAsal = presetArmada ? ROUTES.ARMADA_DETAIL(presetArmada) : ROUTES.DOKUMEN_ARMADA
+    const halamanAsal = presetArmada && searchParams.get('asal') === 'armada' ? ROUTES.ARMADA_DETAIL(presetArmada) : ROUTES.DOKUMEN_ARMADA
 
     const [armadaOptions, setArmadaOptions] = useState<Option[]>([])
     const [idArmada, setIdArmada] = useState(presetArmada)

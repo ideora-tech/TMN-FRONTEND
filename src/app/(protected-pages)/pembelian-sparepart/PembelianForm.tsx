@@ -11,7 +11,6 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { pembelianSparepartService, PembelianSparepart, PembelianBukti, PembelianPayload } from '@/services/pembelianSparepart.service'
 import { supplierService } from '@/services/supplier.service'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
@@ -61,25 +60,8 @@ export default function PembelianForm({ mode, initial }: Props) {
     const [tanggalPengajuan, setTanggalPengajuan] = useState(initial?.tanggal_pengajuan ?? dayjs().format('YYYY-MM-DD'))
     const [keterangan, setKeterangan] = useState(initial?.keterangan ?? '')
     const [lampiran, setLampiran] = useState<File[]>([])
-    const [buktiLama, setBuktiLama] = useState<PembelianBukti[]>(initial?.bukti ?? [])
-    const [hapusBuktiTarget, setHapusBuktiTarget] = useState<PembelianBukti | null>(null)
-    const [menghapusBukti, setMenghapusBukti] = useState(false)
-
-    const handleHapusBuktiLama = async () => {
-        if (!initial || !hapusBuktiTarget) return
-        setMenghapusBukti(true)
-        try {
-            await pembelianSparepartService.hapusBukti(initial.id_pembelian, hapusBuktiTarget.id_bukti)
-            setBuktiLama(prev => prev.filter(b => b.id_bukti !== hapusBuktiTarget.id_bukti))
-            setHapusBuktiTarget(null)
-            toast.push(<Notification type="success" title="Lampiran dihapus" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-            setHapusBuktiTarget(null)
-        } finally {
-            setMenghapusBukti(false)
-        }
-    }
+    const [buktiLama] = useState<PembelianBukti[]>(initial?.bukti ?? [])
+    const [buktiAkanDihapus, setBuktiAkanDihapus] = useState<string[]>([])
     const [idArmada, setIdArmada] = useState('')
     const [idPerawatan, setIdPerawatan] = useState(initial?.id_perawatan ?? '')
     const [items, setItems] = useState<ItemRow[]>(
@@ -141,13 +123,39 @@ export default function PembelianForm({ mode, initial }: Props) {
 
     const totalEstimasi = items.reduce((sum, row) => sum + (Number(row.qty) || 0) * (Number(row.harga_estimasi) || 0), 0)
 
+    const tandaiHapusBuktiLama = (idBukti: string) => {
+        setBuktiAkanDihapus(prev => (prev.includes(idBukti) ? prev.filter(id => id !== idBukti) : [...prev, idBukti]))
+        setErrors(p => ({ ...p, lampiran: '' }))
+    }
+
+    const jumlahLampiran = buktiLama.filter(b => !buktiAkanDihapus.includes(b.id_bukti)).length + lampiran.length
+
+    const sinkronLampiranEdit = async (idPembelian: string) => {
+        if (lampiran.length > 0) {
+            try {
+                await pembelianSparepartService.uploadBukti(idPembelian, lampiran)
+            } catch (err) {
+                toast.push(<Notification type="warning" title={`Pengajuan tersimpan, tapi lampiran baru gagal diunggah: ${parseApiError(err)}`} />)
+                return
+            }
+        }
+        for (const idBukti of buktiAkanDihapus) {
+            try {
+                await pembelianSparepartService.hapusBukti(idPembelian, idBukti)
+            } catch (err) {
+                toast.push(<Notification type="warning" title={`Pengajuan tersimpan, tapi lampiran lama gagal dihapus: ${parseApiError(err)}`} />)
+                return
+            }
+        }
+    }
+
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!idSupplier) e.id_supplier = 'Supplier wajib dipilih'
         if (!tanggalPengajuan) e.tanggal_pengajuan = 'Tanggal pengajuan wajib diisi'
         if (items.some(row => !row.id_sparepart || (Number(row.qty) || 0) < 1)) {
             e.items = 'Setiap baris wajib memilih sparepart dengan qty minimal 1'
         }
+        if (jumlahLampiran === 0) e.lampiran = 'Foto atau lampiran pengajuan wajib diunggah minimal satu'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -160,7 +168,7 @@ export default function PembelianForm({ mode, initial }: Props) {
         setLoading(true)
         try {
             const payload: PembelianPayload = {
-                id_supplier: idSupplier,
+                id_supplier: idSupplier || null,
                 id_perawatan: idPerawatan || null,
                 tanggal_pengajuan: tanggalPengajuan,
                 keterangan: keterangan.trim() || null,
@@ -172,13 +180,9 @@ export default function PembelianForm({ mode, initial }: Props) {
             }
             const hasil = mode === 'edit' && initial
                 ? await pembelianSparepartService.update(initial.id_pembelian, payload)
-                : await pembelianSparepartService.create(payload)
-            if (lampiran.length > 0) {
-                try {
-                    await pembelianSparepartService.uploadBukti(hasil.id_pembelian, lampiran)
-                } catch (err) {
-                    toast.push(<Notification type="warning" title={`Pengajuan tersimpan, tapi lampiran gagal diunggah: ${parseApiError(err)}`} />)
-                }
+                : await pembelianSparepartService.create(payload, lampiran)
+            if (mode === 'edit') {
+                await sinkronLampiranEdit(hasil.id_pembelian)
             }
             toast.push(<Notification type="success" title={mode === 'edit' ? 'Pengajuan berhasil diperbarui' : 'Pengajuan berhasil dibuat'} />)
             router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(hasil.id_pembelian))
@@ -208,11 +212,11 @@ export default function PembelianForm({ mode, initial }: Props) {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                        <FormItem label="Supplier" asterisk invalid={!!errors.id_supplier} errorMessage={errors.id_supplier}>
-                            <Select<Option> isSearchable placeholder="Pilih supplier..."
+                        <FormItem label="Supplier (opsional)">
+                            <Select<Option> isSearchable isClearable placeholder="Pilih supplier bila sudah ada..."
                                 options={supplierOptions}
                                 value={supplierOptions.find(o => o.value === idSupplier) ?? null}
-                                onChange={opt => { setIdSupplier(opt?.value ?? ''); setErrors(p => ({ ...p, id_supplier: '' })) }} />
+                                onChange={opt => setIdSupplier(opt?.value ?? '')} />
                         </FormItem>
                         <FormItem label="Tanggal Pengajuan" asterisk invalid={!!errors.tanggal_pengajuan} errorMessage={errors.tanggal_pengajuan}>
                             <DatePicker inputFormat="DD/MM/YYYY"
@@ -291,30 +295,51 @@ export default function PembelianForm({ mode, initial }: Props) {
 
                     <div className="mt-1">
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
-                            Lampiran (opsional) — penawaran supplier, foto kerusakan, dsb.
+                            Lampiran <span className="text-red-500">*</span> — foto nota / penawaran supplier / foto kerusakan, minimal satu
                         </p>
+                        {errors.lampiran && <p className="text-red-500 text-sm mb-2">{errors.lampiran}</p>}
                         {mode === 'edit' && buktiLama.length > 0 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-3">
-                                {buktiLama.map(b => (
-                                    <div key={b.id_bukti} className="relative group">
-                                        <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
-                                            {b.nama_asli.toLowerCase().endsWith('.pdf') ? (
-                                                <div className="w-full h-24 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 px-2 text-center">
-                                                    {b.nama_asli}
-                                                </div>
-                                            ) : (
-                                                <img src={b.url_file} alt={b.nama_asli}
-                                                    className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
-                                            )}
-                                        </a>
-                                        <button type="button"
-                                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white items-center justify-center hidden group-hover:flex"
-                                            onClick={() => setHapusBuktiTarget(b)}>
-                                            <HiOutlineTrash className="text-sm" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-3">
+                                    {buktiLama.map(b => {
+                                        const akanDihapus = buktiAkanDihapus.includes(b.id_bukti)
+                                        return (
+                                            <div key={b.id_bukti} className="relative group">
+                                                <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}
+                                                    className={akanDihapus ? 'block opacity-40 grayscale' : 'block'}>
+                                                    {b.nama_asli.toLowerCase().endsWith('.pdf') ? (
+                                                        <div className="w-full h-24 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 px-2 text-center">
+                                                            {b.nama_asli}
+                                                        </div>
+                                                    ) : (
+                                                        <img src={b.url_file} alt={b.nama_asli}
+                                                            className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
+                                                    )}
+                                                </a>
+                                                {akanDihapus ? (
+                                                    <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1 rounded-md bg-red-500/90 px-2 py-1 text-[11px] font-semibold text-white">
+                                                        <span>Akan dihapus</span>
+                                                        <button type="button" className="underline" onClick={() => tandaiHapusBuktiLama(b.id_bukti)}>
+                                                            Batalkan
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button type="button"
+                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white items-center justify-center hidden group-hover:flex"
+                                                        onClick={() => tandaiHapusBuktiLama(b.id_bukti)}>
+                                                        <HiOutlineTrash className="text-sm" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                {buktiAkanDihapus.length > 0 && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                                        {buktiAkanDihapus.length} lampiran lama akan dihapus saat perubahan disimpan
+                                    </p>
+                                )}
+                            </>
                         )}
                         <div>
                             <Upload
@@ -329,7 +354,7 @@ export default function PembelianForm({ mode, initial }: Props) {
                                     if (kebesaran) return `File ${kebesaran.name} melebihi 5MB`
                                     return true
                                 }}
-                                onChange={files => setLampiran(files)}
+                                onChange={files => { setLampiran(files); setErrors(p => ({ ...p, lampiran: '' })) }}
                             >
                                 <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
                                     Pilih file (bisa lebih dari satu, maks. 10 file × 5MB)
@@ -363,13 +388,6 @@ export default function PembelianForm({ mode, initial }: Props) {
                     </div>
                 </form>
             </Card>
-
-            <ConfirmDialog isOpen={!!hapusBuktiTarget} type="danger" title="Hapus Lampiran"
-                confirmText="Ya, Hapus" cancelText="Batal"
-                onClose={() => setHapusBuktiTarget(null)} onCancel={() => setHapusBuktiTarget(null)}
-                onConfirm={handleHapusBuktiLama} confirmButtonProps={{ loading: menghapusBukti }}>
-                <p>Hapus lampiran <strong>{hapusBuktiTarget?.nama_asli}</strong>?</p>
-            </ConfirmDialog>
         </div>
     )
 }

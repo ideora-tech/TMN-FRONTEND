@@ -1,6 +1,7 @@
 import Menu from '@/components/ui/Menu'
 import Dropdown from '@/components/ui/Dropdown'
 import VerticalMenuIcon from './VerticalMenuIcon'
+import MenuBadge, { MenuBadgeDot } from './MenuBadge'
 import AuthorityCheck from '@/components/shared/AuthorityCheck'
 import type { CommonProps } from '@/@types/common'
 import type { Direction } from '@/@types/theme'
@@ -13,6 +14,8 @@ interface DefaultItemProps extends CommonProps {
     indent?: boolean
     dotIndent?: boolean
     userAuthority: string[]
+    badgeCount?: number
+    badgeKeterangan?: string
 }
 
 interface CollapsedItemProps extends DefaultItemProps {
@@ -34,6 +37,8 @@ const DefaultItem = ({
     dotIndent,
     children,
     userAuthority,
+    badgeCount = 0,
+    badgeKeterangan,
     t,
 }: DefaultItemProps) => {
     return (
@@ -44,6 +49,7 @@ const DefaultItem = ({
                     <>
                         <VerticalMenuIcon icon={nav.icon} />
                         <span>{t(nav.translateKey, nav.title)}</span>
+                        <MenuBadge jumlah={badgeCount} keterangan={badgeKeterangan} />
                     </>
                 }
                 eventKey={nav.key}
@@ -65,6 +71,8 @@ const CollapsedItem = ({
     renderAsIcon,
     userAuthority,
     parentKeys,
+    badgeCount = 0,
+    badgeKeterangan,
 }: CollapsedItemProps) => {
     const menuItem = (
         <MenuItem
@@ -73,7 +81,10 @@ const CollapsedItem = ({
             eventKey={nav.key}
             className="mb-2"
         >
-            <VerticalMenuIcon icon={nav.icon} />
+            <span className="relative inline-flex">
+                <VerticalMenuIcon icon={nav.icon} />
+                <MenuBadgeDot jumlah={badgeCount} keterangan={badgeKeterangan} />
+            </span>
         </MenuItem>
     )
 

@@ -1,6 +1,16 @@
+import dayjs from 'dayjs'
+
 export type Option = { value: string; label: string }
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024
+
+export const HARI_PENGINGAT = 7
+
+export const labelPengingat = (berlakuSampai: string | null) => {
+    if (!berlakuSampai) return null
+    const habis = dayjs(berlakuSampai)
+    return `${habis.subtract(HARI_PENGINGAT, 'day').format('DD MMM YYYY')} (H-${HARI_PENGINGAT}) dan ${habis.format('DD MMM YYYY')} (hari H)`
+}
 
 export const JENIS_DOKUMEN_OPTIONS: Option[] = [
     { value: 'STNK',     label: 'STNK' },

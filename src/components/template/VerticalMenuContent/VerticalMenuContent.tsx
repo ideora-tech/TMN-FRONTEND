@@ -13,6 +13,7 @@ import {
 } from '@/constants/navigation.constant'
 import useMenuActive from '@/utils/hooks/useMenuActive'
 import useTranslation from '@/utils/hooks/useTranslation'
+import useBadgeMenu, { jumlahBadge, keteranganBadge } from '@/utils/hooks/useBadgeMenu'
 import { Direction } from '@/@types/theme'
 import type { NavigationTree, TranslationFn } from '@/@types/navigation'
 
@@ -52,6 +53,7 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
     const [defaulExpandKey, setDefaulExpandKey] = useState<string[]>([])
 
     const { activedRoute } = useMenuActive(navigationTree, routeKey)
+    const badge = useBadgeMenu(routeKey)
 
     useEffect(() => {
         if (activedRoute?.parentKey) {
@@ -91,6 +93,8 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
                                         ? cascade >= 1
                                         : cascade <= MAX_CASCADE_LEVEL
                                 }
+                                badgeCount={jumlahBadge(nav, badge)}
+                                badgeKeterangan={keteranganBadge(nav, badge)}
                                 t={t}
                                 onLinkClick={handleLinkClick}
                             />
@@ -107,6 +111,8 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
                                 dotIndent={nextCascade >= MAX_CASCADE_LEVEL}
                                 renderAsIcon={nextCascade <= 1}
                                 userAuthority={userAuthority}
+                                badgeCount={jumlahBadge(nav, badge)}
+                                badgeKeterangan={keteranganBadge(nav, badge)}
                                 t={t}
                                 onLinkClick={onMenuItemClick}
                             >

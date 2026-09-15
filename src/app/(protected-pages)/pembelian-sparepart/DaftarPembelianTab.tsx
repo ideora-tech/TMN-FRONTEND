@@ -123,9 +123,9 @@ export default function DaftarPembelianTab() {
         {
             header: 'Supplier', accessorKey: 'nama_supplier', size: 180,
             cell: ({ row }) => (
-                <span className="font-semibold">
-                    {row.original.nama_supplier ?? row.original.id_supplier}
-                </span>
+                row.original.nama_supplier
+                    ? <span className="font-semibold">{row.original.nama_supplier}</span>
+                    : <span className="text-gray-400">—</span>
             ),
         },
         {

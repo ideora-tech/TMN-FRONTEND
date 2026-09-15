@@ -72,14 +72,76 @@ export interface RekapPerawatanUnit {
     nopol: string
     merk: string | null
     jumlah_perawatan: number
+    qty_sparepart: number
+    km_terakhir: number | null
+    tanggal_terakhir: string | null
     biaya_jasa: number
     biaya_sparepart: number
     total_biaya: number
 }
 
+export interface RiwayatBiayaSparepart {
+    id_sparepart: string | null
+    kode_sparepart: string | null
+    nama_sparepart: string
+    satuan: string | null
+    sumber: SumberSparepart
+    qty: number
+    harga: number
+    subtotal: number
+}
+
+export interface RiwayatBiayaPerawatan {
+    id_perawatan: string
+    id_armada: string
+    nopol: string
+    merk: string | null
+    tanggal: string
+    jenis_perawatan: string
+    status: StatusPerawatan
+    km_odometer: number | null
+    nama_supplier: string | null
+    keterangan: string | null
+    biaya_jasa: number
+    biaya_sparepart: number
+    total_biaya: number
+    sparepart: RiwayatBiayaSparepart[]
+}
+
+export interface RiwayatBiayaUnit {
+    armada: { id_armada: string; nopol: string; merk: string | null }
+    ringkasan: {
+        jumlah_perawatan: number
+        qty_sparepart: number
+        biaya_jasa: number
+        biaya_sparepart: number
+        total_biaya: number
+        km_terakhir: number | null
+    }
+    riwayat: RiwayatBiayaPerawatan[]
+}
+
+export type SumberRekapSparepart = SumberSparepart | 'campuran'
+
+export interface RekapSparepartUnit {
+    id_armada: string
+    nopol: string
+    merk: string | null
+    id_sparepart: string | null
+    kode_sparepart: string | null
+    nama_sparepart: string
+    satuan: string | null
+    sumber: SumberRekapSparepart
+    total_qty: number
+    harga_rata: number
+    total_biaya: number
+    jumlah_perawatan: number
+    terakhir_dipakai: string | null
+}
+
 export type FormatLaporan = 'excel' | 'pdf'
 
-type ParamPeriode = { tanggal_dari?: string; tanggal_sampai?: string }
+export type ParamPeriode = { tanggal_dari?: string; tanggal_sampai?: string }
 
 async function unduhBlob(url: string, filename: string, params?: ParamPeriode) {
     const res = await axios.get(url, { responseType: 'blob', params })
@@ -185,6 +247,14 @@ export const perawatanArmadaService = {
     async rekapPerUnit(params?: ParamPeriode) {
         const { data } = await axios.get(API_ENDPOINTS.PERAWATAN_REKAP_PER_UNIT, { params })
         return data.data as RekapPerawatanUnit[]
+    },
+    async riwayatBiayaUnit(idArmada: string, params?: ParamPeriode) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN_RIWAYAT_BIAYA(idArmada), { params })
+        return data.data as RiwayatBiayaUnit
+    },
+    async rekapSparepartUnit(idArmada: string, params?: ParamPeriode) {
+        const { data } = await axios.get(API_ENDPOINTS.ARMADA_PERAWATAN_REKAP_SPAREPART(idArmada), { params })
+        return data.data as RekapSparepartUnit[]
     },
     async downloadLaporanUnit(idArmada: string, nopol: string, format: FormatLaporan, params?: ParamPeriode) {
         const ekstensi = format === 'excel' ? 'xlsx' : 'pdf'

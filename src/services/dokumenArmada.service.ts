@@ -77,6 +77,11 @@ export const dokumenArmadaService = {
         }
     },
 
+    async jumlahSegeraHabis() {
+        const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_ARMADA_JUMLAH_SEGERA_HABIS)
+        return data.data as { jumlah: number; hari: number }
+    },
+
     async list(idArmada: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARMADA_DOKUMEN(idArmada))
         return data.data as DokumenArmada[]

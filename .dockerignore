@@ -4,4 +4,7 @@ node_modules
 *.md
 docs
 tsconfig.tsbuildinfo
+tsconfig.check.tsbuildinfo
 .eslintcache
+.superpowers
+.claude

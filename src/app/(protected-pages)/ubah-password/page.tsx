@@ -77,7 +77,7 @@ export default function UbahPasswordPage() {
                 </div>
             </div>
 
-            <Card className="max-w-xl">
+            <Card>
                 {berhasil ? (
                     <div className="flex flex-col items-center text-center gap-3 py-6">
                         <HiOutlineCheckCircle className="text-6xl text-emerald-500" />
@@ -94,21 +94,23 @@ export default function UbahPasswordPage() {
                             <HiOutlineShieldCheck className="text-lg shrink-0 mt-0.5" />
                             <span>Gunakan minimal 8 karakter. Setelah password diubah, Anda akan keluar otomatis dari semua perangkat (web dan aplikasi mobile) dan perlu login ulang.</span>
                         </div>
-                        <FormItem label="Password Lama" asterisk invalid={!!galat.lama} errorMessage={galat.lama}>
-                            <PasswordInput placeholder="Masukkan password lama" autoComplete="current-password"
-                                value={lama} invalid={!!galat.lama}
-                                onChange={e => setLama(e.target.value)} />
-                        </FormItem>
-                        <FormItem label="Password Baru" asterisk invalid={!!galat.baru} errorMessage={galat.baru}>
-                            <PasswordInput placeholder="Minimal 8 karakter" autoComplete="new-password"
-                                value={baru} invalid={!!galat.baru}
-                                onChange={e => setBaru(e.target.value)} />
-                        </FormItem>
-                        <FormItem label="Ulangi Password Baru" asterisk invalid={!!galat.konfirmasi} errorMessage={galat.konfirmasi}>
-                            <PasswordInput placeholder="Ketik ulang password baru" autoComplete="new-password"
-                                value={konfirmasi} invalid={!!galat.konfirmasi}
-                                onChange={e => setKonfirmasi(e.target.value)} />
-                        </FormItem>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            <FormItem label="Password Lama" asterisk className="sm:col-span-2" invalid={!!galat.lama} errorMessage={galat.lama}>
+                                <PasswordInput placeholder="Masukkan password lama" autoComplete="current-password"
+                                    value={lama} invalid={!!galat.lama}
+                                    onChange={e => setLama(e.target.value)} />
+                            </FormItem>
+                            <FormItem label="Password Baru" asterisk invalid={!!galat.baru} errorMessage={galat.baru}>
+                                <PasswordInput placeholder="Minimal 8 karakter" autoComplete="new-password"
+                                    value={baru} invalid={!!galat.baru}
+                                    onChange={e => setBaru(e.target.value)} />
+                            </FormItem>
+                            <FormItem label="Ulangi Password Baru" asterisk invalid={!!galat.konfirmasi} errorMessage={galat.konfirmasi}>
+                                <PasswordInput placeholder="Ketik ulang password baru" autoComplete="new-password"
+                                    value={konfirmasi} invalid={!!galat.konfirmasi}
+                                    onChange={e => setKonfirmasi(e.target.value)} />
+                            </FormItem>
+                        </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => router.push(ROUTES.HOME)}>Batal</Button>
                             <Button type="submit" variant="solid" loading={menyimpan}>Simpan Password</Button>

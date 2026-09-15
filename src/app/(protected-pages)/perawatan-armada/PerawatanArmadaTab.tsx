@@ -598,7 +598,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                                 <tr key={s.id_perawatan_sparepart}>
                                                     <td className="py-2 px-3">
                                                         <Tag className={`text-xs font-semibold whitespace-nowrap ${s.sumber === 'bengkel' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100'}`}>
-                                                            {s.sumber === 'bengkel' ? 'Bengkel' : 'Stok'}
+                                                            {s.sumber === 'bengkel' ? 'Pembelian Langsung' : 'Stok'}
                                                         </Tag>
                                                     </td>
                                                     <td className="py-2 px-3">{s.nama_sparepart}</td>

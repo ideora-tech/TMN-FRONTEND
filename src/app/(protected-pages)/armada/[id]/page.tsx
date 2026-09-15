@@ -509,7 +509,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Dokumen Kendaraan</p>
                         <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal habis masa berlaku terdekat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => router.push(`${ROUTES.DOKUMEN_ARMADA_BARU}?id_armada=${id}`)}>
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => router.push(`${ROUTES.DOKUMEN_ARMADA_BARU}?id_armada=${id}&asal=armada`)}>
                         Tambah Dokumen
                     </Button>
                 </div>

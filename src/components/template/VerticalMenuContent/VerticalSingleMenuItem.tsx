@@ -2,6 +2,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import Menu from '@/components/ui/Menu'
 import AuthorityCheck from '@/components/shared/AuthorityCheck'
 import VerticalMenuIcon from './VerticalMenuIcon'
+import MenuBadge from './MenuBadge'
 import Link from 'next/link'
 import Dropdown from '@/components/ui/Dropdown'
 import type { CommonProps } from '@/@types/common'
@@ -30,6 +31,8 @@ interface DefaultItemProps {
     userAuthority: string[]
     showIcon?: boolean
     showTitle?: boolean
+    badgeCount?: number
+    badgeKeterangan?: string
 }
 
 interface VerticalMenuItemProps extends CollapsedItemProps, DefaultItemProps {}
@@ -87,6 +90,8 @@ const DefaultItem = (props: DefaultItemProps) => {
         indent,
         showIcon = true,
         userAuthority,
+        badgeCount = 0,
+        badgeKeterangan,
         t,
     } = props
 
@@ -107,6 +112,7 @@ const DefaultItem = (props: DefaultItemProps) => {
                 >
                     {showIcon && <VerticalMenuIcon icon={nav.icon} />}
                     {showTitle && <span>{t(nav.translateKey, nav.title)}</span>}
+                    {showTitle && <MenuBadge jumlah={badgeCount} keterangan={badgeKeterangan} className="ml-auto" />}
                 </Link>
             </MenuItem>
         </AuthorityCheck>
@@ -123,6 +129,8 @@ const VerticalSingleMenuItem = ({
     userAuthority,
     showIcon,
     showTitle,
+    badgeCount,
+    badgeKeterangan,
     t,
     currentKey,
     parentKeys,
@@ -146,6 +154,8 @@ const VerticalSingleMenuItem = ({
                         userAuthority={userAuthority}
                         showIcon={showIcon}
                         showTitle={showTitle}
+                        badgeCount={badgeCount}
+                        badgeKeterangan={badgeKeterangan}
                         t={t}
                         onLinkClick={onLinkClick}
                     />

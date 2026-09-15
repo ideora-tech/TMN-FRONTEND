@@ -11,7 +11,7 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { dokumenArmadaService, DokumenArmadaWithArmada, DokumenPerUnit, KondisiDokumenUnit, RingkasanDokumenUnit } from '@/services/dokumenArmada.service'
 import { armadaService, Armada } from '@/services/armada.service'
-import { JENIS_DOKUMEN_OPTIONS, getExpiryInfo, labelJenisDokumen, type Option } from './dokumenArmada.shared'
+import { JENIS_DOKUMEN_OPTIONS, HARI_PENGINGAT, getExpiryInfo, labelJenisDokumen, type Option } from './dokumenArmada.shared'
 
 const JENIS_FILTER_OPTIONS: Option[] = [{ value: '', label: 'Semua Jenis' }, ...JENIS_DOKUMEN_OPTIONS]
 
@@ -135,7 +135,9 @@ export default function DokumenArmadaPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Dokumen Armada</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Pantau dokumen seluruh unit — STNK, KIR, Asuransi, dll</p>
+                    <p className="text-gray-500 text-sm mt-0.5">
+                        Pantau dokumen seluruh unit — pengingat otomatis masuk notifikasi {HARI_PENGINGAT} hari sebelum masa berlaku habis
+                    </p>
                 </div>
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.DOKUMEN_ARMADA_BARU)}>Tambah Dokumen</Button>
             </div>

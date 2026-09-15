@@ -13,7 +13,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, Sparepart } from '@/services/sparepart.service'
 import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
 
-export default function SparepartTab() {
+export default function SparepartTab({ refreshKey = 0 }: { refreshKey?: number }) {
     const router = useRouter()
     const [list, setList]             = useState<Sparepart[]>([])
     const [loading, setLoading]       = useState(false)
@@ -46,7 +46,7 @@ export default function SparepartTab() {
             .catch(() => {})
     }, [])
 
-    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => { fetchData() }, [fetchData, refreshKey])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
@@ -75,10 +75,21 @@ export default function SparepartTab() {
                 <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.original.kode}</span>
             ),
         },
+        { header: 'Serial Number', accessorKey: 'serial_number', size: 150,
+            cell: ({ row }: CellContext<Sparepart, unknown>) => row.original.serial_number
+                ? <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.original.serial_number}</span>
+                : <span className="text-gray-400">—</span>,
+        },
         { header: 'Nama', accessorKey: 'nama', size: 220,
-            cell: ({ row }: CellContext<Sparepart, unknown>) => (
-                <span className="font-semibold">{row.original.nama}</span>
-            ),
+            cell: ({ row }: CellContext<Sparepart, unknown>) => {
+                const detail = [row.original.merek, row.original.tahun].filter(v => v != null && v !== '').join(' · ')
+                return (
+                    <div>
+                        <span className="font-semibold">{row.original.nama}</span>
+                        {detail && <p className="text-xs text-gray-400 mt-0.5">{detail}</p>}
+                    </div>
+                )
+            },
         },
         { header: 'Kategori', accessorKey: 'nama_kategori_sparepart', size: 160,
             cell: ({ row }: CellContext<Sparepart, unknown>) => row.original.nama_kategori_sparepart
@@ -139,7 +150,7 @@ export default function SparepartTab() {
         <div className="flex flex-col gap-4">
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 py-3">
-                    <Input className="flex-1 min-w-60" placeholder="Cari kode atau nama spare part... (tekan Enter)"
+                    <Input className="flex-1 min-w-60" placeholder="Cari kode, nama, serial number, atau merek... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
                             : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}

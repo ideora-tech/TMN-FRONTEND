@@ -10,7 +10,7 @@ import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { dokumenArmadaService, DokumenArmadaDetail, DokumenArmada } from '@/services/dokumenArmada.service'
 import {
-    JENIS_DOKUMEN_OPTIONS, JENIS_BOLEH_GANDA, getExpiryInfo, labelJenisDokumen,
+    JENIS_DOKUMEN_OPTIONS, JENIS_BOLEH_GANDA, getExpiryInfo, labelJenisDokumen, labelPengingat,
     ukuranFileTerlaluBesar, pesanFileTerlaluBesar, type Option,
 } from '../dokumenArmada.shared'
 
@@ -230,6 +230,11 @@ export default function DokumenArmadaDetailPage({ params }: { params: Promise<{ 
                                     : '—'}
                             </Info>
                             <Info label="Dicatat">{dayjs(data.dibuat_pada).format('DD MMM YYYY HH:mm')}</Info>
+                            <Info label="Pengingat Notifikasi">
+                                {data.aktif && labelPengingat(data.berlaku_sampai)
+                                    ? labelPengingat(data.berlaku_sampai)
+                                    : <span className="text-gray-400">{data.aktif ? 'Tanpa masa berlaku' : 'Tidak aktif (riwayat)'}</span>}
+                            </Info>
                         </div>
 
                         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

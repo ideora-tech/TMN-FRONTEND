@@ -7,12 +7,20 @@ import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { sparepartService } from '@/services/sparepart.service'
+import { sparepartService, SATUAN_SPAREPART_OPTIONS, SatuanSparepart } from '@/services/sparepart.service'
 import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
+
+type SatuanOption = { value: SatuanSparepart; label: string }
+
+const TAHUN_SEKARANG = new Date().getFullYear()
+const tahunValid = (t: string) => /^\d{4}$/.test(t) && Number(t) >= 1900 && Number(t) <= TAHUN_SEKARANG + 1
 
 export default function SparepartBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode: '', nama: '', id_kategori_sparepart: '', satuan: 'pcs', harga_standar: '' })
+    const [form, setForm] = useState({
+        kode: '', nama: '', serial_number: '', merek: '', tahun: '',
+        id_kategori_sparepart: '', satuan: 'pcs' as SatuanSparepart, harga_standar: '',
+    })
     const [kategoriOptions, setKategoriOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -27,6 +35,8 @@ export default function SparepartBaruPage() {
         const e: Record<string, string> = {}
         if (!form.kode.trim()) e.kode = 'Kode wajib diisi'
         if (!form.nama.trim()) e.nama = 'Nama wajib diisi'
+        if (!form.serial_number.trim()) e.serial_number = 'Serial number wajib diisi'
+        if (form.tahun && !tahunValid(form.tahun)) e.tahun = 'Tahun tidak valid'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -42,6 +52,9 @@ export default function SparepartBaruPage() {
             await sparepartService.create({
                 kode: form.kode,
                 nama: form.nama,
+                serial_number: form.serial_number.trim(),
+                merek: form.merek.trim() || null,
+                tahun: form.tahun ? Number(form.tahun) : null,
                 id_kategori_sparepart: form.id_kategori_sparepart || null,
                 satuan: form.satuan || 'pcs',
                 harga_standar: form.harga_standar ? Number(form.harga_standar) : 0,
@@ -78,15 +91,30 @@ export default function SparepartBaruPage() {
                         <Input placeholder="Nama spare part" value={form.nama} invalid={!!errors.nama}
                             onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
                     </FormItem>
+                    <FormItem label="Serial Number" asterisk invalid={!!errors.serial_number} errorMessage={errors.serial_number}>
+                        <Input placeholder="Nomor seri / part number" value={form.serial_number} invalid={!!errors.serial_number}
+                            onChange={e => setForm(p => ({ ...p, serial_number: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Merek">
+                        <Input placeholder="Merek spare part" value={form.merek}
+                            onChange={e => setForm(p => ({ ...p, merek: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Tahun" invalid={!!errors.tahun} errorMessage={errors.tahun}>
+                        <Input placeholder={String(TAHUN_SEKARANG)} inputMode="numeric" maxLength={4}
+                            value={form.tahun} invalid={!!errors.tahun}
+                            onChange={e => setForm(p => ({ ...p, tahun: e.target.value.replace(/\D/g, '').slice(0, 4) }))} />
+                    </FormItem>
                     <FormItem label="Kategori">
                         <Select isSearchable isClearable placeholder="Pilih kategori (opsional)..."
                             options={kategoriOptions}
                             value={kategoriOptions.find(o => o.value === form.id_kategori_sparepart) ?? null}
                             onChange={opt => setForm(p => ({ ...p, id_kategori_sparepart: (opt as { value: string } | null)?.value ?? '' }))} />
                     </FormItem>
-                    <FormItem label="Satuan">
-                        <Input placeholder="pcs" value={form.satuan}
-                            onChange={e => setForm(p => ({ ...p, satuan: e.target.value }))} />
+                    <FormItem label="Satuan" asterisk>
+                        <Select<SatuanOption> isSearchable={false}
+                            options={SATUAN_SPAREPART_OPTIONS}
+                            value={SATUAN_SPAREPART_OPTIONS.find(o => o.value === form.satuan) ?? SATUAN_SPAREPART_OPTIONS[0]}
+                            onChange={opt => opt && setForm(p => ({ ...p, satuan: (opt as SatuanOption).value }))} />
                     </FormItem>
                     <FormItem label="Harga Standar (Rp)">
                         <Input prefix="Rp" placeholder="0"

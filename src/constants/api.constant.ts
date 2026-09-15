@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
     ARMADA_DOKUMEN_DELETE: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}`,
     DOKUMEN_ARMADA:        '/api/proxy/dokumen-armada',
     DOKUMEN_ARMADA_PER_UNIT: '/api/proxy/dokumen-armada/per-unit',
+    DOKUMEN_ARMADA_JUMLAH_SEGERA_HABIS: '/api/proxy/dokumen-armada/jumlah-segera-habis',
     DOKUMEN_ARMADA_DETAIL: (id: string) => `/api/proxy/dokumen-armada/${id}`,
     ARMADA_DOKUMEN_BATCH:  (idArmada: string) => `/api/proxy/armada/${idArmada}/dokumen/batch`,
     ARMADA_DOKUMEN_PERPANJANG: (idArmada: string, id: string) => `/api/proxy/armada/${idArmada}/dokumen/${id}/perpanjang`,
@@ -55,6 +56,8 @@ export const API_ENDPOINTS = {
     PERAWATAN_REKAP_PER_UNIT: '/api/proxy/perawatan-armada/rekap-per-unit',
     PERAWATAN_REKAP_EXPORT: (format: 'excel' | 'pdf') => `/api/proxy/perawatan-armada/rekap-per-unit/export/${format}`,
     ARMADA_PERAWATAN_EXPORT: (idArmada: string, format: 'excel' | 'pdf') => `/api/proxy/armada/${idArmada}/perawatan/export/${format}`,
+    ARMADA_PERAWATAN_RIWAYAT_BIAYA: (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan/riwayat-biaya`,
+    ARMADA_PERAWATAN_REKAP_SPAREPART: (idArmada: string) => `/api/proxy/armada/${idArmada}/perawatan/rekap-sparepart`,
 
     // Jenis Perawatan
     JENIS_PERAWATAN:        '/api/proxy/jenis-perawatan',
@@ -73,6 +76,9 @@ export const API_ENDPOINTS = {
     SPAREPART_DETAIL:       (id: string) => `/api/proxy/sparepart/${id}`,
     SPAREPART_STOK:         (id: string) => `/api/proxy/sparepart/${id}/stok`,
     SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
+    SPAREPART_RIWAYAT_HARGA: (id: string) => `/api/proxy/sparepart/${id}/riwayat-harga`,
+    SPAREPART_IMPORT_TEMPLATE: '/api/proxy/sparepart/import/template',
+    SPAREPART_IMPORT:          '/api/proxy/sparepart/import',
 
     // Kategori Sparepart
     KATEGORI_SPAREPART:        '/api/proxy/kategori-sparepart',

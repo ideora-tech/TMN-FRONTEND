@@ -23,7 +23,7 @@ const STATUS_OPTIONS: { value: StatusPerawatan; label: string }[] = [
 ]
 
 const SUMBER_OPTIONS: { value: SumberSparepart; label: string }[] = [
-    { value: 'bengkel',      label: 'Dari Bengkel' },
+    { value: 'bengkel',      label: 'Pembelian Langsung' },
     { value: 'stok_sendiri', label: 'Stok Sendiri' },
 ]
 
@@ -267,7 +267,10 @@ export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, pr
         return !!it.id_sparepart || !!it.nama_sparepart.trim()
     }
 
-    const canSubmit = !!form.id_armada && !!form.tanggal && items.every(itemValid)
+    const kmWajib = !!form.id_interval_perawatan
+    const kmBelumDiisi = kmWajib && form.km_odometer === ''
+
+    const canSubmit = !!form.id_armada && !!form.tanggal && !kmBelumDiisi && items.every(itemValid)
 
     const handleSubmit = async () => {
         if (!canSubmit) return
@@ -364,8 +367,10 @@ export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, pr
                                 value={form.biaya ? formatNum(Number(form.biaya)) : ''}
                                 onChange={e => setForm(p => ({ ...p, biaya: e.target.value.replace(/\D/g, '') }))} />
                         </FormItem>
-                        <FormItem label="KM Odometer">
-                            <Input suffix="km" placeholder="0" value={form.km_odometer}
+                        <FormItem label="KM Odometer" asterisk={kmWajib}
+                            invalid={kmBelumDiisi}
+                            errorMessage={kmBelumDiisi ? 'KM odometer wajib diisi untuk servis berkala' : undefined}>
+                            <Input suffix="km" placeholder="0" value={form.km_odometer} invalid={kmBelumDiisi}
                                 onChange={e => setForm(p => ({ ...p, km_odometer: e.target.value.replace(/\D/g, '') }))} />
                         </FormItem>
                         <FormItem label="Status">
@@ -456,7 +461,7 @@ export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, pr
                                                     value={sparepartOptions.find(o => o.value === it.id_sparepart) ?? null}
                                                     onChange={opt => pilihSparepart(idx, (opt as Option | null)?.value ?? '')} />
                                             ) : (
-                                                <Input placeholder="Ketik nama part dari bengkel..."
+                                                <Input placeholder="Ketik nama part pembelian langsung..."
                                                     maxLength={150}
                                                     value={it.nama_sparepart}
                                                     onChange={e => isiNamaPartBebas(idx, e.target.value)} />
