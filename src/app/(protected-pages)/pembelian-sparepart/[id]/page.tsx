@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, Upload, toast, Notification } from '@/components/ui'
@@ -17,6 +18,7 @@ import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
 
 export default function PembelianDetailPage() {
+    const { klik } = usePratinjauBerkas()
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
     const { session } = useCurrentSession()
@@ -243,14 +245,14 @@ export default function PembelianDetailPage() {
                             {data.pembayaran.url_bukti ? (
                                 isGambar(data.pembayaran.url_bukti) ? (
                                     <div className="w-fit">
-                                        <a href={data.pembayaran.url_bukti} target="_blank" rel="noreferrer">
+                                        <a href={data.pembayaran.url_bukti} onClick={klik(data.pembayaran.url_bukti, 'Bukti transfer', 'bukti-transfer')} target="_blank" rel="noreferrer">
                                             <img src={data.pembayaran.url_bukti} alt="Bukti transfer"
                                                 className="h-20 w-32 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
                                         </a>
                                         <p className="text-xs text-gray-400 mt-1">Klik untuk membuka</p>
                                     </div>
                                 ) : (
-                                    <a href={data.pembayaran.url_bukti} target="_blank" rel="noreferrer"
+                                    <a href={data.pembayaran.url_bukti} onClick={klik(data.pembayaran.url_bukti, 'Bukti transfer', 'bukti-transfer')} target="_blank" rel="noreferrer"
                                         className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                         Lihat bukti
                                     </a>
@@ -327,7 +329,7 @@ export default function PembelianDetailPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                         {data.bukti.map(b => (
                             <div key={b.id_bukti} className="relative group">
-                                <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
                                     {b.nama_asli.toLowerCase().endsWith('.pdf') ? (
                                         <div className="w-full h-24 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 px-2 text-center">
                                             {b.nama_asli}

@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import dayjs from 'dayjs'
 import { Dialog, Tag } from '@/components/ui'
 import { HiOutlineDocumentText } from 'react-icons/hi'
@@ -24,6 +25,7 @@ const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
 
 export default function DetailTransaksiDialog({ transaksi, onClose }: { transaksi: DetailTransaksi | null; onClose: () => void }) {
+    const { klik } = usePratinjauBerkas()
     const t = transaksi
     return (
         <Dialog isOpen={!!t} onRequestClose={onClose} onClose={onClose} width={560}>
@@ -82,14 +84,14 @@ export default function DetailTransaksiDialog({ transaksi, onClose }: { transaks
                         {t.url_bukti ? (
                             isGambar(t.url_bukti) ? (
                                 <div className="w-fit">
-                                    <a href={t.url_bukti} target="_blank" rel="noreferrer">
+                                    <a href={t.url_bukti} onClick={klik(t.url_bukti, 'Bukti transaksi', 'bukti-transaksi')} target="_blank" rel="noreferrer">
                                         <img src={t.url_bukti} alt="Bukti transaksi"
                                             className="h-24 w-40 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
                                     </a>
                                     <p className="text-xs text-gray-400 mt-1">Klik untuk membuka</p>
                                 </div>
                             ) : (
-                                <a href={t.url_bukti} target="_blank" rel="noreferrer"
+                                <a href={t.url_bukti} onClick={klik(t.url_bukti, 'Bukti transaksi', 'bukti-transaksi')} target="_blank" rel="noreferrer"
                                     className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                     <HiOutlineDocumentText className="text-base" /> Lihat bukti
                                 </a>

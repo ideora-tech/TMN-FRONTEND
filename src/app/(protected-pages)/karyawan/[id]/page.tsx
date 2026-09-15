@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Select, Dialog, Switcher, Tooltip, toast, Notification, Tag } from '@/components/ui'
@@ -123,6 +124,7 @@ const totalHariPkwt = (list: KontrakKaryawan[]): number => {
 }
 
 export default function KaryawanDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { klik } = usePratinjauBerkas()
     const { id } = use(params)
     const router = useRouter()
 
@@ -878,7 +880,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                                             </td>
                                             <td className="py-2.5 px-3">
                                                 {d.url_file
-                                                    ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                    ? <a href={d.url_file} onClick={klik(d.url_file, 'Dokumen karyawan', 'dokumen-karyawan')} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
                                                     : kosong}
                                             </td>
                                             <td className="py-2.5 px-3">

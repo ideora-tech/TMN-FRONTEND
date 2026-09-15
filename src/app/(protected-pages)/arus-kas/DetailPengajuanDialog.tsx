@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useState } from 'react'
 import dayjs from 'dayjs'
 import { Dialog, Tag, Button, Input, toast, Notification } from '@/components/ui'
@@ -77,6 +78,7 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
 }
 
 export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, readOnly = false }: { pengajuan: PengajuanPengeluaran | null; onClose: () => void; onRefresh?: () => void; readOnly?: boolean }) {
+    const { klik } = usePratinjauBerkas()
     const p = pengajuan
     const [approveOpen, setApproveOpen] = useState(false)
     const [tolakOpen, setTolakOpen]     = useState(false)
@@ -201,14 +203,14 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         {p.url_bukti ? (
                             isGambar(p.url_bukti) ? (
                                 <div className="w-fit">
-                                    <a href={p.url_bukti} target="_blank" rel="noreferrer">
+                                    <a href={p.url_bukti} onClick={klik(p.url_bukti, 'Bukti transfer', 'bukti-transfer')} target="_blank" rel="noreferrer">
                                         <img src={p.url_bukti} alt="Bukti transfer"
                                             className="h-24 w-40 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
                                     </a>
                                     <p className="text-xs text-gray-400 mt-1">Klik untuk membuka</p>
                                 </div>
                             ) : (
-                                <a href={p.url_bukti} target="_blank" rel="noreferrer"
+                                <a href={p.url_bukti} onClick={klik(p.url_bukti, 'Bukti transfer', 'bukti-transfer')} target="_blank" rel="noreferrer"
                                     className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                     <HiOutlineDocumentText className="text-base" /> Lihat bukti
                                 </a>

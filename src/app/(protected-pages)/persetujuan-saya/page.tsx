@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Tag, Button, Dialog, Input, Spinner, toast, Notification } from '@/components/ui'
@@ -71,6 +72,7 @@ function formatTanggal(iso: string) {
 }
 
 export default function PersetujuanSayaPage() {
+    const { klik } = usePratinjauBerkas()
     const router = useRouter()
     const [activeTab, setActiveTab] = useState<TabValue>('menunggu')
     const [list, setList] = useState<ApprovalPengajuanSaya[]>([])
@@ -613,7 +615,7 @@ export default function PersetujuanSayaPage() {
                                 <p className={LABEL_CLASS}>Lampiran</p>
                                 <div className="flex flex-col gap-1 mt-1">
                                     {detailApproval!.lampiran!.map(l => (
-                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} target="_blank" rel="noreferrer"
+                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} onClick={klik(l.url_file, `${l.nama_file ?? 'Lampiran'}`, `${l.nama_file ?? 'lampiran'}`.replace(/\.[^.]+$/, ''))} target="_blank" rel="noreferrer"
                                             className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                             <HiOutlinePaperClip className="text-base shrink-0" />
                                             <span className="truncate">{l.nama_file}</span>

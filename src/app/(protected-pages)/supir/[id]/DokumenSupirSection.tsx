@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, Dialog, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -25,6 +26,7 @@ function getExpiryInfo(berlakuSampai: string | null): { label: string; className
 const kosong = <span className="text-gray-300 dark:text-gray-600">—</span>
 
 export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKaryawan: string | null | undefined; namaSupir: string }) {
+    const { klik } = usePratinjauBerkas()
     const [list, setList]     = useState<DokumenKaryawan[]>([])
     const [open, setOpen]     = useState(false)
     const [edit, setEdit]     = useState<DokumenKaryawan | null>(null)
@@ -162,7 +164,7 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
                                             </td>
                                             <td className="py-2.5 px-3">
                                                 {d.url_file
-                                                    ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                    ? <a href={d.url_file} onClick={klik(d.url_file, 'Dokumen supir', 'dokumen-supir')} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
                                                     : kosong}
                                             </td>
                                             <td className="py-2.5 px-3">

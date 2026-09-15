@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
@@ -55,6 +56,7 @@ function LampiranPreview({ file }: { file: File }) {
 }
 
 export default function PembelianForm({ mode, initial }: Props) {
+    const { klik } = usePratinjauBerkas()
     const router = useRouter()
     const [idSupplier, setIdSupplier] = useState(initial?.id_supplier ?? '')
     const [tanggalPengajuan, setTanggalPengajuan] = useState(initial?.tanggal_pengajuan ?? dayjs().format('YYYY-MM-DD'))
@@ -305,7 +307,7 @@ export default function PembelianForm({ mode, initial }: Props) {
                                         const akanDihapus = buktiAkanDihapus.includes(b.id_bukti)
                                         return (
                                             <div key={b.id_bukti} className="relative group">
-                                                <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}
+                                                <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}
                                                     className={akanDihapus ? 'block opacity-40 grayscale' : 'block'}>
                                                     {b.nama_asli.toLowerCase().endsWith('.pdf') ? (
                                                         <div className="w-full h-24 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 px-2 text-center">

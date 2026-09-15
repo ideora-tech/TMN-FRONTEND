@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Upload, toast, Notification } from '@/components/ui'
@@ -75,6 +76,7 @@ function FotoBuktiBaru({ file, onRemove }: { file: File; onRemove: () => void })
 }
 
 export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, presetIntervalPerawatanId, rutin }: { editId?: string; editArmadaId?: string; presetArmadaId?: string; presetIntervalPerawatanId?: string; rutin?: boolean }) {
+    const { klik } = usePratinjauBerkas()
     const router = useRouter()
     const isEdit = !!editId
 
@@ -415,7 +417,7 @@ export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, pr
                             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                                 {buktiLama.map(b => (
                                     <div key={b.id_bukti} className="relative">
-                                        <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                        <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
                                             <img src={b.url_file} alt={b.nama_asli}
                                                 className="w-full h-24 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
                                         </a>

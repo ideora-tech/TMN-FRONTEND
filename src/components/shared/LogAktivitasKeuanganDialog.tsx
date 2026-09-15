@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { Dialog, Button, Tag, Spinner } from '@/components/ui'
 import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
@@ -57,6 +58,7 @@ type Props = {
 }
 
 export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, loading = false, emptyMessage }: Props) {
+    const { klik } = usePratinjauBerkas()
     const riwayat = [...(info?.riwayat ?? [])].reverse()
 
     return (
@@ -160,7 +162,7 @@ export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, load
                                         </div>
                                     )}
                                     {r.status === 'ditransfer' && info?.url_bukti && (
-                                        <a href={info.url_bukti} target="_blank" rel="noreferrer"
+                                        <a href={info.url_bukti} onClick={klik(info.url_bukti, 'Bukti transfer', 'bukti-transfer')} target="_blank" rel="noreferrer"
                                             className="inline-flex items-center gap-1.5 mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                             <HiOutlinePaperClip className="text-base" /> Lihat bukti transfer
                                         </a>

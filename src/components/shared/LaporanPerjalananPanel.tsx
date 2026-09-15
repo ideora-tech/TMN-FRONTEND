@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
@@ -100,6 +101,7 @@ type Props = {
 }
 
 export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }: Props) {
+    const { klik } = usePratinjauBerkas()
     const searchParams = useSearchParams()
     const [trip, setTrip] = useState<Trip | null>(null)
 
@@ -680,7 +682,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                                 {laporan.foto.map(f => (
                                     <div key={f.id_foto} className="relative group">
-                                        <a href={f.url_file} target="_blank" rel="noreferrer">
+                                        <a href={f.url_file} onClick={klik(f.url_file, f.keterangan ?? 'Foto laporan perjalanan', 'foto-laporan')} target="_blank" rel="noreferrer">
                                             <FotoPreview url={f.url_file} alt={f.keterangan ?? 'Foto laporan perjalanan'} />
                                         </a>
                                         {f.keterangan && (

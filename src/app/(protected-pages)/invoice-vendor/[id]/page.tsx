@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -49,6 +50,7 @@ const BAYAR_FORM_KOSONG = {
 }
 
 export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { klik } = usePratinjauBerkas()
     const { id } = use(params)
     const router = useRouter()
     const [data, setData]       = useState<InvoiceVendor | null>(null)
@@ -778,7 +780,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                         <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{p.no_referensi ?? <span className="text-gray-400">—</span>}</td>
                                         <td className="py-3 pr-4">
                                             {p.url_bukti
-                                                ? <a href={p.url_bukti} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                ? <a href={p.url_bukti} onClick={klik(p.url_bukti, 'Bukti pembayaran', 'bukti-pembayaran')} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
                                                 : <span className="text-gray-400 text-xs">—</span>}
                                         </td>
                                         <td className="py-3 text-right whitespace-nowrap">

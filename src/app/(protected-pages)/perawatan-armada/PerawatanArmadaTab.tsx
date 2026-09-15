@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
@@ -68,6 +69,7 @@ function getServisBadge(tanggal: string | null): { label: string; className: str
 }
 
 export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { mode?: 'aktif' | 'riwayat'; initialDetail?: PerawatanArmadaWithArmada | null }) {
+    const { klik } = usePratinjauBerkas()
     const router = useRouter()
     const [list, setList]       = useState<PerawatanArmadaWithArmada[]>([])
     const [loading, setLoading] = useState(false)
@@ -627,7 +629,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {detailData?.bukti?.map(b => (
                                         <div key={b.id_bukti}>
-                                            <a href={b.url_file} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
+                                            <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
                                                 <img src={b.url_file} alt={b.nama_asli}
                                                     className="w-full h-28 object-cover rounded-lg border border-gray-100 dark:border-gray-700 hover:opacity-90 transition-opacity" />
                                             </a>

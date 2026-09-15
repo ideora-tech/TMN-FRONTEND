@@ -1,4 +1,5 @@
 ﻿'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
@@ -106,6 +107,7 @@ function sortDokumen(list: DokumenVendor[]): DokumenVendor[] {
 // --- component ---
 
 export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { klik } = usePratinjauBerkas()
     const { id } = use(params)
     const router = useRouter()
     const [vendor, setVendor]   = useState<Vendor | null>(null)
@@ -620,7 +622,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                             </td>
                                             <td className="py-3 pr-4">
                                                 {d.url_file
-                                                    ? <a href={d.url_file} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
+                                                    ? <a href={d.url_file} onClick={klik(d.url_file, 'Dokumen vendor', 'dokumen-vendor')} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
                                                     : <span className="text-gray-400 text-xs">—</span>}
                                             </td>
                                             <td className="py-3 text-right whitespace-nowrap">

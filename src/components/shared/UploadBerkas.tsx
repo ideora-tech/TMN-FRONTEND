@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useEffect, useState } from 'react'
 import { Button, Upload } from '@/components/ui'
 import { HiOutlinePaperClip, HiOutlineDocumentText, HiOutlineTrash } from 'react-icons/hi'
@@ -58,6 +59,7 @@ export default function UploadBerkas({
     existingLabel = 'Bukti tersimpan',
     emptyText = null,
 }: UploadBerkasProps) {
+    const { klik } = usePratinjauBerkas()
     const existingIsImage = !!existingUrl && IMAGE_URL_REGEX.test(existingUrl)
 
     return (
@@ -91,7 +93,7 @@ export default function UploadBerkas({
             )}
             {!file && existingUrl && existingIsImage && (
                 <div className="w-40 mt-2">
-                    <a href={existingUrl} target="_blank" rel="noreferrer">
+                    <a href={existingUrl} onClick={klik(existingUrl, `${existingLabel}`)} target="_blank" rel="noreferrer">
                         <img src={existingUrl} alt={existingLabel}
                             className="w-40 h-24 object-cover rounded-lg border border-gray-100 dark:border-gray-700" />
                     </a>
@@ -99,7 +101,7 @@ export default function UploadBerkas({
                 </div>
             )}
             {!file && existingUrl && !existingIsImage && (
-                <a href={existingUrl} target="_blank" rel="noreferrer"
+                <a href={existingUrl} onClick={klik(existingUrl, `${existingLabel}`)} target="_blank" rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline mt-2">
                     <HiOutlineDocumentText className="text-base" />
                     {existingLabel}

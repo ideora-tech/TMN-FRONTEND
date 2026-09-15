@@ -1,4 +1,5 @@
 'use client'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
 import { HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlinePaperClip } from 'react-icons/hi'
@@ -42,6 +43,7 @@ const IKON: Record<string, { icon: ReactNode; className: string }> = {
 }
 
 export default function ApprovalTimeline({ info }: { info: StatusApprovalReferensi }) {
+    const { klik } = usePratinjauBerkas()
     const entri: { key: string; ikon: string; judul: string; oleh: string | null; waktu: string | null; catatan: string | null }[] = []
     entri.push({ key: 'diajukan', ikon: 'diajukan', judul: 'Diajukan', oleh: info.diajukan_oleh, waktu: info.diajukan_pada, catatan: null })
     info.approver.forEach((a, i) => {
@@ -93,7 +95,7 @@ export default function ApprovalTimeline({ info }: { info: StatusApprovalReferen
                                 <div className="mt-2 flex flex-col gap-1">
                                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Lampiran</p>
                                     {info.lampiran!.map(l => (
-                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} target="_blank" rel="noreferrer"
+                                        <a key={l.id_lampiran} href={l.url_file ?? '#'} onClick={klik(l.url_file, `${l.nama_file ?? 'Lampiran'}`, `${l.nama_file ?? 'lampiran'}`.replace(/\.[^.]+$/, ''))} target="_blank" rel="noreferrer"
                                             className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                                             <HiOutlinePaperClip className="text-base shrink-0" />
                                             <span className="truncate">{l.nama_file}</span>
