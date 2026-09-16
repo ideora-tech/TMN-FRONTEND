@@ -69,7 +69,7 @@ const Side = ({ children, ...rest }: SideProps) => {
             <div className="relative flex-1 flex items-center justify-center bg-white dark:bg-gray-900 px-6 py-8 overflow-y-auto">
                 <Link
                     href="/"
-                    className="absolute top-6 right-6 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                    className="absolute top-6 right-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#1B2D6E] shadow-sm transition-all hover:border-slate-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
                 >
                     <HiArrowLeft className="text-base" />
                     Kembali ke Website
