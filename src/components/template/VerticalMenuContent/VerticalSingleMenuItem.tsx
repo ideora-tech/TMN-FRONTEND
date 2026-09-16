@@ -20,6 +20,8 @@ interface CollapsedItemProps extends CommonProps {
     userAuthority: string[]
     currentKey?: string
     parentKeys?: string[]
+    badgeCount?: number
+    badgeKeterangan?: string
 }
 
 interface DefaultItemProps {
@@ -46,6 +48,8 @@ const CollapsedItem = ({
     userAuthority,
     t,
     currentKey,
+    badgeCount = 0,
+    badgeKeterangan,
 }: CollapsedItemProps) => {
     return (
         <AuthorityCheck userAuthority={userAuthority} authority={nav.authority}>
@@ -72,6 +76,7 @@ const CollapsedItem = ({
                             }
                         >
                             <span>{t(nav.translateKey, nav.title)}</span>
+                            <MenuBadge jumlah={badgeCount} keterangan={badgeKeterangan} className="ml-auto" />
                         </Link>
                     ) : (
                         <span>{t(nav.translateKey, nav.title)}</span>
@@ -145,6 +150,8 @@ const VerticalSingleMenuItem = ({
                     direction={direction}
                     renderAsIcon={renderAsIcon}
                     userAuthority={userAuthority}
+                    badgeCount={badgeCount}
+                    badgeKeterangan={badgeKeterangan}
                     t={t}
                     onLinkClick={onLinkClick}
                 >
@@ -168,6 +175,8 @@ const VerticalSingleMenuItem = ({
                     showIcon={showIcon}
                     showTitle={showTitle}
                     indent={indent}
+                    badgeCount={badgeCount}
+                    badgeKeterangan={badgeKeterangan}
                     t={t}
                     onLinkClick={onLinkClick}
                 />

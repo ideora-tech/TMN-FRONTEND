@@ -30,7 +30,10 @@ export default function useBadgeMenu(routeKey: string): BadgeMenu {
             .then(res => setBadge({
                 '/dokumen-armada': {
                     jumlah: res.jumlah,
-                    keterangan: `${res.jumlah} dokumen armada habis dalam ${res.hari} hari`,
+                    keterangan: [
+                        res.habis > 0 ? `${res.habis} dokumen armada sudah habis masa berlaku` : '',
+                        res.segera > 0 ? `${res.segera} dokumen armada habis dalam ${res.hari} hari` : '',
+                    ].filter(Boolean).join(' · '),
                 },
             }))
             .catch(() => setBadge({}))
