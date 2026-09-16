@@ -41,6 +41,10 @@ export default function ComingSoonPage() {
                     >
                         Situs Resmi <span style={{ color: WARNA.cyan }}>{BRAND.namaLengkap}</span> Sedang Disiapkan
                     </h1>
+
+                    <p className="mt-6 text-white/60 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+                        Kami sedang menyusun informasi layanan, armada, dan jangkauan operasional kami. Halaman ini akan segera diperbarui.
+                    </p>
                 </div>
             </section>
         </div>
