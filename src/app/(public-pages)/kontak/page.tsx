@@ -1,17 +1,16 @@
 import type { Metadata } from 'next'
-import { HiOutlineMapPin, HiOutlinePhone, HiOutlineEnvelope, HiOutlineClock } from 'react-icons/hi2'
+import { HiOutlineMapPin, HiOutlineEnvelope, HiOutlineClock } from 'react-icons/hi2'
 import HeroHalaman from '@/components/company-profile/HeroHalaman'
-import { KONTAK, WARNA, waLink, HERO_HALAMAN, PESAN_WA } from '@/constants/companyProfile.data'
+import { KONTAK, WARNA, HERO_HALAMAN } from '@/constants/companyProfile.data'
 
 export const metadata: Metadata = {
     title: 'Kontak — Sulita Logistik Indonesia',
-    description: 'Hubungi PT Sulita Logistik Indonesia — WhatsApp, telepon, email, dan alamat kantor.',
+    description: 'Hubungi PT Sulita Logistik Indonesia — email, alamat kantor, dan jam operasional.',
 }
 
 export default function KontakPage() {
-    const info = [
+    const info: { Icon: typeof HiOutlineMapPin; label: string; nilai: string; href?: string }[] = [
         { Icon: HiOutlineMapPin, label: 'Alamat', nilai: KONTAK.alamat },
-        { Icon: HiOutlinePhone, label: 'Telepon', nilai: KONTAK.telepon, href: `tel:${KONTAK.telepon.replace(/[^+\d]/g, '')}` },
         { Icon: HiOutlineEnvelope, label: 'Email', nilai: KONTAK.email, href: `mailto:${KONTAK.email}` },
         { Icon: HiOutlineClock, label: 'Jam Operasional', nilai: KONTAK.jamOperasional },
     ]
@@ -40,15 +39,6 @@ export default function KontakPage() {
                                 </div>
                             ))}
                         </div>
-                        <a
-                            href={waLink(PESAN_WA.umum)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-block mt-10 px-8 py-4 rounded-xl font-semibold text-sm transition-opacity hover:opacity-90"
-                            style={{ background: '#25D366', color: 'white' }}
-                        >
-                            Chat via WhatsApp
-                        </a>
                     </div>
 
                     <div className="rounded-2xl overflow-hidden border border-slate-100 min-h-80">

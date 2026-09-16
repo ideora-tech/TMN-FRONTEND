@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { HiOutlineTruck } from 'react-icons/hi2'
 import HeroHalaman from '@/components/company-profile/HeroHalaman'
-import { ARMADA, WARNA, waLink, HERO_HALAMAN, PESAN_WA } from '@/constants/companyProfile.data'
+import { ARMADA, WARNA, HERO_HALAMAN } from '@/constants/companyProfile.data'
 
 export const metadata: Metadata = {
     title: 'Armada — Sulita Logistik Indonesia',
@@ -35,15 +35,12 @@ export default function ArmadaKamiPage() {
                     Kapasitas bersifat indikatif — kebutuhan spesifik dapat didiskusikan dengan tim kami.
                 </p>
                 <div className="text-center mt-6">
-                    <a
-                        href={waLink(PESAN_WA.armada)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block px-7 py-3.5 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
+                    <span
+                        className="inline-block px-7 py-3.5 rounded-xl font-semibold text-sm text-white cursor-default select-none"
                         style={{ background: WARNA.navy }}
                     >
                         Tanya Ketersediaan Unit
-                    </a>
+                    </span>
                 </div>
             </section>
         </main>

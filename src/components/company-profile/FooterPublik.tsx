@@ -42,7 +42,6 @@ export default function FooterPublik() {
                         </div>
                         <ul className="space-y-3 text-sm text-white/40">
                             <li>{KONTAK.alamat}</li>
-                            <li>Telp: {KONTAK.telepon}</li>
                             <li>Email: {KONTAK.email}</li>
                             <li>{KONTAK.jamOperasional}</li>
                         </ul>

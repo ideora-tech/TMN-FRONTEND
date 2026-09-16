@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { HiOutlineCheckCircle } from 'react-icons/hi2'
 import HeroHalaman from '@/components/company-profile/HeroHalaman'
-import { LAYANAN, WARNA, waLink, HERO_HALAMAN, PESAN_WA } from '@/constants/companyProfile.data'
+import { LAYANAN, WARNA, HERO_HALAMAN } from '@/constants/companyProfile.data'
 
 export const metadata: Metadata = {
     title: 'Layanan — Sulita Logistik Indonesia',
@@ -26,15 +26,12 @@ export default function LayananPage() {
                                     </li>
                                 ))}
                             </ul>
-                            <a
-                                href={waLink(PESAN_WA.perLayanan(l.judul))}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-auto inline-block self-start px-6 py-3 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
+                            <span
+                                className="mt-auto inline-block self-start px-6 py-3 rounded-xl font-semibold text-sm text-white cursor-default select-none"
                                 style={{ background: WARNA.navy }}
                             >
                                 Minta Penawaran
-                            </a>
+                            </span>
                         </div>
                     ))}
                 </div>

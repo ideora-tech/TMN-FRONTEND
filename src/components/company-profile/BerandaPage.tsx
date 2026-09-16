@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { IconType } from 'react-icons'
 import { HiOutlineTruck, HiOutlineClock, HiOutlineShieldCheck, HiOutlineBanknotes, HiOutlineMap, HiOutlineCpuChip, HiArrowRight, HiCheckCircle } from 'react-icons/hi2'
 import NavbarPublik from './NavbarPublik'
 import FooterPublik from './FooterPublik'
 import StatCounter from './StatCounter'
-import { HERO, STATISTIK, LAYANAN, KEUNGGULAN, KLIEN, WARNA, PESAN_WA, waLink, type IkonKeunggulanKey } from '@/constants/companyProfile.data'
+import { HERO, STATISTIK, LAYANAN, KEUNGGULAN, KLIEN, WARNA, type IkonKeunggulanKey } from '@/constants/companyProfile.data'
 
 const IKON_KEUNGGULAN: Record<IkonKeunggulanKey, IconType> = {
     clock: HiOutlineClock,
@@ -58,15 +59,12 @@ export default function BerandaPage() {
                             </p>
 
                             <div className="mt-8 flex flex-wrap gap-4">
-                                <a
-                                    href={waLink(PESAN_WA.umum)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-xl transition-opacity hover:opacity-90"
+                                <span
+                                    className="inline-flex items-center justify-center gap-2 font-semibold px-7 py-3.5 rounded-xl cursor-default select-none"
                                     style={{ background: WARNA.cyan, color: WARNA.navyDark }}
                                 >
                                     Hubungi Kami
-                                </a>
+                                </span>
                                 <Link
                                     href="/layanan"
                                     className="inline-flex items-center justify-center gap-2 border border-white/20 hover:border-white/40 text-white/80 hover:text-white font-medium px-7 py-3.5 rounded-xl transition-colors"
@@ -155,9 +153,20 @@ export default function BerandaPage() {
                     <p className="text-center text-sm font-semibold tracking-widest uppercase text-slate-400 mb-8">
                         Dipercaya oleh
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-                        {KLIEN.map(nama => (
-                            <span key={nama} className="text-slate-400 font-semibold text-sm md:text-base">{nama}</span>
+                    <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+                        {KLIEN.map(klien => (
+                            klien.logo ? (
+                                <Image
+                                    key={klien.nama}
+                                    src={klien.logo}
+                                    alt={klien.nama}
+                                    width={200}
+                                    height={80}
+                                    className="h-9 md:h-11 w-auto object-contain grayscale opacity-60 transition duration-300 hover:grayscale-0 hover:opacity-100"
+                                />
+                            ) : (
+                                <span key={klien.nama} className="text-slate-400 font-semibold text-sm md:text-base">{klien.nama}</span>
+                            )
                         ))}
                     </div>
                 </div>
@@ -169,15 +178,12 @@ export default function BerandaPage() {
                         Butuh Mitra Transportasi yang Bisa Diandalkan?
                     </h2>
                     <p className="text-white/70 mt-4">Ceritakan kebutuhan angkutan Anda — tim kami siap menyusun penawaran terbaik.</p>
-                    <a
-                        href={waLink(PESAN_WA.penawaran)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block mt-8 px-8 py-4 rounded-xl font-semibold text-sm transition-opacity hover:opacity-90"
+                    <span
+                        className="inline-block mt-8 px-8 py-4 rounded-xl font-semibold text-sm cursor-default select-none"
                         style={{ background: WARNA.cyan, color: WARNA.navyDark }}
                     >
-                        Minta Penawaran via WhatsApp
-                    </a>
+                        Minta Penawaran
+                    </span>
                 </div>
             </section>
 

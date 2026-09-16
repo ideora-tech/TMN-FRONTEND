@@ -173,11 +173,9 @@ export const KEUNGGULAN: { judul: string; deskripsi: string; ikon: IkonKeunggula
     { judul: 'Sistem Digital Real-time', deskripsi: 'Didukung sistem manajemen armada milik sendiri: penjadwalan, monitoring trip, hingga pelaporan.', ikon: 'digital' },
 ]
 
-export const KLIEN = [
-    'PT Mitra Industri A',
-    'PT Distribusi Nusantara B',
-    'CV Sumber Makmur C',
-    'PT Karya Konstruksi D',
-    'PT Retail Sejahtera E',
-    'PT Pangan Utama F',
+export const KLIEN: { nama: string; logo: string | null }[] = [
+    { nama: 'ASSA', logo: '/img/klien/assa.png' },
+    { nama: 'Shopee', logo: '/img/klien/shopee.png' },
+    { nama: 'Lazada', logo: '/img/klien/lazada.png' },
+    { nama: 'Anteraja', logo: '/img/klien/anteraja.png' },
 ]
