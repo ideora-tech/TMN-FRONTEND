@@ -1,5 +1,7 @@
 import { cloneElement } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { HiArrowLeft } from 'react-icons/hi2'
 import type { CommonProps } from '@/@types/common'
 
 type SideProps = CommonProps
@@ -64,7 +66,14 @@ const Side = ({ children, ...rest }: SideProps) => {
             </div>
 
             {/* Right: form panel */}
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-900 px-6 py-8 overflow-y-auto">
+            <div className="relative flex-1 flex items-center justify-center bg-white dark:bg-gray-900 px-6 py-8 overflow-y-auto">
+                <Link
+                    href="/"
+                    className="absolute top-6 right-6 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                >
+                    <HiArrowLeft className="text-base" />
+                    Kembali ke Website
+                </Link>
                 <div className="w-full max-w-md">
                     {children
                         ? // eslint-disable-next-line @typescript-eslint/no-explicit-any

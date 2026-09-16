@@ -13,10 +13,10 @@ export const BRAND = {
 
 export const NAV_LINKS = [
     { href: '/', label: 'Beranda' },
-    { href: '/tentang', label: 'Tentang Kami' },
-    { href: '/layanan', label: 'Layanan' },
-    { href: '/armada-kami', label: 'Armada' },
-    { href: '/kontak', label: 'Kontak' },
+    // { href: '/tentang', label: 'Tentang Kami' },
+    // { href: '/layanan', label: 'Layanan' },
+    // { href: '/armada-kami', label: 'Armada' },
+    // { href: '/kontak', label: 'Kontak' },
 ]
 
 export const KONTAK = {

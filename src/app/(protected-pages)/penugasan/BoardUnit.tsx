@@ -430,6 +430,7 @@ export default function BoardUnit() {
     }
 
     const daftarTerpilih = useMemo(() => Object.values(terpilih), [terpilih])
+    const modePilih = daftarTerpilih.length > 0
 
     useEffect(() => {
         setTerpilih({})
@@ -602,7 +603,9 @@ export default function BoardUnit() {
             {daftarTerpilih.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 dark:border-blue-500/30 dark:bg-blue-500/10">
                     <span className="text-sm font-semibold">{daftarTerpilih.length} penugasan terpilih</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Tahan Shift lalu klik kotak centang untuk memilih rentang sekaligus</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Klik penugasan lain untuk menambah pilihan · Shift + klik untuk memilih satu rentang sekaligus
+                    </span>
                     <div className="ml-auto flex items-center gap-2">
                         <Button size="xs" variant="plain" onClick={() => { setTerpilih({}); pilihTerakhir.current = null }}>Batal</Button>
                         <Button type="button" size="xs" variant="solid" icon={<HiOutlineTrash />}
@@ -715,11 +718,17 @@ export default function BoardUnit() {
                                                             const dipilih = !!terpilih[a.id_penugasan]
                                                             return (
                                                                 <div key={a.id_penugasan} className={`rounded-lg border px-2 py-1.5 cursor-pointer transition-shadow ${kelasWarna} ${dipilih ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
-                                                                    onClick={() => bukaDetail(a, u)}>
+                                                                    title={dipilih ? 'Terpilih — klik lagi sambil menahan Shift untuk batal' : 'Klik: detail · Shift + klik: pilih / pilih rentang'}
+                                                                    onMouseDown={e => { if (e.shiftKey) e.preventDefault() }}
+                                                                    onClick={e => {
+                                                                        if (e.shiftKey || e.ctrlKey || e.metaKey) { togglePilih(e, a, u); return }
+                                                                        if (modePilih) { togglePilih(e, a, u); return }
+                                                                        bukaDetail(a, u)
+                                                                    }}>
                                                                     <div className="flex items-center justify-between gap-1">
                                                                         <span className="flex items-center gap-1 min-w-0">
                                                                             <span role="checkbox" aria-checked={dipilih} title="Pilih untuk hapus massal (Shift + klik: pilih rentang)"
-                                                                                className={`shrink-0 inline-flex items-center justify-center w-3.5 h-3.5 rounded border transition-colors ${
+                                                                                className={`shrink-0 inline-flex items-center justify-center w-4 h-4 rounded border transition-colors ${
                                                                                     dipilih
                                                                                         ? 'bg-blue-600 border-blue-600 text-white'
                                                                                         : 'bg-white border-gray-300 hover:border-blue-500 dark:bg-gray-800 dark:border-gray-500'
