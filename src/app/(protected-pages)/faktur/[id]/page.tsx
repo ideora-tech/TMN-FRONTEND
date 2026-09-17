@@ -222,6 +222,13 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         ? faktur.pajak
         : (faktur.persen_pajak ? [{ nama: faktur.nama_pajak || 'Pajak', persen: faktur.persen_pajak }] : [])
 
+    const panelStatus = [
+        faktur.status === 'draft' && !!faktur.alasan_ditolak_internal,
+        faktur.status === 'draft',
+        faktur.status === 'menunggu_approval',
+        (NEXT_STATUS[faktur.status] ?? []).length > 0,
+    ].filter(Boolean).length
+
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
@@ -240,77 +247,81 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 </div>
             </div>
 
-            {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (
-                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
-                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{faktur.alasan_ditolak_internal}</p>
-                        </div>
-                    </div>
-                </Card>
-            )}
+            {panelStatus > 0 && (
+                <div className={panelStatus > 1 ? 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start' : 'flex flex-col gap-4'}>
+                    {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (
+                        <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+                            <div className="flex items-start gap-3">
+                                <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
+                                    <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{faktur.alasan_ditolak_internal}</p>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
 
-            {faktur.status === 'draft' && (
-                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                {faktur.approval_aktif === false
-                                    ? 'Approval internal sedang nonaktif — invoice bisa langsung ditandai terkirim'
-                                    : 'Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim'}
-                            </p>
-                        </div>
-                        {faktur.approval_aktif === false ? (
-                            <Button size="sm" variant="solid" onClick={() => setTandaiTerkirimOpen(true)}>
-                                Tandai Terkirim
-                            </Button>
-                        ) : (
-                            <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
-                                Ajukan Approval
-                            </Button>
-                        )}
-                    </div>
-                </Card>
-            )}
+                    {faktur.status === 'draft' && (
+                        <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        {faktur.approval_aktif === false
+                                            ? 'Approval internal sedang nonaktif — invoice bisa langsung ditandai terkirim'
+                                            : 'Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim'}
+                                    </p>
+                                </div>
+                                {faktur.approval_aktif === false ? (
+                                    <Button size="sm" variant="solid" onClick={() => setTandaiTerkirimOpen(true)}>
+                                        Tandai Terkirim
+                                    </Button>
+                                ) : (
+                                    <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
+                                        Ajukan Approval
+                                    </Button>
+                                )}
+                            </div>
+                        </Card>
+                    )}
 
-            {faktur.status === 'menunggu_approval' && (
-                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.
-                    </p>
-                </Card>
-            )}
+                    {faktur.status === 'menunggu_approval' && (
+                        <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
+                            <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
+                                Menunggu keputusan reviewer internal — belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.
+                            </p>
+                        </Card>
+                    )}
 
-            {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
-            {(NEXT_STATUS[faktur.status] ?? []).length > 0 && (
-                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Ubah Status Invoice
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[faktur.status] ?? faktur.status}</span>
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {(NEXT_STATUS[faktur.status] ?? []).map(s => (
-                                <Button
-                                    key={s}
-                                    size="sm"
-                                    variant="default"
-                                    className={`${STATUS_CLASS[s]} border border-current`}
-                                    onClick={() => setPendingStatus(s)}
-                                >
-                                    {`-> ${STATUS_LABEL[s]}`}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                </Card>
+                    {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
+                    {(NEXT_STATUS[faktur.status] ?? []).length > 0 && (
+                        <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Ubah Status Invoice
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        Status saat ini: <span className="font-semibold">{STATUS_LABEL[faktur.status] ?? faktur.status}</span>
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {(NEXT_STATUS[faktur.status] ?? []).map(s => (
+                                        <Button
+                                            key={s}
+                                            size="sm"
+                                            variant="default"
+                                            className={`${STATUS_CLASS[s]} border border-current`}
+                                            onClick={() => setPendingStatus(s)}
+                                        >
+                                            {`-> ${STATUS_LABEL[s]}`}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+                </div>
             )}
 
             <ConfirmDialog

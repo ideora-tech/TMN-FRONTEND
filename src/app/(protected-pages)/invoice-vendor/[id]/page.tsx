@@ -326,59 +326,18 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     if (!data) return <div className="p-6 text-red-500">Invoice tidak ditemukan.</div>
 
     const bisaBayar = data.status === 'diverifikasi' && sisa > 0
+    const initial = data.vendor?.nama_vendor?.charAt(0).toUpperCase() ?? 'I'
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => router.push(ROUTES.INVOICE_VENDOR)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
-                        <HiArrowLeft className="text-xl" />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold font-mono">{data.nomor_invoice}</h3>
-                            <Tag className={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}>
-                                {STATUS_LABEL[data.status] ?? data.status}
-                            </Tag>
-                            <Tag className={BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
-                                {BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran}
-                            </Tag>
-                        </div>
-                        <p className="text-gray-500 text-sm mt-0.5">{data.vendor?.nama_vendor ?? 'Invoice vendor'}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <Tooltip title="Export PDF">
-                        <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleExportPdf} />
-                    </Tooltip>
-                    {!editing && (
-                        <Tooltip title="Log Approval">
-                            <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
-                        </Tooltip>
-                    )}
-                    {data.status === 'draft' && !editing && (
-                        data.approval_aktif === false ? (
-                            <Button variant="solid" size="sm" onClick={() => setVerifikasiLangsungOpen(true)}>
-                                Verifikasi
-                            </Button>
-                        ) : (
-                            <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
-                                Ajukan Approval
-                            </Button>
-                        )
-                    )}
-                    {(data.status === 'draft' || data.status === 'ditolak') && !editing && (
-                        <Tooltip title="Edit">
-                            <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
-                                setEditing(true)
-                                setPpnPersen('')
-                                setPphPersen('')
-                                ppnManual.current = false
-                                pphManual.current = false
-                            }} />
-                        </Tooltip>
-                    )}
+            <div className="flex items-center gap-3">
+                <button type="button" onClick={() => router.push(ROUTES.INVOICE_VENDOR)}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
+                    <HiArrowLeft className="text-xl" />
+                </button>
+                <div>
+                    <h3 className="font-bold font-mono">{data.nomor_invoice}</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">{data.vendor?.nama_vendor ?? 'Invoice vendor'}</p>
                 </div>
             </div>
 
@@ -398,55 +357,105 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
 
             <Card>
                 {!editing ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-                        {([
-                            {
-                                label: 'Vendor',
-                                value: data.vendor
-                                    ? <Link href={ROUTES.VENDOR_DETAIL(data.vendor.id_vendor)} className="text-blue-500 hover:underline">{data.vendor.nama_vendor}</Link>
-                                    : <span className="text-gray-400">—</span>,
-                            },
-                            { label: 'Kontrak',         value: data.kontrak?.nomor_kontrak ?? <span className="text-gray-400">—</span> },
-                            { label: 'Nilai Kontrak',   value: data.kontrak ? formatRupiah(data.kontrak.nilai_kontrak) : <span className="text-gray-400">—</span> },
-                            { label: 'Tanggal Invoice', value: dayjs(data.tanggal_invoice).format('DD MMM YYYY') },
-                            {
-                                label: 'Jatuh Tempo',
-                                value: data.jatuh_tempo
-                                    ? <span className={dayjs(data.jatuh_tempo).isBefore(dayjs(), 'day') && data.status_pembayaran !== 'lunas' ? 'text-red-500' : ''}>{dayjs(data.jatuh_tempo).format('DD MMM YYYY')}</span>
-                                    : <span className="text-gray-400">—</span>,
-                            },
-                            { label: 'No. PO', value: data.no_po ?? <span className="text-gray-400">—</span> },
-                            { label: 'No. Kontrak', value: data.no_kontrak ?? <span className="text-gray-400">—</span> },
-                            { label: 'Nopol', value: data.nopol ?? <span className="text-gray-400">—</span> },
-                            { label: 'Tipe Kendaraan', value: data.tipe_kendaraan ?? <span className="text-gray-400">—</span> },
-                            {
-                                label: 'Tipe Pembayaran',
-                                value: data.tipe_pembayaran
-                                    ? `${tipePembayaranLabelMap[data.tipe_pembayaran] ?? data.tipe_pembayaran}${data.tipe_pembayaran === 'top' && data.top_hari ? ` (${data.top_hari} hari)` : ''}`
-                                    : <span className="text-gray-400">—</span>,
-                            },
-                            {
-                                label: 'Periode',
-                                value: data.periode_dari && data.periode_sampai
-                                    ? `${dayjs(data.periode_dari).format('DD MMM YYYY')} — ${dayjs(data.periode_sampai).format('DD MMM YYYY')}`
-                                    : <span className="text-gray-400">—</span>,
-                            },
-                            { label: 'DPP',    value: formatRupiah(data.dpp) },
-                            { label: 'PPN',    value: formatRupiah(data.ppn) },
-                            { label: 'PPh',    value: formatRupiah(data.pph) },
-                            { label: 'Total',  value: <span className="font-bold">{formatRupiah(data.total)}</span> },
-                            { label: 'Keterangan', value: data.keterangan ?? <span className="text-gray-400">—</span> },
-                            ...(data.catatan_verifikasi ? [{
-                                label: 'Catatan Verifikasi',
-                                value: <span className={data.status === 'ditolak' ? 'text-red-500' : ''}>{data.catatan_verifikasi}</span>,
-                            }] : []),
-                        ]).map(({ label, value }) => (
-                            <div key={label}>
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
+                    <>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 font-bold text-xl flex-shrink-0 select-none">
+                                    {initial}
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight font-mono">{data.nomor_invoice}</p>
+                                    <p className="text-sm text-gray-500 mt-1">{data.vendor?.nama_vendor ?? 'Invoice vendor'}</p>
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                            <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
+                                <Tag className={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}>
+                                    {STATUS_LABEL[data.status] ?? data.status}
+                                </Tag>
+                                <Tag className={BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
+                                    {BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran}
+                                </Tag>
+                                <Tooltip title="Export PDF">
+                                    <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleExportPdf} />
+                                </Tooltip>
+                                <Tooltip title="Log Approval">
+                                    <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
+                                </Tooltip>
+                                {data.status === 'draft' && (
+                                    data.approval_aktif === false ? (
+                                        <Button variant="solid" size="sm" onClick={() => setVerifikasiLangsungOpen(true)}>
+                                            Verifikasi
+                                        </Button>
+                                    ) : (
+                                        <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
+                                            Ajukan Approval
+                                        </Button>
+                                    )
+                                )}
+                                {(data.status === 'draft' || data.status === 'ditolak') && (
+                                    <Tooltip title="Edit">
+                                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
+                                            setEditing(true)
+                                            setPpnPersen('')
+                                            setPphPersen('')
+                                            ppnManual.current = false
+                                            pphManual.current = false
+                                        }} />
+                                    </Tooltip>
+                                )}
+                            </div>
+                        </div>
+                        <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                            {([
+                                {
+                                    label: 'Vendor',
+                                    value: data.vendor
+                                        ? <Link href={ROUTES.VENDOR_DETAIL(data.vendor.id_vendor)} className="text-blue-500 hover:underline">{data.vendor.nama_vendor}</Link>
+                                        : <span className="text-gray-400">—</span>,
+                                },
+                                { label: 'Kontrak',         value: data.kontrak?.nomor_kontrak ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nilai Kontrak',   value: data.kontrak ? formatRupiah(data.kontrak.nilai_kontrak) : <span className="text-gray-400">—</span> },
+                                { label: 'Tanggal Invoice', value: dayjs(data.tanggal_invoice).format('DD MMM YYYY') },
+                                {
+                                    label: 'Jatuh Tempo',
+                                    value: data.jatuh_tempo
+                                        ? <span className={dayjs(data.jatuh_tempo).isBefore(dayjs(), 'day') && data.status_pembayaran !== 'lunas' ? 'text-red-500' : ''}>{dayjs(data.jatuh_tempo).format('DD MMM YYYY')}</span>
+                                        : <span className="text-gray-400">—</span>,
+                                },
+                                { label: 'No. PO', value: data.no_po ?? <span className="text-gray-400">—</span> },
+                                { label: 'No. Kontrak', value: data.no_kontrak ?? <span className="text-gray-400">—</span> },
+                                { label: 'Nopol', value: data.nopol ?? <span className="text-gray-400">—</span> },
+                                { label: 'Tipe Kendaraan', value: data.tipe_kendaraan ?? <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Tipe Pembayaran',
+                                    value: data.tipe_pembayaran
+                                        ? `${tipePembayaranLabelMap[data.tipe_pembayaran] ?? data.tipe_pembayaran}${data.tipe_pembayaran === 'top' && data.top_hari ? ` (${data.top_hari} hari)` : ''}`
+                                        : <span className="text-gray-400">—</span>,
+                                },
+                                {
+                                    label: 'Periode',
+                                    value: data.periode_dari && data.periode_sampai
+                                        ? `${dayjs(data.periode_dari).format('DD MMM YYYY')} — ${dayjs(data.periode_sampai).format('DD MMM YYYY')}`
+                                        : <span className="text-gray-400">—</span>,
+                                },
+                                { label: 'DPP',    value: formatRupiah(data.dpp) },
+                                { label: 'PPN',    value: formatRupiah(data.ppn) },
+                                { label: 'PPh',    value: formatRupiah(data.pph) },
+                                { label: 'Total',  value: <span className="font-bold">{formatRupiah(data.total)}</span> },
+                                { label: 'Keterangan', value: data.keterangan ?? <span className="text-gray-400">—</span> },
+                                ...(data.catatan_verifikasi ? [{
+                                    label: 'Catatan Verifikasi',
+                                    value: <span className={data.status === 'ditolak' ? 'text-red-500' : ''}>{data.catatan_verifikasi}</span>,
+                                }] : []),
+                            ]).map(({ label, value }) => (
+                                <div key={label}>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 ) : (
                     <>
                         <div className="mb-5">
