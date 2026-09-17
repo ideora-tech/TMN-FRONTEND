@@ -82,6 +82,7 @@ export function PilihFotoSparepart({ files, onChange }: { files: File[]; onChang
 export function FotoSparepartCard({ sparepart, onChange }: { sparepart: Sparepart; onChange: (s: Sparepart) => void }) {
     const { klik } = usePratinjauBerkas()
     const [mengunggah, setMengunggah] = useState(false)
+    const [resetUnggah, setResetUnggah] = useState(0)
     const [hapusTarget, setHapusTarget] = useState<FotoSparepart | null>(null)
     const [menghapus, setMenghapus] = useState(false)
 
@@ -99,6 +100,7 @@ export function FotoSparepartCard({ sparepart, onChange }: { sparepart: Sparepar
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setMengunggah(false)
+            setResetUnggah(n => n + 1)
         }
     }
 
@@ -124,7 +126,7 @@ export function FotoSparepartCard({ sparepart, onChange }: { sparepart: Sparepar
                 <div className="flex items-center gap-3">
                     {mengunggah && <Spinner size={20} />}
                     {sisa > 0 && (
-                        <Upload multiple accept={FOTO_ACCEPT} showList={false} fileList={[]} disabled={mengunggah}
+                        <Upload key={resetUnggah} multiple accept={FOTO_ACCEPT} showList={false} fileList={[]} disabled={mengunggah}
                             onChange={unggah}>
                             <Button type="button" size="sm" variant="solid" icon={<HiOutlinePhotograph />} disabled={mengunggah}>Tambah Foto</Button>
                         </Upload>
