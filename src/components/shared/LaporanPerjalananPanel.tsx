@@ -166,6 +166,17 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
         }
     }
 
+    const fotoTersimpan = useMemo(() => {
+        const grup: Record<string, FotoLaporan[]> = Object.fromEntries(
+            LABEL_FOTO_LAPORAN.map(l => [l, [] as FotoLaporan[]]),
+        )
+        for (const f of laporan?.foto ?? []) {
+            const label = f.keterangan && LABEL_FOTO_LAPORAN.includes(f.keterangan) ? f.keterangan : 'Lainnya'
+            grup[label].push(f)
+        }
+        return grup
+    }, [laporan])
+
     const handleOpenCreateLaporan = () => {
         setLaporanForm(emptyLaporanForm())
         setLaporanFotoLabel({})
@@ -439,12 +450,15 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                         <div className="flex flex-col gap-3">
                             {LABEL_FOTO_LAPORAN.map(label => {
                                 const files = laporanFotoLabel[label] ?? []
+                                const tersimpan = fotoTersimpan[label] ?? []
                                 return (
                                     <div key={label} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3">
                                         <div className="flex items-center justify-between gap-3">
                                             <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                                                 {label}
-                                                {files.length > 0 && <span className="text-gray-400 font-normal ml-1">({files.length} foto)</span>}
+                                                {tersimpan.length + files.length > 0 && (
+                                                    <span className="text-gray-400 font-normal ml-1">({tersimpan.length + files.length} foto)</span>
+                                                )}
                                             </p>
                                             <Upload
                                                 accept=".jpg,.jpeg,.png"
@@ -468,6 +482,30 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                                     value={laporanForm.no_surat_jalan}
                                                     onChange={e => setLaporanForm(p => ({ ...p, no_surat_jalan: e.target.value }))}
                                                 />
+                                            </div>
+                                        )}
+                                        {tersimpan.length > 0 && (
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                                                {tersimpan.map(f => (
+                                                    <div key={f.id_foto} className="relative group">
+                                                        <a
+                                                            href={f.url_file}
+                                                            onClick={klik(f.url_file, f.keterangan ?? 'Foto laporan perjalanan', 'foto-laporan')}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            <FotoPreview url={f.url_file} alt={f.keterangan ?? 'Foto laporan perjalanan'} />
+                                                        </a>
+                                                        <p className="text-xs text-gray-400 mt-1">Tersimpan</p>
+                                                        <button
+                                                            type="button"
+                                                            className="absolute top-1 right-1 flex items-center justify-center w-6 h-6 rounded-full bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 shadow"
+                                                            onClick={() => setDeleteFotoTarget(f)}
+                                                        >
+                                                            <HiOutlineTrash className="text-xs" />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
                                         {files.length > 0 && (
