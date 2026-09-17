@@ -3,17 +3,20 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiArrowLeft, HiPlusCircle, HiTrash } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiTrash, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import { PiReceiptDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { fakturService, FakturItem } from '@/services/faktur.service'
+import { fakturService, FakturItem, FakturPajak } from '@/services/faktur.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { projectService, Project } from '@/services/project.service'
 
 const emptyItem = (): FakturItem => ({ deskripsi: '', qty: 1, harga_satuan: 0, subtotal: 0 })
+
+type PajakRow = { nama: string; persen: string }
+const MAKS_PAJAK = 10
 
 export default function FakturBaruPage() {
     const router       = useRouter()
@@ -30,6 +33,7 @@ export default function FakturBaruPage() {
         id_proyek:      initIdProyek,
     })
     const [items, setItems] = useState<FakturItem[]>([emptyItem()])
+    const [pajak, setPajak] = useState<PajakRow[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
 
@@ -81,7 +85,24 @@ export default function FakturBaruPage() {
         })
     }
 
-    const total = items.reduce((sum, i) => sum + i.subtotal, 0)
+    const subtotal = items.reduce((sum, i) => sum + i.subtotal, 0)
+
+    const setPajakRow = (index: number, patch: Partial<PajakRow>) =>
+        setPajak(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)))
+
+    const tambahPajak = () => setPajak(prev => (prev.length >= MAKS_PAJAK ? prev : [...prev, { nama: '', persen: '' }]))
+    const hapusPajak  = (index: number) => setPajak(prev => prev.filter((_, i) => i !== index))
+
+    const namaPajakLower = pajak.map(r => r.nama.trim().toLowerCase())
+    const pajakDuplikat = (index: number) => namaPajakLower[index] !== '' && namaPajakLower.filter(x => x === namaPajakLower[index]).length > 1
+    const pajakValid = pajak.every((row, i) => {
+        const persen = Number(row.persen)
+        return row.nama.trim() !== '' && row.persen !== '' && !Number.isNaN(persen) && persen >= 0 && persen <= 100 && !pajakDuplikat(i)
+    })
+
+    const nominalPajak = (persen: number) => subtotal * persen / 100
+    const totalPajak = pajak.reduce((sum, r) => sum + nominalPajak(Number(r.persen) || 0), 0)
+    const total = subtotal + totalPajak
 
     const handleSubmit = async () => {
         if (!validate()) {
@@ -89,8 +110,13 @@ export default function FakturBaruPage() {
             window.scrollTo({ top: 0, behavior: 'smooth' })
             return
         }
+        if (!pajakValid) {
+            toast.push(<Notification type="danger" title="Periksa baris pajak — nama wajib diisi, persen 0–100, dan tidak boleh sama" />)
+            return
+        }
         setLoading(true)
         try {
+            const pajakPayload: FakturPajak[] = pajak.map(r => ({ nama: r.nama.trim(), persen: Number(r.persen) || 0 }))
             await fakturService.create({
                 nomor_faktur:   form.nomor_faktur,
                 tanggal_faktur: form.tanggal_faktur || undefined,
@@ -98,6 +124,7 @@ export default function FakturBaruPage() {
                 id_klien:       form.id_klien || undefined,
                 id_proyek:      form.id_proyek || undefined,
                 items,
+                pajak: pajakPayload.length > 0 ? pajakPayload : undefined,
             })
             toast.push(<Notification type="success" title="Invoice berhasil dibuat" />)
             router.push(ROUTES.FAKTUR)
@@ -226,10 +253,65 @@ export default function FakturBaruPage() {
                         </table>
                     </div>
 
+                    <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-semibold">Pajak (opsional)</p>
+                            <button type="button" onClick={tambahPajak} disabled={pajak.length >= MAKS_PAJAK}
+                                className="inline-flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                                <HiOutlinePlus /> Tambah Pajak
+                            </button>
+                        </div>
+                        {pajak.length === 0 ? (
+                            <p className="text-xs text-gray-400">Belum ada pajak — tambahkan bila invoice ini kena PPN atau PPh.</p>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {pajak.map((row, index) => (
+                                    <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                                        <div className="col-span-12 sm:col-span-7">
+                                            <Input placeholder="Nama pajak (mis. PPN)" value={row.nama}
+                                                invalid={row.nama.trim() === '' || pajakDuplikat(index)}
+                                                onChange={e => setPajakRow(index, { nama: e.target.value })} />
+                                        </div>
+                                        <div className="col-span-9 sm:col-span-4">
+                                            <Input suffix="%" placeholder="0" value={row.persen}
+                                                invalid={row.persen === '' || Number(row.persen) < 0 || Number(row.persen) > 100}
+                                                onChange={e => setPajakRow(index, { persen: e.target.value.replace(/[^\d.]/g, '') })} />
+                                        </div>
+                                        <div className="col-span-3 sm:col-span-1 flex justify-end">
+                                            <button type="button" onClick={() => hapusPajak(index)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                <HiOutlineTrash />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {pajak.some((row, i) => pajakDuplikat(i)) && (
+                            <p className="text-red-500 text-xs mt-1">Nama pajak tidak boleh sama dengan baris lain</p>
+                        )}
+                    </div>
+
                     <div className="flex justify-end px-5 py-4 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex items-center justify-between w-full max-w-xs bg-primary-subtle rounded-xl px-4 py-3">
-                            <span className="font-semibold text-gray-600 dark:text-gray-300">Total</span>
-                            <span className="text-lg font-bold text-primary">{formatRupiah(total)}</span>
+                        <div className="w-full max-w-xs flex flex-col gap-1">
+                            {pajak.length > 0 && (
+                                <>
+                                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                        <span>Subtotal</span>
+                                        <span className="tabular-nums">{formatRupiah(subtotal)}</span>
+                                    </div>
+                                    {pajak.map((row, i) => (
+                                        <div key={i} className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                            <span>{row.nama.trim() || 'Pajak'} ({Number(row.persen) || 0}%)</span>
+                                            <span className="tabular-nums">{formatRupiah(nominalPajak(Number(row.persen) || 0))}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                            <div className="flex items-center justify-between bg-primary-subtle rounded-xl px-4 py-3 mt-1">
+                                <span className="font-semibold text-gray-600 dark:text-gray-300">Total</span>
+                                <span className="text-lg font-bold text-primary tabular-nums">{formatRupiah(total)}</span>
+                            </div>
                         </div>
                     </div>
 
