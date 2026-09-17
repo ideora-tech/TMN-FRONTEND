@@ -601,14 +601,18 @@ export default function PapanShift({
                 <span className="font-semibold min-w-[140px] text-center">{bulan.format('MMMM YYYY')}</span>
                 <Button size="sm" variant="default" icon={<HiOutlineChevronRight />}
                     onClick={() => setBulan(b => b.add(1, 'month'))} />
-                <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                    title="Download jadwal (.xlsx)"
-                    disabled={barisSemua.length === 0}
-                    loading={downloading}
-                    onClick={handleDownload} />
-                <Button size="sm" variant="solid" icon={<HiPlusCircle />}
-                    title="Tambah Shift"
-                    onClick={bukaTambahShift} />
+                <Tooltip title="Download jadwal (.xlsx)">
+                    <div className="inline-flex">
+                        <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                            disabled={barisSemua.length === 0}
+                            loading={downloading}
+                            onClick={handleDownload} />
+                    </div>
+                </Tooltip>
+                <Tooltip title="Tambah Shift">
+                    <Button size="sm" variant="solid" icon={<HiPlusCircle />}
+                        onClick={bukaTambahShift} />
+                </Tooltip>
                 <div className="ml-auto flex items-center gap-2">
                     <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
                         title="Unduh template import"

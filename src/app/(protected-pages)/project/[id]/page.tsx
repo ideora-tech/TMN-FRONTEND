@@ -26,6 +26,7 @@ import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { penawaranService, Penawaran } from '@/services/penawaran.service'
 import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
+import RuteTarifRows from '@/components/shared/RuteTarifRows'
 import RuteTarifFields, {
     RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
     ruteTarifValid, toProyekRutePayload, stateFromProyekRute,
@@ -925,102 +926,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                 {ruteRows.length > 0 && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                    <tr className="text-left text-gray-600 dark:text-gray-300">
-                                        <th className="px-3 py-2 font-semibold min-w-[220px]">Rute</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[160px]">Jenis Kendaraan</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[140px]">Harga Penawaran</th>
-                                        <th className="px-3 py-2 font-semibold w-24">Ritase</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi Tol</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[120px]">Estimasi BBM</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[130px]">Biaya Lain</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[130px]">Uang Jalan</th>
-                                        <th className="px-3 py-2 font-semibold min-w-[160px]">Keterangan</th>
-                                        <th className="px-3 py-2 font-semibold text-right min-w-[130px]">Subtotal</th>
-                                        <th className="px-3 py-2 w-12"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {ruteRows.map((row, i) => {
-                                        const ritase = Number(row.estimasi_ritase) || 1
-                                        const harga = row.harga_penawaran ? Number(row.harga_penawaran) : 0
-                                        const uangJalan = (Number(row.estimasi_tol) || 0) + (Number(row.estimasi_bbm) || 0) + (Number(row.estimasi_biaya_lain) || 0)
-                                        return (
-                                            <tr key={i} className="border-b border-gray-100 dark:border-gray-700 align-top">
-                                                <td className="px-3 py-2">
-                                                    <Tooltip title={ruteOptionsMaster.find(o => o.value === row.id_rute)?.label ?? ''}>
-                                                        <div>
-                                                        <Select isSearchable placeholder="Pilih rute..."
-                                                            options={ruteOptionsMaster}
-                                                            value={ruteOptionsMaster.find(o => o.value === row.id_rute) ?? null}
-                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                            onChange={opt => updateRuteRow(i, { id_rute: opt?.value ?? '' })} />
-                                                        </div>
-                                                    </Tooltip>
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Tooltip title={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan)?.label ?? ''}>
-                                                        <div>
-                                                        <Select isSearchable isClearable placeholder="Semua jenis"
-                                                            options={jenisOptionsMaster}
-                                                            value={jenisOptionsMaster.find(o => o.value === row.id_jenis_kendaraan) ?? null}
-                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                                            onChange={opt => updateRuteRow(i, { id_jenis_kendaraan: opt?.value ?? '' })} />
-                                                        </div>
-                                                    </Tooltip>
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" placeholder="0"
-                                                        value={row.harga_penawaran ? formatNum(Number(row.harga_penawaran)) : ''}
-                                                        onChange={e => updateRuteRow(i, { harga_penawaran: e.target.value.replace(/\D/g, '') })} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input type="number" min="1"
-                                                        value={row.estimasi_ritase}
-                                                        onChange={e => updateRuteRow(i, { estimasi_ritase: e.target.value })} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" placeholder="0"
-                                                        value={row.estimasi_tol ? formatNum(Number(row.estimasi_tol)) : ''}
-                                                        onChange={e => updateRuteRow(i, { estimasi_tol: e.target.value.replace(/\D/g, '') })} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" placeholder="0"
-                                                        value={row.estimasi_bbm ? formatNum(Number(row.estimasi_bbm)) : ''}
-                                                        onChange={e => updateRuteRow(i, { estimasi_bbm: e.target.value.replace(/\D/g, '') })} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" placeholder="0"
-                                                        value={row.estimasi_biaya_lain ? formatNum(Number(row.estimasi_biaya_lain)) : ''}
-                                                        onChange={e => updateRuteRow(i, { estimasi_biaya_lain: e.target.value.replace(/\D/g, '') })} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input prefix="Rp" disabled value={formatNum(uangJalan)} />
-                                                </td>
-                                                <td className="px-3 py-2">
-                                                    <Input placeholder="Keterangan"
-                                                        value={row.keterangan}
-                                                        onChange={e => updateRuteRow(i, { keterangan: e.target.value })} />
-                                                </td>
-                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
-                                                    {harga > 0 ? formatRupiah(harga * ritase) : '—'}
-                                                </td>
-                                                <td className="px-3 py-2 pt-3">
-                                                    <span
-                                                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-500 hover:bg-red-200 cursor-pointer transition-colors"
-                                                        onClick={() => hapusBarisRute(i)}
-                                                    ><HiOutlineTrash /></span>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                        <RuteTarifRows
+                            rows={ruteRows}
+                            onChangeRow={(index, next) => updateRuteRow(index, next)}
+                            onHapusRow={hapusBarisRute}
+                            ruteOptions={ruteOptionsMaster}
+                            jenisOptions={jenisOptionsMaster}
+                            onRuteCreated={() => muatRuteOptions()}
+                        />
                         {ruteRowsError && <p className="text-red-500 text-sm mt-2">{ruteRowsError}</p>}
                         <div className="flex justify-end gap-2 mt-4">
                             <Button type="button" size="sm" variant="plain"
