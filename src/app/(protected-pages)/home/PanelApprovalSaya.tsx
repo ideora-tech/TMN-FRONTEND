@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Tag, Tooltip, Dialog, Input, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
@@ -29,22 +29,22 @@ export default function PanelApprovalSaya() {
     const [logOpen, setLogOpen]       = useState(false)
     const [logInfo, setLogInfo]       = useState<PengajuanKeuanganInfo | null>(null)
     const [logLoading, setLogLoading] = useState(false)
+    const [ringkasan, setRingkasan]   = useState({ total: 0, totalNominal: 0 })
 
     const fetchData = useCallback(async () => {
         try {
-            const data = await approvalService.menungguSaya()
-            setList(data)
+            const hasil = await approvalService.menungguSaya(1, { limit: 100 })
+            setList(hasil.data)
+            setRingkasan({ total: hasil.meta.total, totalNominal: hasil.meta.totalNominal })
         } catch {
             setList([])
+            setRingkasan({ total: 0, totalNominal: 0 })
         }
     }, [])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const totalNominal = useMemo(
-        () => list.reduce((sum, item) => sum + (item.nominal ?? 0), 0),
-        [list],
-    )
+    const totalNominal = ringkasan.totalNominal
 
     const putuskan = async (p: ApprovalPengajuanSaya, keputusan: 'setuju' | 'tolak', catatan?: string) => {
         setProsesId(p.id_approval)
@@ -98,7 +98,7 @@ export default function PanelApprovalSaya() {
                     <div className="flex items-center gap-2">
                         <h5 className="font-bold">Menunggu Approval Anda</h5>
                         <Tag className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-0 font-semibold">
-                            {list.length} pengajuan
+                            {ringkasan.total} pengajuan
                         </Tag>
                     </div>
                     <div className="flex items-center gap-3">

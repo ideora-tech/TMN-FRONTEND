@@ -62,6 +62,14 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     const { id } = use(params)
     const router = useRouter()
     const searchParams = useSearchParams()
+    const kembali = () => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back()
+            return
+        }
+        router.push(ROUTES.PERMINTAAN_VENDOR)
+    }
+
     const [data, setData]       = useState<PermintaanVendor | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
@@ -169,7 +177,7 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-                <button type="button" onClick={() => router.push(ROUTES.PERMINTAAN_VENDOR)}
+                <button type="button" onClick={kembali}
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                     <HiArrowLeft className="text-xl" />
                 </button>
@@ -280,7 +288,7 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                             </div>
                         </div>
                         <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PERMINTAAN_VENDOR)}>Batal</Button>
+                            <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={kembali}>Batal</Button>
                         </div>
                     </>
                 ) : form && (

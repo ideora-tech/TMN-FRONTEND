@@ -52,6 +52,14 @@ export interface ApprovalRiwayatSaya {
     diajukan_pada: string
 }
 
+export type MetaPersetujuan = {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    totalNominal: number
+}
+
 export const approvalService = {
     async listEventType() {
         const { data } = await axios.get(API_ENDPOINTS.APPROVAL_EVENT_TYPE)
@@ -79,17 +87,21 @@ export const approvalService = {
     async hapusConfigApprover(idEventType: string, idConfig: string) {
         await axios.delete(API_ENDPOINTS.APPROVAL_EVENT_TYPE_APPROVER_DETAIL(idEventType, idConfig))
     },
-    async menungguSaya() {
-        const { data } = await axios.get(API_ENDPOINTS.APPROVAL_MENUNGGU_SAYA)
-        return data.data as ApprovalPengajuanSaya[]
+    async menungguSaya(page = 1, opsi: { limit?: number; search?: string } = {}) {
+        const { data } = await axios.get(API_ENDPOINTS.APPROVAL_MENUNGGU_SAYA, {
+            params: { page, limit: opsi.limit ?? 10, search: opsi.search || undefined },
+        })
+        return { data: data.data as ApprovalPengajuanSaya[], meta: data.meta as MetaPersetujuan }
     },
     async putuskan(idApproval: string, keputusan: 'setuju' | 'tolak', catatan?: string) {
         const { data } = await axios.patch(API_ENDPOINTS.APPROVAL_KEPUTUSAN(idApproval), { keputusan, catatan })
         return data.data
     },
-    async riwayatSaya() {
-        const { data } = await axios.get(API_ENDPOINTS.APPROVAL_RIWAYAT_SAYA)
-        return data.data as ApprovalRiwayatSaya[]
+    async riwayatSaya(page = 1, opsi: { limit?: number; search?: string } = {}) {
+        const { data } = await axios.get(API_ENDPOINTS.APPROVAL_RIWAYAT_SAYA, {
+            params: { page, limit: opsi.limit ?? 10, search: opsi.search || undefined },
+        })
+        return { data: data.data as ApprovalRiwayatSaya[], meta: data.meta as MetaPersetujuan }
     },
     async exportSaya() {
         const res = await axios.get(API_ENDPOINTS.APPROVAL_EXPORT_SAYA, { responseType: 'blob' })

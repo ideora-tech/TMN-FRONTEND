@@ -44,7 +44,10 @@ export default function KontrakVendorPage() {
                 )}
             </div>
 
-            <Tabs value={activeTab} onChange={val => setActiveTab(val as TabValue)}>
+            <Tabs value={activeTab} onChange={val => {
+                setActiveTab(val as TabValue)
+                router.replace(val === 'kontrak' ? ROUTES.KONTRAK_VENDOR : `${ROUTES.KONTRAK_VENDOR}?tab=${val}`, { scroll: false })
+            }}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="kontrak">Kontrak Vendor</Tabs.TabNav>
                     <Tabs.TabNav value="permintaan">

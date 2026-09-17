@@ -77,11 +77,19 @@ export default function PersetujuanSayaPage() {
     const [activeTab, setActiveTab] = useState<TabValue>('menunggu')
     const [list, setList] = useState<ApprovalPengajuanSaya[]>([])
     const [loading, setLoading] = useState(true)
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch] = useState('')
+    const [halaman, setHalaman] = useState(1)
+    const [ukuranHalaman, setUkuranHalaman] = useState(10)
+    const [meta, setMeta] = useState({ total: 0, totalNominal: 0 })
 
     const [riwayatList, setRiwayatList] = useState<ApprovalRiwayatSaya[]>([])
     const [riwayatLoading, setRiwayatLoading] = useState(true)
+    const [riwayatSearchInput, setRiwayatSearchInput] = useState('')
     const [riwayatSearch, setRiwayatSearch] = useState('')
+    const [riwayatHalaman, setRiwayatHalaman] = useState(1)
+    const [riwayatUkuran, setRiwayatUkuran] = useState(10)
+    const [riwayatTotal, setRiwayatTotal] = useState(0)
     const [exporting, setExporting] = useState(false)
 
     const [detailTarget, setDetailTarget] = useState<ApprovalPengajuanSaya | null>(null)
@@ -133,28 +141,30 @@ export default function PersetujuanSayaPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const data = await approvalService.menungguSaya()
-            setList(data)
+            const hasil = await approvalService.menungguSaya(halaman, { limit: ukuranHalaman, search })
+            setList(hasil.data)
+            setMeta({ total: hasil.meta.total, totalNominal: hasil.meta.totalNominal })
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [halaman, ukuranHalaman, search])
 
     useEffect(() => { fetchData() }, [fetchData])
 
     const fetchRiwayat = useCallback(async () => {
         setRiwayatLoading(true)
         try {
-            const data = await approvalService.riwayatSaya()
-            setRiwayatList(data)
+            const hasil = await approvalService.riwayatSaya(riwayatHalaman, { limit: riwayatUkuran, search: riwayatSearch })
+            setRiwayatList(hasil.data)
+            setRiwayatTotal(hasil.meta.total)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setRiwayatLoading(false)
         }
-    }, [])
+    }, [riwayatHalaman, riwayatUkuran, riwayatSearch])
 
     useEffect(() => { fetchRiwayat() }, [fetchRiwayat])
 
@@ -177,34 +187,9 @@ export default function PersetujuanSayaPage() {
 
     useEffect(() => { clearSelection() }, [list, clearSelection])
 
-    const totalNominal = useMemo(
-        () => list.reduce((sum, item) => sum + (item.nominal ?? 0), 0),
-        [list],
-    )
+    const totalNominal = meta.totalNominal
 
-    const filteredList = useMemo(() => {
-        const q = search.trim().toLowerCase()
-        if (!q) return list
-        return list.filter(item => [
-            item.nomor_referensi,
-            item.keterangan_referensi,
-            item.pihak_referensi,
-            item.nama_pengaju,
-            item.nama_event_type,
-        ].some(field => field?.toLowerCase().includes(q)))
-    }, [list, search])
 
-    const filteredRiwayat = useMemo(() => {
-        const q = riwayatSearch.trim().toLowerCase()
-        if (!q) return riwayatList
-        return riwayatList.filter(item => [
-            item.nomor_referensi,
-            item.keterangan_referensi,
-            item.pihak_referensi,
-            item.nama_pengaju,
-            item.nama_event_type,
-        ].some(field => field?.toLowerCase().includes(q)))
-    }, [riwayatList, riwayatSearch])
 
     const selectedRows = useMemo(
         () => list.filter(item => selectedIds.includes(item.id_approval)),
@@ -507,12 +492,14 @@ export default function PersetujuanSayaPage() {
                                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
                                     <Input
                                         className="flex-1 min-w-60"
-                                        placeholder="Cari nomor, keterangan, pihak, atau pengaju..."
-                                        suffix={search
-                                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setSearch('')} />
+                                        placeholder="Cari nomor, keterangan, pihak, atau pengaju — tekan Enter"
+                                        suffix={searchInput
+                                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600"
+                                                onClick={() => { setSearchInput(''); setSearch(''); setHalaman(1) }} />
                                             : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                                        value={search}
-                                        onChange={e => setSearch(e.target.value)}
+                                        value={searchInput}
+                                        onChange={e => setSearchInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput); setHalaman(1) } }}
                                     />
                                     <Button size="sm" variant="solid"
                                         icon={<HiOutlineCheck />} disabled={selectedIds.length === 0}
@@ -530,10 +517,12 @@ export default function PersetujuanSayaPage() {
                                     ref={(instance: DataTableResetHandle | HTMLTableElement | null) => { tableRef.current = instance }}
                                     selectable
                                     columns={columns}
-                                    data={filteredList as unknown[]}
+                                    data={list as unknown[]}
                                     loading={loading}
-                                    noData={!loading && filteredList.length === 0}
-                                    pagingData={{ total: filteredList.length, pageIndex: 1, pageSize: Math.max(filteredList.length, 10) }}
+                                    noData={!loading && list.length === 0}
+                                    pagingData={{ total: meta.total, pageIndex: halaman, pageSize: ukuranHalaman }}
+                                    onPaginationChange={(p: number) => setHalaman(p)}
+                                    onSelectChange={(n: number) => { setUkuranHalaman(n); setHalaman(1) }}
                                     onCheckBoxChange={handleRowCheck}
                                     onIndeterminateCheckBoxChange={handleAllRowCheck}
                                     checkboxChecked={(row: ApprovalPengajuanSaya) => selectedIds.includes(row.id_approval)}
@@ -550,19 +539,23 @@ export default function PersetujuanSayaPage() {
                                 <Input
                                     className="flex-1 min-w-60"
                                     placeholder="Cari nomor, keterangan, pihak, atau pengaju..."
-                                    suffix={riwayatSearch
-                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setRiwayatSearch('')} />
+                                    suffix={riwayatSearchInput
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600"
+                                            onClick={() => { setRiwayatSearchInput(''); setRiwayatSearch(''); setRiwayatHalaman(1) }} />
                                         : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                                    value={riwayatSearch}
-                                    onChange={e => setRiwayatSearch(e.target.value)}
+                                    value={riwayatSearchInput}
+                                    onChange={e => setRiwayatSearchInput(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') { setRiwayatSearch(riwayatSearchInput); setRiwayatHalaman(1) } }}
                                 />
                             </div>
                             <DataTable
                                 columns={riwayatColumns}
-                                data={filteredRiwayat as unknown[]}
+                                data={riwayatList as unknown[]}
                                 loading={riwayatLoading}
-                                noData={!riwayatLoading && filteredRiwayat.length === 0}
-                                pagingData={{ total: filteredRiwayat.length, pageIndex: 1, pageSize: Math.max(filteredRiwayat.length, 10) }}
+                                noData={!riwayatLoading && riwayatList.length === 0}
+                                pagingData={{ total: riwayatTotal, pageIndex: riwayatHalaman, pageSize: riwayatUkuran }}
+                                onPaginationChange={(p: number) => setRiwayatHalaman(p)}
+                                onSelectChange={(n: number) => { setRiwayatUkuran(n); setRiwayatHalaman(1) }}
                             />
                         </Card>
                     </Tabs.TabContent>
