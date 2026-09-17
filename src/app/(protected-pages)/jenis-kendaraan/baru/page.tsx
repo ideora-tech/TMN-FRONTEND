@@ -12,13 +12,12 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function JenisKendaraanBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_jenis: '', nama_jenis: '', kapasitas_muatan: '', aktif: true })
+    const [form, setForm] = useState({ nama_jenis: '', kapasitas_muatan: '', aktif: true })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode_jenis.trim()) e.kode_jenis = 'Kode wajib diisi'
         if (!form.nama_jenis.trim()) e.nama_jenis = 'Nama wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -33,7 +32,6 @@ export default function JenisKendaraanBaruPage() {
         setLoading(true)
         try {
             await jenisKendaraanService.create({
-                kode_jenis: form.kode_jenis,
                 nama_jenis: form.nama_jenis,
                 kapasitas_muatan: form.kapasitas_muatan ? Number(form.kapasitas_muatan) : null,
                 aktif: form.aktif,
@@ -62,10 +60,6 @@ export default function JenisKendaraanBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Jenis" asterisk invalid={!!errors.kode_jenis} errorMessage={errors.kode_jenis}>
-                        <Input placeholder="Kode unik" value={form.kode_jenis} invalid={!!errors.kode_jenis}
-                            onChange={e => setForm(p => ({ ...p, kode_jenis: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Jenis" asterisk invalid={!!errors.nama_jenis} errorMessage={errors.nama_jenis}>
                         <Input placeholder="Nama jenis kendaraan" value={form.nama_jenis} invalid={!!errors.nama_jenis}
                             onChange={e => setForm(p => ({ ...p, nama_jenis: e.target.value }))} />

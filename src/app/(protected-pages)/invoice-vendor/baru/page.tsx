@@ -56,7 +56,7 @@ export default function InvoiceVendorBaruPage() {
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
             .catch(() => {})
         tipePembayaranService.opsiAktif()
-            .then(res => setTipePembayaranOptions(res.map((t: TipePembayaran) => ({ value: t.kode_tipe, label: t.nama_tipe }))))
+            .then(res => setTipePembayaranOptions(res.map((t: TipePembayaran) => ({ value: t.kode_tipe ?? '', label: t.nama_tipe }))))
             .catch(() => {})
         projectService.list(1, 999)
             .then(res => setProyekOptions((res.data as Project[]).map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))))

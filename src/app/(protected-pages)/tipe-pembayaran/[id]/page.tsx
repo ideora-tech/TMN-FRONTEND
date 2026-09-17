@@ -29,7 +29,6 @@ export default function TipePembayaranDetailPage({ params }: { params: Promise<{
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
-        if (!form.kode_tipe?.trim()) e.kode_tipe = 'Kode Tipe wajib diisi'
         if (!form.nama_tipe?.trim()) e.nama_tipe = 'Nama Tipe wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -123,8 +122,8 @@ export default function TipePembayaranDetailPage({ params }: { params: Promise<{
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Tipe" asterisk invalid={!!errors.kode_tipe} errorMessage={errors.kode_tipe}>
-                                <Input value={form.kode_tipe ?? ''} invalid={!!errors.kode_tipe} onChange={e => setForm(p => ({ ...p, kode_tipe: e.target.value }))} />
+                            <FormItem label="Kode Tipe">
+                                <Input value={form.kode_tipe ?? ''} disabled />
                             </FormItem>
                             <FormItem label="Nama Tipe" asterisk invalid={!!errors.nama_tipe} errorMessage={errors.nama_tipe}>
                                 <Input value={form.nama_tipe ?? ''} invalid={!!errors.nama_tipe} onChange={e => setForm(p => ({ ...p, nama_tipe: e.target.value }))} />

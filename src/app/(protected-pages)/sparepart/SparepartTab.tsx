@@ -83,10 +83,17 @@ export default function SparepartTab({ refreshKey = 0 }: { refreshKey?: number }
         { header: 'Nama', accessorKey: 'nama', size: 220,
             cell: ({ row }: CellContext<Sparepart, unknown>) => {
                 const detail = [row.original.merek, row.original.tahun].filter(v => v != null && v !== '').join(' · ')
+                const fotoUtama = row.original.foto?.[0]
                 return (
-                    <div>
-                        <span className="font-semibold">{row.original.nama}</span>
-                        {detail && <p className="text-xs text-gray-400 mt-0.5">{detail}</p>}
+                    <div className="flex items-center gap-3">
+                        {fotoUtama && (
+                            <img src={fotoUtama.url_file} alt={row.original.nama}
+                                className="w-10 h-10 rounded-lg object-cover border border-gray-100 dark:border-gray-700 shrink-0" />
+                        )}
+                        <div>
+                            <span className="font-semibold">{row.original.nama}</span>
+                            {detail && <p className="text-xs text-gray-400 mt-0.5">{detail}</p>}
+                        </div>
                     </div>
                 )
             },

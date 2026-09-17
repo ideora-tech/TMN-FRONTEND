@@ -1,7 +1,19 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 
-export type EntitasKode = 'proyek' | 'rute' | 'penawaran'
+export type EntitasKode =
+    | 'proyek'
+    | 'rute'
+    | 'penawaran'
+    | 'permintaan_vendor'
+    | 'jabatan'
+    | 'departemen'
+    | 'jenis_kendaraan'
+    | 'klien'
+    | 'lokasi_kantor'
+    | 'tipe_pembayaran'
+    | 'vendor'
+    | 'sparepart'
 export type ResetKode = 'tidak' | 'bulanan' | 'tahunan'
 
 export interface PengaturanKode {

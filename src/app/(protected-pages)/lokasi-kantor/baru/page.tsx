@@ -13,7 +13,7 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 export default function LokasiKantorBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        kode_lokasi: '', nama_lokasi: '', alamat: '', kota: '',
+        nama_lokasi: '', alamat: '', kota: '',
         latitude: '', longitude: '', radius: '100', aktif: true,
     })
     const [loading, setLoading] = useState(false)
@@ -21,7 +21,6 @@ export default function LokasiKantorBaruPage() {
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode_lokasi.trim()) e.kode_lokasi = 'Kode wajib diisi'
         if (!form.nama_lokasi.trim()) e.nama_lokasi = 'Nama wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -36,7 +35,6 @@ export default function LokasiKantorBaruPage() {
         setLoading(true)
         try {
             await lokasiKantorService.create({
-                kode_lokasi: form.kode_lokasi,
                 nama_lokasi: form.nama_lokasi,
                 alamat: form.alamat || null,
                 kota: form.kota || null,
@@ -69,10 +67,6 @@ export default function LokasiKantorBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Lokasi" asterisk invalid={!!errors.kode_lokasi} errorMessage={errors.kode_lokasi}>
-                        <Input placeholder="Kode unik" value={form.kode_lokasi} invalid={!!errors.kode_lokasi}
-                            onChange={e => setForm(p => ({ ...p, kode_lokasi: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Lokasi" asterisk invalid={!!errors.nama_lokasi} errorMessage={errors.nama_lokasi}>
                         <Input placeholder="Nama lokasi" value={form.nama_lokasi} invalid={!!errors.nama_lokasi}
                             onChange={e => setForm(p => ({ ...p, nama_lokasi: e.target.value }))} />

@@ -13,9 +13,31 @@ const LABEL_ENTITAS: Record<EntitasKode, string> = {
     proyek: 'Proyek',
     rute: 'Rute',
     penawaran: 'Penawaran',
+    permintaan_vendor: 'Permintaan Vendor',
+    jabatan: 'Jabatan',
+    departemen: 'Departemen',
+    jenis_kendaraan: 'Jenis Kendaraan',
+    klien: 'Klien',
+    lokasi_kantor: 'Lokasi Kantor',
+    tipe_pembayaran: 'Tipe Pembayaran',
+    vendor: 'Vendor',
+    sparepart: 'Spare Part',
 }
 
-const URUTAN_ENTITAS: EntitasKode[] = ['proyek', 'rute', 'penawaran']
+const URUTAN_ENTITAS: EntitasKode[] = [
+    'proyek',
+    'penawaran',
+    'permintaan_vendor',
+    'klien',
+    'vendor',
+    'rute',
+    'jenis_kendaraan',
+    'lokasi_kantor',
+    'tipe_pembayaran',
+    'sparepart',
+    'jabatan',
+    'departemen',
+]
 
 const RESET_OPTIONS: { value: ResetKode; label: string }[] = [
     { value: 'tidak', label: 'Tidak Direset' },
@@ -109,7 +131,7 @@ export default function FormatKodePage() {
             <div>
                 <h3 className="font-bold">Format Kode</h3>
                 <p className="text-gray-500 text-sm mt-0.5">
-                    Atur prefix, panjang digit, dan periode reset untuk penomoran kode otomatis proyek, rute, dan penawaran
+                    Atur prefix, panjang digit, dan periode reset untuk seluruh penomoran kode otomatis di sistem
                 </p>
             </div>
             <Card bodyClass="p-0">

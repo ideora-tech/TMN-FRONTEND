@@ -9,6 +9,14 @@ export interface HargaBeliTerakhir {
     nama_supplier: string | null
 }
 
+export const MAKS_FOTO_SPAREPART = 10
+
+export interface FotoSparepart {
+    id_foto: string
+    url_file: string
+    nama_asli: string
+}
+
 export interface Sparepart {
     id_sparepart: string
     id_perusahaan: string
@@ -24,6 +32,7 @@ export interface Sparepart {
     stok: number
     aktif: boolean
     harga_beli_terakhir?: HargaBeliTerakhir | null
+    foto?: FotoSparepart[]
     dibuat_pada: string
     diubah_pada: string | null
 }
@@ -65,7 +74,7 @@ export const SATUAN_SPAREPART_OPTIONS: { value: SatuanSparepart; label: string }
 ]
 
 export type SparepartPayload = {
-    kode: string
+    kode?: string
     nama: string
     serial_number: string
     merek?: string | null
@@ -123,6 +132,15 @@ export const sparepartService = {
     async penyesuaianStok(id: string, payload: StokPayload) {
         const { data } = await axios.post(API_ENDPOINTS.SPAREPART_STOK(id), payload)
         return data.data as Sparepart
+    },
+    async uploadFoto(id: string, files: File[]) {
+        const fd = new FormData()
+        files.forEach(f => fd.append('foto[]', f))
+        const { data } = await axios.post(API_ENDPOINTS.SPAREPART_FOTO(id), fd)
+        return data.data as Sparepart
+    },
+    async hapusFoto(id: string, idFoto: string) {
+        await axios.delete(API_ENDPOINTS.SPAREPART_FOTO_DETAIL(id, idFoto))
     },
     async listMutasi(id: string, page = 1, limit = 10) {
         const { data } = await axios.get(API_ENDPOINTS.SPAREPART_MUTASI(id), { params: { page, limit } })

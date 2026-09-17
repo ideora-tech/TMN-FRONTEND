@@ -15,7 +15,7 @@ const AKTIF_OPTIONS = [
 export default function KlienBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        kode_klien: '', nama_klien: '', email: '', telepon: '',
+        nama_klien: '', email: '', telepon: '',
         alamat: '', kontak_pic: '', aktif: true,
     })
     const [loading, setLoading] = useState(false)
@@ -23,7 +23,6 @@ export default function KlienBaruPage() {
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
-        if (!form.kode_klien.trim()) e.kode_klien = 'Kode klien wajib diisi'
         if (!form.nama_klien.trim()) e.nama_klien = 'Nama klien wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -38,7 +37,7 @@ export default function KlienBaruPage() {
         setLoading(true)
         try {
             await klienService.create({
-                kode_klien: form.kode_klien, nama_klien: form.nama_klien,
+                nama_klien: form.nama_klien,
                 email: form.email || undefined, telepon: form.telepon || undefined,
                 alamat: form.alamat || undefined, kontak_pic: form.kontak_pic || undefined,
                 aktif: form.aktif,
@@ -67,10 +66,6 @@ export default function KlienBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Klien" asterisk invalid={!!errors.kode_klien} errorMessage={errors.kode_klien}>
-                        <Input placeholder="Contoh: KL-001" value={form.kode_klien} invalid={!!errors.kode_klien}
-                            onChange={(e) => setForm(p => ({ ...p, kode_klien: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Klien" asterisk invalid={!!errors.nama_klien} errorMessage={errors.nama_klien}>
                         <Input placeholder="Nama lengkap klien / perusahaan" value={form.nama_klien} invalid={!!errors.nama_klien}
                             onChange={(e) => setForm(p => ({ ...p, nama_klien: e.target.value }))} />

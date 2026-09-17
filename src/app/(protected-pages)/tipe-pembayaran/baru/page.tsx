@@ -12,13 +12,12 @@ const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', labe
 
 export default function TipePembayaranBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_tipe: '', nama_tipe: '', aktif: true })
+    const [form, setForm] = useState({ nama_tipe: '', aktif: true })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode_tipe.trim()) e.kode_tipe = 'Kode wajib diisi'
         if (!form.nama_tipe.trim()) e.nama_tipe = 'Nama wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -33,7 +32,6 @@ export default function TipePembayaranBaruPage() {
         setLoading(true)
         try {
             await tipePembayaranService.create({
-                kode_tipe: form.kode_tipe,
                 nama_tipe: form.nama_tipe,
                 aktif: form.aktif,
             })
@@ -61,10 +59,6 @@ export default function TipePembayaranBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Tipe" asterisk invalid={!!errors.kode_tipe} errorMessage={errors.kode_tipe}>
-                        <Input placeholder="Kode unik, mis. termin_3x" value={form.kode_tipe} invalid={!!errors.kode_tipe}
-                            onChange={e => setForm(p => ({ ...p, kode_tipe: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Tipe" asterisk invalid={!!errors.nama_tipe} errorMessage={errors.nama_tipe}>
                         <Input placeholder="Nama tampilan, mis. Termin 3x" value={form.nama_tipe} invalid={!!errors.nama_tipe}
                             onChange={e => setForm(p => ({ ...p, nama_tipe: e.target.value }))} />

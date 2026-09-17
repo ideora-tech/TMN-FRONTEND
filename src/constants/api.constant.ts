@@ -76,6 +76,8 @@ export const API_ENDPOINTS = {
     SPAREPART_DETAIL:       (id: string) => `/api/proxy/sparepart/${id}`,
     SPAREPART_STOK:         (id: string) => `/api/proxy/sparepart/${id}/stok`,
     SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
+    SPAREPART_FOTO:         (id: string) => `/api/proxy/sparepart/${id}/foto`,
+    SPAREPART_FOTO_DETAIL:  (id: string, idFoto: string) => `/api/proxy/sparepart/${id}/foto/${idFoto}`,
     SPAREPART_RIWAYAT_HARGA: (id: string) => `/api/proxy/sparepart/${id}/riwayat-harga`,
     SPAREPART_IMPORT_TEMPLATE: '/api/proxy/sparepart/import/template',
     SPAREPART_IMPORT:          '/api/proxy/sparepart/import',

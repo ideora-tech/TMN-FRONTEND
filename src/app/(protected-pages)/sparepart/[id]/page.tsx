@@ -12,6 +12,7 @@ import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, Sparepart, SparepartMutasi, RiwayatHargaSparepart, SATUAN_SPAREPART_OPTIONS, SatuanSparepart } from '@/services/sparepart.service'
 import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
+import { FotoSparepartCard } from '../FotoSparepart'
 
 const MUTASI_CLASS: Record<string, string> = {
     masuk:       'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
@@ -142,7 +143,6 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode.trim()) e.kode = 'Kode wajib diisi'
         if (!form.nama.trim()) e.nama = 'Nama wajib diisi'
         if (!form.serial_number.trim()) e.serial_number = 'Serial number wajib diisi'
         if (form.tahun && !tahunValid(form.tahun)) e.tahun = 'Tahun tidak valid'
@@ -342,8 +342,8 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                 ) : (
                     <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode" asterisk invalid={!!errors.kode} errorMessage={errors.kode}>
-                                <Input value={form.kode} invalid={!!errors.kode} onChange={e => setForm(p => ({ ...p, kode: e.target.value.toUpperCase() }))} />
+                            <FormItem label="Kode">
+                                <Input value={form.kode} disabled />
                             </FormItem>
                             <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
                                 <Input value={form.nama} invalid={!!errors.nama} onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
@@ -399,6 +399,8 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                     </form>
                 )}
             </Card>
+
+            <FotoSparepartCard sparepart={sparepart} onChange={setSparepart} />
 
             <Card>
                 <div className="flex items-center justify-between mb-4">

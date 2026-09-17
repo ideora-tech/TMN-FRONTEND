@@ -30,7 +30,6 @@ export default function JenisKendaraanDetailPage({ params }: { params: Promise<{
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
-        if (!form.kode_jenis?.trim()) e.kode_jenis = 'Kode Jenis wajib diisi'
         if (!form.nama_jenis?.trim()) e.nama_jenis = 'Nama Jenis wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -126,8 +125,8 @@ export default function JenisKendaraanDetailPage({ params }: { params: Promise<{
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Jenis" asterisk invalid={!!errors.kode_jenis} errorMessage={errors.kode_jenis}>
-                                <Input value={form.kode_jenis ?? ''} invalid={!!errors.kode_jenis} onChange={e => setForm(p => ({ ...p, kode_jenis: e.target.value }))} />
+                            <FormItem label="Kode Jenis">
+                                <Input value={form.kode_jenis ?? ''} disabled />
                             </FormItem>
                             <FormItem label="Nama Jenis" asterisk invalid={!!errors.nama_jenis} errorMessage={errors.nama_jenis}>
                                 <Input value={form.nama_jenis ?? ''} invalid={!!errors.nama_jenis} onChange={e => setForm(p => ({ ...p, nama_jenis: e.target.value }))} />

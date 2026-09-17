@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface TipePembayaran {
     id_tipe_pembayaran: string
     id_perusahaan: string
-    kode_tipe: string
+    kode_tipe?: string
     nama_tipe: string
     aktif: boolean
 }

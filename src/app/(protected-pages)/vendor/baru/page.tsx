@@ -17,13 +17,12 @@ const JENIS_VENDOR_OPTIONS = [
 
 export default function VendorBaruPage() {
     const router = useRouter()
-    const [form, setForm] = useState({ kode_vendor: '', nama_vendor: '', telepon: '', alamat: '', email: '', jenis_vendor: '', pic_nama: '', npwp: '', tanggal_bergabung: '' })
+    const [form, setForm] = useState({ nama_vendor: '', telepon: '', alamat: '', email: '', jenis_vendor: '', pic_nama: '', npwp: '', tanggal_bergabung: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
 
     const validate = () => {
         const e: Partial<typeof form> = {}
-        if (!form.kode_vendor.trim()) e.kode_vendor = 'Kode vendor wajib diisi'
         if (!form.nama_vendor.trim()) e.nama_vendor = 'Nama vendor wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -38,7 +37,6 @@ export default function VendorBaruPage() {
         setLoading(true)
         try {
             await vendorService.create({
-                kode_vendor: form.kode_vendor,
                 nama_vendor: form.nama_vendor,
                 telepon: form.telepon || undefined,
                 alamat: form.alamat || undefined,
@@ -73,10 +71,6 @@ export default function VendorBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode Vendor" asterisk invalid={!!errors.kode_vendor} errorMessage={errors.kode_vendor}>
-                        <Input placeholder="Contoh: VN-001" value={form.kode_vendor} invalid={!!errors.kode_vendor}
-                            onChange={(e) => setForm(p => ({ ...p, kode_vendor: e.target.value }))} />
-                    </FormItem>
                     <FormItem label="Nama Vendor" asterisk invalid={!!errors.nama_vendor} errorMessage={errors.nama_vendor}>
                         <Input placeholder="Nama vendor" value={form.nama_vendor} invalid={!!errors.nama_vendor}
                             onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />

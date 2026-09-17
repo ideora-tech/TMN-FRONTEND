@@ -218,7 +218,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
     const validate = () => {
         const e: Partial<Record<keyof Vendor, string>> = {}
-        if (!form.kode_vendor?.trim()) e.kode_vendor = 'Kode vendor wajib diisi'
         if (!form.nama_vendor?.trim()) e.nama_vendor = 'Nama vendor wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -470,8 +469,8 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Kode Vendor" asterisk invalid={!!errors.kode_vendor} errorMessage={errors.kode_vendor}>
-                                <Input value={form.kode_vendor ?? ''} invalid={!!errors.kode_vendor} onChange={(e) => setForm(p => ({ ...p, kode_vendor: e.target.value }))} />
+                            <FormItem label="Kode Vendor">
+                                <Input value={form.kode_vendor ?? ''} disabled />
                             </FormItem>
                             <FormItem label="Nama Vendor" asterisk invalid={!!errors.nama_vendor} errorMessage={errors.nama_vendor}>
                                 <Input value={form.nama_vendor ?? ''} invalid={!!errors.nama_vendor} onChange={(e) => setForm(p => ({ ...p, nama_vendor: e.target.value }))} />

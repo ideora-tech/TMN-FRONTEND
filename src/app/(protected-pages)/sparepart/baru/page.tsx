@@ -9,6 +9,7 @@ import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { sparepartService, SATUAN_SPAREPART_OPTIONS, SatuanSparepart } from '@/services/sparepart.service'
 import { kategoriSparepartService, KategoriSparepart } from '@/services/kategoriSparepart.service'
+import { PilihFotoSparepart } from '../FotoSparepart'
 
 type SatuanOption = { value: SatuanSparepart; label: string }
 
@@ -18,10 +19,11 @@ const tahunValid = (t: string) => /^\d{4}$/.test(t) && Number(t) >= 1900 && Numb
 export default function SparepartBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        kode: '', nama: '', serial_number: '', merek: '', tahun: '',
+        nama: '', serial_number: '', merek: '', tahun: '',
         id_kategori_sparepart: '', satuan: 'pcs' as SatuanSparepart, harga_standar: '',
     })
     const [kategoriOptions, setKategoriOptions] = useState<{ value: string; label: string }[]>([])
+    const [foto, setFoto] = useState<File[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -33,7 +35,6 @@ export default function SparepartBaruPage() {
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.kode.trim()) e.kode = 'Kode wajib diisi'
         if (!form.nama.trim()) e.nama = 'Nama wajib diisi'
         if (!form.serial_number.trim()) e.serial_number = 'Serial number wajib diisi'
         if (form.tahun && !tahunValid(form.tahun)) e.tahun = 'Tahun tidak valid'
@@ -49,8 +50,7 @@ export default function SparepartBaruPage() {
         }
         setLoading(true)
         try {
-            await sparepartService.create({
-                kode: form.kode,
+            const baru = await sparepartService.create({
                 nama: form.nama,
                 serial_number: form.serial_number.trim(),
                 merek: form.merek.trim() || null,
@@ -59,6 +59,15 @@ export default function SparepartBaruPage() {
                 satuan: form.satuan || 'pcs',
                 harga_standar: form.harga_standar ? Number(form.harga_standar) : 0,
             })
+            if (foto.length > 0) {
+                try {
+                    await sparepartService.uploadFoto(baru.id_sparepart, foto)
+                } catch (err) {
+                    toast.push(<Notification type="warning" title={`Spare part tersimpan, tetapi foto gagal diunggah: ${parseApiError(err)}`} />)
+                    router.push(ROUTES.SPAREPART_DETAIL(baru.id_sparepart))
+                    return
+                }
+            }
             toast.push(<Notification type="success" title="Spare part berhasil ditambahkan" />)
             router.push(ROUTES.SPAREPART)
         } catch (err) {
@@ -83,10 +92,6 @@ export default function SparepartBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Kode" asterisk invalid={!!errors.kode} errorMessage={errors.kode}>
-                        <Input placeholder="Kode unik" value={form.kode} invalid={!!errors.kode}
-                            onChange={e => setForm(p => ({ ...p, kode: e.target.value.toUpperCase() }))} />
-                    </FormItem>
                     <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
                         <Input placeholder="Nama spare part" value={form.nama} invalid={!!errors.nama}
                             onChange={e => setForm(p => ({ ...p, nama: e.target.value }))} />
@@ -122,6 +127,7 @@ export default function SparepartBaruPage() {
                             onChange={e => setForm(p => ({ ...p, harga_standar: e.target.value.replace(/\D/g, '') }))} />
                     </FormItem>
                 </div>
+                <PilihFotoSparepart files={foto} onChange={setFoto} />
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>

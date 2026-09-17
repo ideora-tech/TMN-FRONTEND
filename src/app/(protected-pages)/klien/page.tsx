@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
+import type { ColumnDef, CellContext, OnSortParam } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { klienService, Klien } from '@/services/klien.service'
@@ -32,12 +32,14 @@ export default function KlienPage() {
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
 
+    const [urutan, setUrutan] = useState<{ urut: string; arah: string }>({ urut: '', arah: '' })
+
     const [deleteTarget, setDeleteTarget] = useState<Klien | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await klienService.list(currentPage, pageSize, search, aktifFilter)
+            const res = await klienService.list(currentPage, pageSize, search, aktifFilter, urutan.urut, urutan.arah)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -45,7 +47,12 @@ export default function KlienPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, aktifFilter])
+    }, [currentPage, pageSize, search, aktifFilter, urutan])
+
+    const handleSort = ({ key, order }: OnSortParam) => {
+        setUrutan(order ? { urut: String(key), arah: order } : { urut: '', arah: '' })
+        setCurrentPage(1)
+    }
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -194,6 +201,7 @@ export default function KlienPage() {
                     pagingData={{ total, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
+                    onSort={handleSort}
                 />
             </Card>
 

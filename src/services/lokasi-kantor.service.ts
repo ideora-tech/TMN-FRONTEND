@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface LokasiKantor {
     id_lokasi: string
     id_perusahaan: string
-    kode_lokasi: string
+    kode_lokasi?: string
     nama_lokasi: string
     alamat: string | null
     kota: string | null

@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 export interface JenisKendaraan {
     id_jenis_kendaraan: string
     id_perusahaan: string
-    kode_jenis: string
+    kode_jenis?: string
     nama_jenis: string
     kapasitas_muatan: number | null
     aktif: boolean

@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 
 export interface Klien {
     id_klien: string
-    kode_klien: string
+    kode_klien?: string
     nama_klien: string
     email?: string
     telepon?: string
@@ -22,8 +22,10 @@ export interface KlienProyek {
 }
 
 export const klienService = {
-    async list(page = 1, limit = 15, search?: string, aktif?: string) {
-        const { data } = await axios.get(API_ENDPOINTS.KLIEN, { params: { page, limit, search: search || undefined, aktif: aktif || undefined } })
+    async list(page = 1, limit = 15, search?: string, aktif?: string, urut?: string, arah?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.KLIEN, {
+            params: { page, limit, search: search || undefined, aktif: aktif || undefined, urut: urut || undefined, arah: arah || undefined },
+        })
         return data as { data: Klien[]; meta: { page: number; total: number; totalPages: number; limit: number } }
     },
     async get(id: string) {
