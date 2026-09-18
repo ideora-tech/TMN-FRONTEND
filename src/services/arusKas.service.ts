@@ -217,9 +217,13 @@ export const arusKasService = {
         URL.revokeObjectURL(href)
     },
 
-    async listPengajuan(status?: StatusPengajuan) {
+    async listPengajuan(status?: StatusPengajuan, opsi: { search?: string; kategori?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PENGAJUAN, {
-            params: { status: status || undefined },
+            params: {
+                status: status || undefined,
+                search: opsi.search || undefined,
+                kategori: opsi.kategori || undefined,
+            },
         })
         return data.data as PengajuanPengeluaran[]
     },

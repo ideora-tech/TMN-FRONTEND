@@ -40,30 +40,24 @@ export default function ProsesPembayaranPage() {
     const [list, setList]           = useState<PengajuanPengeluaran[]>([])
     const [loading, setLoading]     = useState(false)
     const [kategoriFilter, setKategoriFilter] = useState('')
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]       = useState('')
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const data = await arusKasService.listPengajuan()
+            const data = await arusKasService.listPengajuan(undefined, { search, kategori: kategoriFilter })
             setList(data)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [search, kategoriFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const filteredList = useMemo(() => {
-        const q = search.trim().toLowerCase()
-        return list.filter(p => {
-            if (kategoriFilter && p.kategori !== kategoriFilter) return false
-            if (q && !p.nomor_pengajuan.toLowerCase().includes(q) && !p.penerima.toLowerCase().includes(q)) return false
-            return true
-        })
-    }, [list, kategoriFilter, search])
+    const filteredList = list
 
     const menunggu     = useMemo(() => filteredList.filter(p => p.status === 'diajukan' || p.status === 'menunggu_approval'), [filteredList])
     const verifikasi   = useMemo(() => filteredList.filter(p => p.status === 'disetujui' || p.status === 'dicek'), [filteredList])
@@ -179,12 +173,14 @@ export default function ProsesPembayaranPage() {
                             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
                                 <Input
                                     className="flex-1 min-w-60"
-                                    placeholder="Cari nomor pengajuan atau penerima..."
-                                    suffix={search
-                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setSearch('')} />
+                                    placeholder="Cari nomor pengajuan atau penerima — tekan Enter"
+                                    suffix={searchInput
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600"
+                                            onClick={() => { setSearchInput(''); setSearch('') }} />
                                         : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
+                                    value={searchInput}
+                                    onChange={e => setSearchInput(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') setSearch(searchInput) }}
                                 />
                                 <div className="w-full sm:w-56 shrink-0">
                                     <Select
