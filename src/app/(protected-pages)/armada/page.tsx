@@ -1,8 +1,15 @@
-﻿'use client'
+'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification, Dialog, Upload } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineUpload } from 'react-icons/hi'
+import {
+    PiTruckDuotone,
+    PiCheckCircleDuotone,
+    PiCalendarCheckDuotone,
+    PiSteeringWheelDuotone,
+    PiWrenchDuotone,
+} from 'react-icons/pi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
@@ -12,6 +19,8 @@ import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaService, Armada, ArmadaServisJatuhTempo } from '@/services/armada.service'
+import { ketersediaanVendorService, type RingkasanKetersediaan, type UnitKetersediaan } from '@/services/ketersediaanVendor.service'
+import { SUMBER_UNIT, STATUS_KETERSEDIAAN, formatTanggal, keteranganStatus, tagDokumen } from '../ketersediaan-vendor/ketersediaanVendor.shared'
 import axios from 'axios'
 
 type StatusOption = { value: string; label: string }
@@ -38,6 +47,14 @@ const STATUS_TAG: Record<string, string> = {
     tidak_aktif: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
 }
 
+const KARTU_KETERSEDIAAN = [
+    { key: 'total' as const,     label: 'Semua Unit',      icon: <PiTruckDuotone className="text-3xl text-blue-500" />,           bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400' },
+    { key: 'tersedia' as const,  label: 'Tersedia',        icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,  bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+    { key: 'terjadwal' as const, label: 'Terjadwal',       icon: <PiCalendarCheckDuotone className="text-3xl text-amber-500" />,  bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400' },
+    { key: 'dipakai' as const,   label: 'Sedang Dipakai',  icon: <PiSteeringWheelDuotone className="text-3xl text-violet-500" />, bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400' },
+    { key: 'perawatan' as const, label: 'Dalam Perawatan', icon: <PiWrenchDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400' },
+]
+
 type ImportGagal = { baris: number; nopol: string; alasan: string }
 type ImportResult = { berhasil: number; gagal: ImportGagal[] }
 
@@ -48,6 +65,9 @@ export default function ArmadaPage() {
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [servisJatuhTempo, setServisJatuhTempo] = useState<ArmadaServisJatuhTempo[]>([])
+
+    const [ketersediaanRingkasan, setKetersediaanRingkasan] = useState<RingkasanKetersediaan | null>(null)
+    const [ketersediaanMap, setKetersediaanMap] = useState<Record<string, UnitKetersediaan>>({})
 
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
@@ -81,6 +101,20 @@ export default function ArmadaPage() {
         armadaService.servisJatuhTempo().then(setServisJatuhTempo).catch(() => {})
     }, [])
 
+    const fetchKetersediaan = useCallback(() => {
+        ketersediaanVendorService.list({ sumber: 'aset', limit: 500 })
+            .then(res => {
+                setKetersediaanRingkasan(res.meta.ringkasan)
+                setKetersediaanMap(Object.fromEntries(res.data.map(u => [u.id_unit, u])))
+            })
+            .catch(() => {
+                setKetersediaanRingkasan(null)
+                setKetersediaanMap({})
+            })
+    }, [])
+
+    useEffect(() => { fetchKetersediaan() }, [fetchKetersediaan])
+
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
@@ -92,6 +126,7 @@ export default function ArmadaPage() {
             toast.push(<Notification type="success" title="Armada berhasil dihapus" />)
             setDeleteTarget(null)
             fetchData()
+            fetchKetersediaan()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
             setDeleteTarget(null)
@@ -164,8 +199,10 @@ export default function ArmadaPage() {
     const handleCloseImportResult = () => {
         const berhasil = importResult?.berhasil ?? 0
         setImportResult(null)
-        if (berhasil > 0) fetchData()
+        if (berhasil > 0) { fetchData(); fetchKetersediaan() }
     }
+
+    const adaKetersediaan = ketersediaanRingkasan !== null
 
     const columns: ColumnDef<Armada>[] = [
         {
@@ -199,19 +236,55 @@ export default function ArmadaPage() {
                 row.original.nama_jenis ?? <span className="text-gray-300">—</span>,
         },
         { header: 'Tahun', accessorKey: 'tahun', size: 90 },
+        ...(adaKetersediaan ? [{
+            header: 'Kepemilikan', id: 'kepemilikan', size: 120,
+            cell: () => <Tag className={`text-xs font-semibold ${SUMBER_UNIT.aset.tag}`}>{SUMBER_UNIT.aset.label}</Tag>,
+        } as ColumnDef<Armada>] : []),
         {
-            header: 'Status', accessorKey: 'status', size: 150,
-            cell: ({ row }: CellContext<Armada, unknown>) => (
-                <div>
-                    <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                        {STATUS_LABEL[row.original.status] ?? row.original.status}
-                    </Tag>
-                    {(row.original.jumlah_penugasan_aktif ?? 0) > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">{row.original.jumlah_penugasan_aktif} penugasan aktif</p>
-                    )}
-                </div>
-            ),
+            header: 'Status', accessorKey: 'status', size: 170,
+            cell: ({ row }: CellContext<Armada, unknown>) => {
+                const kv = ketersediaanMap[row.original.id_armada]
+                if (kv) {
+                    const status = STATUS_KETERSEDIAAN[kv.status_ketersediaan]
+                    const ket = keteranganStatus(kv)
+                    return (
+                        <div>
+                            <Tag className={`text-xs font-semibold ${status.tag}`}>{status.label}</Tag>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{ket.utama}</p>
+                            {ket.tambahan && <p className="text-xs text-gray-400 mt-0.5">{ket.tambahan}</p>}
+                        </div>
+                    )
+                }
+                return (
+                    <div>
+                        <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
+                            {STATUS_LABEL[row.original.status] ?? row.original.status}
+                        </Tag>
+                        {(row.original.jumlah_penugasan_aktif ?? 0) > 0 && (
+                            <p className="text-xs text-gray-400 mt-1">{row.original.jumlah_penugasan_aktif} penugasan aktif</p>
+                        )}
+                    </div>
+                )
+            },
         },
+        ...(adaKetersediaan ? [{
+            header: 'Riwayat Pemakaian', id: 'riwayat', size: 220,
+            cell: ({ row }: CellContext<Armada, unknown>) => {
+                const kv = ketersediaanMap[row.original.id_armada]
+                if (!kv) return <span className="text-gray-300">—</span>
+                if (kv.jumlah_proyek === 0) return <p className="text-xs text-gray-400">Belum pernah dipakai di proyek</p>
+                return (
+                    <div>
+                        <p className="text-xs font-medium">{formatNum(kv.jumlah_proyek)} proyek · {formatNum(kv.hari_pakai)} hari</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            Terakhir {formatTanggal(kv.terakhir_dipakai)}
+                            {kv.proyek_terakhir?.nama_proyek && ` · ${kv.proyek_terakhir.nama_proyek}`}
+                        </p>
+                        {kv.proyek_terakhir?.nama_klien && <p className="text-xs text-gray-400">{kv.proyek_terakhir.nama_klien}</p>}
+                    </div>
+                )
+            },
+        } as ColumnDef<Armada>] : []),
         {
             header: 'Servis',
             id: 'servis',
@@ -246,6 +319,21 @@ export default function ArmadaPage() {
                 )
             },
         },
+        ...(adaKetersediaan ? [{
+            header: 'Dokumen', id: 'dokumen', size: 140,
+            cell: ({ row }: CellContext<Armada, unknown>) => {
+                const kv = ketersediaanMap[row.original.id_armada]
+                if (!kv) return <span className="text-gray-300">—</span>
+                const stnk = tagDokumen('STNK', kv.masa_berlaku_stnk)
+                const kir = tagDokumen('KIR', kv.masa_berlaku_kir)
+                return (
+                    <div className="flex flex-col items-start gap-1">
+                        <Tag className={`text-xs font-semibold whitespace-nowrap ${stnk.className}`}>{stnk.label}</Tag>
+                        <Tag className={`text-xs font-semibold whitespace-nowrap ${kir.className}`}>{kir.label}</Tag>
+                    </div>
+                )
+            },
+        } as ColumnDef<Armada>] : []),
         {
             header: '', id: 'action', size: 100,
             cell: ({ row }: CellContext<Armada, unknown>) => (
@@ -303,6 +391,25 @@ export default function ArmadaPage() {
                     </Button>
                 </div>
             </div>
+
+            {adaKetersediaan && (
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    {KARTU_KETERSEDIAAN.map(k => (
+                        <Card key={k.key} className={k.bg}>
+                            <div className="flex flex-col gap-2">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.bg}`}>
+                                    {k.icon}
+                                </div>
+                                <div className={`font-bold text-2xl ${k.text}`}>
+                                    {formatNum(ketersediaanRingkasan[k.key])}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{k.label} · unit aktif</div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
