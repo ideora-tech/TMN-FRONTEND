@@ -22,7 +22,7 @@ const Dialog = (props: DialogProps) => {
         children,
         className,
         closable = true,
-        closeTimeoutMS = 150,
+        closeTimeoutMS = 250,
         contentClassName,
         height,
         isOpen,
@@ -94,8 +94,8 @@ const Dialog = (props: DialogProps) => {
         >
             <motion.div
                 className={dialogClass}
-                initial={{ scale: 0.9 }}
-                animate={{ scale: isOpen ? 1 : 0.9 }}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: isOpen ? 1 : 0.9, opacity: isOpen ? 1 : 0 }}
                 transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
             >
                 {closable && renderCloseButton}

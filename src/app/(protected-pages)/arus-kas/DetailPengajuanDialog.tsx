@@ -1,8 +1,8 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
-import { Dialog, Tag, Button, Input, toast, Notification } from '@/components/ui'
+import { Drawer, Tag, Button, Input, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { HiOutlineDocumentText, HiOutlineExternalLink } from 'react-icons/hi'
 import { formatRupiah } from '@/utils/formatNumber'
@@ -16,6 +16,7 @@ import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG } from './peng
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
+const LEBAR_DRAWER_DETAIL = 640
 
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
 
@@ -89,6 +90,14 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
     const [catatanTolak, setCatatanTolak] = useState('')
     const [errCatatanTolak, setErrCatatanTolak] = useState('')
     const [memproses, setMemproses] = useState(false)
+    const [lebarDrawer, setLebarDrawer] = useState(LEBAR_DRAWER_DETAIL)
+
+    useEffect(() => {
+        const sesuaikan = () => setLebarDrawer(Math.min(LEBAR_DRAWER_DETAIL, window.innerWidth))
+        sesuaikan()
+        window.addEventListener('resize', sesuaikan)
+        return () => window.removeEventListener('resize', sesuaikan)
+    }, [])
 
     const tutupAksiApproval = () => {
         setApproveOpen(false)
@@ -143,11 +152,21 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
 
     return (
         <>
-        <Dialog isOpen={!!p} onRequestClose={onClose} onClose={onClose} width={640}>
-            <h5 className="text-base font-semibold mb-1">Detail Pengajuan</h5>
-            <p className="text-xs font-mono text-gray-400 mb-4">{p?.nomor_pengajuan}</p>
+        <Drawer
+            isOpen={!!p}
+            width={lebarDrawer}
+            onClose={onClose}
+            onRequestClose={onClose}
+            bodyClass="p-0"
+            title={
+                <div className="flex flex-col">
+                    <span className="font-semibold text-base">Detail Pengajuan</span>
+                    <span className="text-xs text-gray-500 font-mono">{p?.nomor_pengajuan ?? '—'}</span>
+                </div>
+            }
+        >
             {p && (
-                <div className="max-h-[65vh] overflow-y-auto pr-1">
+                <div className="p-5">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
                             <p className={LABEL_CLASS}>Kategori</p>
@@ -219,20 +238,21 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                             <p className="text-xs text-gray-400 italic">Belum ada bukti diunggah.</p>
                         )}
                     </div>
+
+                    {p.bisa_approve && !readOnly && (
+                        <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
+                                onClick={bukaTolak}>
+                                Tolak
+                            </Button>
+                            <Button size="sm" variant="solid" loading={memproses} onClick={bukaApprove}>
+                                Approve
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
-            {p && p.bisa_approve && !readOnly && (
-                <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button size="sm" variant="solid" className="bg-red-600 hover:bg-red-700" loading={memproses}
-                        onClick={bukaTolak}>
-                        Tolak
-                    </Button>
-                    <Button size="sm" variant="solid" loading={memproses} onClick={bukaApprove}>
-                        Approve
-                    </Button>
-                </div>
-            )}
-        </Dialog>
+        </Drawer>
 
         <ConfirmDialog
             isOpen={approveOpen}

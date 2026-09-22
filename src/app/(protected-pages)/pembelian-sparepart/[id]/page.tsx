@@ -106,7 +106,9 @@ export default function PembelianDetailPage() {
     if (!data) return null
 
     const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
-    const bolehUploadBukti = bolehKelola && (data.status === 'disetujui_finance' || data.status === 'dibeli')
+    const bolehEksekusiPengadaan = bolehKelola || punyaPeran('pengadaan')
+    const bolehUploadBukti = bolehEksekusiPengadaan && (data.status === 'disetujui_finance' || data.status === 'dibeli')
+    const bolehRealisasi = bolehEksekusiPengadaan && (!data.wajib_pengadaan || punyaPeran('pengadaan', 'superadmin'))
 
     return (
         <div className="flex flex-col gap-4">
@@ -122,6 +124,11 @@ export default function PembelianDetailPage() {
                             <Tag className={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}>
                                 {STATUS_LABEL[data.status] ?? data.status}
                             </Tag>
+                            {data.wajib_pengadaan && (
+                                <Tag className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+                                    Wajib Pengadaan
+                                </Tag>
+                            )}
                         </div>
                         <p className="text-gray-500 text-sm mt-0.5">
                             Diajukan {dayjs(data.tanggal_pengajuan).format('DD MMM YYYY')} · {data.nama_supplier ?? '—'}
@@ -154,7 +161,7 @@ export default function PembelianDetailPage() {
                             </Tooltip>
                         </>
                     )}
-                    {(data.status === 'disetujui_finance' || data.status === 'dibeli') && bolehKelola && (
+                    {bolehUploadBukti && (
                         <Upload accept=".jpg,.jpeg,.png,.webp,.pdf" showList={false} multiple disabled={submitting}
                             onChange={(semua, sebelumnya) => handleUpload(semua.slice(sebelumnya.length))}>
                             <Tooltip title="Upload Nota">
@@ -162,7 +169,7 @@ export default function PembelianDetailPage() {
                             </Tooltip>
                         </Upload>
                     )}
-                    {data.status === 'disetujui_finance' && bolehKelola && (
+                    {data.status === 'disetujui_finance' && bolehRealisasi && (
                         <Tooltip title="Realisasi">
                             <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi} />
                         </Tooltip>

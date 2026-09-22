@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button, toast, Notification } from '@/components/ui'
 import { HiPlusCircle } from 'react-icons/hi'
@@ -36,14 +36,16 @@ export default function PerawatanArmadaPage() {
     const [initialDetail, setInitialDetail] = useState<PerawatanArmadaWithArmada | null>(null)
     const [jumlah, setJumlah] = useState<{ berjalan: number | null; riwayat: number | null }>({ berjalan: null, riwayat: null })
 
-    useEffect(() => {
+    const fetchJumlah = useCallback(() => {
         Promise.all([
             perawatanArmadaService.listAll({ page: 1, limit: 1, status: 'terjadwal,dalam_proses' }),
             perawatanArmadaService.listAll({ page: 1, limit: 1, status: 'selesai,dibatalkan' }),
         ])
             .then(([berjalan, riwayat]) => setJumlah({ berjalan: berjalan.meta.total, riwayat: riwayat.meta.total }))
             .catch(() => {})
-    }, [activeTab])
+    }, [])
+
+    useEffect(() => { fetchJumlah() }, [activeTab, fetchJumlah])
 
     useEffect(() => {
         if (!detailParam || !armadaParam) return
@@ -57,6 +59,11 @@ export default function PerawatanArmadaPage() {
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [detailParam, armadaParam])
+
+    const handleInitialDetailShown = useCallback(() => {
+        setInitialDetail(null)
+        router.replace(`${ROUTES.PERAWATAN_ARMADA}?tab=${activeTab}`)
+    }, [router, activeTab])
 
 
     return (
@@ -83,8 +90,8 @@ export default function PerawatanArmadaPage() {
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="armada"><PapanUnitTab onGoToInterval={() => setActiveTab('interval')} /></Tabs.TabContent>
-                    <Tabs.TabContent value="berjalan"><PerawatanArmadaTab mode="aktif" initialDetail={initialDetail && initialDetail.status !== 'selesai' && initialDetail.status !== 'dibatalkan' ? initialDetail : null} /></Tabs.TabContent>
-                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" initialDetail={initialDetail && (initialDetail.status === 'selesai' || initialDetail.status === 'dibatalkan') ? initialDetail : null} /></Tabs.TabContent>
+                    <Tabs.TabContent value="berjalan"><PerawatanArmadaTab mode="aktif" initialDetail={initialDetail && initialDetail.status !== 'selesai' && initialDetail.status !== 'dibatalkan' ? initialDetail : null} onDataBerubah={fetchJumlah} onInitialDetailShown={handleInitialDetailShown} /></Tabs.TabContent>
+                    <Tabs.TabContent value="riwayat"><PerawatanArmadaTab mode="riwayat" initialDetail={initialDetail && (initialDetail.status === 'selesai' || initialDetail.status === 'dibatalkan') ? initialDetail : null} onDataBerubah={fetchJumlah} onInitialDetailShown={handleInitialDetailShown} /></Tabs.TabContent>
                     <Tabs.TabContent value="interval"><IntervalPerawatanTab /></Tabs.TabContent>
                     <Tabs.TabContent value="laporan"><LaporanPerUnitTab /></Tabs.TabContent>
                 </div>

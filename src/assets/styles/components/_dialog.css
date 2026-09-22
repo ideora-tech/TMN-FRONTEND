@@ -9,7 +9,7 @@
   }
   
   .dialog-overlay {
-    transition: all 0.15s ease-in-out;
+    transition: all 0.25s ease-in-out;
     @apply inset-0 fixed z-40 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain;
   }
 

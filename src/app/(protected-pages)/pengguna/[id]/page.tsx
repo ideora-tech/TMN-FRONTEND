@@ -3,6 +3,7 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Dialog, toast, Notification, Tooltip } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import PasswordInput from '@/components/shared/PasswordInput'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineLockClosed } from 'react-icons/hi'
 import axios from 'axios'
 import dayjs from 'dayjs'
@@ -272,12 +273,12 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                     <form onSubmit={e => { e.preventDefault(); handleChangePassword() }}>
                     <div className="flex flex-col gap-4">
                         <FormItem label="Kata Sandi Baru" asterisk invalid={!!pwErrors.kata_sandi_baru} errorMessage={pwErrors.kata_sandi_baru}>
-                            <Input type="password" placeholder="Min. 8 karakter" value={pwForm.kata_sandi_baru}
+                            <PasswordInput placeholder="Min. 8 karakter" value={pwForm.kata_sandi_baru}
                                 invalid={!!pwErrors.kata_sandi_baru}
                                 onChange={e => setPwForm(p => ({ ...p, kata_sandi_baru: e.target.value }))} />
                         </FormItem>
                         <FormItem label="Konfirmasi Kata Sandi" asterisk invalid={!!pwErrors.konfirmasi} errorMessage={pwErrors.konfirmasi}>
-                            <Input type="password" placeholder="Ulangi kata sandi baru" value={pwForm.konfirmasi}
+                            <PasswordInput placeholder="Ulangi kata sandi baru" value={pwForm.konfirmasi}
                                 invalid={!!pwErrors.konfirmasi}
                                 onChange={e => setPwForm(p => ({ ...p, konfirmasi: e.target.value }))} />
                         </FormItem>

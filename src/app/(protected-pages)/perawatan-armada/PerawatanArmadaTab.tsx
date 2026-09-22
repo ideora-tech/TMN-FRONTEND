@@ -2,7 +2,7 @@
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { Fragment, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, Dialog, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
+import { Button, Card, Drawer, Dropdown, Input, Tag, Tooltip, toast, Notification, Switcher, DatePicker, Pagination, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
@@ -56,6 +56,7 @@ const PAGE_SIZE_OPTIONS = [
 const TH_CLASS = 'py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
 const JAM_TANDA_BARU = 24
+const LEBAR_DRAWER_DETAIL = 640
 
 const baruDiinput = (dibuatPada?: string | null) =>
     !!dibuatPada && dayjs().diff(dayjs(dibuatPada), 'hour') < JAM_TANDA_BARU
@@ -68,7 +69,7 @@ function getServisBadge(tanggal: string | null): { label: string; className: str
     return null
 }
 
-export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { mode?: 'aktif' | 'riwayat'; initialDetail?: PerawatanArmadaWithArmada | null }) {
+export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail, onDataBerubah, onInitialDetailShown }: { mode?: 'aktif' | 'riwayat'; initialDetail?: PerawatanArmadaWithArmada | null; onDataBerubah?: () => void; onInitialDetailShown?: () => void }) {
     const { klik } = usePratinjauBerkas()
     const router = useRouter()
     const [list, setList]       = useState<PerawatanArmadaWithArmada[]>([])
@@ -91,6 +92,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
     const [detailData, setDetailData]     = useState<PerawatanArmada | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
     const [downloadingPdf, setDownloadingPdf] = useState(false)
+    const [lebarDrawer, setLebarDrawer]   = useState(LEBAR_DRAWER_DETAIL)
     const [logOpen, setLogOpen]         = useState(false)
     const [logInfo, setLogInfo]         = useState<PengajuanKeuanganInfo | null>(null)
     const [logLoading, setLogLoading]   = useState(false)
@@ -131,8 +133,16 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
         if (initialDetail) {
             setDetailTarget(initialDetail)
             setDetailData(initialDetail)
+            onInitialDetailShown?.()
         }
-    }, [initialDetail])
+    }, [initialDetail, onInitialDetailShown])
+
+    useEffect(() => {
+        const sesuaikan = () => setLebarDrawer(Math.min(LEBAR_DRAWER_DETAIL, window.innerWidth))
+        sesuaikan()
+        window.addEventListener('resize', sesuaikan)
+        return () => window.removeEventListener('resize', sesuaikan)
+    }, [])
     const [deleting, setDeleting]         = useState(false)
     const [alasanHapus, setAlasanHapus]   = useState('')
 
@@ -184,6 +194,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             setDeleteTarget(null)
             setAlasanHapus('')
             fetchData()
+            onDataBerubah?.()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
             setDeleteTarget(null)
@@ -200,6 +211,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             const label = STATUS_UBAH.find(s => s.value === status)?.label ?? status
             toast.push(<Notification type="success" title={`Status diubah ke ${label}`} />)
             fetchData()
+            onDataBerubah?.()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -216,6 +228,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
             setBatalTarget(null)
             setAlasanBatal('')
             fetchData()
+            onDataBerubah?.()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -517,20 +530,31 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                 </div>
             </Card>
 
-            <Dialog isOpen={!!detailTarget} onRequestClose={() => setDetailTarget(null)} onClose={() => setDetailTarget(null)} width={640}>
-                <div className="flex items-start justify-between gap-3 pr-8 mb-4">
-                    <div>
-                        <h5 className="text-base font-semibold mb-1">Detail Perawatan</h5>
-                        <p className="text-xs text-gray-400">{detailTarget?.armada_nopol ?? '—'}{detailTarget?.armada_merk ? ` · ${detailTarget.armada_merk}` : ''}</p>
+            <Drawer
+                isOpen={!!detailTarget}
+                width={lebarDrawer}
+                onClose={() => setDetailTarget(null)}
+                onRequestClose={() => setDetailTarget(null)}
+                bodyClass="p-0"
+                title={
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-base">Detail Perawatan</span>
+                        <span className="text-xs text-gray-500 font-normal">{detailTarget?.armada_nopol ?? '—'}{detailTarget?.armada_merk ? ` · ${detailTarget.armada_merk}` : ''}</span>
                     </div>
-                    <Tooltip title="Export PDF">
-                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} disabled={detailLoading} onClick={handleUnduhPdf} />
-                    </Tooltip>
-                </div>
-                {detailLoading ? (
-                    <div className="flex justify-center py-8"><Spinner size={28} /></div>
-                ) : (
-                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                }
+            >
+                <div className="p-5">
+                    <div className="flex justify-end mb-4">
+                        <Tooltip title="Export PDF">
+                            <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} disabled={detailLoading} onClick={handleUnduhPdf}>
+                                Export PDF
+                            </Button>
+                        </Tooltip>
+                    </div>
+                    {detailLoading ? (
+                        <div className="py-16 text-center"><Spinner className="inline-block" size={32} /></div>
+                    ) : (
+                        <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
                             <div>
                                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Tanggal</p>
@@ -640,14 +664,16 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail }: { 
                             </div>
                         )}
 
-                    </div>
-                )}
-            </Dialog>
+                        </>
+                    )}
+                </div>
+            </Drawer>
 
             <LogAktivitasKeuanganDialog
                 isOpen={logOpen}
                 info={logInfo}
                 loading={logLoading}
+                judul="Log Aktivitas — Approval Biaya Perawatan"
                 emptyMessage="Belum ada pengajuan keuangan untuk perawatan ini."
                 onClose={() => setLogOpen(false)}
             />

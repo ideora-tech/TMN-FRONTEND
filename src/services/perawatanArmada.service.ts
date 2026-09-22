@@ -173,8 +173,10 @@ export interface PapanUnitJatuhTempo {
 export interface PapanUnitRow {
     id_armada: string
     nopol: string
+    merk: string | null
     nama_jenis_kendaraan: string | null
     status_armada: string
+    km_odometer_terakhir: number | null
     servis_terakhir: PapanUnitServisTerakhir | null
     jumlah_interval: number
     jatuh_tempo: PapanUnitJatuhTempo[]

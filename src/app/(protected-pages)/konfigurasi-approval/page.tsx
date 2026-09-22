@@ -49,6 +49,9 @@ export default function KonfigurasiApprovalPage() {
     const [loadingBatas, setLoadingBatas] = useState(false)
     const [savingBatas, setSavingBatas] = useState(false)
 
+    const [batasPengadaanInput, setBatasPengadaanInput] = useState('500000')
+    const [savingBatasPengadaan, setSavingBatasPengadaan] = useState(false)
+
     const [jabatanOptions, setJabatanOptions] = useState<Opsi[]>([])
     const [penggunaOptions, setPenggunaOptions] = useState<Opsi[]>([])
 
@@ -79,6 +82,7 @@ export default function KonfigurasiApprovalPage() {
             const pengaturan = await approvalKeuanganService.getPengaturan()
             setBatasInput(String(pengaturan.batas))
             setWajibManual(pengaturan.wajib_approval_manual ?? false)
+            setBatasPengadaanInput(String(pengaturan.batas_realisasi_mandiri ?? 500000))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -225,6 +229,19 @@ export default function KonfigurasiApprovalPage() {
         }
     }
 
+    const handleSimpanBatasPengadaan = async () => {
+        setSavingBatasPengadaan(true)
+        try {
+            const nilai = Number(batasPengadaanInput) || 0
+            await approvalKeuanganService.setPengaturan(Number(batasInput) || 0, wajibManual, nilai)
+            toast.push(<Notification type="success" title="Batas realisasi mandiri berhasil disimpan" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSavingBatasPengadaan(false)
+        }
+    }
+
     const bukaTambah = () => { setForm(FORM_KOSONG); setErrors({}); setFormOpen(true) }
 
     const validate = () => {
@@ -326,7 +343,7 @@ export default function KonfigurasiApprovalPage() {
             <Card header={{ content: 'Jenis Pengajuan' }}>
                 <div className="flex flex-wrap items-end gap-3">
                     <div className="w-full sm:w-72">
-                        <Select isSearchable={false}
+                        <Select isSearchable
                             options={eventTypes.map(e => ({ value: e.id_event_type, label: labelEventType(e) }))}
                             value={eventTypeTerpilih ? { value: eventTypeTerpilih.id_event_type, label: labelEventType(eventTypeTerpilih) } : null}
                             onChange={opt => {
@@ -384,6 +401,23 @@ export default function KonfigurasiApprovalPage() {
                             </p>
                         </div>
                     </div>
+                </form>
+            </Card>
+
+            <Card header={{ content: 'Batas Realisasi Mandiri (Pengadaan)' }}>
+                <form onSubmit={e => { e.preventDefault(); handleSimpanBatasPengadaan() }}>
+                    <div className="flex flex-wrap items-end gap-3">
+                        <FormItem label="Batas Nominal" className="mb-0 w-full sm:w-64"
+                            extra={<span className="text-xs text-gray-400">Sampai nilai ini, pembelian sparepart boleh direalisasi sendiri tanpa tim Pengadaan</span>}>
+                            <Input prefix="Rp" placeholder="500.000" value={batasPengadaanInput ? formatNum(Number(batasPengadaanInput)) : ''}
+                                disabled={loadingBatas}
+                                onChange={e => setBatasPengadaanInput(e.target.value.replace(/\D/g, ''))} />
+                        </FormItem>
+                        <Button type="submit" variant="solid" loading={savingBatasPengadaan} disabled={loadingBatas}>Simpan</Button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">
+                        Di atas nilai ini, realisasi pembelian sparepart (baik dari halaman Pembelian Sparepart maupun yang ditautkan ke Perawatan Armada) wajib diproses oleh role Pengadaan atau Superadmin.
+                    </p>
                 </form>
             </Card>
 

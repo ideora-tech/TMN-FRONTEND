@@ -7,8 +7,23 @@ import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
 import { PiWrenchDuotone, PiScrewdriverDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { perawatanArmadaService, PapanUnitRow, StatusJatuhTempoUnit } from '@/services/perawatanArmada.service'
+
+const STATUS_ARMADA_LABEL: Record<string, string> = {
+    tersedia:    'Tersedia',
+    digunakan:   'Dalam Perjalanan',
+    perawatan:   'Perawatan',
+    tidak_aktif: 'Tidak Aktif',
+}
+
+const STATUS_ARMADA_TAG: Record<string, string> = {
+    tersedia:    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    digunakan:   'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    perawatan:   'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
+    tidak_aktif: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+}
 
 const PAGE_SIZE_OPTIONS = [
     { value: 10, label: '10 / halaman' },
@@ -95,6 +110,8 @@ export default function PapanUnitTab({ onGoToInterval }: { onGoToInterval?: () =
                             <tr className="border-b border-gray-100 dark:border-gray-700">
                                 <th className={`${TH_CLASS} w-12`}>No</th>
                                 <th className={TH_CLASS}>Armada</th>
+                                <th className={TH_CLASS}>Status</th>
+                                <th className={TH_CLASS}>KM Odometer</th>
                                 <th className={TH_CLASS}>Servis Terakhir</th>
                                 <th className={TH_CLASS}>Pemberitahuan</th>
                                 <th className="py-2.5 px-3" />
@@ -103,13 +120,13 @@ export default function PapanUnitTab({ onGoToInterval }: { onGoToInterval?: () =
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-10 text-center">
+                                    <td colSpan={7} className="py-10 text-center">
                                         <Spinner className="inline-block" size={28} />
                                     </td>
                                 </tr>
                             ) : list.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-10 text-center text-gray-400">
+                                    <td colSpan={7} className="py-10 text-center text-gray-400">
                                         Tidak ada data armada
                                     </td>
                                 </tr>
@@ -123,7 +140,17 @@ export default function PapanUnitTab({ onGoToInterval }: { onGoToInterval?: () =
                                             <td className="py-2.5 px-3">{nomorBaris}</td>
                                             <td className="py-2.5 px-3">
                                                 <p className="font-semibold text-gray-800 dark:text-gray-100">{r.nopol}</p>
-                                                <p className="text-xs text-gray-400">{r.nama_jenis_kendaraan ?? '—'}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    {[r.merk, r.nama_jenis_kendaraan].filter(Boolean).join(' · ') || '—'}
+                                                </p>
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                <Tag className={`text-xs font-semibold whitespace-nowrap ${STATUS_ARMADA_TAG[r.status_armada] ?? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'}`}>
+                                                    {STATUS_ARMADA_LABEL[r.status_armada] ?? r.status_armada}
+                                                </Tag>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-sm">
+                                                {r.km_odometer_terakhir !== null ? `${formatNum(r.km_odometer_terakhir)} km` : <span className="text-gray-400">—</span>}
                                             </td>
                                             <td className="py-2.5 px-3">
                                                 {r.servis_terakhir ? (

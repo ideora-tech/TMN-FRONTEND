@@ -55,16 +55,17 @@ type Props = {
     info: PengajuanKeuanganInfo | null | undefined
     loading?: boolean
     emptyMessage?: string
+    judul?: string
 }
 
-export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, loading = false, emptyMessage }: Props) {
+export default function LogAktivitasKeuanganDialog({ isOpen, onClose, info, loading = false, emptyMessage, judul }: Props) {
     const { klik } = usePratinjauBerkas()
     const riwayat = [...(info?.riwayat ?? [])].reverse()
 
     return (
         <Dialog isOpen={isOpen} width={520} closable={false} onRequestClose={onClose} onClose={onClose}>
             <div className="flex items-center justify-between gap-3 mb-1">
-                <h5 className="font-bold">Log Aktivitas</h5>
+                <h5 className="font-bold">{judul ?? 'Log Aktivitas'}</h5>
                 {info && (
                     <Tag className={`${PENGAJUAN_TAG[info.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0 font-semibold`}>
                         {PENGAJUAN_LABEL[info.status] ?? info.status}

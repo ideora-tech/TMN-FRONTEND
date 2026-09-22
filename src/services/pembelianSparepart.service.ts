@@ -45,6 +45,7 @@ export interface PembelianSparepart {
     total_estimasi: number
     total_aktual: number | null
     selisih: number | null
+    wajib_pengadaan?: boolean
     tanggal_pengajuan: string
     tanggal_pembelian: string | null
     tanggal_pembayaran: string | null

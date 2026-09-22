@@ -254,8 +254,8 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr>
-                                        <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48">Menu</th>
-                                        <th className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">
+                                        <th className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48 border-b border-gray-200 dark:border-gray-700">Menu</th>
+                                        <th className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20 border-b border-gray-200 dark:border-gray-700">
                                             <div className="flex flex-col items-center gap-1.5">
                                                 <span>Semua</span>
                                                 <input
@@ -274,7 +274,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                                             </div>
                                         </th>
                                         {AKSI.map(a => (
-                                            <th key={a} className="py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20">
+                                            <th key={a} className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20 border-b border-gray-200 dark:border-gray-700">
                                                 <div className="flex flex-col items-center gap-1.5">
                                                     <span>{a}</span>
                                                     <input

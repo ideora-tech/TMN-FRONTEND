@@ -13,6 +13,7 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { pembelianSparepartService, PembelianSparepart, PengajuanKeuanganInfo } from '@/services/pembelianSparepart.service'
 import { supplierService } from '@/services/supplier.service'
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from './status'
@@ -26,6 +27,10 @@ const STATUS_OPTIONS: Option[] = [
 
 export default function DaftarPembelianTab() {
     const router = useRouter()
+    const { session } = useCurrentSession()
+    const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
+    const punyaPeran = (...roles: string[]) => roles.some(r => authority.includes(r))
+    const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
     const [list, setList]             = useState<PembelianSparepart[]>([])
     const [loading, setLoading]       = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -155,9 +160,16 @@ export default function DaftarPembelianTab() {
         {
             header: 'Status', accessorKey: 'status', size: 150,
             cell: ({ row }) => (
-                <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {STATUS_LABEL[row.original.status] ?? row.original.status}
-                </Tag>
+                <div className="flex flex-col items-start gap-1">
+                    <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
+                        {STATUS_LABEL[row.original.status] ?? row.original.status}
+                    </Tag>
+                    {row.original.wajib_pengadaan && (
+                        <Tag className="text-[10px] px-1.5 py-0 bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+                            Pengadaan
+                        </Tag>
+                    )}
+                </div>
             ),
         },
         {
@@ -180,7 +192,7 @@ export default function DaftarPembelianTab() {
                             <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
-                    {bolehDiubahAtauDihapus(row.original.status, row.original.id_perawatan) && (
+                    {bolehDiubahAtauDihapus(row.original.status, row.original.id_perawatan) && bolehKelola && (
                         <Tooltip title="Hapus">
                             <span
                                 className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"

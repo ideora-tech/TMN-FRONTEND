@@ -337,7 +337,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
             cell: ({ row }) => KATEGORI_LABEL[row.original.kategori] ?? row.original.kategori,
         },
         {
-            header: 'Tanggal', accessorKey: 'tanggal_pengajuan', size: 120,
+            header: 'Tanggal Diajukan', accessorKey: 'tanggal_pengajuan', size: 130,
             cell: ({ row }) => dayjs(row.original.tanggal_pengajuan).format('DD MMM YYYY'),
         },
         { header: 'Penerima', accessorKey: 'penerima', size: 160 },

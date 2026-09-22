@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
+import PasswordInput from '@/components/shared/PasswordInput'
 import { HiArrowLeft } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
@@ -95,7 +96,7 @@ export default function PenggunaBaruPage() {
                             onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Kata Sandi" asterisk invalid={!!errors.kata_sandi} errorMessage={errors.kata_sandi}>
-                        <Input type="password" placeholder="Min. 8 karakter" value={form.kata_sandi} invalid={!!errors.kata_sandi}
+                        <PasswordInput placeholder="Min. 8 karakter" value={form.kata_sandi} invalid={!!errors.kata_sandi}
                             onChange={e => setForm(p => ({ ...p, kata_sandi: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Peran">

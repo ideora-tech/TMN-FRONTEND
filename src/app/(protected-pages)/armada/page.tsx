@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification, Dialog, Upload } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiOutlineUpload } from 'react-icons/hi'
@@ -19,7 +19,7 @@ import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaService, Armada, ArmadaServisJatuhTempo } from '@/services/armada.service'
-import { ketersediaanVendorService, type RingkasanKetersediaan, type UnitKetersediaan } from '@/services/ketersediaanVendor.service'
+import { ketersediaanVendorService, type RingkasanKetersediaan, type StatusKetersediaan, type UnitKetersediaan } from '@/services/ketersediaanVendor.service'
 import { SUMBER_UNIT, STATUS_KETERSEDIAAN, formatTanggal, keteranganStatus, tagDokumen } from '../ketersediaan-vendor/ketersediaanVendor.shared'
 import axios from 'axios'
 
@@ -48,11 +48,11 @@ const STATUS_TAG: Record<string, string> = {
 }
 
 const KARTU_KETERSEDIAAN = [
-    { key: 'total' as const,     label: 'Semua Unit',      icon: <PiTruckDuotone className="text-3xl text-blue-500" />,           bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400' },
-    { key: 'tersedia' as const,  label: 'Tersedia',        icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,  bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
-    { key: 'terjadwal' as const, label: 'Terjadwal',       icon: <PiCalendarCheckDuotone className="text-3xl text-amber-500" />,  bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400' },
-    { key: 'dipakai' as const,   label: 'Sedang Dipakai',  icon: <PiSteeringWheelDuotone className="text-3xl text-violet-500" />, bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400' },
-    { key: 'perawatan' as const, label: 'Dalam Perawatan', icon: <PiWrenchDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400' },
+    { key: 'total' as const,     label: 'Semua Unit',      icon: <PiTruckDuotone className="text-3xl text-blue-500" />,           bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400',       ring: 'ring-blue-400' },
+    { key: 'tersedia' as const,  label: 'Tersedia',        icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,  bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-400' },
+    { key: 'terjadwal' as const, label: 'Terjadwal',       icon: <PiCalendarCheckDuotone className="text-3xl text-amber-500" />,  bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400',     ring: 'ring-amber-400' },
+    { key: 'dipakai' as const,   label: 'Sedang Dipakai',  icon: <PiSteeringWheelDuotone className="text-3xl text-violet-500" />, bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400',   ring: 'ring-violet-400' },
+    { key: 'perawatan' as const, label: 'Dalam Perawatan', icon: <PiWrenchDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400',         ring: 'ring-red-400' },
 ]
 
 type ImportGagal = { baris: number; nopol: string; alasan: string }
@@ -67,7 +67,9 @@ export default function ArmadaPage() {
     const [servisJatuhTempo, setServisJatuhTempo] = useState<ArmadaServisJatuhTempo[]>([])
 
     const [ketersediaanRingkasan, setKetersediaanRingkasan] = useState<RingkasanKetersediaan | null>(null)
+    const [ketersediaanList, setKetersediaanList] = useState<UnitKetersediaan[]>([])
     const [ketersediaanMap, setKetersediaanMap] = useState<Record<string, UnitKetersediaan>>({})
+    const [ketersediaanFilter, setKetersediaanFilter] = useState<StatusKetersediaan | null>(null)
 
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
@@ -101,16 +103,27 @@ export default function ArmadaPage() {
         armadaService.servisJatuhTempo().then(setServisJatuhTempo).catch(() => {})
     }, [])
 
-    const fetchKetersediaan = useCallback(() => {
-        ketersediaanVendorService.list({ sumber: 'aset', limit: 500 })
-            .then(res => {
-                setKetersediaanRingkasan(res.meta.ringkasan)
-                setKetersediaanMap(Object.fromEntries(res.data.map(u => [u.id_unit, u])))
-            })
-            .catch(() => {
-                setKetersediaanRingkasan(null)
-                setKetersediaanMap({})
-            })
+    const fetchKetersediaan = useCallback(async () => {
+        const LIMIT_HALAMAN = 100
+        try {
+            const pertama = await ketersediaanVendorService.list({ sumber: 'aset', limit: LIMIT_HALAMAN, page: 1 })
+            let semuaData = pertama.data
+            if (pertama.meta.totalPages > 1) {
+                const sisaHalaman = await Promise.all(
+                    Array.from({ length: pertama.meta.totalPages - 1 }, (_, i) =>
+                        ketersediaanVendorService.list({ sumber: 'aset', limit: LIMIT_HALAMAN, page: i + 2 }),
+                    ),
+                )
+                semuaData = [...semuaData, ...sisaHalaman.flatMap(r => r.data)]
+            }
+            setKetersediaanRingkasan(pertama.meta.ringkasan)
+            setKetersediaanList(semuaData)
+            setKetersediaanMap(Object.fromEntries(semuaData.map(u => [u.id_unit, u])))
+        } catch {
+            setKetersediaanRingkasan(null)
+            setKetersediaanList([])
+            setKetersediaanMap({})
+        }
     }, [])
 
     useEffect(() => { fetchKetersediaan() }, [fetchKetersediaan])
@@ -203,6 +216,35 @@ export default function ArmadaPage() {
     }
 
     const adaKetersediaan = ketersediaanRingkasan !== null
+    const pakaiKetersediaan = ketersediaanFilter !== null
+
+    const ketersediaanTersaring = useMemo(() => {
+        if (ketersediaanFilter === null) return []
+        const kunci = search.trim().toLowerCase()
+        return ketersediaanList
+            .filter(u => u.status_ketersediaan === ketersediaanFilter)
+            .filter(u => !kunci || [u.nopol, u.merk, u.model, u.nama_jenis_kendaraan]
+                .some(v => v != null && v.toLowerCase().includes(kunci)))
+    }, [ketersediaanFilter, ketersediaanList, search])
+
+    const armadaDariUnit = (u: UnitKetersediaan): Armada => ({
+        id_armada: u.id_unit,
+        nopol: u.nopol,
+        merk: u.merk ?? '-',
+        tahun: u.tahun ?? 0,
+        status: u.status_ketersediaan === 'dipakai' ? 'digunakan' : u.status_ketersediaan === 'perawatan' ? 'perawatan' : 'tersedia',
+        nama_jenis: u.nama_jenis_kendaraan ?? undefined,
+        jumlah_penugasan_aktif: null,
+    })
+
+    const pilihKartuKetersediaan = (key: (typeof KARTU_KETERSEDIAAN)[number]['key']) => {
+        setKetersediaanFilter(prev => (key === 'total' ? null : (prev === key ? null : key)))
+        setCurrentPage(1)
+    }
+
+    const dataTabel   = pakaiKetersediaan ? ketersediaanTersaring.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(armadaDariUnit) : list
+    const totalTabel  = pakaiKetersediaan ? ketersediaanTersaring.length : total
+    const loadingTabel = pakaiKetersediaan ? false : loading
 
     const columns: ColumnDef<Armada>[] = [
         {
@@ -394,19 +436,23 @@ export default function ArmadaPage() {
 
             {adaKetersediaan && (
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    {KARTU_KETERSEDIAAN.map(k => (
-                        <Card key={k.key} className={k.bg}>
-                            <div className="flex flex-col gap-2">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.bg}`}>
-                                    {k.icon}
+                    {KARTU_KETERSEDIAAN.map(k => {
+                        const aktif = k.key === 'total' ? ketersediaanFilter === null : ketersediaanFilter === k.key
+                        return (
+                            <Card key={k.key} clickable onClick={() => pilihKartuKetersediaan(k.key)}
+                                className={`${k.bg} transition-shadow ${aktif ? `ring-2 ${k.ring}` : ''}`}>
+                                <div className="flex flex-col gap-2">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.bg}`}>
+                                        {k.icon}
+                                    </div>
+                                    <div className={`font-bold text-2xl ${k.text}`}>
+                                        {formatNum(ketersediaanRingkasan[k.key])}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{k.label} · unit aktif</div>
                                 </div>
-                                <div className={`font-bold text-2xl ${k.text}`}>
-                                    {formatNum(ketersediaanRingkasan[k.key])}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{k.label} · unit aktif</div>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        )
+                    })}
                 </div>
             )}
 
@@ -426,18 +472,24 @@ export default function ArmadaPage() {
                     />
                     <div className="w-44 shrink-0">
                         <Select<StatusOption>
+                            isDisabled={pakaiKetersediaan}
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
                         />
                     </div>
                 </div>
+                {pakaiKetersediaan && (
+                    <p className="text-xs text-gray-400 px-4 pb-3 -mt-1">
+                        Menampilkan unit dengan status &ldquo;{KARTU_KETERSEDIAAN.find(k => k.key === ketersediaanFilter)?.label}&rdquo; — klik kartunya lagi atau pilih &ldquo;Semua Unit&rdquo; untuk kembali ke daftar lengkap.
+                    </p>
+                )}
                 <DataTable
                     columns={columns}
-                    data={list as unknown[]}
-                    loading={loading}
-                    noData={!loading && list.length === 0}
-                    pagingData={{ total, pageIndex: currentPage, pageSize }}
+                    data={dataTabel as unknown[]}
+                    loading={loadingTabel}
+                    noData={!loadingTabel && dataTabel.length === 0}
+                    pagingData={{ total: totalTabel, pageIndex: currentPage, pageSize }}
                     onPaginationChange={setCurrentPage}
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
