@@ -111,6 +111,8 @@ export const ROUTES = {
     PERMINTAAN_VENDOR_BARU:   '/permintaan-vendor/baru',
     PERMINTAAN_VENDOR_DETAIL: (id: string) => `/permintaan-vendor/${id}`,
 
+    KETERSEDIAAN_VENDOR: '/ketersediaan-vendor',
+
     DEPARTEMEN:        '/departemen',
     DEPARTEMEN_BARU:   '/departemen/baru',
     DEPARTEMEN_DETAIL: (id: string) => `/departemen/${id}`,

@@ -1,6 +1,7 @@
 ﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
@@ -115,6 +116,23 @@ export default function ProjectPage() {
                 row.original.nama_klien
                     ? <span>{row.original.nama_klien}</span>
                     : <span className="text-gray-400">—</span>,
+        },
+        {
+            header: 'Penawaran', id: 'penawaran', size: 200,
+            cell: ({ row }: CellContext<Project, unknown>) => {
+                const p = row.original
+                if (!p.id_penawaran) return <span className="text-gray-400">—</span>
+                return (
+                    <div>
+                        <Link href={ROUTES.PENAWARAN_DETAIL(p.id_penawaran)} className="block text-sm font-semibold text-blue-500 hover:underline">
+                            {p.nomor_penawaran ?? 'Lihat Penawaran'}
+                        </Link>
+                        {p.judul_penawaran && (
+                            <p className="text-xs text-gray-400 mt-0.5 max-w-[200px] truncate">{p.judul_penawaran}</p>
+                        )}
+                    </div>
+                )
+            },
         },
         {
             header: 'Status', accessorKey: 'status', size: 120,

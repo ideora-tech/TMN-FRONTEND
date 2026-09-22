@@ -1,13 +1,16 @@
 ﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import Link from 'next/link'
+import axios from 'axios'
+import { Card, Button, Input, Select, Spinner, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineEye, HiOutlineDocumentDownload, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 
@@ -47,6 +50,7 @@ export default function PenawaranPage() {
 
     const [deleteId, setDeleteId]           = useState<string | null>(null)
     const [deleteLoading, setDeleteLoading] = useState(false)
+    const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
     const load = useCallback(() => {
         setLoading(true)
@@ -74,6 +78,25 @@ export default function PenawaranPage() {
             setDeleteId(null)
         } finally {
             setDeleteLoading(false)
+        }
+    }
+
+    const handleDownloadPdf = async (row: Penawaran) => {
+        setDownloadingId(row.id_penawaran)
+        try {
+            const res = await axios.get(API_ENDPOINTS.PENAWARAN_PDF(row.id_penawaran), { responseType: 'blob' })
+            const href = URL.createObjectURL(res.data)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `penawaran-${row.nomor_penawaran}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setDownloadingId(null)
         }
     }
 
@@ -112,6 +135,24 @@ export default function PenawaranPage() {
             },
         },
         {
+            header: 'Project',
+            id: 'project',
+            cell: (props: CellContext<Penawaran, unknown>) => {
+                const row = props.row.original
+                if (!row.id_proyek) return <span className="text-gray-400">—</span>
+                return (
+                    <div>
+                        <Link href={ROUTES.PROYEK_DETAIL(row.id_proyek)} className="block text-sm font-semibold text-blue-500 hover:underline">
+                            {row.kode_proyek ?? 'Lihat Proyek'}
+                        </Link>
+                        {row.nama_proyek && (
+                            <p className="text-xs text-gray-400 mt-0.5 max-w-[200px] truncate">{row.nama_proyek}</p>
+                        )}
+                    </div>
+                )
+            },
+        },
+        {
             header: 'Nilai',
             accessorKey: 'nilai_penawaran',
             cell: (props: CellContext<Penawaran, unknown>) => {
@@ -130,16 +171,6 @@ export default function PenawaranPage() {
             },
         },
         {
-            header: 'Berlaku Hingga',
-            accessorKey: 'tanggal_berlaku',
-            cell: (props: CellContext<Penawaran, unknown>) => {
-                const v = props.row.original.tanggal_berlaku
-                return v
-                    ? <span className="text-sm text-gray-600 dark:text-gray-300">{v}</span>
-                    : <span className="text-gray-400">—</span>
-            },
-        },
-        {
             header: '',
             accessorKey: 'id_penawaran',
             cell: (props: CellContext<Penawaran, unknown>) => {
@@ -152,6 +183,16 @@ export default function PenawaranPage() {
                                 onClick={() => router.push(ROUTES.PENAWARAN_DETAIL(row.id_penawaran))}
                             >
                                 <HiOutlineEye className="text-base" />
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Download PDF">
+                            <span
+                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-300 hover:bg-gray-200 cursor-pointer transition-colors"
+                                onClick={() => { if (downloadingId === null) handleDownloadPdf(row) }}
+                            >
+                                {downloadingId === row.id_penawaran
+                                    ? <Spinner size={16} />
+                                    : <HiOutlineDocumentDownload className="text-base" />}
                             </span>
                         </Tooltip>
                         {(row.status === 'draft' || row.status === 'menunggu_approval') && (

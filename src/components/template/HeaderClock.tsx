@@ -17,7 +17,10 @@ const HeaderClock = () => {
 
     useEffect(() => {
         setNow(new Date())
-        const id = setInterval(() => setNow(new Date()), 1000)
+        const id = setInterval(() => {
+            if (document.body.classList.contains('dialog-open')) return
+            setNow(new Date())
+        }, 1000)
         return () => clearInterval(id)
     }, [])
 

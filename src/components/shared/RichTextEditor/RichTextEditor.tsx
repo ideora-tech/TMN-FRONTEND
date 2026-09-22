@@ -95,9 +95,10 @@ const RichTextEditor = (props: RichTextEditorProps) => {
               ],
               editorProps: {
                   attributes: {
-                      class: 'm-2 focus:outline-hidden',
+                      class: 'm-2 min-h-[80px] focus:outline-hidden',
                   },
               },
+              immediatelyRender: false,
               content,
               onUpdate({ editor }) {
                   onChange?.({

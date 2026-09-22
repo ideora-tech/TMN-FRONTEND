@@ -35,6 +35,7 @@ export const protectedRoutes: Routes = {
     ...listRoute('kontrak-vendor', 'kontrak-vendor'),
     ...listRoute('armada-vendor', 'armada-vendor'),
     ...listRoute('supir-vendor', 'supir-vendor'),
+    '/ketersediaan-vendor': { key: 'ketersediaan-vendor', authority: [] },
     '/evaluasi-vendor': { key: 'evaluasi-vendor', authority: [] },
     ...listRoute('rute', 'rute'),
     '/trip': { key: 'trip', authority: [] },

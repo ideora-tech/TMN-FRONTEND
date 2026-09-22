@@ -6,6 +6,7 @@ import { HiArrowLeft, HiPlusCircle, HiOutlineViewList } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { TIPE_HARGA_OPTIONS, tipeHargaNilaiTetap } from '@/constants/tipeHarga.constant'
 import { projectService, TipeHargaProyek } from '@/services/project.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { penawaranService, Penawaran } from '@/services/penawaran.service'
@@ -25,11 +26,6 @@ const STATUS_OPTIONS = [
     { value: 'aktif',   label: 'Aktif' },
     { value: 'selesai', label: 'Selesai' },
     { value: 'batal',   label: 'Batal' },
-]
-
-const TIPE_HARGA_OPTIONS: { value: TipeHargaProyek; label: string }[] = [
-    { value: 'per_rit',  label: 'Per Rit' },
-    { value: 'borongan', label: 'Borongan' },
 ]
 
 export default function ProjectBaruPage() {
@@ -220,7 +216,7 @@ export default function ProjectBaruPage() {
                         <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
                             onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
-                    <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)'}>
+                    <FormItem label={tipeHargaNilaiTetap(form.tipe_harga) ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)'}>
                         <Input prefix="Rp" placeholder="0"
                             value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
                             onChange={(e) => {

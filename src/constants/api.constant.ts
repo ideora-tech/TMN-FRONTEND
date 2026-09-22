@@ -82,6 +82,11 @@ export const API_ENDPOINTS = {
     SPAREPART_IMPORT_TEMPLATE: '/api/proxy/sparepart/import/template',
     SPAREPART_IMPORT:          '/api/proxy/sparepart/import',
 
+    // Ketersediaan Vendor
+    KETERSEDIAAN_VENDOR:        '/api/proxy/ketersediaan-vendor',
+    KETERSEDIAAN_VENDOR_DETAIL: (sumber: string, id: string) => `/api/proxy/ketersediaan-vendor/${sumber}/${id}`,
+    KETERSEDIAAN_VENDOR_EXPORT: '/api/proxy/ketersediaan-vendor/export/excel',
+
     // Kategori Sparepart
     KATEGORI_SPAREPART:        '/api/proxy/kategori-sparepart',
     KATEGORI_SPAREPART_DETAIL: (id: string) => `/api/proxy/kategori-sparepart/${id}`,

@@ -94,10 +94,9 @@ const Dialog = (props: DialogProps) => {
         >
             <motion.div
                 className={dialogClass}
-                initial={{ transform: 'scale(0.9)' }}
-                animate={{
-                    transform: isOpen ? 'scale(1)' : 'scale(0.9)',
-                }}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: isOpen ? 1 : 0.9 }}
+                transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
             >
                 {closable && renderCloseButton}
                 {children}

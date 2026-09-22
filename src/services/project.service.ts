@@ -1,10 +1,11 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { TipeHarga } from '@/constants/tipeHarga.constant'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
 import { Penawaran } from '@/services/penawaran.service'
 import { Faktur } from '@/services/faktur.service'
 
-export type TipeHargaProyek = 'per_rit' | 'borongan'
+export type TipeHargaProyek = TipeHarga
 
 export interface RealisasiProyek {
     total_rit: number
@@ -17,6 +18,9 @@ export interface Project {
     id_proyek: string
     id_klien: string
     nama_klien?: string | null
+    id_penawaran?: string | null
+    nomor_penawaran?: string | null
+    judul_penawaran?: string | null
     kode_proyek: string
     nama_proyek: string
     tanggal_mulai?: string

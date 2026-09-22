@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { TipeHarga } from '@/constants/tipeHarga.constant'
 
 export interface KonsolidasiKlienTrip {
     id_trip: string
@@ -17,6 +18,7 @@ export interface KonsolidasiKlienTrip {
     jarak_tempuh_km: number | null
     tarif: { harga: number; perkiraan: boolean } | null
     borongan: boolean
+    tipe_harga: TipeHarga
     sudah_difakturkan: boolean
     titik_drop: string[]
     biaya_tambahan: number

@@ -14,6 +14,7 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { TIPE_HARGA_LABEL, tipeHargaNilaiTetap, tipeHargaPerRit } from '@/constants/tipeHarga.constant'
 import { projectService, Project } from '@/services/project.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { penugasanHarianService, PeriodeSinkron, PratinjauSinkron } from '@/services/penugasanHarian.service'
@@ -36,7 +37,6 @@ const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
     { value: 'aktif',   label: 'Aktif' },
     { value: 'selesai', label: 'Selesai' },
-    { value: 'batal',   label: 'Batal' },
 ]
 
 const STATUS_CLASS: Record<string, string> = {
@@ -55,11 +55,6 @@ const STATUS_LABEL: Record<string, string> = {
     batal:             'Batal',
 }
 
-const TIPE_HARGA_LABEL: Record<string, string> = {
-    per_rit:  'Per Rit',
-    borongan: 'Borongan',
-}
-
 const PENAWARAN_STATUS_CLASS: Record<string, string> = {
     draft:     'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
     terkirim:  'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
@@ -70,9 +65,9 @@ const PENAWARAN_STATUS_CLASS: Record<string, string> = {
 
 // Transisi status yang diizinkan (mengikuti pola halaman Penawaran)
 const NEXT_STATUS: Record<string, string[]> = {
-    draft:             ['aktif', 'batal'],
+    draft:             ['aktif'],
     menunggu_approval: [],
-    aktif:             ['selesai', 'batal'],
+    aktif:             ['selesai'],
     selesai:           [],
     batal:             [],
 }
@@ -353,7 +348,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setRevisiError('')
         setRevisiCatatan('')
         setRevisiRowErrors([])
-        if (project?.tipe_harga === 'borongan') {
+        if (project && tipeHargaNilaiTetap(project.tipe_harga)) {
             setRevisiNilaiBorongan(project.harga_penawaran != null ? String(project.harga_penawaran) : '')
         } else {
             setRevisiRows(ruteProyekList.length > 0
@@ -396,7 +391,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     )
 
     const handleSubmitRevisi = async () => {
-        const borongan = project?.tipe_harga === 'borongan'
+        const borongan = tipeHargaNilaiTetap(project?.tipe_harga)
         if (borongan && !revisiNilaiBorongan) {
             setRevisiError('Nilai penawaran baru wajib diisi')
             return
@@ -663,7 +658,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const perluApprovalProyek = proyekManual && project.approval_aktif !== false
     const nextStatuses = (NEXT_STATUS[project.status] ?? [])
         .filter(s => !(s === 'aktif' && project.status === 'draft' && perluApprovalProyek))
-    const isPerRit = project.tipe_harga !== 'borongan'
+    const isPerRit = tipeHargaPerRit(project.tipe_harga)
     const totalNilaiRute = ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? 0) * (r.estimasi_ritase || 1)), 0)
     const unitGroups: UnitPenugasanGroup[] = (() => {
         const map = new Map<string, UnitPenugasanGroup>()
@@ -767,7 +762,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
             <ConfirmDialog
                 isOpen={!!pendingStatus}
-                type={pendingStatus === 'batal' ? 'danger' : 'info'}
+                type="info"
                 title="Ubah Status Proyek"
                 confirmText="Ya, Ubah"
                 cancelText="Batal"
@@ -885,7 +880,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </FormItem>
                                 <FormItem label="Status">
                                     <Select isSearchable={false} options={STATUS_OPTIONS}
-                                        value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}
+                                        value={STATUS_OPTIONS.find(o => o.value === form.status) ?? (form.status ? { value: form.status, label: STATUS_LABEL[form.status] ?? form.status } : null)}
                                         onChange={opt => setForm(p => ({ ...p, status: opt?.value as Project['status'] }))} />
                                 </FormItem>
                                 <div className="sm:col-span-2">
@@ -1056,14 +1051,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </ConfirmDialog>
 
             {/* Realisasi — disembunyikan utk per_rit selama belum ada rit berjalan; borongan selalu tampil krn tombol Buat Faktur ada di sini */}
-            {(project.tipe_harga === 'borongan' || (project.realisasi?.total_rit ?? 0) > 0) && (
+            {(tipeHargaNilaiTetap(project.tipe_harga) || (project.realisasi?.total_rit ?? 0) > 0) && (
             <Card>
                 <div className="flex items-center justify-between mb-1">
                     <div>
                         <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Realisasi</p>
                         <p className="text-xs text-gray-400 mt-0.5">Progres realisasi terhadap nilai penawaran</p>
                     </div>
-                    {project.tipe_harga === 'borongan' && (
+                    {tipeHargaNilaiTetap(project.tipe_harga) && (
                         <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={openFakturDialog}>
                             Buat Faktur
                         </Button>
@@ -1085,7 +1080,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </p>
                     </div>
                 </div>
-                {project.tipe_harga === 'borongan' && (
+                {tipeHargaNilaiTetap(project.tipe_harga) && (
                     <div className="mt-3 rounded-lg p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
                         <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Sisa Belum Difakturkan</p>
                         <p className="font-bold text-base text-amber-700 dark:text-amber-300 mt-1">
@@ -1185,7 +1180,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     Revisi dibuat sebagai penawaran baru berstatus draft — kirim &amp; setujui ulang lewat menu Penawaran.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleSubmitRevisi() }}>
-                    {project.tipe_harga === 'borongan' ? (
+                    {tipeHargaNilaiTetap(project.tipe_harga) ? (
                         <FormItem label="Nilai Penawaran Baru" asterisk>
                             <Input prefix="Rp" placeholder="0"
                                 value={revisiNilaiBorongan ? formatNum(Number(revisiNilaiBorongan)) : ''}

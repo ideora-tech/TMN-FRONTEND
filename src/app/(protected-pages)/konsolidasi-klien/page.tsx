@@ -16,6 +16,7 @@ import { klienService, Klien } from '@/services/klien.service'
 import { konsolidasiKlienService, KonsolidasiKlienRekap, KonsolidasiKlienTrip } from '@/services/konsolidasiKlien.service'
 import { projectService, Project } from '@/services/project.service'
 import { penagihanTripService } from '@/services/penagihanTrip.service'
+import { TIPE_HARGA_LABEL } from '@/constants/tipeHarga.constant'
 
 const SUMBER_OPTIONS = [
     { value: '',         label: 'Semua Sumber' },
@@ -242,7 +243,7 @@ export default function KonsolidasiKlienPage() {
                             </>
                         )
                         : row.original.borongan
-                            ? <Tag className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">Borongan</Tag>
+                            ? <Tag className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">{TIPE_HARGA_LABEL[row.original.tipe_harga] ?? 'Nilai tetap'}</Tag>
                             : <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Tarif belum diatur</Tag>}
                 </span>
             ),

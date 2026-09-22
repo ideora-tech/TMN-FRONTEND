@@ -7,6 +7,8 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import RichTextEditor from '@/components/shared/RichTextEditor'
+import RichTextView from '@/components/shared/RichTextView'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineDocumentDownload, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
@@ -16,8 +18,10 @@ import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { ROUTES } from '@/constants/route.constant'
+import { TIPE_HARGA_OPTIONS, labelTipeHarga, tipeHargaNilaiTetap } from '@/constants/tipeHarga.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
+import { kontenKeHtml } from '@/utils/richText'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 
 const STATUS_CLASS: Record<string, string> = {
@@ -42,18 +46,13 @@ const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
     ditolak: [],
 }
 
-const TIPE_HARGA_OPTIONS: { value: TipeHargaPenawaran; label: string }[] = [
-    { value: 'per_rit', label: 'Per Rit' },
-    { value: 'borongan', label: 'Borongan' },
-]
-
 interface EditForm {
     id_klien: string
     judul: string
     tipe_harga: TipeHargaPenawaran
     nilai_str: string
     tanggal_penawaran: string
-    tanggal_berlaku: string
+    jumlah_hari: string
     catatan: string
 }
 
@@ -61,6 +60,7 @@ interface ItemForm {
     id_rute: string
     id_jenis_kendaraan: string
     harga_satuan_str: string
+    jumlah_hari_str: string
     estimasi_ritase_str: string
     keterangan: string
 }
@@ -69,7 +69,7 @@ type Option = { value: string; label: string }
 
 const ITEM_KOSONG: ItemForm = {
     id_rute: '', id_jenis_kendaraan: '',
-    harga_satuan_str: '', estimasi_ritase_str: '1', keterangan: '',
+    harga_satuan_str: '', jumlah_hari_str: '', estimasi_ritase_str: '1', keterangan: '',
 }
 
 export default function PenawaranDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -81,7 +81,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [editing, setEditing] = useState(false)
     const [saving, setSaving] = useState(false)
     const [form, setForm] = useState<EditForm>({
-        id_klien: '', judul: '', tipe_harga: 'per_rit', nilai_str: '', tanggal_penawaran: '', tanggal_berlaku: '', catatan: '',
+        id_klien: '', judul: '', tipe_harga: 'per_rit', nilai_str: '', tanggal_penawaran: '', jumlah_hari: '', catatan: '',
     })
     const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({})
 
@@ -121,8 +121,16 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
         })
     }
 
+    const itemBaru = (patch: Partial<ItemForm> = {}): ItemForm => ({ ...ITEM_KOSONG, jumlah_hari_str: form.jumlah_hari, ...patch })
+
+    const setJumlahHari = (nilai: string) => {
+        const lama = form.jumlah_hari
+        setForm(p => ({ ...p, jumlah_hari: nilai }))
+        setItems(prev => prev.map(it => (it.jumlah_hari_str === lama ? { ...it, jumlah_hari_str: nilai } : it)))
+    }
+
     const tambahItemDariDialog = (pilihan: PilihanItemRute) => {
-        setItems(prev => [...prev, { ...ITEM_KOSONG, id_rute: pilihan.id_rute }])
+        setItems(prev => [...prev, itemBaru({ id_rute: pilihan.id_rute })])
     }
 
     const tambahRuteOption = (r: Rute) =>
@@ -136,17 +144,19 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const validateItems = () => {
         if (items.length === 0) return true
         const perRit = form.tipe_harga === 'per_rit'
+        const hariSalah = items.some(it => it.jumlah_hari_str !== '' && Number(it.jumlah_hari_str) < 1)
         const invalid = items.some(it => !it.id_rute || !it.id_jenis_kendaraan || (perRit && !it.harga_satuan_str))
         setItemError(invalid
             ? (perRit ? 'Setiap item wajib punya rute, jenis kendaraan, dan harga' : 'Setiap item wajib punya rute dan jenis kendaraan')
-            : '')
-        return !invalid
+            : (hariSalah ? 'Hari pada item minimal 1' : ''))
+        return !invalid && !hariSalah
     }
 
     const validate = () => {
         const e: Partial<Record<keyof EditForm, string>> = {}
         if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
         if (!form.id_klien) e.id_klien = 'Klien wajib dipilih'
+        if (form.jumlah_hari && Number(form.jumlah_hari) < 1) e.jumlah_hari = 'Jumlah hari minimal 1'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -165,13 +175,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     tipe_harga: d.tipe_harga ?? 'per_rit',
                     nilai_str: d.nilai_penawaran != null ? String(d.nilai_penawaran) : '',
                     tanggal_penawaran: d.tanggal_penawaran ?? '',
-                    tanggal_berlaku: d.tanggal_berlaku ?? '',
+                    jumlah_hari: d.jumlah_hari != null ? String(d.jumlah_hari) : '',
                     catatan: d.catatan ?? '',
                 })
                 setItems((d.items ?? []).map(it => ({
                     id_rute: it.id_rute,
                     id_jenis_kendaraan: it.id_jenis_kendaraan,
                     harga_satuan_str: String(Math.round(it.harga_satuan)),
+                    jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
                     estimasi_ritase_str: String(it.estimasi_ritase),
                     keterangan: it.keterangan ?? '',
                 })))
@@ -196,12 +207,13 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     ? undefined
                     : (form.nilai_str ? Number(form.nilai_str) : null),
                 tanggal_penawaran: form.tanggal_penawaran || null,
-                tanggal_berlaku: form.tanggal_berlaku || null,
+                jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
                 catatan: form.catatan || null,
                 items: items.map(it => ({
                     id_rute: it.id_rute,
                     id_jenis_kendaraan: it.id_jenis_kendaraan,
-                    harga_satuan: form.tipe_harga === 'borongan' ? undefined : Number(it.harga_satuan_str || 0),
+                    harga_satuan: form.tipe_harga !== 'per_rit' ? undefined : Number(it.harga_satuan_str || 0),
+                    jumlah_hari: it.jumlah_hari_str ? Number(it.jumlah_hari_str) : null,
                     estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                     keterangan: it.keterangan.trim() || null,
                 })),
@@ -212,6 +224,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 id_rute: it.id_rute,
                 id_jenis_kendaraan: it.id_jenis_kendaraan,
                 harga_satuan_str: String(Math.round(it.harga_satuan)),
+                jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
                 estimasi_ritase_str: String(it.estimasi_ritase),
                 keterangan: it.keterangan ?? '',
             })))
@@ -300,7 +313,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
     const initial = data.nomor_penawaran.charAt(0).toUpperCase()
     const nextStatuses = NEXT_STATUS[data.status] ?? []
-    const tipeHargaBorongan = data.tipe_harga === 'borongan'
+    const nilaiTetap = tipeHargaNilaiTetap(data.tipe_harga)
 
     return (
         <div className="flex flex-col gap-4">
@@ -458,7 +471,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                     <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
                                         loading={downloadingPdf} onClick={handleDownloadPdf} />
                                 </Tooltip>
-                                {data.status === 'draft' && (
+                                {(data.status === 'draft' || data.status === 'negosiasi') && (
                                     <Tooltip title="Edit">
                                         <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />}
                                             onClick={() => setEditing(true)} />
@@ -474,9 +487,9 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 [
                                     { label: 'Nomor Penawaran', value: data.nomor_penawaran },
                                     { label: 'Judul', value: data.judul },
-                                    { label: 'Tipe Harga', value: tipeHargaBorongan ? 'Borongan' : 'Per Rit' },
+                                    { label: 'Tipe Harga', value: labelTipeHarga(data.tipe_harga) },
                                     {
-                                        label: tipeHargaBorongan ? 'Nilai Borongan' : 'Nilai Penawaran',
+                                        label: nilaiTetap ? `Nilai ${labelTipeHarga(data.tipe_harga)}` : 'Nilai Penawaran',
                                         value: data.nilai_penawaran != null
                                             ? formatRupiah(data.nilai_penawaran)
                                             : <span className="text-gray-400">-</span>,
@@ -486,20 +499,21 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         value: data.tanggal_penawaran ?? <span className="text-gray-400">-</span>,
                                     },
                                     {
-                                        label: 'Berlaku Hingga',
-                                        value: data.tanggal_berlaku ?? <span className="text-gray-400">-</span>,
+                                        label: 'Jumlah Hari',
+                                        value: data.jumlah_hari != null ? `${data.jumlah_hari} hari` : <span className="text-gray-400">-</span>,
                                     },
                                     {
                                         label: 'Catatan',
-                                        value: data.catatan ?? <span className="text-gray-400">-</span>,
+                                        value: data.catatan ? <RichTextView konten={data.catatan} /> : <span className="text-gray-400">-</span>,
+                                        lebar: true,
                                     },
-                                ] as { label: string; value: React.ReactNode }[]
-                            ).map(({ label, value }) => (
-                                <div key={label}>
+                                ] as { label: string; value: React.ReactNode; lebar?: boolean }[]
+                            ).map(({ label, value, lebar }) => (
+                                <div key={label} className={lebar ? 'sm:col-span-2' : undefined}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
                                         {label}
                                     </p>
-                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</p>
+                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{value}</div>
                                 </div>
                             ))}
                         </div>
@@ -513,9 +527,10 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                             <tr className="text-left text-gray-600 dark:text-gray-300">
                                                 <th className="px-3 py-2 font-semibold min-w-[200px]">Rute</th>
                                                 <th className="px-3 py-2 font-semibold min-w-[150px]">Jenis Kendaraan</th>
-                                                {!tipeHargaBorongan && <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>}
-                                                <th className="px-3 py-2 font-semibold w-24">Ritase</th>
-                                                {!tipeHargaBorongan && <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>}
+                                                {!nilaiTetap && <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>}
+                                                <th className="px-3 py-2 font-semibold w-24">Hari</th>
+                                                <th className="px-3 py-2 font-semibold w-24">Trip</th>
+                                                {!nilaiTetap && <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -523,9 +538,10 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                 <tr key={it.id_penawaran_item} className="border-b border-gray-100 dark:border-gray-700">
                                                     <td className="px-3 py-2">{it.nama_rute ?? '-'}</td>
                                                     <td className="px-3 py-2">{it.nama_jenis ?? '-'}</td>
-                                                    {!tipeHargaBorongan && <td className="px-3 py-2">{formatRupiah(it.harga_satuan)}</td>}
+                                                    {!nilaiTetap && <td className="px-3 py-2">{formatRupiah(it.harga_satuan)}</td>}
+                                                    <td className="px-3 py-2">{it.jumlah_hari ?? '-'}</td>
                                                     <td className="px-3 py-2">{it.estimasi_ritase}</td>
-                                                    {!tipeHargaBorongan && <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatRupiah(it.subtotal)}</td>}
+                                                    {!nilaiTetap && <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatRupiah(it.subtotal)}</td>}
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -547,7 +563,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                     Edit Penawaran
                                 </p>
                                 <p className="text-sm text-gray-500 mt-0.5">
-                                    Hanya penawaran Draft yang dapat diubah
+                                    Hanya penawaran Draft atau Negosiasi yang dapat diubah
                                 </p>
                             </div>
                         </div>
@@ -574,7 +590,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         value={klienOptions.find(o => o.value === form.id_klien) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, id_klien: opt?.value ?? '' }))} />
                                 </FormItem>
-                                <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Borongan' : 'Nilai Penawaran'}
+                                <FormItem label={form.tipe_harga === 'per_rit' ? 'Nilai Penawaran' : `Nilai ${labelTipeHarga(form.tipe_harga)}`}
                                     extra={nilaiOtomatis ? <span className="text-xs text-gray-400 ml-2">(otomatis dari item rate card)</span> : undefined}>
                                     <Input
                                         prefix="Rp"
@@ -597,21 +613,16 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         onChange={date => setForm(p => ({ ...p, tanggal_penawaran: date ? dayjs(date).format('YYYY-MM-DD') : '' }))}
                                     />
                                 </FormItem>
-                                <FormItem label="Berlaku Hingga">
-                                    <DatePicker inputFormat="DD/MM/YYYY"
-                                        value={form.tanggal_berlaku ? dayjs(form.tanggal_berlaku).toDate() : null}
-                                        onChange={date => setForm(p => ({ ...p, tanggal_berlaku: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
-                                        }
-                                    />
+                                <FormItem label="Jumlah Hari" invalid={!!errors.jumlah_hari} errorMessage={errors.jumlah_hari}>
+                                    <Input type="number" min="1" placeholder="Contoh: 26" suffix="hari"
+                                        value={form.jumlah_hari}
+                                        invalid={!!errors.jumlah_hari}
+                                        onChange={e => setJumlahHari(e.target.value)} />
                                 </FormItem>
                                 <FormItem label="Catatan" className="sm:col-span-2">
-                                    <textarea
-                                        rows={3}
-                                        value={form.catatan}
-                                        onChange={e =>
-                                            setForm(p => ({ ...p, catatan: e.target.value }))
-                                        }
-                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+                                    <RichTextEditor
+                                        content={kontenKeHtml(form.catatan)}
+                                        onChange={({ html }) => setForm(p => ({ ...p, catatan: html === '<p></p>' ? '' : html }))}
                                     />
                                 </FormItem>
                             </div>
@@ -621,9 +632,9 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                     <div>
                                         <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute</p>
                                         <p className="text-xs text-gray-400 mt-0.5">
-                                            {form.tipe_harga === 'borongan'
-                                                ? 'Tambahkan rute cakupan proyek — nilai borongan diisi manual di field Nilai Borongan di atas'
-                                                : 'Isi harga satuan dan ritase untuk tiap rute secara manual'}
+                                            {form.tipe_harga !== 'per_rit'
+                                                ? `Tambahkan rute cakupan proyek — nilainya diisi manual di field Nilai ${labelTipeHarga(form.tipe_harga)} di atas`
+                                                : 'Isi harga satuan dan trip untuk tiap rute secara manual'}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -632,7 +643,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                             Daftar Rute
                                         </Button>
                                         <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                            onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
+                                            onClick={() => setItems(prev => [...prev, itemBaru()])}>
                                             Tambah Item
                                         </Button>
                                     </div>
@@ -648,7 +659,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                     {form.tipe_harga === 'per_rit' && (
                                                         <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
                                                     )}
-                                                    <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                                    <th className="px-3 py-2 font-semibold w-24">Hari</th>
+                                                    <th className="px-3 py-2 font-semibold w-24">Trip</th>
                                                     {form.tipe_harga === 'per_rit' && (
                                                         <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
                                                     )}
@@ -683,6 +695,11 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                                     })} />
                                                             </td>
                                                         )}
+                                                        <td className="px-3 py-2">
+                                                            <Input type="number" min="1"
+                                                                value={it.jumlah_hari_str}
+                                                                onChange={e => updateItem(i, { jumlah_hari_str: e.target.value })} />
+                                                        </td>
                                                         <td className="px-3 py-2">
                                                             <Input type="number" min="1"
                                                                 value={it.estimasi_ritase_str}

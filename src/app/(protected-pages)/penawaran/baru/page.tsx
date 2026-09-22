@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
+import RichTextEditor from '@/components/shared/RichTextEditor'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
@@ -12,7 +13,9 @@ import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { klienService, Klien } from '@/services/klien.service'
 import { ROUTES } from '@/constants/route.constant'
+import { TIPE_HARGA_OPTIONS, labelTipeHarga } from '@/constants/tipeHarga.constant'
 import { parseApiError } from '@/utils/error.util'
+import { kontenKeHtml } from '@/utils/richText'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 interface FormState {
@@ -21,7 +24,7 @@ interface FormState {
     tipe_harga: TipeHargaPenawaran
     nilai_penawaran_str: string
     tanggal_penawaran: string
-    tanggal_berlaku: string
+    jumlah_hari: string
     catatan: string
 }
 
@@ -31,7 +34,7 @@ const INIT: FormState = {
     tipe_harga: 'per_rit',
     nilai_penawaran_str: '',
     tanggal_penawaran: '',
-    tanggal_berlaku: '',
+    jumlah_hari: '',
     catatan: '',
 }
 
@@ -39,6 +42,7 @@ interface ItemForm {
     id_rute: string
     id_jenis_kendaraan: string
     harga_satuan_str: string
+    jumlah_hari_str: string
     estimasi_ritase_str: string
     keterangan: string
 }
@@ -48,13 +52,8 @@ type TipeHargaOption = { value: TipeHargaPenawaran; label: string }
 
 const ITEM_KOSONG: ItemForm = {
     id_rute: '', id_jenis_kendaraan: '',
-    harga_satuan_str: '', estimasi_ritase_str: '1', keterangan: '',
+    harga_satuan_str: '', jumlah_hari_str: '', estimasi_ritase_str: '1', keterangan: '',
 }
-
-const TIPE_HARGA_OPTIONS: TipeHargaOption[] = [
-    { value: 'per_rit', label: 'Per Rit' },
-    { value: 'borongan', label: 'Borongan' },
-]
 
 export default function PenawaranBaruPage() {
     const router = useRouter()
@@ -96,8 +95,16 @@ export default function PenawaranBaruPage() {
         })
     }
 
+    const itemBaru = (patch: Partial<ItemForm> = {}): ItemForm => ({ ...ITEM_KOSONG, jumlah_hari_str: form.jumlah_hari, ...patch })
+
+    const setJumlahHari = (nilai: string) => {
+        const lama = form.jumlah_hari
+        setForm(p => ({ ...p, jumlah_hari: nilai }))
+        setItems(prev => prev.map(it => (it.jumlah_hari_str === lama ? { ...it, jumlah_hari_str: nilai } : it)))
+    }
+
     const tambahItemDariDialog = (pilihan: PilihanItemRute) => {
-        setItems(prev => [...prev, { ...ITEM_KOSONG, id_rute: pilihan.id_rute }])
+        setItems(prev => [...prev, itemBaru({ id_rute: pilihan.id_rute })])
     }
 
     const tambahRuteOption = (r: Rute) =>
@@ -111,17 +118,19 @@ export default function PenawaranBaruPage() {
     const validateItems = () => {
         if (items.length === 0) return true
         const perRit = form.tipe_harga === 'per_rit'
+        const hariSalah = items.some(it => it.jumlah_hari_str !== '' && Number(it.jumlah_hari_str) < 1)
         const invalid = items.some(it => !it.id_rute || !it.id_jenis_kendaraan || (perRit && !it.harga_satuan_str))
         setItemError(invalid
             ? (perRit ? 'Setiap item wajib punya rute, jenis kendaraan, dan harga' : 'Setiap item wajib punya rute dan jenis kendaraan')
-            : '')
-        return !invalid
+            : (hariSalah ? 'Hari pada item minimal 1' : ''))
+        return !invalid && !hariSalah
     }
 
     const validate = () => {
         const e: Partial<Record<keyof FormState, string>> = {}
         if (!form.judul.trim()) e.judul = 'Judul penawaran wajib diisi'
         if (!form.id_klien) e.id_klien = 'Klien wajib dipilih'
+        if (form.jumlah_hari && Number(form.jumlah_hari) < 1) e.jumlah_hari = 'Jumlah hari minimal 1'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -145,13 +154,14 @@ export default function PenawaranBaruPage() {
                         ? Number(form.nilai_penawaran_str.replace(/\D/g, ''))
                         : null),
                 tanggal_penawaran: form.tanggal_penawaran || null,
-                tanggal_berlaku: form.tanggal_berlaku || null,
+                jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
                 catatan: form.catatan.trim() || null,
                 items: items.length > 0
                     ? items.map(it => ({
                         id_rute: it.id_rute,
                         id_jenis_kendaraan: it.id_jenis_kendaraan,
-                        harga_satuan: form.tipe_harga === 'borongan' ? undefined : Number(it.harga_satuan_str || 0),
+                        harga_satuan: form.tipe_harga !== 'per_rit' ? undefined : Number(it.harga_satuan_str || 0),
+                        jumlah_hari: it.jumlah_hari_str ? Number(it.jumlah_hari_str) : null,
                         estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                         keterangan: it.keterangan.trim() || null,
                     }))
@@ -205,7 +215,7 @@ export default function PenawaranBaruPage() {
                                 value={klienOptions.find(o => o.value === form.id_klien) ?? null}
                                 onChange={opt => set('id_klien', opt?.value ?? '')} />
                         </FormItem>
-                        <FormItem label={form.tipe_harga === 'borongan' ? 'Nilai Borongan' : 'Nilai Penawaran'}
+                        <FormItem label={form.tipe_harga === 'per_rit' ? 'Nilai Penawaran' : `Nilai ${labelTipeHarga(form.tipe_harga)}`}
                             extra={nilaiOtomatis ? <span className="text-xs text-gray-400 ml-2">(otomatis dari item rate card)</span> : undefined}>
                             <Input
                                 prefix="Rp"
@@ -227,19 +237,16 @@ export default function PenawaranBaruPage() {
                                 onChange={date => set('tanggal_penawaran', date ? dayjs(date).format('YYYY-MM-DD') : '')}
                             />
                         </FormItem>
-                        <FormItem label="Berlaku Hingga">
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={form.tanggal_berlaku ? dayjs(form.tanggal_berlaku).toDate() : null}
-                                onChange={date => set('tanggal_berlaku', date ? dayjs(date).format('YYYY-MM-DD') : '')}
-                            />
+                        <FormItem label="Jumlah Hari" invalid={!!errors.jumlah_hari} errorMessage={errors.jumlah_hari}>
+                            <Input type="number" min="1" placeholder="Contoh: 26" suffix="hari"
+                                value={form.jumlah_hari}
+                                invalid={!!errors.jumlah_hari}
+                                onChange={e => setJumlahHari(e.target.value)} />
                         </FormItem>
                         <FormItem label="Catatan" className="sm:col-span-2">
-                            <textarea
-                                rows={3}
-                                placeholder="Catatan tambahan untuk penawaran ini (opsional)"
-                                value={form.catatan}
-                                onChange={e => set('catatan', e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+                            <RichTextEditor
+                                content={kontenKeHtml(form.catatan)}
+                                onChange={({ html }) => set('catatan', html === '<p></p>' ? '' : html)}
                             />
                         </FormItem>
                     </div>
@@ -249,9 +256,9 @@ export default function PenawaranBaruPage() {
                             <div>
                                 <p className="font-semibold text-gray-800 dark:text-gray-100">Item Rute</p>
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                    {form.tipe_harga === 'borongan'
-                                        ? 'Tambahkan rute cakupan proyek — nilai borongan diisi manual di field Nilai Borongan di atas'
-                                        : 'Isi harga satuan dan ritase untuk tiap rute secara manual'}
+                                    {form.tipe_harga !== 'per_rit'
+                                        ? `Tambahkan rute cakupan proyek — nilainya diisi manual di field Nilai ${labelTipeHarga(form.tipe_harga)} di atas`
+                                        : 'Isi harga satuan dan trip untuk tiap rute secara manual'}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -260,7 +267,7 @@ export default function PenawaranBaruPage() {
                                     Daftar Rute
                                 </Button>
                                 <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
-                                    onClick={() => setItems(prev => [...prev, { ...ITEM_KOSONG }])}>
+                                    onClick={() => setItems(prev => [...prev, itemBaru()])}>
                                     Tambah Item
                                 </Button>
                             </div>
@@ -276,7 +283,8 @@ export default function PenawaranBaruPage() {
                                             {form.tipe_harga === 'per_rit' && (
                                                 <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>
                                             )}
-                                            <th className="px-3 py-2 font-semibold w-24">Ritase</th>
+                                            <th className="px-3 py-2 font-semibold w-24">Hari</th>
+                                            <th className="px-3 py-2 font-semibold w-24">Trip</th>
                                             {form.tipe_harga === 'per_rit' && (
                                                 <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
                                             )}
@@ -311,6 +319,11 @@ export default function PenawaranBaruPage() {
                                                             })} />
                                                     </td>
                                                 )}
+                                                <td className="px-3 py-2">
+                                                    <Input type="number" min="1"
+                                                        value={it.jumlah_hari_str}
+                                                        onChange={e => updateItem(i, { jumlah_hari_str: e.target.value })} />
+                                                </td>
                                                 <td className="px-3 py-2">
                                                     <Input type="number" min="1"
                                                         value={it.estimasi_ritase_str}
