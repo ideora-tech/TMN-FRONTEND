@@ -12,6 +12,7 @@ import {
     arusKasService,
     PengajuanPengeluaran,
 } from '@/services/arusKas.service'
+import RincianSumberPengajuan from './RincianSumberPengajuan'
 import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG } from './pengajuanMeta'
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
@@ -215,6 +216,10 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                             <p className={LABEL_CLASS}>Alasan Ditolak</p>
                             <p className="text-sm text-red-500 dark:text-red-400">{p.alasan_ditolak}</p>
                         </div>
+                    )}
+
+                    {(p.id_perawatan || p.id_pembelian || p.id_periode || p.id_invoice_vendor || p.periode_dari || p.id_supir) && (
+                        <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 
                     <div className="mt-5">

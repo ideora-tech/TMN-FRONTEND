@@ -408,6 +408,7 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PENGAJUAN_APPROVAL: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/approval`,
     ARUS_KAS_PENGAJUAN_MENUNGGU_SAYA: '/api/proxy/arus-kas/pengajuan/menunggu-approval-saya',
     ARUS_KAS_PENGAJUAN_RIWAYAT:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/riwayat`,
+    ARUS_KAS_PENGAJUAN_RINCIAN_SUMBER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/rincian-sumber`,
 
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',

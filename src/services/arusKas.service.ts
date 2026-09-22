@@ -1,5 +1,9 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import type { PerawatanArmadaWithArmada } from './perawatanArmada.service'
+import type { PembelianSparepart } from './pembelianSparepart.service'
+import type { PayrollPeriode, RingkasanPayroll } from './payroll.service'
+import type { InvoiceVendor } from './invoice-vendor.service'
 
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
@@ -184,6 +188,45 @@ function buildPemasukanFormData(payload: Partial<PemasukanPayload>, bukti?: File
     return fd
 }
 
+export type StatusPenugasanUangJalan = 'pending' | 'aktif' | 'selesai' | 'batal'
+
+export interface PenugasanUangJalan {
+    id_penugasan: string
+    tanggal_tugas: string | null
+    status: StatusPenugasanUangJalan
+    sumber: string | null
+    keterangan: string | null
+    kode_proyek: string | null
+    nama_proyek: string | null
+    nama_rute: string | null
+    nopol: string | null
+}
+
+export interface RincianUangJalan {
+    nama_supir: string | null
+    nama_proyek: string | null
+    periode_dari: string | null
+    periode_sampai: string | null
+    tarif_per_hari: number | null
+    /** Jumlah hari yang ditagihkan saat pengajuan dibuat (nominal ÷ tarif) */
+    jumlah_hari_ditagih: number | null
+    jumlah_penugasan: number
+    jumlah_dibatalkan: number
+    penugasan: PenugasanUangJalan[]
+}
+
+export interface RincianPayroll {
+    periode: PayrollPeriode
+    ringkasan: RingkasanPayroll
+}
+
+export type RincianSumberPengajuan =
+    | { tipe: 'perawatan'; data: PerawatanArmadaWithArmada }
+    | { tipe: 'pembelian'; data: PembelianSparepart }
+    | { tipe: 'payroll'; data: RincianPayroll }
+    | { tipe: 'uang_jalan'; data: RincianUangJalan }
+    | { tipe: 'invoice_vendor'; data: InvoiceVendor }
+
 export const arusKasService = {
     async getRekap(params?: { dari?: string; sampai?: string; arah?: ArahArusKas; sumber?: SumberArusKas }) {
         const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS, {
@@ -244,6 +287,12 @@ export const arusKasService = {
     async riwayatPengajuan(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_RIWAYAT(id))
         return data.data as PengajuanKeuanganInfo
+    },
+
+    /** Rincian transaksi asal pengajuan — perawatan armada atau pembelian sparepart */
+    async rincianSumberPengajuan(id: string) {
+        const { data } = await axios.get(API_ENDPOINTS.ARUS_KAS_PENGAJUAN_RINCIAN_SUMBER(id))
+        return data.data as RincianSumberPengajuan
     },
 
     async createPengajuan(payload: PengajuanPayload, bukti?: File | null) {
