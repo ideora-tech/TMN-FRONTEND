@@ -10,6 +10,7 @@ export interface Penawaran {
     id_perusahaan: string
     id_klien: string | null
     nama_klien?: string | null
+    email_klien?: string | null
     nomor_penawaran: string
     judul: string
     tipe_harga: TipeHargaPenawaran
@@ -20,6 +21,10 @@ export interface Penawaran {
     jumlah_hari: number | null
     catatan: string | null
     alasan_ditolak_internal: string | null
+    email_terkirim_ke?: string | null
+    email_terkirim_pada?: string | null
+    email_gagal_pada?: string | null
+    email_gagal_alasan?: string | null
     id_proyek: string | null
     proyek_status?: string | null
     approval_aktif?: boolean | null
@@ -88,6 +93,15 @@ export const penawaranService = {
 
     ajukanApproval: (id: string): Promise<Penawaran> =>
         axios.post(API_ENDPOINTS.PENAWARAN_AJUKAN_APPROVAL(id)).then(r => r.data?.data),
+
+    kirimEmail: (id: string, payload: { email_tujuan: string; subjek: string; pesan: string; lampiran?: File[] }): Promise<Penawaran> => {
+        const form = new FormData()
+        form.append('email_tujuan', payload.email_tujuan)
+        form.append('subjek', payload.subjek)
+        form.append('pesan', payload.pesan)
+        ;(payload.lampiran ?? []).forEach(f => form.append('lampiran[]', f))
+        return axios.post(API_ENDPOINTS.PENAWARAN_KIRIM_EMAIL(id), form).then(r => r.data?.data)
+    },
 
     delete: (id: string): Promise<void> =>
         axios.delete(API_ENDPOINTS.PENAWARAN_DETAIL(id)).then(() => undefined),

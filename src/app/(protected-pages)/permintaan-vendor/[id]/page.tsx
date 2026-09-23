@@ -1,14 +1,15 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiOutlinePlus, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiOutlinePlus, HiOutlineClipboardList, HiOutlinePaperAirplane } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { permintaanVendorService, PermintaanVendor, itemUnitDiminta, ringkasanUnitDiminta, UnitDimintaPayload } from '@/services/permintaan-vendor.service'
@@ -35,6 +36,21 @@ const STATUS_CLASS: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
     draft: 'Draft', menunggu_approval: 'Menunggu Approval', disetujui: 'Disetujui', ditolak: 'Ditolak', dikontrakkan: 'Dikontrakkan',
+}
+
+const TAHAP_PERMINTAAN = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'disetujui',         label: 'Disetujui' },
+    { status: 'dikontrakkan',      label: 'Dikontrakkan' },
+]
+
+const LANGKAH_PERMINTAAN: Record<string, { judul: string; keterangan: string }> = {
+    draft:             { judul: 'Siap diajukan?',                             keterangan: 'Permintaan perlu disetujui approver dulu sebelum bisa dibuatkan kontrak vendor.' },
+    menunggu_approval: { judul: 'Menunggu keputusan approver',                keterangan: 'Data tidak bisa diubah sampai ada keputusan.' },
+    ditolak:           { judul: 'Perbaiki lalu ajukan ulang',                 keterangan: 'Edit permintaan ini — setelah disimpan, status kembali ke Draft dan bisa diajukan approval lagi.' },
+    disetujui:         { judul: 'Permintaan disetujui',                       keterangan: 'Lanjutkan dengan membuat kontrak vendor dari permintaan ini.' },
+    dikontrakkan:      { judul: 'Permintaan sudah dikontrakkan',              keterangan: 'Kontrak vendor sudah dibuat dari permintaan ini — tidak ada aksi lanjutan.' },
 }
 
 type FormState = {
@@ -186,6 +202,54 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                     <p className="text-gray-500 text-sm mt-0.5">Permintaan vendor — {MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme}</p>
                 </div>
             </div>
+            {!editing && (
+                <PanelAlurStatus
+                    judul="Alur Permintaan"
+                    alat={(
+                        <Tooltip title="Log Approval">
+                            <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogOpen(true)}>
+                                <HiOutlineClipboardList className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
+                    tahap={TAHAP_PERMINTAAN}
+                    status={data.status}
+                    statusLabel={STATUS_LABEL[data.status] ?? data.status}
+                    kelasIkon={STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-600'}
+                    tahapGagal={data.status === 'ditolak' ? 1 : undefined}
+                    selesai={data.status === 'dikontrakkan'}
+                    catatan={data.status === 'ditolak' && data.alasan_ditolak
+                        ? [{ warna: 'merah', judul: 'Permintaan ditolak approver — perlu revisi', isi: `“${data.alasan_ditolak}”` }]
+                        : []}
+                    langkah={LANGKAH_PERMINTAAN[data.status]}
+                    aksi={(
+                        <>
+                            {data.status === 'ditolak' && (
+                                <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>
+                                    Perbaiki Permintaan
+                                </Button>
+                            )}
+                            {data.status === 'draft' && (
+                                <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                    Ajukan Approval
+                                </Button>
+                            )}
+                            {data.status === 'disetujui' && (
+                                <Button size="sm" variant="solid" icon={<HiOutlineDocumentText />}
+                                    onClick={() => router.push(`${ROUTES.KONTRAK_VENDOR_BARU}?id_permintaan=${id}`)}>
+                                    Buat Kontrak
+                                </Button>
+                            )}
+                            {data.status === 'dikontrakkan' && data.id_kontrak_vendor && (
+                                <Button size="sm" variant="solid" icon={<HiOutlineDocumentText />}
+                                    onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(data.id_kontrak_vendor!))}>
+                                    Lihat Kontrak
+                                </Button>
+                            )}
+                        </>
+                    )}
+                />
+            )}
             <Card>
                 {!editing ? (
                     <>
@@ -200,29 +264,6 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                 </div>
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-                                <Tag className={`${STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-600'} border-0`}>
-                                    {STATUS_LABEL[data.status] ?? data.status}
-                                </Tag>
-                                {data.status === 'draft' && (
-                                    <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
-                                        Ajukan Approval
-                                    </Button>
-                                )}
-                                {data.status === 'disetujui' && (
-                                    <Button variant="solid" size="sm" icon={<HiOutlineDocumentText />}
-                                        onClick={() => router.push(`${ROUTES.KONTRAK_VENDOR_BARU}?id_permintaan=${id}`)}>
-                                        Buat Kontrak
-                                    </Button>
-                                )}
-                                {data.status === 'dikontrakkan' && data.id_kontrak_vendor && (
-                                    <Button variant="solid" size="sm" icon={<HiOutlineDocumentText />}
-                                        onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(data.id_kontrak_vendor!))}>
-                                        Lihat Kontrak
-                                    </Button>
-                                )}
-                                <Tooltip title="Log Approval">
-                                    <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
-                                </Tooltip>
                                 {bisaUbah && (
                                     <Tooltip title="Edit">
                                         <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
@@ -237,21 +278,6 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                 )}
                             </div>
                         </div>
-                        {data.status === 'ditolak' && data.alasan_ditolak && (
-                            <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-sm text-red-600 dark:text-red-300">
-                                Ditolak approver: {data.alasan_ditolak} — perbaiki lalu ajukan ulang.
-                            </div>
-                        )}
-                        {data.status === 'menunggu_approval' && (
-                            <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-sm text-violet-600 dark:text-violet-300">
-                                Permintaan sedang menunggu keputusan approver — data tidak bisa diubah sampai ada keputusan.
-                            </div>
-                        )}
-                        {data.status === 'disetujui' && (
-                            <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-sm text-emerald-600 dark:text-emerald-300">
-                                Permintaan disetujui — lanjutkan dengan membuat kontrak vendor dari permintaan ini.
-                            </div>
-                        )}
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([

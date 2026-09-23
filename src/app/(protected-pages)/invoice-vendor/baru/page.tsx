@@ -48,8 +48,11 @@ export default function InvoiceVendorBaruPage() {
     const dppManual = useRef(false)
     const [ppnPersen, setPpnPersen] = useState('')
     const [pphPersen, setPphPersen] = useState('')
-    const ppnManual = useRef(false)
-    const pphManual = useRef(false)
+    const nominalDariPersen = (dpp: string, persen: string) => {
+        const nilai = Number(persen)
+        if (!dpp || !persen || Number.isNaN(nilai)) return ''
+        return String(Math.round((Number(dpp) || 0) * nilai / 100))
+    }
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 999 } })
@@ -109,17 +112,11 @@ export default function InvoiceVendorBaruPage() {
     }, [mode, tripIdsChecked, selectedKontrak?.satuan, selectedKontrak?.rate])
 
     useEffect(() => {
-        if (!ppnPersen || ppnManual.current) return
-        const persen = Number(ppnPersen)
-        if (Number.isNaN(persen)) return
-        setForm(p => ({ ...p, ppn: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
+        setForm(p => ({ ...p, ppn: nominalDariPersen(p.dpp, ppnPersen) }))
     }, [form.dpp, ppnPersen])
 
     useEffect(() => {
-        if (!pphPersen || pphManual.current) return
-        const persen = Number(pphPersen)
-        if (Number.isNaN(persen)) return
-        setForm(p => ({ ...p, pph: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
+        setForm(p => ({ ...p, pph: nominalDariPersen(p.dpp, pphPersen) }))
     }, [form.dpp, pphPersen])
 
     const nopolOptions = armadaList.map(a => ({
@@ -428,36 +425,22 @@ export default function InvoiceVendorBaruPage() {
                                 setForm(p => ({ ...p, dpp: e.target.value.replace(/\D/g, '') }))
                             }} />
                     </FormItem>
-                    <FormItem label="PPN">
+                    <FormItem label="PPN" extra={<span className="text-xs text-gray-400">Isi persentase, nominal dihitung otomatis dari DPP</span>}>
                         <div className="flex items-center gap-2">
-                            <Input className="flex-1" prefix="Rp" placeholder="0"
-                                value={form.ppn ? formatNum(Number(form.ppn)) : ''}
-                                onChange={e => {
-                                    ppnManual.current = true
-                                    setForm(p => ({ ...p, ppn: e.target.value.replace(/\D/g, '') }))
-                                }} />
                             <Input className="w-24" suffix="%" placeholder="0"
                                 value={ppnPersen}
-                                onChange={e => {
-                                    ppnManual.current = false
-                                    setPpnPersen(e.target.value.replace(/[^0-9.]/g, ''))
-                                }} />
+                                onChange={e => setPpnPersen(e.target.value.replace(/[^0-9.]/g, ''))} />
+                            <Input className="flex-1" prefix="Rp" placeholder="0" readOnly
+                                value={form.ppn ? formatNum(Number(form.ppn)) : ''} />
                         </div>
                     </FormItem>
-                    <FormItem label="PPh">
+                    <FormItem label="PPh" extra={<span className="text-xs text-gray-400">Isi persentase, nominal dihitung otomatis dari DPP</span>}>
                         <div className="flex items-center gap-2">
-                            <Input className="flex-1" prefix="Rp" placeholder="0"
-                                value={form.pph ? formatNum(Number(form.pph)) : ''}
-                                onChange={e => {
-                                    pphManual.current = true
-                                    setForm(p => ({ ...p, pph: e.target.value.replace(/\D/g, '') }))
-                                }} />
                             <Input className="w-24" suffix="%" placeholder="0"
                                 value={pphPersen}
-                                onChange={e => {
-                                    pphManual.current = false
-                                    setPphPersen(e.target.value.replace(/[^0-9.]/g, ''))
-                                }} />
+                                onChange={e => setPphPersen(e.target.value.replace(/[^0-9.]/g, ''))} />
+                            <Input className="flex-1" prefix="Rp" placeholder="0" readOnly
+                                value={form.pph ? formatNum(Number(form.pph)) : ''} />
                         </div>
                     </FormItem>
                     <div className="sm:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mb-4">

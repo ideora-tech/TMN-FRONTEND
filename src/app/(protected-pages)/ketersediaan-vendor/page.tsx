@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Input, Pagination, Spinner, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiOutlineDownload, HiOutlineEye, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { HiOutlineDownload, HiOutlineEye, HiOutlineSearch, HiOutlineX, HiPlusCircle } from 'react-icons/hi'
+import { ROUTES } from '@/constants/route.constant'
 import {
     PiTruckDuotone,
     PiCheckCircleDuotone,
@@ -54,6 +57,8 @@ const CHIP_AKTIF = 'bg-blue-600 text-white border-blue-600'
 const CHIP_BIASA = 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600'
 
 export default function KetersediaanVendorPage() {
+    const router = useRouter()
+    const [konfirmasiMinta, setKonfirmasiMinta] = useState(false)
     const [hasil, setHasil]       = useState<HasilKetersediaan | null>(null)
     const [galat, setGalat]       = useState<string | null>(null)
     const [percobaan, setPercobaan] = useState(0)
@@ -121,6 +126,27 @@ export default function KetersediaanVendorPage() {
         setCurrentPage(1)
     }
 
+    const jenisTerpilih = jenisFilter ? perJenis.find(j => j.id_jenis_kendaraan === jenisFilter) ?? null : null
+    const unitTersedia = jenisTerpilih ? jenisTerpilih.tersedia : (ringkasan?.tersedia ?? 0)
+    const labelCakupan = jenisTerpilih ? `jenis ${jenisTerpilih.nama_jenis}` : 'semua jenis'
+    const tooltipMinta = unitTersedia > 0
+        ? `Masih ada ${formatNum(unitTersedia)} unit tersedia untuk ${labelCakupan} — cek dulu sebelum minta ke vendor`
+        : `Tidak ada unit tersedia untuk ${labelCakupan} — buat permintaan vendor`
+
+    const keFormPermintaan = () => {
+        setKonfirmasiMinta(false)
+        router.push(jenisFilter ? `${ROUTES.PERMINTAAN_VENDOR_BARU}?id_jenis_kendaraan=${jenisFilter}` : ROUTES.PERMINTAAN_VENDOR_BARU)
+    }
+
+    const mintaVendor = () => {
+        if (loading) return
+        if (unitTersedia > 0) {
+            setKonfirmasiMinta(true)
+            return
+        }
+        keFormPermintaan()
+    }
+
     const unduh = async () => {
         setMengunduh(true)
         try {
@@ -141,10 +167,34 @@ export default function KetersediaanVendorPage() {
                         Unit aset milik dan unit vendor beserta status ketersediaannya — acuan tim marketing sebelum meminta unit ke pengadaan
                     </p>
                 </div>
-                <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={mengunduh} onClick={unduh}>
-                    Unduh Excel
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button size="sm" variant="default" icon={<HiOutlineDownload />} loading={mengunduh} onClick={unduh}>
+                        Unduh Excel
+                    </Button>
+                    <Tooltip title={tooltipMinta}>
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled={loading} onClick={mintaVendor}>
+                            Minta Vendor
+                        </Button>
+                    </Tooltip>
+                </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={konfirmasiMinta}
+                type="warning"
+                title="Masih ada unit tersedia"
+                confirmText="Tetap Minta Vendor"
+                cancelText="Cek Dulu"
+                onClose={() => setKonfirmasiMinta(false)}
+                onCancel={() => setKonfirmasiMinta(false)}
+                onConfirm={keFormPermintaan}
+            >
+                <p className="text-sm">
+                    Saat ini masih ada <strong>{formatNum(unitTersedia)} unit tersedia</strong> untuk {labelCakupan}
+                    {jenisTerpilih && ` (${formatNum(jenisTerpilih.tersedia_aset)} aset milik · ${formatNum(jenisTerpilih.tersedia_vendor)} vendor)`}.
+                    Permintaan vendor sebaiknya dibuat setelah unit yang ada benar-benar tidak mencukupi. Tetap lanjut?
+                </p>
+            </ConfirmDialog>
 
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {KARTU.map(k => {

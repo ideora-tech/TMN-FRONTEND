@@ -1,7 +1,7 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
@@ -64,8 +64,9 @@ export default function PembelianForm({ mode, initial }: Props) {
     const [lampiran, setLampiran] = useState<File[]>([])
     const [buktiLama] = useState<PembelianBukti[]>(initial?.bukti ?? [])
     const [buktiAkanDihapus, setBuktiAkanDihapus] = useState<string[]>([])
-    const [idArmada, setIdArmada] = useState('')
-    const [idPerawatan, setIdPerawatan] = useState(initial?.id_perawatan ?? '')
+    const searchParams = useSearchParams()
+    const [idArmada, setIdArmada] = useState(searchParams.get('id_armada') ?? '')
+    const [idPerawatan, setIdPerawatan] = useState(initial?.id_perawatan ?? searchParams.get('id_perawatan') ?? '')
     const [items, setItems] = useState<ItemRow[]>(
         initial?.items.length
             ? initial.items.map(i => ({

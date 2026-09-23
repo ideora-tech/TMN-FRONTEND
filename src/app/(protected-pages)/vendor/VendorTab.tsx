@@ -1,8 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Input, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
+import dayjs from 'dayjs'
+import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -74,19 +76,82 @@ export default function VendorTab() {
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary dark:bg-primary/20 flex items-center justify-center text-xs font-bold">
                             {initials}
                         </div>
-                        <span className="font-semibold">{row.original.nama_vendor}</span>
+                        <div className="min-w-0">
+                            <p className="font-semibold truncate">{row.original.nama_vendor}</p>
+                            <p className="text-xs text-gray-400 truncate">
+                                {[row.original.jenis_vendor, row.original.pic_nama ? `PIC: ${row.original.pic_nama}` : null].filter(Boolean).join(' · ') || '—'}
+                            </p>
+                        </div>
                     </div>
                 )
             },
         },
         {
-            header: 'Telepon', accessorKey: 'telepon', size: 180,
-            cell: ({ row }: CellContext<Vendor, unknown>) => row.original.telepon ?? '-',
+            header: 'Kontak', accessorKey: 'telepon', size: 220,
+            cell: ({ row }: CellContext<Vendor, unknown>) => (
+                <div className="min-w-0">
+                    <p className="text-sm">{row.original.telepon || '—'}</p>
+                    <p className="text-xs text-gray-400 truncate">{row.original.email || '—'}</p>
+                </div>
+            ),
         },
         {
-            header: 'Email', accessorKey: 'email', size: 220,
+            header: 'Unit / Driver', id: 'unit_driver', size: 130,
             cell: ({ row }: CellContext<Vendor, unknown>) => (
-                <span className="text-sm">{row.original.email ?? '-'}</span>
+                <div className="flex items-center gap-1.5">
+                    <Tooltip title="Unit terdaftar">
+                        <Tag className="bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-0 text-xs font-semibold">
+                            {formatNum(row.original.jumlah_unit ?? 0)} unit
+                        </Tag>
+                    </Tooltip>
+                    <Tooltip title="Driver terdaftar">
+                        <Tag className="bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300 border-0 text-xs font-semibold">
+                            {formatNum(row.original.jumlah_driver ?? 0)} driver
+                        </Tag>
+                    </Tooltip>
+                </div>
+            ),
+        },
+        {
+            header: 'Kontrak Aktif', id: 'kontrak_aktif', size: 170,
+            cell: ({ row }: CellContext<Vendor, unknown>) => {
+                const jumlah = row.original.jumlah_kontrak_aktif ?? 0
+                if (jumlah === 0) return <span className="text-gray-400">Belum ada</span>
+                return (
+                    <div>
+                        <p className="text-sm font-semibold">{formatNum(jumlah)} kontrak</p>
+                        <p className="text-xs text-gray-400 whitespace-nowrap">{formatRupiah(row.original.nilai_kontrak_aktif ?? 0)}</p>
+                    </div>
+                )
+            },
+        },
+        {
+            header: 'Kontrak Berakhir', id: 'kontrak_berakhir', size: 160,
+            cell: ({ row }: CellContext<Vendor, unknown>) => {
+                const tgl = row.original.kontrak_berakhir_terdekat
+                if (!tgl) return <span className="text-gray-400">—</span>
+                const sisa = dayjs(tgl).startOf('day').diff(dayjs().startOf('day'), 'day')
+                const kelas = sisa <= 7
+                    ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300'
+                    : sisa <= 30
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                return (
+                    <div>
+                        <p className="text-sm whitespace-nowrap">{dayjs(tgl).format('DD MMM YYYY')}</p>
+                        <Tag className={`${kelas} border-0 text-xs font-semibold mt-0.5`}>{sisa === 0 ? 'Hari ini' : `${formatNum(sisa)} hari lagi`}</Tag>
+                    </div>
+                )
+            },
+        },
+        {
+            header: 'Status', accessorKey: 'aktif', size: 100,
+            cell: ({ row }: CellContext<Vendor, unknown>) => (
+                <Tag className={`border-0 text-xs font-semibold ${row.original.aktif
+                    ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300'
+                    : 'bg-gray-100 text-gray-500 dark:bg-gray-500/20 dark:text-gray-300'}`}>
+                    {row.original.aktif ? 'Aktif' : 'Nonaktif'}
+                </Tag>
             ),
         },
         {

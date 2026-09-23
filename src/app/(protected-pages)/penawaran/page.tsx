@@ -3,11 +3,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import axios from 'axios'
-import { Card, Button, Input, Select, Spinner, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineEye, HiOutlineDocumentDownload, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -185,14 +186,12 @@ export default function PenawaranPage() {
                                 <HiOutlineEye className="text-base" />
                             </span>
                         </Tooltip>
-                        <Tooltip title="Download PDF">
+                        <Tooltip title="Cetak PDF">
                             <span
-                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-300 hover:bg-gray-200 cursor-pointer transition-colors"
+                                className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingId === row.id_penawaran ? 'opacity-50 pointer-events-none' : ''}`}
                                 onClick={() => { if (downloadingId === null) handleDownloadPdf(row) }}
                             >
-                                {downloadingId === row.id_penawaran
-                                    ? <Spinner size={16} />
-                                    : <HiOutlineDocumentDownload className="text-base" />}
+                                <PiFilePdfDuotone className="text-lg" />
                             </span>
                         </Tooltip>
                         {(row.status === 'draft' || row.status === 'menunggu_approval') && (

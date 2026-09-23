@@ -2,9 +2,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineClipboardList } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import DataTable from '@/components/shared/DataTable'
+import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
@@ -50,6 +51,7 @@ export default function FakturPage() {
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
     const [downloading, setDownloading]   = useState<string | null>(null)
+    const [logApprovalId, setLogApprovalId] = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -144,7 +146,7 @@ export default function FakturPage() {
             ),
         },
         {
-            header: '', id: 'action', size: 150,
+            header: '', id: 'action', size: 190,
             cell: ({ row }: CellContext<Faktur, unknown>) => (
                 <div className="flex items-center justify-end gap-1.5">
                     <Tooltip title="Cetak PDF">
@@ -153,6 +155,14 @@ export default function FakturPage() {
                             onClick={() => downloadFaktur(row.original)}
                         >
                             <PiFilePdfDuotone className="text-lg" />
+                        </span>
+                    </Tooltip>
+                    <Tooltip title="Log Approval">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                            onClick={() => setLogApprovalId(row.original.id_faktur)}
+                        >
+                            <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
                     <Tooltip title="Detail">
@@ -215,6 +225,14 @@ export default function FakturPage() {
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
+
+            <LogApprovalDialog
+                isOpen={logApprovalId !== null}
+                onClose={() => setLogApprovalId(null)}
+                kode="faktur"
+                idReferensi={logApprovalId ?? ''}
+                emptyMessage="Belum ada pengajuan approval untuk invoice ini."
+            />
         </div>
     )
 }

@@ -3,8 +3,9 @@ import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Checkbox, Dialog, Input, Tag, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import PanelAlurStatus, { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
-import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash, HiOutlineBan, HiOutlinePlay, HiOutlineCheckCircle } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -25,6 +26,19 @@ const STATUS_LABEL: Record<string, string> = {
     berjalan:    'Berjalan',
     selesai:     'Selesai',
     dibatalkan:  'Dibatalkan',
+}
+
+const TAHAP_TRIP = [
+    { status: 'belum_mulai', label: 'Belum Mulai' },
+    { status: 'berjalan',    label: 'Berjalan' },
+    { status: 'selesai',     label: 'Selesai' },
+]
+
+const LANGKAH_TRIP: Record<string, { judul: string; keterangan: string }> = {
+    belum_mulai: { judul: 'Trip belum dimulai',    keterangan: 'Mulai trip saat armada berangkat dari titik jemput.' },
+    berjalan:    { judul: 'Trip sedang berjalan',  keterangan: 'Selesaikan trip setelah armada tiba dan laporan perjalanan terisi.' },
+    selesai:     { judul: 'Trip selesai',          keterangan: 'Data trip siap dipakai untuk penagihan ke klien.' },
+    dibatalkan:  { judul: 'Trip dibatalkan',       keterangan: 'Tidak ada aksi lanjutan untuk trip ini.' },
 }
 
 const MEKANISME_LABEL: Record<string, string> = {
@@ -237,6 +251,47 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
             </div>
 
+            <PanelAlurStatus
+                judul="Alur Trip"
+                tahap={TAHAP_TRIP}
+                status={trip.status}
+                statusLabel={STATUS_LABEL[trip.status] ?? trip.status}
+                kelasIkon={STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-600'}
+                selesai={trip.status === 'selesai'}
+                gagal={trip.status === 'dibatalkan' ? 'Trip ini telah dibatalkan dan tidak bisa diproses lebih lanjut.' : undefined}
+                langkah={trip.status === 'dibatalkan' ? undefined : {
+                    judul: LANGKAH_TRIP[trip.status]?.judul,
+                    keterangan: trip.status === 'berjalan' && !trip.punya_laporan
+                        ? (
+                            <span
+                                className="text-amber-600 dark:text-amber-400 cursor-pointer hover:underline"
+                                onClick={() => document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            >
+                                Isi laporan perjalanan dulu sebelum trip bisa diselesaikan.
+                            </span>
+                        )
+                        : LANGKAH_TRIP[trip.status]?.keterangan,
+                }}
+                aksi={(trip.status === 'belum_mulai' || trip.status === 'berjalan') && (
+                    <>
+                        <Button size="sm" variant="plain" icon={<HiOutlineBan />} className={KELAS_TOMBOL_BATAL}
+                            onClick={() => setAksiTrip('batalkan')} disabled={aksiLoading}>
+                            Batalkan Trip
+                        </Button>
+                        {trip.status === 'belum_mulai' && (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePlay />} onClick={() => setAksiTrip('mulai')} disabled={aksiLoading}>
+                                Mulai Trip
+                            </Button>
+                        )}
+                        {trip.status === 'berjalan' && trip.punya_laporan && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setAksiTrip('selesai')} disabled={aksiLoading}>
+                                Selesaikan Trip
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
+
             <Card>
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -260,9 +315,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                                 Vendor
                             </Tag>
                         )}
-                        <Tag className={`${STATUS_TAG[trip.status] ?? 'bg-gray-100 text-gray-700'} border-0`}>
-                            {STATUS_LABEL[trip.status] ?? trip.status}
-                        </Tag>
                         <Button size="sm" variant="default" onClick={() => router.push(ROUTES.TRIP)}>
                             Batal
                         </Button>
@@ -386,49 +438,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {(trip.status === 'belum_mulai' || trip.status === 'berjalan') && (
-                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Aksi Trip</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[trip.status]}</span>
-                            </p>
-                            {trip.status === 'berjalan' && !trip.punya_laporan && (
-                                <p
-                                    className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 cursor-pointer hover:underline"
-                                    onClick={() => document.getElementById('laporan-perjalanan-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                                >
-                                    Isi laporan perjalanan dulu sebelum bisa diselesaikan
-                                </p>
-                            )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {trip.status === 'belum_mulai' && (
-                                <Button size="sm" variant="solid" onClick={() => setAksiTrip('mulai')} disabled={aksiLoading}>
-                                    Mulai Trip
-                                </Button>
-                            )}
-                            {trip.status === 'berjalan' && trip.punya_laporan && (
-                                <Button
-                                    size="sm"
-                                    variant="solid"
-                                    onClick={() => setAksiTrip('selesai')}
-                                    disabled={aksiLoading}
-                                >
-                                    Selesaikan
-                                </Button>
-                            )}
-                            <Button size="sm" variant="default"
-                                className={`${STATUS_TAG['dibatalkan']} border border-current`}
-                                onClick={() => setAksiTrip('batalkan')} disabled={aksiLoading}>
-                                Batalkan
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-            )}
-
             <Card id="laporan-perjalanan-card">
                 <LaporanPerjalananPanel idTrip={id} onSaved={fetchRekap} />
             </Card>

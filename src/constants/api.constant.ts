@@ -316,6 +316,7 @@ export const API_ENDPOINTS = {
     PENAWARAN_DETAIL: (id: string) => `/api/proxy/penawaran/${id}`,
     PENAWARAN_STATUS: (id: string) => `/api/proxy/penawaran/${id}/status`,
     PENAWARAN_AJUKAN_APPROVAL: (id: string) => `/api/proxy/penawaran/${id}/ajukan-approval`,
+    PENAWARAN_KIRIM_EMAIL: (id: string) => `/api/proxy/penawaran/${id}/kirim-email`,
 
     // Notifikasi
     NOTIFIKASI:       '/api/proxy/notifikasi',

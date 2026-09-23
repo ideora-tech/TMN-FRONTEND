@@ -7,8 +7,10 @@ import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import TambahPenugasanDialog from './TambahPenugasanDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineViewList, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlinePlay, HiOutlineCheckCircle } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -53,6 +55,22 @@ const STATUS_LABEL: Record<string, string> = {
     aktif:             'Aktif',
     selesai:           'Selesai',
     batal:             'Batal',
+}
+
+const TAHAP_PROYEK = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'aktif',             label: 'Aktif' },
+    { status: 'selesai',           label: 'Selesai' },
+]
+
+const LANGKAH_PROYEK: Record<string, { judul: string; keterangan: string }> = {
+    draft:                { judul: 'Siap dijalankan?',                    keterangan: 'Aktifkan proyek untuk mulai menjalankan penugasan armada dan supir.' },
+    draft_perlu_approval: { judul: 'Proyek perlu approval sebelum aktif', keterangan: 'Proyek tanpa penawaran wajib disetujui approver dulu sebelum bisa diaktifkan.' },
+    menunggu_approval:    { judul: 'Proyek sedang menunggu approval',      keterangan: 'Status akan berubah otomatis setelah approver memutuskan.' },
+    aktif:                { judul: 'Proyek sedang berjalan',               keterangan: 'Tandai selesai setelah seluruh penugasan rampung.' },
+    selesai:              { judul: 'Proyek selesai',                       keterangan: 'Tidak ada aksi lanjutan untuk proyek ini.' },
+    batal:                { judul: 'Proyek dibatalkan',                    keterangan: 'Tidak ada aksi lanjutan untuk proyek ini.' },
 }
 
 const PENAWARAN_STATUS_CLASS: Record<string, string> = {
@@ -658,6 +676,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const perluApprovalProyek = proyekManual && project.approval_aktif !== false
     const nextStatuses = (NEXT_STATUS[project.status] ?? [])
         .filter(s => !(s === 'aktif' && project.status === 'draft' && perluApprovalProyek))
+    const tahapProyek = (perluApprovalProyek || project.status === 'menunggu_approval')
+        ? TAHAP_PROYEK
+        : TAHAP_PROYEK.filter(t => t.status !== 'menunggu_approval')
+    const langkahAlur = LANGKAH_PROYEK[project.status === 'draft' && perluApprovalProyek ? 'draft_perlu_approval' : project.status]
     const isPerRit = tipeHargaPerRit(project.tipe_harga)
     const totalNilaiRute = ruteProyekList.reduce((sum, r) => sum + ((r.harga_penawaran ?? 0) * (r.estimasi_ritase || 1)), 0)
     const unitGroups: UnitPenugasanGroup[] = (() => {
@@ -702,63 +724,42 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
             </div>
 
-            {/* Ubah status proyek — gaya sama dengan halaman Penawaran */}
-            {(nextStatuses.length > 0 || (project.status === 'draft' && perluApprovalProyek)) && (
-                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Ubah Status Proyek
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[project.status] ?? project.status}</span>
-                                {project.status === 'draft' && perluApprovalProyek && ' — proyek tanpa penawaran perlu approval sebelum aktif'}
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {project.status === 'draft' && perluApprovalProyek && (
-                                <>
-                                    <Tooltip title="Log Approval">
-                                        <Button size="sm" variant="plain" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
-                                    </Tooltip>
-                                    <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
-                                        Ajukan Approval
-                                    </Button>
-                                </>
-                            )}
-                            {nextStatuses.map(s => (
-                                <Button
-                                    key={s}
-                                    size="sm"
-                                    variant="default"
-                                    className={`${STATUS_CLASS[s]} border border-current`}
-                                    onClick={() => setPendingStatus(s)}
-                                >
-                                    {`-> ${STATUS_LABEL[s]}`}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {project.status === 'menunggu_approval' && (
-                <Card className="border border-amber-200 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                                Proyek sedang menunggu approval
-                            </p>
-                            <p className="text-xs text-amber-600/80 dark:text-amber-300/80 mt-0.5">
-                                Status akan berubah otomatis setelah approver memutuskan.
-                            </p>
-                        </div>
-                        <Tooltip title="Log Approval">
-                            <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
-                        </Tooltip>
-                    </div>
-                </Card>
-            )}
+            <PanelAlurStatus
+                judul="Alur Proyek"
+                alat={proyekManual && (
+                    <Tooltip title="Log Approval">
+                        <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogApprovalOpen(true)}>
+                            <HiOutlineClipboardList className="text-lg" />
+                        </span>
+                    </Tooltip>
+                )}
+                tahap={tahapProyek}
+                status={project.status}
+                statusLabel={STATUS_LABEL[project.status] ?? project.status}
+                kelasIkon={STATUS_CLASS[project.status] ?? 'bg-gray-100 text-gray-600'}
+                selesai={project.status === 'selesai'}
+                gagal={project.status === 'batal' ? 'Proyek ini telah dibatalkan dan tidak bisa diproses lebih lanjut.' : undefined}
+                langkah={project.status !== 'batal' ? langkahAlur : undefined}
+                aksi={project.status !== 'batal' && (
+                    <>
+                        {project.status === 'draft' && perluApprovalProyek && (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                Ajukan Approval
+                            </Button>
+                        )}
+                        {nextStatuses.includes('aktif') && (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePlay />} onClick={() => setPendingStatus('aktif')}>
+                                Aktifkan Proyek
+                            </Button>
+                        )}
+                        {nextStatuses.includes('selesai') && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setPendingStatus('selesai')}>
+                                Tandai Selesai
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
 
             <ConfirmDialog
                 isOpen={!!pendingStatus}
@@ -793,11 +794,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <Tag className={`text-xs font-semibold ${STATUS_CLASS[project.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                                    {project.status}
-                                </Tag>
-                                <Tooltip title="Download PDF">
-                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleDownloadPdf} />
+                                <Tooltip title="Cetak PDF">
+                                    <span
+                                        className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingPdf ? 'opacity-50 pointer-events-none' : ''}`}
+                                        onClick={handleDownloadPdf}
+                                    >
+                                        <PiFilePdfDuotone className="text-lg" />
+                                    </span>
                                 </Tooltip>
                                 <Tooltip title="Edit">
                                     <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
@@ -815,7 +818,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 { label: 'Tanggal Mulai',   value: project.tanggal_mulai ? dayjs(project.tanggal_mulai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Selesai', value: project.tanggal_selesai ? dayjs(project.tanggal_selesai).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
                                 { label: 'Harga Penawaran', value: project.harga_penawaran != null ? formatRupiah(project.harga_penawaran) : <span className="text-gray-400">—</span> },
-                                { label: 'Harga Proyek',    value: project.harga_proyek != null ? formatRupiah(project.harga_proyek) : <span className="text-gray-400">—</span> },
+                                // { label: 'Harga Proyek', value: project.harga_proyek != null ? formatRupiah(project.harga_proyek) : <span className="text-gray-400">—</span> },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -870,14 +873,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                             setForm(p => ({ ...p, harga_penawaran: nilai ? Number(nilai) : null }))
                                         }} />
                                 </FormItem>
-                                <FormItem label="Harga Proyek (opsional)">
+                                {/* <FormItem label="Harga Proyek (opsional)">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.harga_proyek != null && form.harga_proyek !== 0 ? formatNum(form.harga_proyek) : ''}
                                         onChange={e => {
                                             const nilai = e.target.value.replace(/\D/g, '')
                                             setForm(p => ({ ...p, harga_proyek: nilai ? Number(nilai) : null }))
                                         }} />
-                                </FormItem>
+                                </FormItem> */}
                                 <FormItem label="Status">
                                     <Select isSearchable={false} options={STATUS_OPTIONS}
                                         value={STATUS_OPTIONS.find(o => o.value === form.status) ?? (form.status ? { value: form.status, label: STATUS_LABEL[form.status] ?? form.status } : null)}

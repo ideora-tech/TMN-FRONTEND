@@ -6,6 +6,7 @@ import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, Upload, toast, Not
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineClipboardList, HiOutlinePaperClip } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
@@ -16,6 +17,22 @@ import { pembelianSparepartService, PembelianSparepart } from '@/services/pembel
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
 
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
+
+const TAHAP_PEMBELIAN = [
+    { status: 'diajukan',          label: 'Diajukan' },
+    { status: 'disetujui_finance', label: 'Disetujui' },
+    { status: 'dibeli',            label: 'Dibeli' },
+    { status: 'lunas',             label: 'Lunas' },
+]
+
+const LANGKAH_PEMBELIAN: Record<string, { judul: string; keterangan: string }> = {
+    diajukan:          { judul: 'Menunggu keputusan approver',      keterangan: '' },
+    disetujui_manager: { judul: 'Disetujui — siap direalisasi',     keterangan: 'Lakukan pembelian ke supplier, lalu catat realisasi (harga aktual + nota). Pembayaran diproses di Keuangan → Proses Pembayaran.' },
+    disetujui_finance: { judul: 'Disetujui — siap direalisasi',     keterangan: 'Lakukan pembelian ke supplier, lalu catat realisasi (harga aktual + nota). Pembayaran diproses di Keuangan → Proses Pembayaran.' },
+    dibeli:            { judul: 'Sudah dibeli — menunggu pembayaran', keterangan: 'Pembayaran diproses di Keuangan → Proses Pembayaran; status berubah jadi Lunas otomatis saat ditransfer.' },
+    lunas:             { judul: 'Pembelian selesai',                 keterangan: 'Pembayaran sudah ditransfer — tidak ada aksi lanjutan.' },
+    ditolak:           { judul: 'Pengajuan ditolak',                 keterangan: 'Buat pengajuan pembelian baru bila masih diperlukan.' },
+}
 
 export default function PembelianDetailPage() {
     const { klik } = usePratinjauBerkas()
@@ -109,6 +126,15 @@ export default function PembelianDetailPage() {
     const bolehEksekusiPengadaan = bolehKelola || punyaPeran('pengadaan')
     const bolehUploadBukti = bolehEksekusiPengadaan && (data.status === 'disetujui_finance' || data.status === 'dibeli')
     const bolehRealisasi = bolehEksekusiPengadaan && (!data.wajib_pengadaan || punyaPeran('pengadaan', 'superadmin'))
+    const bukaLogApproval = () => {
+        if (!data.pengajuan_keuangan) {
+            toast.push(<Notification type="info" title={data.id_perawatan
+                ? 'Approval pembelian ini mengikuti pengajuan perawatan terkait'
+                : 'Belum ada pengajuan pengeluaran untuk pembelian ini'} />)
+            return
+        }
+        setLogOpen(true)
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -121,9 +147,6 @@ export default function PembelianDetailPage() {
                     <div>
                         <div className="flex items-center gap-3">
                             <h3 className="font-bold font-mono">{data.nomor_pengajuan}</h3>
-                            <Tag className={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}>
-                                {STATUS_LABEL[data.status] ?? data.status}
-                            </Tag>
                             {data.wajib_pengadaan && (
                                 <Tag className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
                                     Wajib Pengadaan
@@ -136,19 +159,7 @@ export default function PembelianDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Tooltip title="Log Approval">
-                        <Button variant="default" size="sm" icon={<HiOutlineClipboardList />}
-                            onClick={() => {
-                                if (!data.pengajuan_keuangan) {
-                                    toast.push(<Notification type="info" title={data.id_perawatan
-                                        ? 'Approval pembelian ini mengikuti pengajuan perawatan terkait'
-                                        : 'Belum ada pengajuan pengeluaran untuk pembelian ini'} />)
-                                    return
-                                }
-                                setLogOpen(true)
-                            }} />
-                    </Tooltip>
-                    {bolehDiubahAtauDihapus(data.status, data.id_perawatan) && bolehKelola && (
+                    {bolehDiubahAtauDihapus(data.status) && bolehKelola && (
                         <>
                             <Tooltip title="Hapus">
                                 <Button variant="default" size="sm" icon={<HiOutlineTrash />}
@@ -169,26 +180,45 @@ export default function PembelianDetailPage() {
                             </Tooltip>
                         </Upload>
                     )}
-                    {data.status === 'disetujui_finance' && bolehRealisasi && (
-                        <Tooltip title="Realisasi">
-                            <Button variant="solid" size="sm" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi} />
-                        </Tooltip>
-                    )}
                 </div>
             </div>
 
-            <p className="text-xs text-gray-400">
-                {data.id_perawatan
-                    ? 'Biaya pembelian ini termasuk dalam pengajuan perawatan terkait'
-                    : 'Approval oleh approver sesuai Konfigurasi Approval (via Persetujuan Saya), pembayaran di menu Keuangan → Proses Pembayaran'}
-            </p>
-
-            {data.status === 'ditolak' && data.alasan_ditolak && (
-                <div className="rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-4 py-3">
-                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">Pengajuan ditolak</p>
-                    <p className="text-sm text-red-500 dark:text-red-300 mt-0.5">{data.alasan_ditolak}</p>
-                </div>
-            )}
+            <PanelAlurStatus
+                judul="Alur Pembelian"
+                alat={(
+                    <Tooltip title="Log Approval">
+                        <span className={KELAS_IKON_LOG_APPROVAL} onClick={bukaLogApproval}>
+                            <HiOutlineClipboardList className="text-lg" />
+                        </span>
+                    </Tooltip>
+                )}
+                tahap={TAHAP_PEMBELIAN}
+                status={data.status === 'disetujui_manager' ? 'disetujui_finance' : data.status}
+                statusLabel={STATUS_LABEL[data.status] ?? data.status}
+                kelasIkon={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}
+                tahapGagal={data.status === 'ditolak' ? 1 : undefined}
+                selesai={data.status === 'lunas'}
+                catatan={data.status === 'ditolak' && data.alasan_ditolak
+                    ? [{ warna: 'merah', judul: 'Pengajuan ditolak approver', isi: `“${data.alasan_ditolak}”` }]
+                    : []}
+                langkah={{
+                    judul: LANGKAH_PEMBELIAN[data.status]?.judul ?? STATUS_LABEL[data.status] ?? data.status,
+                    keterangan: data.status === 'diajukan'
+                        ? (data.id_perawatan
+                            ? 'Ditautkan ke perawatan armada — tetap lewat approval sesuai Konfigurasi Approval (via Persetujuan Saya).'
+                            : 'Approval oleh approver sesuai Konfigurasi Approval (via Persetujuan Saya).')
+                        : LANGKAH_PEMBELIAN[data.status]?.keterangan,
+                }}
+                aksi={(
+                    <>
+                        {data.status === 'disetujui_finance' && bolehRealisasi && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
+                                Catat Realisasi
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
 
             <Card>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">

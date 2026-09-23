@@ -6,12 +6,13 @@ import { Button, Card, Drawer, Dropdown, Input, Tag, Tooltip, toast, Notificatio
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineDocumentDownload, HiOutlineChevronDown, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDownload, HiOutlineDocumentDownload, HiOutlineChevronDown, HiOutlineClipboardList, HiOutlineShoppingCart } from 'react-icons/hi'
 import { PiTruckDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import { STATUS_TAG as STATUS_TAG_PEMBELIAN, STATUS_LABEL as STATUS_LABEL_PEMBELIAN } from '../pembelian-sparepart/status'
 import { perawatanArmadaService, PerawatanArmada, PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
 import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -642,6 +643,48 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail, onDa
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        )}
+
+                        {detailTarget && detailTarget.status !== 'dibatalkan' && (
+                            <div className="mt-5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                        Pembelian Sparepart ({detailData?.pembelian?.length ?? 0})
+                                    </p>
+                                    {detailTarget.status !== 'selesai' && (
+                                        <Button size="xs" variant="default" icon={<HiOutlineShoppingCart />}
+                                            onClick={() => router.push(`${ROUTES.PEMBELIAN_SPAREPART_BARU}?id_armada=${detailTarget.id_armada}&id_perawatan=${detailTarget.id_perawatan}`)}>
+                                            Buat Pembelian
+                                        </Button>
+                                    )}
+                                </div>
+                                {(detailData?.pembelian?.length ?? 0) === 0 ? (
+                                    <p className="text-xs text-gray-400 italic">Belum ada pembelian sparepart yang ditautkan ke perawatan ini.</p>
+                                ) : (
+                                    <div className="flex flex-col gap-1.5">
+                                        {detailData?.pembelian?.map(p => (
+                                            <div key={p.id_pembelian}
+                                                className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                                                onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(p.id_pembelian))}>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold font-mono truncate">{p.nomor_pengajuan}</p>
+                                                    <p className="text-xs text-gray-400 truncate">
+                                                        {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}{p.nama_supplier ? ` · ${p.nama_supplier}` : ''}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <Tag className={`text-xs font-semibold border-0 ${STATUS_TAG_PEMBELIAN[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                        {STATUS_LABEL_PEMBELIAN[p.status] ?? p.status}
+                                                    </Tag>
+                                                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-nowrap">
+                                                        {formatRupiah(p.total_aktual ?? p.total_estimasi)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 

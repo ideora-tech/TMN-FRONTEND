@@ -16,7 +16,7 @@ export default function PembelianEditPage() {
     useEffect(() => {
         pembelianSparepartService.get(id)
             .then(data => {
-                if (!bolehDiubahAtauDihapus(data.status, data.id_perawatan)) {
+                if (!bolehDiubahAtauDihapus(data.status)) {
                     toast.push(<Notification type="warning" title="Pengajuan sudah diproses, tidak bisa diedit" />)
                     router.replace(ROUTES.PEMBELIAN_SPAREPART_DETAIL(id))
                     return

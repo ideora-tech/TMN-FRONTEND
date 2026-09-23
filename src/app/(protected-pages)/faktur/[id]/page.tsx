@@ -6,7 +6,9 @@ import { Card, Button, Dialog, FormItem, Input, DatePicker, Tooltip, toast, Noti
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import { HiPlusCircle, HiOutlinePlus, HiArrowLeft, HiOutlineLightBulb, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import PanelAlurStatus, { KELAS_TOMBOL_BATAL, KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
+import { HiPlusCircle, HiOutlinePlus, HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineClipboardList, HiOutlineCheckCircle, HiOutlineBan, HiOutlinePaperAirplane } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -37,6 +39,23 @@ const NEXT_STATUS: Record<string, string[]> = {
     terkirim:          ['lunas', 'batal'],
     lunas:              [],
     batal:              [],
+}
+
+const TAHAP_INVOICE = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'terkirim',          label: 'Terkirim' },
+    { status: 'lunas',             label: 'Lunas' },
+]
+
+const LANGKAH_INVOICE: Record<string, { judul: string; keterangan: string }> = {
+    draft:                { judul: 'Siap dikirim ke klien?',              keterangan: 'Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim ke klien.' },
+    draft_ditolak:        { judul: 'Perbaiki lalu ajukan ulang',          keterangan: 'Revisi data invoice sesuai catatan reviewer, lalu ajukan approval kembali.' },
+    draft_tanpa_approval: { judul: 'Siap dikirim ke klien?',              keterangan: 'Approval internal sedang nonaktif — invoice bisa langsung ditandai terkirim.' },
+    menunggu_approval:    { judul: 'Menunggu keputusan reviewer internal', keterangan: 'Belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.' },
+    terkirim:             { judul: 'Invoice sudah dikirim ke klien',       keterangan: 'Tandai lunas setelah pembayaran dari klien diterima.' },
+    lunas:                { judul: 'Pembayaran sudah diterima',            keterangan: 'Invoice ini selesai dan tidak memerlukan aksi lanjutan.' },
+    batal:                { judul: 'Invoice dibatalkan',                   keterangan: 'Tidak ada aksi lanjutan untuk invoice ini.' },
 }
 
 const RIWAYAT_LABEL: Record<string, string> = {
@@ -222,12 +241,15 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
         ? faktur.pajak
         : (faktur.persen_pajak ? [{ nama: faktur.nama_pajak || 'Pajak', persen: faktur.persen_pajak }] : [])
 
-    const panelStatus = [
-        faktur.status === 'draft' && !!faktur.alasan_ditolak_internal,
-        faktur.status === 'draft',
-        faktur.status === 'menunggu_approval',
-        (NEXT_STATUS[faktur.status] ?? []).length > 0,
-    ].filter(Boolean).length
+    const ditolak = faktur.status === 'draft' && !!faktur.alasan_ditolak_internal
+    const tanpaApproval = faktur.approval_aktif === false
+    const bisaBatal = (NEXT_STATUS[faktur.status] ?? []).includes('batal')
+    const langkah = LANGKAH_INVOICE[
+        faktur.status === 'draft' ? (tanpaApproval ? 'draft_tanpa_approval' : ditolak ? 'draft_ditolak' : 'draft') : faktur.status
+    ]
+    const kelasIkonAlur = ditolak
+        ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300'
+        : (STATUS_CLASS[faktur.status] ?? 'bg-gray-100 text-gray-600')
 
     return (
         <div className="flex flex-col gap-4">
@@ -247,82 +269,48 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 </div>
             </div>
 
-            {panelStatus > 0 && (
-                <div className={panelStatus > 1 ? 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start' : 'flex flex-col gap-4'}>
-                    {faktur.status === 'draft' && faktur.alasan_ditolak_internal && (
-                        <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
-                            <div className="flex items-start gap-3">
-                                <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
-                                    <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{faktur.alasan_ditolak_internal}</p>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
-
-                    {faktur.status === 'draft' && (
-                        <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">
-                                        {faktur.approval_aktif === false
-                                            ? 'Approval internal sedang nonaktif — invoice bisa langsung ditandai terkirim'
-                                            : 'Invoice perlu disetujui reviewer internal dulu sebelum bisa dikirim'}
-                                    </p>
-                                </div>
-                                {faktur.approval_aktif === false ? (
-                                    <Button size="sm" variant="solid" onClick={() => setTandaiTerkirimOpen(true)}>
-                                        Tandai Terkirim
-                                    </Button>
-                                ) : (
-                                    <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
-                                        Ajukan Approval
-                                    </Button>
-                                )}
-                            </div>
-                        </Card>
-                    )}
-
-                    {faktur.status === 'menunggu_approval' && (
-                        <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                            <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                                Menunggu keputusan reviewer internal — belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.
-                            </p>
-                        </Card>
-                    )}
-
-                    {/* Ubah status faktur — gaya sama dengan halaman Penawaran */}
-                    {(NEXT_STATUS[faktur.status] ?? []).length > 0 && (
-                        <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Ubah Status Invoice
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-0.5">
-                                        Status saat ini: <span className="font-semibold">{STATUS_LABEL[faktur.status] ?? faktur.status}</span>
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {(NEXT_STATUS[faktur.status] ?? []).map(s => (
-                                        <Button
-                                            key={s}
-                                            size="sm"
-                                            variant="default"
-                                            className={`${STATUS_CLASS[s]} border border-current`}
-                                            onClick={() => setPendingStatus(s)}
-                                        >
-                                            {`-> ${STATUS_LABEL[s]}`}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        </Card>
-                    )}
-                </div>
-            )}
+            <PanelAlurStatus
+                judul="Alur Invoice"
+                alat={(
+                    <Tooltip title="Log Approval">
+                        <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogApprovalOpen(true)}>
+                            <HiOutlineClipboardList className="text-lg" />
+                        </span>
+                    </Tooltip>
+                )}
+                tahap={TAHAP_INVOICE}
+                status={faktur.status}
+                statusLabel={ditolak ? 'Draft — Ditolak' : (STATUS_LABEL[faktur.status] ?? faktur.status)}
+                kelasIkon={kelasIkonAlur}
+                tahapGagal={ditolak ? 1 : undefined}
+                selesai={faktur.status === 'lunas'}
+                gagal={faktur.status === 'batal' ? 'Invoice ini telah dibatalkan dan tidak bisa diproses lebih lanjut.' : undefined}
+                catatan={ditolak ? [{ warna: 'merah', judul: 'Approval ditolak — perlu revisi', isi: `“${faktur.alasan_ditolak_internal}”` }] : []}
+                langkah={faktur.status !== 'batal' ? langkah : undefined}
+                aksi={faktur.status !== 'batal' && (
+                    <>
+                        {bisaBatal && (
+                            <Button size="sm" variant="plain" icon={<HiOutlineBan />} className={KELAS_TOMBOL_BATAL} onClick={() => setPendingStatus('batal')}>
+                                Batalkan Invoice
+                            </Button>
+                        )}
+                        {faktur.status === 'draft' && (tanpaApproval ? (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setTandaiTerkirimOpen(true)}>
+                                Tandai Terkirim
+                            </Button>
+                        ) : (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                {ditolak ? 'Ajukan Ulang' : 'Ajukan Approval'}
+                            </Button>
+                        ))}
+                        {faktur.status === 'terkirim' && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setPendingStatus('lunas')}>
+                                Tandai Lunas
+                            </Button>
+                        )}
+                    </>
+                )}
+            />
 
             <ConfirmDialog
                 isOpen={!!pendingStatus}
@@ -380,14 +368,13 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CLASS[faktur.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                            {STATUS_LABEL[faktur.status] ?? faktur.status}
-                        </span>
-                        <Tooltip title="Export PDF">
-                            <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />} loading={downloadingExport} onClick={handleExportPdf} />
-                        </Tooltip>
-                        <Tooltip title="Log Approval">
-                            <Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogApprovalOpen(true)} />
+                        <Tooltip title="Cetak PDF">
+                            <span
+                                className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingExport ? 'opacity-50 pointer-events-none' : ''}`}
+                                onClick={handleExportPdf}
+                            >
+                                <PiFilePdfDuotone className="text-lg" />
+                            </span>
                         </Tooltip>
                     </div>
                 </div>

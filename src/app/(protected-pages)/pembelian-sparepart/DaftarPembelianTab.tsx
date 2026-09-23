@@ -22,7 +22,7 @@ type Option = { value: string; label: string }
 
 const STATUS_OPTIONS: Option[] = [
     { value: '', label: 'Semua Status' },
-    ...Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label })),
+    ...Object.entries(STATUS_LABEL).filter(([value]) => value !== 'disetujui_manager').map(([value, label]) => ({ value, label })),
 ]
 
 export default function DaftarPembelianTab() {
@@ -192,7 +192,7 @@ export default function DaftarPembelianTab() {
                             <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
-                    {bolehDiubahAtauDihapus(row.original.status, row.original.id_perawatan) && bolehKelola && (
+                    {bolehDiubahAtauDihapus(row.original.status) && bolehKelola && (
                         <Tooltip title="Hapus">
                             <span
                                 className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"

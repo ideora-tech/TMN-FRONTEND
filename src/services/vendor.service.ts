@@ -13,6 +13,11 @@ export interface Vendor {
     npwp?: string | null
     tanggal_bergabung?: string | null
     aktif: boolean
+    jumlah_unit?: number
+    jumlah_driver?: number
+    jumlah_kontrak_aktif?: number
+    nilai_kontrak_aktif?: number
+    kontrak_berakhir_terdekat?: string | null
 }
 
 export interface KontrakVendor {

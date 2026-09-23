@@ -225,7 +225,7 @@ export default function ProjectBaruPage() {
                                 setForm(p => ({ ...p, harga_penawaran: v }))
                             }} />
                     </FormItem>
-                    <FormItem label="Harga Proyek (opsional)">
+                    {/* <FormItem label="Harga Proyek (opsional)">
                         <Input prefix="Rp" placeholder="0"
                             value={form.harga_proyek ? formatNum(Number(form.harga_proyek)) : ''}
                             onChange={(e) => {
@@ -233,7 +233,7 @@ export default function ProjectBaruPage() {
                                 setHargaDiketikManual(m => ({ ...m, proyek: v !== '' }))
                                 setForm(p => ({ ...p, harga_proyek: v }))
                             }} />
-                    </FormItem>
+                    </FormItem> */}
                     <FormItem label="Status">
                         <Select options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === form.status) ?? null}

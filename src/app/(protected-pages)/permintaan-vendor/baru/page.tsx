@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
@@ -23,11 +23,13 @@ const emptyUnitRow = (): UnitRow => ({ id_jenis_kendaraan: '', jumlah_unit: '1' 
 
 export default function PermintaanVendorBaruPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const presetJenis = searchParams.get('id_jenis_kendaraan') ?? ''
     const [form, setForm] = useState({
         id_proyek: '',
         mekanisme: 'unit_only', periode_dari: '', periode_sampai: '', catatan: '',
     })
-    const [unitRows, setUnitRows] = useState<UnitRow[]>([emptyUnitRow()])
+    const [unitRows, setUnitRows] = useState<UnitRow[]>([{ ...emptyUnitRow(), id_jenis_kendaraan: presetJenis }])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors]   = useState<Record<string, string>>({})
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])

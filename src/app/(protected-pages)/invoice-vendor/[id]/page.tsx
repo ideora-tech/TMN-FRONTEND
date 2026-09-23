@@ -1,6 +1,6 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
-import { use, useEffect, useState, useCallback, useRef } from 'react'
+import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
@@ -9,8 +9,10 @@ import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineBadgeCheck } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolidasiVendor.service'
@@ -24,6 +26,23 @@ import { STATUS_LABEL as STATUS_PENGAJUAN_LABEL, STATUS_TAG as STATUS_PENGAJUAN_
 import { KontrakVendor } from '@/services/vendor.service'
 import { tipePembayaranService, TipePembayaran } from '@/services/tipe-pembayaran.service'
 import { STATUS_TAG, STATUS_LABEL, BAYAR_TAG, BAYAR_LABEL } from '../DaftarInvoiceTab'
+
+const TAHAP_INVOICE_VENDOR = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'diverifikasi',      label: 'Diverifikasi' },
+    { status: 'lunas',             label: 'Lunas' },
+]
+
+const LANGKAH_INVOICE_VENDOR: Record<string, { judul: string; keterangan: string }> = {
+    draft:                 { judul: 'Siap diverifikasi?',                    keterangan: 'Invoice perlu disetujui approver dulu sebelum bisa dibayar.' },
+    draft_tanpa_approval:  { judul: 'Siap diverifikasi?',                    keterangan: 'Approval sedang nonaktif — invoice bisa langsung diverifikasi.' },
+    menunggu_approval:     { judul: 'Menunggu keputusan approver',           keterangan: 'Invoice belum bisa dibayar sampai ada keputusan.' },
+    ditolak:               { judul: 'Perbaiki lalu ajukan ulang',            keterangan: 'Edit invoice ini — setelah disimpan, status kembali ke Draft dan bisa diajukan approval lagi.' },
+    diverifikasi_belum:    { judul: 'Invoice terverifikasi — siap dibayar',  keterangan: 'Pembayaran tiap termin diajukan lewat Keuangan → Proses Pembayaran; status pembayaran diperbarui otomatis saat ditransfer.' },
+    diverifikasi_sebagian: { judul: 'Pembayaran sedang berjalan',            keterangan: 'Sebagian termin sudah dibayar — sisanya masih menunggu transfer.' },
+    diverifikasi_lunas:    { judul: 'Invoice lunas',                         keterangan: 'Seluruh termin sudah dibayar — tidak ada aksi lanjutan.' },
+}
 
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
@@ -67,8 +86,13 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const [saving, setSaving]         = useState(false)
     const [ppnPersen, setPpnPersen] = useState('')
     const [pphPersen, setPphPersen] = useState('')
-    const ppnManual = useRef(false)
-    const pphManual = useRef(false)
+    const nominalDariPersen = (dpp: string, persen: string) => {
+        const nilai = Number(persen)
+        if (!dpp || !persen || Number.isNaN(nilai)) return ''
+        return String(Math.round((Number(dpp) || 0) * nilai / 100))
+    }
+    const persenDariNominal = (dpp: number, nominal: number) =>
+        dpp > 0 && nominal > 0 ? String(Math.round(nominal / dpp * 10000) / 100) : ''
     const [kontrakList, setKontrakList] = useState<KontrakVendor[]>([])
     const [tipePembayaranList, setTipePembayaranList] = useState<TipePembayaran[]>([])
 
@@ -167,18 +191,14 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const tipePembayaranLabelMap = Object.fromEntries(tipePembayaranList.map(t => [t.kode_tipe, t.nama_tipe]))
 
     useEffect(() => {
-        if (!ppnPersen || ppnManual.current) return
-        const persen = Number(ppnPersen)
-        if (Number.isNaN(persen)) return
-        setForm(p => ({ ...p, ppn: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
-    }, [form.dpp, ppnPersen])
+        if (!editing) return
+        setForm(p => ({ ...p, ppn: nominalDariPersen(p.dpp, ppnPersen) }))
+    }, [editing, form.dpp, ppnPersen])
 
     useEffect(() => {
-        if (!pphPersen || pphManual.current) return
-        const persen = Number(pphPersen)
-        if (Number.isNaN(persen)) return
-        setForm(p => ({ ...p, pph: p.dpp ? String(Math.round((Number(p.dpp) || 0) * persen / 100)) : '' }))
-    }, [form.dpp, pphPersen])
+        if (!editing) return
+        setForm(p => ({ ...p, pph: nominalDariPersen(p.dpp, pphPersen) }))
+    }, [editing, form.dpp, pphPersen])
 
     const totalEdit = Math.max((Number(form.dpp) || 0) + (Number(form.ppn) || 0) - (Number(form.pph) || 0), 0)
 
@@ -327,6 +347,18 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
 
     const bisaBayar = data.status === 'diverifikasi' && sisa > 0
     const initial = data.vendor?.nama_vendor?.charAt(0).toUpperCase() ?? 'I'
+    const mulaiEdit = () => {
+        setPpnPersen(persenDariNominal(Number(data.dpp) || 0, Number(data.ppn) || 0))
+        setPphPersen(persenDariNominal(Number(data.dpp) || 0, Number(data.pph) || 0))
+        setEditing(true)
+    }
+    const langkahAlur = LANGKAH_INVOICE_VENDOR[
+        data.status === 'draft'
+            ? (data.approval_aktif === false ? 'draft_tanpa_approval' : 'draft')
+            : data.status === 'diverifikasi'
+                ? `diverifikasi_${data.status_pembayaran}`
+                : data.status
+    ]
 
     return (
         <div className="flex flex-col gap-4">
@@ -341,18 +373,50 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 </div>
             </div>
 
-            {data.status === 'menunggu_approval' && (
-                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                        Menunggu keputusan approver — invoice belum bisa dibayar.
-                    </p>
-                </Card>
-            )}
-
-            {data.status === 'ditolak' && data.catatan_verifikasi && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-                    <strong>Invoice ditolak:</strong> {data.catatan_verifikasi}
-                </div>
+            {!editing && (
+                <PanelAlurStatus
+                    judul="Alur Invoice Vendor"
+                    alat={(
+                        <Tooltip title="Log Approval">
+                            <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogOpen(true)}>
+                                <HiOutlineClipboardList className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
+                    tahap={TAHAP_INVOICE_VENDOR}
+                    status={data.status}
+                    statusLabel={data.status === 'diverifikasi' && data.status_pembayaran !== 'belum'
+                        ? (BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran)
+                        : (STATUS_LABEL[data.status] ?? data.status)}
+                    kelasIkon={data.status === 'diverifikasi' && data.status_pembayaran !== 'belum'
+                        ? (BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600')
+                        : (STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600')}
+                    tahapAktif={data.status === 'diverifikasi' && data.status_pembayaran === 'sebagian' ? 3 : undefined}
+                    tahapGagal={data.status === 'ditolak' ? 1 : undefined}
+                    selesai={data.status === 'diverifikasi' && data.status_pembayaran === 'lunas'}
+                    catatan={data.status === 'ditolak' && data.catatan_verifikasi
+                        ? [{ warna: 'merah', judul: 'Invoice ditolak approver — perlu revisi', isi: `“${data.catatan_verifikasi}”` }]
+                        : []}
+                    langkah={langkahAlur}
+                    aksi={(
+                        <>
+                            {data.status === 'ditolak' && (
+                                <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={mulaiEdit}>
+                                    Perbaiki Invoice
+                                </Button>
+                            )}
+                            {data.status === 'draft' && (data.approval_aktif === false ? (
+                                <Button size="sm" variant="solid" icon={<HiOutlineBadgeCheck />} onClick={() => setVerifikasiLangsungOpen(true)}>
+                                    Verifikasi
+                                </Button>
+                            ) : (
+                                <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                    Ajukan Approval
+                                </Button>
+                            ))}
+                        </>
+                    )}
+                />
             )}
 
             <Card>
@@ -369,38 +433,20 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 </div>
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-                                <Tag className={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}>
-                                    {STATUS_LABEL[data.status] ?? data.status}
-                                </Tag>
                                 <Tag className={BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
                                     {BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran}
                                 </Tag>
-                                <Tooltip title="Export PDF">
-                                    <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingPdf} onClick={handleExportPdf} />
+                                <Tooltip title="Cetak PDF">
+                                    <span
+                                        className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingPdf ? 'opacity-50 pointer-events-none' : ''}`}
+                                        onClick={handleExportPdf}
+                                    >
+                                        <PiFilePdfDuotone className="text-lg" />
+                                    </span>
                                 </Tooltip>
-                                <Tooltip title="Log Approval">
-                                    <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
-                                </Tooltip>
-                                {data.status === 'draft' && (
-                                    data.approval_aktif === false ? (
-                                        <Button variant="solid" size="sm" onClick={() => setVerifikasiLangsungOpen(true)}>
-                                            Verifikasi
-                                        </Button>
-                                    ) : (
-                                        <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
-                                            Ajukan Approval
-                                        </Button>
-                                    )
-                                )}
                                 {(data.status === 'draft' || data.status === 'ditolak') && (
                                     <Tooltip title="Edit">
-                                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => {
-                                            setEditing(true)
-                                            setPpnPersen('')
-                                            setPphPersen('')
-                                            ppnManual.current = false
-                                            pphManual.current = false
-                                        }} />
+                                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={mulaiEdit} />
                                     </Tooltip>
                                 )}
                             </div>
@@ -537,36 +583,22 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.dpp ? formatNum(Number(form.dpp)) : ''}
                                     onChange={e => setForm(p => ({ ...p, dpp: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
-                            <FormItem label="PPN">
+                            <FormItem label="PPN" extra={<span className="text-xs text-gray-400">Isi persentase, nominal dihitung otomatis dari DPP</span>}>
                                 <div className="flex items-center gap-2">
-                                    <Input className="flex-1" prefix="Rp" placeholder="0"
-                                        value={form.ppn ? formatNum(Number(form.ppn)) : ''}
-                                        onChange={e => {
-                                            ppnManual.current = true
-                                            setForm(p => ({ ...p, ppn: e.target.value.replace(/\D/g, '') }))
-                                        }} />
                                     <Input className="w-24" suffix="%" placeholder="0"
                                         value={ppnPersen}
-                                        onChange={e => {
-                                            ppnManual.current = false
-                                            setPpnPersen(e.target.value.replace(/[^0-9.]/g, ''))
-                                        }} />
+                                        onChange={e => setPpnPersen(e.target.value.replace(/[^0-9.]/g, ''))} />
+                                    <Input className="flex-1" prefix="Rp" placeholder="0" readOnly
+                                        value={form.ppn ? formatNum(Number(form.ppn)) : ''} />
                                 </div>
                             </FormItem>
-                            <FormItem label="PPh">
+                            <FormItem label="PPh" extra={<span className="text-xs text-gray-400">Isi persentase, nominal dihitung otomatis dari DPP</span>}>
                                 <div className="flex items-center gap-2">
-                                    <Input className="flex-1" prefix="Rp" placeholder="0"
-                                        value={form.pph ? formatNum(Number(form.pph)) : ''}
-                                        onChange={e => {
-                                            pphManual.current = true
-                                            setForm(p => ({ ...p, pph: e.target.value.replace(/\D/g, '') }))
-                                        }} />
                                     <Input className="w-24" suffix="%" placeholder="0"
                                         value={pphPersen}
-                                        onChange={e => {
-                                            pphManual.current = false
-                                            setPphPersen(e.target.value.replace(/[^0-9.]/g, ''))
-                                        }} />
+                                        onChange={e => setPphPersen(e.target.value.replace(/[^0-9.]/g, ''))} />
+                                    <Input className="flex-1" prefix="Rp" placeholder="0" readOnly
+                                        value={form.pph ? formatNum(Number(form.pph)) : ''} />
                                 </div>
                             </FormItem>
                             <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mb-4 self-start">

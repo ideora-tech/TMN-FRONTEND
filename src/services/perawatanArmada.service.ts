@@ -30,6 +30,17 @@ export interface BuktiPerawatan {
     nama_asli: string
 }
 
+export interface PembelianTerkaitPerawatan {
+    id_pembelian: string
+    nomor_pengajuan: string
+    status: string
+    total_estimasi: number
+    total_aktual: number | null
+    tanggal_pengajuan: string
+    tanggal_pembelian: string | null
+    nama_supplier: string | null
+}
+
 export interface PerawatanArmada {
     id_perawatan: string
     id_armada: string
@@ -37,6 +48,7 @@ export interface PerawatanArmada {
     interval_label: string | null
     sparepart?: PerawatanSparepartItem[]
     bukti?: BuktiPerawatan[]
+    pembelian?: PembelianTerkaitPerawatan[]
     tanggal: string
     biaya: number
     km_odometer: number | null

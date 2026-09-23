@@ -6,10 +6,12 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineClipboardList } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineClipboardList, HiOutlinePaperAirplane } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -17,6 +19,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { kontrakVendorService, KontrakVendor, HasilTimpaPasangan } from '@/services/kontrak-vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
+import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 
 const MEKANISME_OPTIONS = [
     { value: 'unit_only',   label: 'Unit Only' },
@@ -44,13 +47,30 @@ const KONTRAK_STATUS_CLASS: Record<string, string> = {
 }
 
 const KONTRAK_STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', menunggu_approval: 'Menunggu Approval', aktif: 'aktif', selesai: 'selesai', batal: 'batal',
+    draft: 'Draft', menunggu_approval: 'Menunggu Approval', aktif: 'Aktif', selesai: 'Selesai', batal: 'Batal',
+}
+
+const TAHAP_KONTRAK = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'aktif',             label: 'Aktif' },
+    { status: 'selesai',           label: 'Selesai' },
+]
+
+const LANGKAH_KONTRAK: Record<string, { judul: string; keterangan: string }> = {
+    draft:             { judul: 'Siap diberlakukan?',                          keterangan: 'Kontrak perlu disetujui approver dulu sebelum berstatus aktif.' },
+    draft_ditolak:     { judul: 'Perbaiki lalu ajukan ulang',                  keterangan: 'Revisi data kontrak sesuai catatan approver, lalu ajukan approval kembali.' },
+    menunggu_approval: { judul: 'Kontrak sedang menunggu keputusan approver',  keterangan: 'Mengubah data akan menarik pengajuan dan mengembalikan kontrak ke Draft — ajukan ulang setelah selesai edit.' },
+    aktif:             { judul: 'Kontrak sedang berjalan',                     keterangan: 'Unit dan driver vendor dalam kontrak ini bisa ditugaskan ke proyek.' },
+    selesai:           { judul: 'Kontrak selesai',                             keterangan: 'Masa kontrak telah berakhir — tidak ada aksi lanjutan.' },
+    batal:             { judul: 'Kontrak dibatalkan',                          keterangan: 'Tidak ada aksi lanjutan untuk kontrak ini.' },
 }
 
 type TambahUnitForm = {
     nopol: string; merk: string; jenis: string; id_jenis_kendaraan: string
     tahun: string; kapasitas: string; masa_berlaku_stnk: string; masa_berlaku_kir: string
     id_supir_vendor_default: string
+    mode_driver: 'ada' | 'baru'
     driver_nama: string; driver_telepon: string; driver_no_sim: string
 }
 type TambahSupirForm = { nama: string; telepon: string; no_sim: string }
@@ -60,6 +80,7 @@ const emptyTambahUnit = (): TambahUnitForm => ({
     nopol: '', merk: '', jenis: '', id_jenis_kendaraan: '',
     tahun: '', kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
     id_supir_vendor_default: '',
+    mode_driver: 'ada',
     driver_nama: '', driver_telepon: '', driver_no_sim: '',
 })
 const emptyTambahSupir = (): TambahSupirForm => ({ nama: '', telepon: '', no_sim: '' })
@@ -74,6 +95,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [saving, setSaving]   = useState(false)
     const [unitTerikat, setUnitTerikat]   = useState<ArmadaVendor[]>([])
     const [supirTerikat, setSupirTerikat] = useState<SupirVendor[]>([])
+    const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
     const [dialogTambah, setDialogTambah] = useState<'' | 'unit' | 'supir'>('')
     const [unitForm, setUnitForm]   = useState<TambahUnitForm>(emptyTambahUnit())
     const [supirForm, setSupirForm] = useState<TambahSupirForm>(emptyTambahSupir())
@@ -131,6 +153,17 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     }, [data?.id_vendor, id])
 
     useEffect(() => { muatTerikat() }, [muatTerikat])
+
+    useEffect(() => {
+        jenisKendaraanService.list(1, 100)
+            .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
+            .catch(() => {})
+    }, [])
+
+    const pilihJenis = (idJenis: string) => ({
+        id_jenis_kendaraan: idJenis,
+        jenis: jenisOptions.find(o => o.value === idJenis)?.label ?? '',
+    })
 
     useEffect(() => {
         if (!data?.id_vendor) { setKontrakPayungOptions([]); return }
@@ -207,12 +240,15 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             nopol: u.nopol ?? '',
             merk: u.merk ?? '',
             jenis: u.jenis ?? '',
-            id_jenis_kendaraan: u.id_jenis_kendaraan ?? '',
+            id_jenis_kendaraan: u.id_jenis_kendaraan
+                ?? jenisOptions.find(o => o.label.toLowerCase() === (u.jenis ?? '').trim().toLowerCase())?.value
+                ?? '',
             tahun: u.tahun != null ? String(u.tahun) : '',
             kapasitas: u.kapasitas ?? '',
             masa_berlaku_stnk: u.masa_berlaku_stnk ?? '',
             masa_berlaku_kir: u.masa_berlaku_kir ?? '',
             id_supir_vendor_default: u.id_supir_vendor_default ?? '',
+            mode_driver: 'ada',
             driver_nama: driverDariUnit(u)?.nama ?? '',
             driver_telepon: driverDariUnit(u)?.telepon ?? '',
             driver_no_sim: driverDariUnit(u)?.no_sim ?? '',
@@ -254,7 +290,9 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         setMenyimpanDraft(i)
         try {
             let idDriverDefault: string | null = null
-            if (kontrakPaket && row.driver_nama.trim()) {
+            if (kontrakPaket && row.mode_driver === 'ada' && row.id_supir_vendor_default) {
+                idDriverDefault = row.id_supir_vendor_default
+            } else if (kontrakPaket && row.mode_driver === 'baru' && row.driver_nama.trim()) {
                 const driverBaru = await supirVendorService.create({
                     id_vendor: data.id_vendor,
                     id_kontrak_vendor: id,
@@ -303,13 +341,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             let idDriverDefault: string | null = unitForm.id_supir_vendor_default || null
             if (kontrakPaket) {
                 const namaDriver = unitForm.driver_nama.trim()
-                if (namaDriver && idDriverDefault) {
-                    await supirVendorService.update(idDriverDefault, {
-                        nama: namaDriver,
-                        telepon: unitForm.driver_telepon.trim() || null,
-                        no_sim: unitForm.driver_no_sim.trim() || null,
-                    })
-                } else if (namaDriver && !idDriverDefault) {
+                if (unitForm.mode_driver === 'baru' && namaDriver) {
                     const driverBaru = await supirVendorService.create({
                         id_vendor: data.id_vendor,
                         id_kontrak_vendor: id,
@@ -318,7 +350,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         no_sim: unitForm.driver_no_sim.trim() || null,
                     })
                     idDriverDefault = driverBaru.id_supir_vendor
-                } else if (!namaDriver) {
+                } else if (unitForm.mode_driver === 'baru' || !idDriverDefault) {
                     idDriverDefault = null
                 }
             }
@@ -444,8 +476,30 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const driverDariUnit = (u: ArmadaVendor) => supirTerikat.find(s => s.id_supir_vendor === u.id_supir_vendor_default) ?? null
     const idDriverTerpakai = new Set(unitTerikat.map(u => u.id_supir_vendor_default).filter(Boolean))
     const driverCadangan = supirTerikat.filter(s => !idDriverTerpakai.has(s.id_supir_vendor))
+    const DRIVER_BARU = '__baru__'
+    const labelDriver = (s: SupirVendor) => `${s.nama}${s.telepon ? ` · ${s.telepon}` : ''}${s.no_sim ? ` · SIM ${s.no_sim}` : ''}`
+    const opsiDriver = (idSekarang?: string) => [
+        ...supirTerikat
+            .filter(s => !idDriverTerpakai.has(s.id_supir_vendor) || s.id_supir_vendor === idSekarang)
+            .map(s => ({ value: s.id_supir_vendor, label: labelDriver(s) })),
+        { value: DRIVER_BARU, label: '+ Driver baru…' },
+    ]
+    const pilihDriver = (idDriver: string): Partial<TambahUnitForm> => {
+        if (idDriver === DRIVER_BARU) {
+            return { mode_driver: 'baru', id_supir_vendor_default: '', driver_nama: '', driver_telepon: '', driver_no_sim: '' }
+        }
+        const s = supirTerikat.find(x => x.id_supir_vendor === idDriver)
+        return {
+            mode_driver: 'ada',
+            id_supir_vendor_default: idDriver,
+            driver_nama: s?.nama ?? '',
+            driver_telepon: s?.telepon ?? '',
+            driver_no_sim: s?.no_sim ?? '',
+        }
+    }
     const initial = vendorName.charAt(0).toUpperCase()
     const adalahPayung = (data.jumlah_turunan ?? 0) > 0
+    const ditolakInternal = data.status === 'draft' && !!data.alasan_ditolak_internal
     const turunanList = data.turunan ?? []
     const totalNilaiTurunan = data.total_nilai_turunan ?? 0
     const nilaiPayung = data.nilai_kontrak ?? 0
@@ -464,6 +518,36 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                     <p className="text-gray-500 text-sm mt-0.5">{MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme}</p>
                 </div>
             </div>
+            {!editing && (
+                <PanelAlurStatus
+                    judul="Alur Kontrak"
+                    alat={(
+                        <Tooltip title="Log Approval">
+                            <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogOpen(true)}>
+                                <HiOutlineClipboardList className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
+                    tahap={TAHAP_KONTRAK}
+                    status={data.status ?? 'draft'}
+                    statusLabel={ditolakInternal ? 'Draft — Ditolak' : (KONTRAK_STATUS_LABEL[data.status ?? 'draft'] ?? data.status ?? 'Draft')}
+                    kelasIkon={ditolakInternal ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300' : (KONTRAK_STATUS_CLASS[data.status ?? 'draft'] ?? 'bg-gray-100 text-gray-600')}
+                    tahapGagal={ditolakInternal ? 1 : undefined}
+                    selesai={data.status === 'selesai'}
+                    gagal={data.status === 'batal' ? 'Kontrak ini telah dibatalkan dan tidak bisa diproses lebih lanjut.' : undefined}
+                    catatan={ditolakInternal ? [{ warna: 'merah', judul: 'Approval ditolak — perlu revisi', isi: `“${data.alasan_ditolak_internal}”` }] : []}
+                    langkah={data.status !== 'batal' ? LANGKAH_KONTRAK[ditolakInternal ? 'draft_ditolak' : (data.status ?? 'draft')] : undefined}
+                    aksi={data.status !== 'batal' && (
+                        <>
+                            {data.status === 'draft' && (
+                                <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                    {ditolakInternal ? 'Ajukan Ulang' : 'Ajukan Approval'}
+                                </Button>
+                            )}
+                        </>
+                    )}
+                />
+            )}
             <Card>
                 {!editing ? (
                     <>
@@ -491,38 +575,19 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         Payung · {data.jumlah_turunan} turunan
                                     </span>
                                 )}
-                                {data.status && (
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${KONTRAK_STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                                        {KONTRAK_STATUS_LABEL[data.status] ?? data.status}
+                                <Tooltip title="Cetak PDF">
+                                    <span
+                                        className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingExport ? 'opacity-50 pointer-events-none' : ''}`}
+                                        onClick={handleExport}
+                                    >
+                                        <PiFilePdfDuotone className="text-lg" />
                                     </span>
-                                )}
-                                {data.status === 'draft' && (
-                                    <Button variant="solid" size="sm" onClick={() => setAjukanOpen(true)}>
-                                        Ajukan Approval
-                                    </Button>
-                                )}
-                                <Tooltip title="Export PDF">
-                                    <Button variant="default" size="sm" icon={<HiOutlineDocumentDownload />} loading={downloadingExport}
-                                        onClick={handleExport} />
-                                </Tooltip>
-                                <Tooltip title="Log Approval">
-                                    <Button variant="default" size="sm" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} />
                                 </Tooltip>
                                 <Tooltip title="Edit">
                                     <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
                                 </Tooltip>
                             </div>
                         </div>
-                        {data.status === 'draft' && data.alasan_ditolak_internal && (
-                            <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 text-sm text-red-600 dark:text-red-300">
-                                Ditolak approver: {data.alasan_ditolak_internal} — perbaiki lalu ajukan ulang.
-                            </div>
-                        )}
-                        {data.status === 'menunggu_approval' && (
-                            <div className="mt-4 px-3.5 py-2.5 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-sm text-violet-600 dark:text-violet-300">
-                                Kontrak sedang menunggu keputusan approver — mengubah data akan menarik pengajuan ini dan mengembalikan kontrak ke Draft, ajukan ulang setelah selesai edit.
-                            </div>
-                        )}
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
@@ -723,7 +788,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
 
             <Card>
                 <p className="font-semibold mb-4">Unit & Supir Kontrak Ini</p>
-                <div className={`grid grid-cols-1 gap-x-8 gap-y-6 ${kontrakPaket && driverCadangan.length > 0 ? 'sm:grid-cols-2' : ''}`}>
+                <div className="flex flex-col gap-6">
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{kontrakPaket ? `Pasangan Unit + Driver (${unitTerikat.length})` : `Unit Disewa (${unitTerikat.length})`}</p>
@@ -780,29 +845,43 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                     <Input size="sm" value={unitForm.merk}
                                                         onChange={e => setUnitForm(p => ({ ...p, merk: e.target.value }))} />
                                                 </td>
-                                                <td className="py-2 pr-3 min-w-28">
-                                                    <Input size="sm" value={unitForm.jenis}
-                                                        onChange={e => setUnitForm(p => ({ ...p, jenis: e.target.value }))} />
+                                                <td className="py-2 pr-3 min-w-40">
+                                                    <Select size="sm" isSearchable isClearable placeholder="Pilih jenis..."
+                                                        options={jenisOptions}
+                                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                        value={jenisOptions.find(o => o.value === unitForm.id_jenis_kendaraan) ?? null}
+                                                        onChange={opt => setUnitForm(p => ({ ...p, ...pilihJenis(opt?.value ?? '') }))} />
                                                 </td>
                                                 <td className="py-2 pr-3 min-w-28">
                                                     <Input size="sm" value={unitForm.kapasitas}
                                                         onChange={e => setUnitForm(p => ({ ...p, kapasitas: e.target.value }))} />
                                                 </td>
                                                 {kontrakPaket && (
-                                                    <td className="py-2 pr-3 min-w-32">
-                                                        <Input size="sm" placeholder="Kosong = lepas driver" value={unitForm.driver_nama}
-                                                            onChange={e => setUnitForm(p => ({ ...p, driver_nama: e.target.value }))} />
+                                                    <td className="py-2 pr-3 min-w-48">
+                                                        <Select size="sm" isSearchable isClearable placeholder="Pilih driver / kosong = lepas"
+                                                            options={opsiDriver(unitEdit?.id_supir_vendor_default ?? undefined)}
+                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            value={unitForm.mode_driver === 'baru'
+                                                                ? { value: DRIVER_BARU, label: '+ Driver baru…' }
+                                                                : opsiDriver(unitEdit?.id_supir_vendor_default ?? undefined).find(o => o.value === unitForm.id_supir_vendor_default) ?? null}
+                                                            onChange={opt => setUnitForm(p => ({ ...p, ...(opt ? pilihDriver(opt.value) : { mode_driver: 'ada', id_supir_vendor_default: '', driver_nama: '', driver_telepon: '', driver_no_sim: '' }) }))} />
+                                                        {unitForm.mode_driver === 'baru' && (
+                                                            <Input size="sm" className="mt-1" placeholder="Nama driver baru *" value={unitForm.driver_nama}
+                                                                onChange={e => setUnitForm(p => ({ ...p, driver_nama: e.target.value }))} />
+                                                        )}
                                                     </td>
                                                 )}
                                                 {kontrakPaket && (
                                                     <td className="py-2 pr-3 min-w-28">
-                                                        <Input size="sm" value={unitForm.driver_telepon}
+                                                        <Input size="sm" value={unitForm.driver_telepon} disabled={unitForm.mode_driver !== 'baru'}
                                                             onChange={e => setUnitForm(p => ({ ...p, driver_telepon: e.target.value }))} />
                                                     </td>
                                                 )}
                                                 {kontrakPaket && (
                                                     <td className="py-2 pr-3 min-w-28">
-                                                        <Input size="sm" value={unitForm.driver_no_sim}
+                                                        <Input size="sm" value={unitForm.driver_no_sim} disabled={unitForm.mode_driver !== 'baru'}
                                                             onChange={e => setUnitForm(p => ({ ...p, driver_no_sim: e.target.value }))} />
                                                     </td>
                                                 )}
@@ -872,29 +951,43 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                     <Input size="sm" placeholder="Merk" value={row.merk}
                                                         onChange={e => ubahDraftUnit(i, { merk: e.target.value })} />
                                                 </td>
-                                                <td className="py-2 pr-3 min-w-28">
-                                                    <Input size="sm" placeholder="Jenis" value={row.jenis}
-                                                        onChange={e => ubahDraftUnit(i, { jenis: e.target.value })} />
+                                                <td className="py-2 pr-3 min-w-40">
+                                                    <Select size="sm" isSearchable isClearable placeholder="Pilih jenis..."
+                                                        options={jenisOptions}
+                                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                        value={jenisOptions.find(o => o.value === row.id_jenis_kendaraan) ?? null}
+                                                        onChange={opt => ubahDraftUnit(i, pilihJenis(opt?.value ?? ''))} />
                                                 </td>
                                                 <td className="py-2 pr-3 min-w-28">
                                                     <Input size="sm" placeholder="Kapasitas" value={row.kapasitas}
                                                         onChange={e => ubahDraftUnit(i, { kapasitas: e.target.value })} />
                                                 </td>
                                                 {kontrakPaket && (
-                                                    <td className="py-2 pr-3 min-w-32">
-                                                        <Input size="sm" placeholder="Nama driver" value={row.driver_nama}
-                                                            onChange={e => ubahDraftUnit(i, { driver_nama: e.target.value })} />
+                                                    <td className="py-2 pr-3 min-w-48">
+                                                        <Select size="sm" isSearchable isClearable placeholder="Pilih driver..."
+                                                            options={opsiDriver()}
+                                                            menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                            value={row.mode_driver === 'baru'
+                                                                ? { value: DRIVER_BARU, label: '+ Driver baru…' }
+                                                                : opsiDriver().find(o => o.value === row.id_supir_vendor_default) ?? null}
+                                                            onChange={opt => ubahDraftUnit(i, opt ? pilihDriver(opt.value) : { mode_driver: 'ada', id_supir_vendor_default: '', driver_nama: '', driver_telepon: '', driver_no_sim: '' })} />
+                                                        {row.mode_driver === 'baru' && (
+                                                            <Input size="sm" className="mt-1" placeholder="Nama driver baru *" value={row.driver_nama}
+                                                                onChange={e => ubahDraftUnit(i, { driver_nama: e.target.value })} />
+                                                        )}
                                                     </td>
                                                 )}
                                                 {kontrakPaket && (
                                                     <td className="py-2 pr-3 min-w-28">
-                                                        <Input size="sm" placeholder="Telepon" value={row.driver_telepon}
+                                                        <Input size="sm" placeholder="Telepon" value={row.driver_telepon} disabled={row.mode_driver !== 'baru'}
                                                             onChange={e => ubahDraftUnit(i, { driver_telepon: e.target.value })} />
                                                     </td>
                                                 )}
                                                 {kontrakPaket && (
                                                     <td className="py-2 pr-3 min-w-28">
-                                                        <Input size="sm" placeholder="No. SIM" value={row.driver_no_sim}
+                                                        <Input size="sm" placeholder="No. SIM" value={row.driver_no_sim} disabled={row.mode_driver !== 'baru'}
                                                             onChange={e => ubahDraftUnit(i, { driver_no_sim: e.target.value })} />
                                                     </td>
                                                 )}
@@ -925,7 +1018,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         )}
                     </div>
                     {kontrakPaket && driverCadangan.length > 0 && (
-                    <div>
+                    <div className="pt-5 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Driver Cadangan ({driverCadangan.length})</p>
                             <span className="cursor-pointer text-xs text-blue-600 hover:underline"
@@ -933,8 +1026,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 Lihat supir vendor
                             </span>
                         </div>
-                        <p className="text-xs text-gray-400 mb-3">Driver kontrak ini yang tidak terpasang ke unit manapun — bisa dipilih sebagai pengganti saat penugasan</p>
-                        <div className="flex flex-col gap-2">
+                        <p className="text-xs text-gray-400 mb-3">Driver kontrak ini yang belum terpasang ke unit manapun — pilih di kolom Driver saat menambah/mengedit unit, atau sebagai pengganti saat penugasan</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             {driverCadangan.map(s => (
                                 <div key={s.id_supir_vendor}
                                     className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-gray-200 dark:border-gray-600 px-3 py-2">

@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
@@ -10,7 +10,9 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import RichTextEditor from '@/components/shared/RichTextEditor'
 import RichTextView from '@/components/shared/RichTextView'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineDocumentDownload, HiOutlineExternalLink, HiOutlineLightBulb, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
+import PanelAlurStatus, { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiPlusCircle, HiOutlineTrash, HiOutlineViewList, HiOutlineMail, HiOutlineDocumentText, HiOutlineBan, HiOutlineChat, HiOutlineCheckCircle, HiOutlinePaperAirplane, HiOutlineBriefcase } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
 import { penawaranService, Penawaran, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
 import { projectService } from '@/services/project.service'
@@ -44,6 +46,23 @@ const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
     negosiasi: ['disetujui', 'ditolak'],
     disetujui: [],
     ditolak: [],
+}
+
+const TAHAP_PENAWARAN = [
+    { status: 'draft',             label: 'Draft' },
+    { status: 'menunggu_approval', label: 'Approval' },
+    { status: 'terkirim',          label: 'Terkirim' },
+    { status: 'disetujui',         label: 'Disetujui' },
+]
+
+const LANGKAH_PENAWARAN: Record<string, { judul: string; keterangan: string }> = {
+    draft:                { judul: 'Siap dikirim ke klien?',               keterangan: 'Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim ke klien.' },
+    draft_ditolak:        { judul: 'Perbaiki lalu ajukan ulang',           keterangan: 'Revisi data penawaran sesuai catatan reviewer, lalu ajukan approval kembali.' },
+    draft_tanpa_approval: { judul: 'Siap dikirim ke klien?',               keterangan: 'Approval internal sedang nonaktif — penawaran bisa langsung ditandai terkirim.' },
+    menunggu_approval:    { judul: 'Menunggu keputusan reviewer internal',  keterangan: 'Belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan penawaran ke Draft.' },
+    terkirim:             { judul: 'Menunggu respons klien',                keterangan: 'Perbarui status sesuai jawaban klien: masuk negosiasi, disetujui, atau ditolak.' },
+    negosiasi:            { judul: 'Sedang negosiasi dengan klien',         keterangan: 'Perbarui status setelah ada keputusan akhir dari klien.' },
+    ditolak:              { judul: 'Penawaran ditolak klien',               keterangan: 'Tidak ada aksi lanjutan untuk penawaran ini.' },
 }
 
 interface EditForm {
@@ -164,6 +183,11 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [pendingStatus, setPendingStatus] = useState<PenawaranStatus | null>(null)
     const [statusLoading, setStatusLoading] = useState(false)
     const [downloadingPdf, setDownloadingPdf] = useState(false)
+    const [sendingEmail, setSendingEmail] = useState(false)
+    const [kirimEmailOpen, setKirimEmailOpen] = useState(false)
+    const [emailForm, setEmailForm] = useState({ email_tujuan: '', subjek: '', pesan: '' })
+    const [emailErrors, setEmailErrors] = useState<Partial<Record<'email_tujuan' | 'subjek' | 'pesan', string>>>({})
+    const [lampiranEmail, setLampiranEmail] = useState<File[]>([])
 
     useEffect(() => {
         penawaranService.get(id)
@@ -277,6 +301,45 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
         }
     }
 
+    const openKirimEmail = () => {
+        if (!data) return
+        setEmailForm({
+            email_tujuan: data.email_klien ?? '',
+            subjek: `Penawaran ${data.nomor_penawaran} - ${data.judul}`,
+            pesan: `Yth. ${data.nama_klien || 'Bapak/Ibu'},\n\nBersama email ini kami sampaikan penawaran ${data.nomor_penawaran} — ${data.judul}. Detail lengkap dapat dilihat pada berkas PDF terlampir.\n\nJika ada pertanyaan lebih lanjut, silakan hubungi kami kembali.\n\nHormat kami,`,
+        })
+        setEmailErrors({})
+        setLampiranEmail([])
+        setKirimEmailOpen(true)
+    }
+
+    const handleKirimEmail = async () => {
+        const e: typeof emailErrors = {}
+        if (!emailForm.email_tujuan.trim()) e.email_tujuan = 'Alamat email tujuan wajib diisi'
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email_tujuan.trim())) e.email_tujuan = 'Format email tidak valid'
+        if (!emailForm.subjek.trim()) e.subjek = 'Subjek wajib diisi'
+        if (!emailForm.pesan.trim()) e.pesan = 'Pesan wajib diisi'
+        setEmailErrors(e)
+        if (Object.keys(e).length > 0) return
+
+        setSendingEmail(true)
+        try {
+            const updated = await penawaranService.kirimEmail(id, {
+                email_tujuan: emailForm.email_tujuan.trim(),
+                subjek: emailForm.subjek.trim(),
+                pesan: emailForm.pesan,
+                lampiran: lampiranEmail,
+            })
+            setData(updated)
+            toast.push(<Notification type="success" title={`Penawaran berhasil dikirim ke ${updated.email_terkirim_ke}`} />)
+            setKirimEmailOpen(false)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setSendingEmail(false)
+        }
+    }
+
     const openJadikanProyek = () => {
         if (!data) return
         setJpForm({ nama_proyek: data.judul, tanggal_mulai: '', tanggal_selesai: '' })
@@ -313,7 +376,22 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
     const initial = data.nomor_penawaran.charAt(0).toUpperCase()
     const nextStatuses = NEXT_STATUS[data.status] ?? []
+    const ditolakInternal = data.status === 'draft' && !!data.alasan_ditolak_internal
+    const tanpaApproval = data.approval_aktif === false
+    const langkahAlur = data.status === 'draft'
+        ? LANGKAH_PENAWARAN[tanpaApproval ? 'draft_tanpa_approval' : ditolakInternal ? 'draft_ditolak' : 'draft']
+        : data.status === 'disetujui'
+            ? { judul: 'Penawaran disetujui klien', keterangan: data.id_proyek ? 'Penawaran ini sudah terhubung ke proyek.' : 'Langkah selanjutnya: jadikan proyek berdasarkan penawaran ini, lalu tambahkan penugasan di halaman proyek.' }
+            : LANGKAH_PENAWARAN[data.status]
+    const kelasIkonAlur = ditolakInternal
+        ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300'
+        : (STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-600')
     const nilaiTetap = tipeHargaNilaiTetap(data.tipe_harga)
+
+    const statusBelumBisaKirimEmail = data.status === 'draft' || data.status === 'menunggu_approval'
+    const tooltipKirimEmail = statusBelumBisaKirimEmail
+        ? 'Penawaran berstatus draft/menunggu approval belum bisa dikirim ke klien'
+        : 'Kirim Email ke Klien'
 
     return (
         <div className="flex flex-col gap-4">
@@ -331,122 +409,63 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 </div>
             </div>
 
-            {data.proyek_status === 'batal' && (
-                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-                                Proyek dari penawaran ini sudah dibatalkan{data.kode_proyek ? ` (${data.kode_proyek})` : ''}
-                            </p>
-                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">
-                                Penawaran tetap tersimpan sebagai riwayat kesepakatan, tapi proyeknya tidak lagi berjalan.
-                            </p>
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {data.status === 'draft' && data.alasan_ditolak_internal && (
-                <Card className="border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineLightBulb className="text-red-600 dark:text-red-400 text-xl flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-red-700 dark:text-red-400">Approval Ditolak — Perlu Revisi</p>
-                            <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">{data.alasan_ditolak_internal}</p>
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {/* Banner aksi setelah disetujui */}
-            {data.status === 'disetujui' && (
-                <Card className="border border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineLightBulb className="text-emerald-600 dark:text-emerald-400 text-xl flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Penawaran Disetujui</p>
-                            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
-                                {data.id_proyek
-                                    ? 'Penawaran ini sudah terhubung ke proyek.'
-                                    : 'Langkah selanjutnya: jadikan proyek berdasarkan penawaran ini, lalu tambahkan penugasan di halaman proyek.'}
-                            </p>
-                        </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                            {data.id_proyek ? (
-                                <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />}
-                                    onClick={() => router.push(ROUTES.PROYEK_DETAIL(data.id_proyek!))}>
-                                    Lihat Proyek
-                                </Button>
-                            ) : (
-                                <Button size="sm" variant="solid" onClick={openJadikanProyek}>
-                                    Jadikan Proyek
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {data.status === 'draft' && (
-                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Siap dikirim ke klien?</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                {data.approval_aktif === false
-                                    ? 'Approval internal sedang nonaktif — penawaran bisa langsung ditandai terkirim'
-                                    : 'Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim'}
-                            </p>
-                        </div>
-                        {data.approval_aktif === false ? (
-                            <Button size="sm" variant="solid" onClick={() => setTandaiTerkirimOpen(true)}>
+            <PanelAlurStatus
+                judul="Alur Penawaran"
+                tahap={TAHAP_PENAWARAN}
+                status={data.status}
+                statusLabel={ditolakInternal ? 'Draft — Ditolak' : (STATUS_LABEL[data.status] ?? data.status)}
+                kelasIkon={kelasIkonAlur}
+                tahapAktif={data.status === 'negosiasi' ? 2 : undefined}
+                tahapGagal={ditolakInternal ? 1 : undefined}
+                selesai={data.status === 'disetujui'}
+                gagal={data.status === 'ditolak' ? 'Penawaran ini ditolak oleh klien dan tidak bisa diproses lebih lanjut.' : undefined}
+                catatan={[
+                    ...(ditolakInternal ? [{ warna: 'merah' as const, judul: 'Approval ditolak — perlu revisi', isi: `“${data.alasan_ditolak_internal}”` }] : []),
+                    ...(data.proyek_status === 'batal' ? [{
+                        warna: 'merah' as const,
+                        judul: `Proyek dari penawaran ini sudah dibatalkan${data.kode_proyek ? ` (${data.kode_proyek})` : ''}`,
+                        isi: 'Penawaran tetap tersimpan sebagai riwayat kesepakatan, tapi proyeknya tidak lagi berjalan.',
+                    }] : []),
+                ]}
+                langkah={data.status !== 'ditolak' ? langkahAlur : undefined}
+                aksi={data.status !== 'ditolak' && (
+                    <>
+                        {nextStatuses.includes('ditolak') && (
+                            <Button size="sm" variant="plain" icon={<HiOutlineBan />} className={KELAS_TOMBOL_BATAL} onClick={() => setPendingStatus('ditolak')}>
+                                Ditolak Klien
+                            </Button>
+                        )}
+                        {nextStatuses.includes('negosiasi') && (
+                            <Button size="sm" variant="default" icon={<HiOutlineChat />} onClick={() => setPendingStatus('negosiasi')}>
+                                Masuk Negosiasi
+                            </Button>
+                        )}
+                        {nextStatuses.includes('disetujui') && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setPendingStatus('disetujui')}>
+                                Disetujui Klien
+                            </Button>
+                        )}
+                        {data.status === 'draft' && (tanpaApproval ? (
+                            <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setTandaiTerkirimOpen(true)}>
                                 Tandai Terkirim
                             </Button>
                         ) : (
-                            <Button size="sm" variant="solid" onClick={() => setAjukanOpen(true)}>
-                                Ajukan Approval
+                            <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
+                                {ditolakInternal ? 'Ajukan Ulang' : 'Ajukan Approval'}
                             </Button>
-                        )}
-                    </div>
-                </Card>
-            )}
-
-            {data.status === 'menunggu_approval' && (
-                <Card className="border border-dashed border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10">
-                    <p className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                        Menunggu keputusan reviewer internal — belum bisa dikirim ke klien.
-                    </p>
-                </Card>
-            )}
-
-            {nextStatuses.length > 0 && (
-                <Card className="border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Ubah Status Penawaran
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                Status saat ini: <span className="font-semibold">{STATUS_LABEL[data.status]}</span>
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {nextStatuses.map(s => (
-                                <Button
-                                    key={s}
-                                    size="sm"
-                                    variant="default"
-                                    className={`${STATUS_CLASS[s]} border border-current`}
-                                    onClick={() => setPendingStatus(s)}
-                                >
-                                    {`-> ${STATUS_LABEL[s]}`}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                </Card>
-            )}
+                        ))}
+                        {data.status === 'disetujui' && (data.id_proyek ? (
+                            <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />} onClick={() => router.push(ROUTES.PROYEK_DETAIL(data.id_proyek!))}>
+                                Lihat Proyek
+                            </Button>
+                        ) : (
+                            <Button size="sm" variant="solid" icon={<HiOutlineBriefcase />} onClick={openJadikanProyek}>
+                                Jadikan Proyek
+                            </Button>
+                        ))}
+                    </>
+                )}
+            />
 
             <Card>
                 {!editing ? (
@@ -464,12 +483,18 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <Tag className={`${STATUS_CLASS[data.status] ?? ''} border-0`}>
-                                    {STATUS_LABEL[data.status] ?? data.status}
-                                </Tag>
-                                <Tooltip title="Download PDF">
-                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
-                                        loading={downloadingPdf} onClick={handleDownloadPdf} />
+                                <Tooltip title="Cetak PDF">
+                                    <span
+                                        className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingPdf ? 'opacity-50 pointer-events-none' : ''}`}
+                                        onClick={handleDownloadPdf}
+                                    >
+                                        <PiFilePdfDuotone className="text-lg" />
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title={tooltipKirimEmail}>
+                                    <Button size="sm" variant="default" icon={<HiOutlineMail />}
+                                        disabled={statusBelumBisaKirimEmail}
+                                        onClick={openKirimEmail} />
                                 </Tooltip>
                                 {(data.status === 'draft' || data.status === 'negosiasi') && (
                                     <Tooltip title="Edit">
@@ -502,6 +527,29 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                         label: 'Jumlah Hari',
                                         value: data.jumlah_hari != null ? `${data.jumlah_hari} hari` : <span className="text-gray-400">-</span>,
                                     },
+                                    ...(data.email_terkirim_pada ? [{
+                                        label: 'Status Email',
+                                        value: data.email_gagal_pada ? (
+                                            <div>
+                                                <Tag className="bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 border-0 mb-1">Gagal terkirim</Tag>
+                                                <p className="text-sm text-gray-800 dark:text-gray-200">
+                                                    Dikirim {dayjs(data.email_terkirim_pada).format('DD MMM YYYY HH:mm')} ke {data.email_terkirim_ke}, ditolak {dayjs(data.email_gagal_pada).format('DD MMM YYYY HH:mm')}
+                                                </p>
+                                                {data.email_gagal_alasan && (
+                                                    <p className="text-xs text-red-500 dark:text-red-400 mt-0.5 break-words">{data.email_gagal_alasan}</p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <Tag className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border-0 mb-1">Diserahkan ke server mail</Tag>
+                                                <p className="text-sm text-gray-800 dark:text-gray-200">
+                                                    {dayjs(data.email_terkirim_pada).format('DD MMM YYYY HH:mm')} ke {data.email_terkirim_ke}
+                                                </p>
+                                                <p className="text-xs text-gray-400 mt-0.5">Belum ada laporan gagal — status diperbarui otomatis bila ada bounce.</p>
+                                            </div>
+                                        ),
+                                        lebar: true,
+                                    }] : []),
                                     {
                                         label: 'Catatan',
                                         value: data.catatan ? <RichTextView konten={data.catatan} /> : <span className="text-gray-400">-</span>,
@@ -770,6 +818,72 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     Tindakan ini tidak dapat dibatalkan.
                 </p>
             </ConfirmDialog>
+
+            <Dialog isOpen={kirimEmailOpen} onRequestClose={() => setKirimEmailOpen(false)} onClose={() => setKirimEmailOpen(false)} width={800}>
+                <h5 className="text-base font-semibold mb-1">Kirim Email ke Klien</h5>
+                <p className="text-xs text-gray-400 mb-4">
+                    PDF penawaran {data.nomor_penawaran} akan dilampirkan otomatis
+                </p>
+                <div className="flex flex-col gap-4">
+                    <FormItem label="Alamat Tujuan" asterisk invalid={!!emailErrors.email_tujuan} errorMessage={emailErrors.email_tujuan}>
+                        <Input type="email" placeholder="email@klien.com" value={emailForm.email_tujuan}
+                            invalid={!!emailErrors.email_tujuan}
+                            onChange={e => setEmailForm(p => ({ ...p, email_tujuan: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Subjek" asterisk invalid={!!emailErrors.subjek} errorMessage={emailErrors.subjek}>
+                        <Input value={emailForm.subjek} invalid={!!emailErrors.subjek}
+                            onChange={e => setEmailForm(p => ({ ...p, subjek: e.target.value }))} />
+                    </FormItem>
+                    <FormItem label="Pesan" asterisk invalid={!!emailErrors.pesan} errorMessage={emailErrors.pesan}>
+                        <RichTextEditor
+                            content={kontenKeHtml(emailForm.pesan)}
+                            onChange={({ html }) => setEmailForm(p => ({ ...p, pesan: html === '<p></p>' ? '' : html }))}
+                        />
+                    </FormItem>
+                    <FormItem label="Lampiran Tambahan" extra={<span className="text-xs text-gray-400">PDF penawaran selalu ikut terlampir otomatis</span>}>
+                        <Upload
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,.xls,.xlsx,.doc,.docx"
+                            multiple
+                            showList={false}
+                            fileList={lampiranEmail}
+                            beforeUpload={(baru) => {
+                                const daftar = Array.from(baru ?? [])
+                                if (lampiranEmail.length + daftar.length > 10) return 'Maksimal 10 file lampiran'
+                                const kebesaran = daftar.find(f => f.size > 5 * 1024 * 1024)
+                                if (kebesaran) return `File ${kebesaran.name} melebihi 5MB`
+                                return true
+                            }}
+                            onChange={files => setLampiranEmail(files)}
+                        >
+                            <Button type="button" variant="default" size="sm" icon={<HiOutlineDocumentText />}>
+                                Pilih file (bisa lebih dari satu, maks. 10 file × 5MB)
+                            </Button>
+                        </Upload>
+                        {lampiranEmail.length > 0 && (
+                            <div className="flex flex-col gap-1.5 mt-3">
+                                {lampiranEmail.map((file, idx) => (
+                                    <div key={`${file.name}-${idx}`}
+                                        className="flex items-center gap-2 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5">
+                                        <HiOutlineDocumentText className="text-base text-gray-400 shrink-0" />
+                                        <p className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">
+                                            {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
+                                        </p>
+                                        <span
+                                            className="cursor-pointer inline-flex items-center justify-center w-6 h-6 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 shrink-0"
+                                            onClick={() => setLampiranEmail(prev => prev.filter((_, i) => i !== idx))}>
+                                            <HiOutlineTrash className="text-sm" />
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </FormItem>
+                </div>
+                <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <Button variant="plain" onClick={() => setKirimEmailOpen(false)}>Batal</Button>
+                    <Button variant="solid" loading={sendingEmail} onClick={handleKirimEmail}>Kirim</Button>
+                </div>
+            </Dialog>
 
             <Dialog isOpen={showJadikanProyek} onRequestClose={() => setShowJadikanProyek(false)} onClose={() => setShowJadikanProyek(false)} width={800}>
                 <h5 className="text-base font-semibold mb-1">Jadikan Proyek</h5>
