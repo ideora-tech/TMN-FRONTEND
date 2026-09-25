@@ -1,8 +1,8 @@
 'use client'
 import { Fragment, use, useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Input, Tag, Spinner, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
+import { Card, Button, Input, Tag, Spinner, Dialog, FormItem, Switcher, Tooltip, toast, Notification } from '@/components/ui'
+import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { peranService, Peran } from '@/services/peran.service'
@@ -22,6 +22,10 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
     const router = useRouter()
 
     const [peran, setPeran]     = useState<Peran | null>(null)
+    const [ubahOpen, setUbahOpen] = useState(false)
+    const [formUbah, setFormUbah] = useState({ nama_peran: '', aktif: true })
+    const [errorNama, setErrorNama] = useState('')
+    const [menyimpanUbah, setMenyimpanUbah] = useState(false)
     const [grup, setGrup]       = useState<GrupMenu[]>([])
     const [perms, setPerms]     = useState<Record<string, boolean>>({})
     const [permsAwal, setPermsAwal] = useState<Record<string, boolean>>({})
@@ -161,6 +165,32 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         }
     }
 
+    const bukaUbah = () => {
+        if (!peran) return
+        setFormUbah({ nama_peran: peran.nama_peran, aktif: peran.aktif })
+        setErrorNama('')
+        setUbahOpen(true)
+    }
+
+    const simpanUbah = async () => {
+        const nama = formUbah.nama_peran.trim()
+        if (!nama) {
+            setErrorNama('Nama peran wajib diisi')
+            return
+        }
+        setMenyimpanUbah(true)
+        try {
+            const hasil = await peranService.update(id, { nama_peran: nama, aktif: formUbah.aktif })
+            setPeran(hasil)
+            setUbahOpen(false)
+            toast.push(<Notification type="success" title="Peran berhasil diperbarui" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyimpanUbah(false)
+        }
+    }
+
     if (loading) return (
         <div className="flex items-center justify-center py-16">
             <Spinner size="40px" />
@@ -183,6 +213,12 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
 
             {/* Peran Info */}
             <Card>
+                <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-semibold">Informasi Peran</h5>
+                    <Tooltip title="Ubah">
+                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={bukaUbah} />
+                    </Tooltip>
+                </div>
                 <div className="flex flex-col gap-0">
                     {[
                         { label: 'Kode Peran',  value: <span className="font-mono text-sm">{peran.kode_peran}</span> },
@@ -350,6 +386,29 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                     <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
                 </div>
             </Card>
+            <Dialog isOpen={ubahOpen} onClose={() => setUbahOpen(false)} onRequestClose={() => setUbahOpen(false)}>
+                <h5 className="mb-4">Ubah Peran</h5>
+                <form onSubmit={e => { e.preventDefault(); simpanUbah() }}>
+                    <FormItem label="Kode Peran">
+                        <Input value={peran.kode_peran} disabled />
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Kode tidak bisa diubah karena dipakai akun pengguna dan izin akses.</p>
+                    </FormItem>
+                    <FormItem label="Nama Peran" asterisk invalid={!!errorNama} errorMessage={errorNama}>
+                        <Input value={formUbah.nama_peran} maxLength={100} invalid={!!errorNama}
+                            onChange={e => { setFormUbah(p => ({ ...p, nama_peran: e.target.value })); setErrorNama('') }} />
+                    </FormItem>
+                    <FormItem label="Status">
+                        <div className="flex items-center gap-2">
+                            <Switcher checked={formUbah.aktif} onChange={v => setFormUbah(p => ({ ...p, aktif: v }))} />
+                            <span className="text-sm">{formUbah.aktif ? 'Aktif' : 'Nonaktif'}</span>
+                        </div>
+                    </FormItem>
+                    <div className="flex justify-end gap-2 mt-4">
+                        <Button type="button" variant="plain" onClick={() => setUbahOpen(false)}>Batal</Button>
+                        <Button type="submit" variant="solid" loading={menyimpanUbah}>Simpan</Button>
+                    </div>
+                </form>
+            </Dialog>
         </div>
     )
 }
