@@ -41,6 +41,16 @@ export interface PembelianTerkaitPerawatan {
     nama_supplier: string | null
 }
 
+export interface PermintaanPembelianTerkaitPerawatan {
+    id_permintaan: string
+    nomor_permintaan: string
+    status: string
+    tipe: string
+    total_estimasi: number
+    total_aktual: number | null
+    tanggal_permintaan: string
+}
+
 export interface PerawatanArmada {
     id_perawatan: string
     id_armada: string
@@ -49,6 +59,7 @@ export interface PerawatanArmada {
     sparepart?: PerawatanSparepartItem[]
     bukti?: BuktiPerawatan[]
     pembelian?: PembelianTerkaitPerawatan[]
+    permintaan_pembelian?: PermintaanPembelianTerkaitPerawatan[]
     tanggal: string
     biaya: number
     km_odometer: number | null

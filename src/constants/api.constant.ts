@@ -102,12 +102,35 @@ export const API_ENDPOINTS = {
 
     // Pembelian Sparepart
     PEMBELIAN_SPAREPART:                 '/api/proxy/pembelian-sparepart',
+    PEMBELIAN_SPAREPART_BATAS_MANDIRI:   '/api/proxy/pembelian-sparepart/batas-mandiri',
     PEMBELIAN_SPAREPART_LAPORAN:         '/api/proxy/pembelian-sparepart/laporan',
     PEMBELIAN_SPAREPART_LAPORAN_EXPORT:  (format: 'excel' | 'pdf') => `/api/proxy/pembelian-sparepart/laporan/export/${format}`,
     PEMBELIAN_SPAREPART_DETAIL:          (id: string) => `/api/proxy/pembelian-sparepart/${id}`,
     PEMBELIAN_SPAREPART_REALISASI:       (id: string) => `/api/proxy/pembelian-sparepart/${id}/realisasi`,
     PEMBELIAN_SPAREPART_BUKTI:           (id: string) => `/api/proxy/pembelian-sparepart/${id}/bukti`,
     PEMBELIAN_SPAREPART_BUKTI_DETAIL:    (id: string, idBukti: string) => `/api/proxy/pembelian-sparepart/${id}/bukti/${idBukti}`,
+
+    // Barang & Permintaan Pembelian
+    BARANG:                    '/api/proxy/barang',
+    BARANG_BUAT_CEPAT:         '/api/proxy/barang/buat-cepat',
+    BARANG_DETAIL:             (id: string) => `/api/proxy/barang/${id}`,
+    BARANG_MUTASI:             (id: string) => `/api/proxy/barang/${id}/mutasi`,
+    BARANG_PEMAKAIAN:          (id: string) => `/api/proxy/barang/${id}/pemakaian`,
+    BARANG_PENYESUAIAN:        (id: string) => `/api/proxy/barang/${id}/penyesuaian`,
+    KATEGORI_BARANG:           '/api/proxy/kategori-barang',
+    KATEGORI_BARANG_DETAIL:    (id: string) => `/api/proxy/kategori-barang/${id}`,
+    PERMINTAAN_PEMBELIAN:              '/api/proxy/permintaan-pembelian',
+    PERMINTAAN_PEMBELIAN_DETAIL:       (id: string) => `/api/proxy/permintaan-pembelian/${id}`,
+    PERMINTAAN_PEMBELIAN_PROSES:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/proses`,
+    PERMINTAAN_PEMBELIAN_DIBELI:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/dibeli`,
+    PERMINTAAN_PEMBELIAN_TERIMA:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/terima`,
+    PERMINTAAN_PEMBELIAN_BATAL:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/batal`,
+    PERMINTAAN_PEMBELIAN_BUKTI:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/bukti`,
+    PERMINTAAN_PEMBELIAN_BUKTI_DETAIL: (id: string, idBukti: string) => `/api/proxy/permintaan-pembelian/${id}/bukti/${idBukti}`,
+    PERMINTAAN_PEMBELIAN_PENGAJUAN:    (id: string) => `/api/proxy/permintaan-pembelian/${id}/pengajuan`,
+    PERMINTAAN_PEMBELIAN_REALISASI_SPAREPART: (id: string) => `/api/proxy/permintaan-pembelian/${id}/realisasi-sparepart`,
+    PERMINTAAN_PEMBELIAN_LAPORAN:              '/api/proxy/permintaan-pembelian/laporan',
+    PERMINTAAN_PEMBELIAN_LAPORAN_EXPORT:       (format: 'excel' | 'pdf') => `/api/proxy/permintaan-pembelian/laporan/export/${format}`,
 
     // Shift
     SHIFT:        '/api/proxy/shift',
@@ -154,6 +177,9 @@ export const API_ENDPOINTS = {
     PERMINTAAN_VENDOR:        '/api/proxy/permintaan-vendor',
     PERMINTAAN_VENDOR_DETAIL: (id: string) => `/api/proxy/permintaan-vendor/${id}`,
     PERMINTAAN_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/permintaan-vendor/${id}/ajukan-approval`,
+    PERMINTAAN_VENDOR_PROSES: (id: string) => `/api/proxy/permintaan-vendor/${id}/proses`,
+    PERMINTAAN_VENDOR_BATAL:  (id: string) => `/api/proxy/permintaan-vendor/${id}/batal`,
+    PENGADAAN_RINGKASAN:      '/api/proxy/pengadaan/ringkasan',
 
     // Kontrak Vendor
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
@@ -166,6 +192,7 @@ export const API_ENDPOINTS = {
     KONTRAK_VENDOR_TIMPA_UNIT:  (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-unit`,
     KONTRAK_VENDOR_TIMPA_PASANGAN: (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-pasangan`,
     KONTRAK_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/kontrak-vendor/${id}/ajukan-approval`,
+    KONTRAK_VENDOR_SELESAI: (id: string) => `/api/proxy/kontrak-vendor/${id}/selesai`,
     KONTRAK_VENDOR_TIMPA_SUPIR: (id: string) => `/api/proxy/kontrak-vendor/${id}/timpa-supir`,
 
     // Trip
@@ -195,6 +222,7 @@ export const API_ENDPOINTS = {
     // Invoice Vendor
     KONSOLIDASI_KLIEN:               '/api/proxy/konsolidasi-klien',
     KONSOLIDASI_KLIEN_EXPORT_EXCEL:  '/api/proxy/konsolidasi-klien/export/excel',
+    KONSOLIDASI_KLIEN_SIAP_TAGIH:    '/api/proxy/konsolidasi-klien/siap-tagih',
     KONSOLIDASI_VENDOR:              '/api/proxy/konsolidasi-vendor',
     KONSOLIDASI_VENDOR_EXPORT_EXCEL: '/api/proxy/konsolidasi-vendor/export/excel',
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
@@ -429,6 +457,7 @@ export const API_ENDPOINTS = {
     APPROVAL_EVENT_TYPE_APPROVER_DETAIL: (idEventType: string, idConfig: string) => `/api/proxy/approval-event-type/${idEventType}/approver/${idConfig}`,
     APPROVAL_MENUNGGU_SAYA: '/api/proxy/approval-pengajuan/menunggu-saya',
     APPROVAL_KEPUTUSAN:     (idApproval: string) => `/api/proxy/approval-pengajuan/${idApproval}/keputusan`,
+    APPROVAL_RINCIAN:       (idApproval: string) => `/api/proxy/approval-pengajuan/${idApproval}/rincian`,
     APPROVAL_RIWAYAT_SAYA:  '/api/proxy/approval-pengajuan/riwayat-saya',
     APPROVAL_EXPORT_SAYA:   '/api/proxy/approval-pengajuan/export-saya',
     APPROVAL_STATUS_REFERENSI: '/api/proxy/approval-pengajuan/status-referensi',

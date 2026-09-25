@@ -2,19 +2,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineDocumentAdd } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineDocumentAdd, HiOutlineCog } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { permintaanVendorService, PermintaanVendor, ringkasanUnitDiminta } from '@/services/permintaan-vendor.service'
 import dayjs from 'dayjs'
-
-const MEKANISME_LABEL: Record<string, string> = {
-    unit_only:   'Unit Only',
-    unit_driver: 'Unit + Driver',
-    full:        'All In',
-}
+import { STATUS_LABEL, STATUS_TAG, MEKANISME_LABEL } from '../permintaan-vendor/status'
 
 export default function PermintaanSiapKontrakTab() {
     const router = useRouter()
@@ -25,13 +20,14 @@ export default function PermintaanSiapKontrakTab() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
+    const [memproses, setMemproses]     = useState<string | null>(null)
 
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
             const res = await permintaanVendorService.list(currentPage, {
                 limit: pageSize,
-                status: 'disetujui',
+                status: 'disetujui,diproses',
                 search: search || undefined,
             })
             setList(res.data)
@@ -47,6 +43,20 @@ export default function PermintaanSiapKontrakTab() {
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const handleProses = async (p: PermintaanVendor) => {
+        if (memproses) return
+        setMemproses(p.id_permintaan)
+        try {
+            await permintaanVendorService.proses(p.id_permintaan)
+            toast.push(<Notification type="success" title={`Permintaan ${p.nomor_permintaan} mulai diproses`} />)
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMemproses(null)
+        }
+    }
 
     const columns: ColumnDef<PermintaanVendor>[] = [
         {
@@ -97,12 +107,14 @@ export default function PermintaanSiapKontrakTab() {
         },
         {
             header: 'Status', id: 'status', size: 130,
-            cell: () => (
-                <Tag className="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Disetujui</Tag>
+            cell: ({ row }) => (
+                <Tag className={`${STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'} border-0`}>
+                    {STATUS_LABEL[row.original.status] ?? row.original.status}
+                </Tag>
             ),
         },
         {
-            header: '', id: 'aksi', size: 90,
+            header: '', id: 'aksi', size: 130,
             cell: ({ row }) => (
                 <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail Permintaan">
@@ -113,6 +125,16 @@ export default function PermintaanSiapKontrakTab() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
+                    {row.original.status === 'disetujui' && (
+                        <Tooltip title="Proses (tandai sedang dicarikan vendor)">
+                            <span
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30 transition-colors ${memproses === row.original.id_permintaan ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+                                onClick={() => handleProses(row.original)}
+                            >
+                                <HiOutlineCog className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
                     <Tooltip title="Buat Kontrak">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 transition-colors"
@@ -142,7 +164,7 @@ export default function PermintaanSiapKontrakTab() {
                         onChange={e => setSearchInput(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
                     />
-                    <p className="text-sm text-gray-500">Permintaan dari sales yang sudah disetujui dan belum dibuatkan kontrak</p>
+                    <p className="text-sm text-gray-500">Permintaan dari sales yang sudah disetujui atau sedang diproses dan belum dibuatkan kontrak</p>
                 </div>
                 <DataTable
                     columns={columns}

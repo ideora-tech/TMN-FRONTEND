@@ -373,10 +373,13 @@ export default function KonfigurasiApprovalPage() {
                     </Tooltip>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
-                    Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, pembayaran_vendor, lainnya</span> — kalau jenisnya dinonaktifkan, pengajuan kategori itu langsung disetujui tanpa approval; kalau jenisnya belum dibuat, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor, kontrak_vendor) dipakai oleh modulnya masing-masing — saat dinonaktifkan, dokumennya juga langsung lolos tanpa approval.
+                    Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, pembayaran_vendor, pengadaan, lainnya</span> — kalau jenisnya dinonaktifkan, pengajuan kategori itu langsung disetujui tanpa approval; kalau jenisnya belum dibuat, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor, kontrak_vendor) dipakai oleh modulnya masing-masing — saat dinonaktifkan, dokumennya juga langsung lolos tanpa approval.
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                     Kode <span className="font-mono">persetujuan_transfer</span> adalah gerbang persetujuan transfer oleh dirut sebelum staf keuangan transfer dana — opsional; tanpa jenis ini (atau saat dinonaktifkan), pengajuan langsung siap transfer setelah diverifikasi keuangan.
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                    Kode <span className="font-mono">permintaan_pembelian</span> adalah approval untuk Permintaan Pembelian (PR) sebelum diproses Pengadaan — terpisah dari approval pembayarannya (kategori <span className="font-mono">pengadaan</span>).
                 </p>
             </Card>
 
@@ -408,7 +411,7 @@ export default function KonfigurasiApprovalPage() {
                 <form onSubmit={e => { e.preventDefault(); handleSimpanBatasPengadaan() }}>
                     <div className="flex flex-wrap items-end gap-3">
                         <FormItem label="Batas Nominal" className="mb-0 w-full sm:w-64"
-                            extra={<span className="text-xs text-gray-400">Sampai nilai ini, pembelian sparepart boleh direalisasi sendiri tanpa tim Pengadaan</span>}>
+                            extra={<span className="text-xs text-gray-400">Sampai nilai ini, PR tipe Spare Part boleh direalisasi sendiri oleh pengaju setelah disetujui</span>}>
                             <Input prefix="Rp" placeholder="500.000" value={batasPengadaanInput ? formatNum(Number(batasPengadaanInput)) : ''}
                                 disabled={loadingBatas}
                                 onChange={e => setBatasPengadaanInput(e.target.value.replace(/\D/g, ''))} />
@@ -416,7 +419,7 @@ export default function KonfigurasiApprovalPage() {
                         <Button type="submit" variant="solid" loading={savingBatasPengadaan} disabled={loadingBatas}>Simpan</Button>
                     </div>
                     <p className="text-xs text-gray-400 mt-3">
-                        Di atas nilai ini, realisasi pembelian sparepart (baik dari halaman Pembelian Sparepart maupun yang ditautkan ke Perawatan Armada) wajib diproses oleh role Pengadaan atau Superadmin.
+                        PR tipe Spare Part dengan total estimasi sampai nilai ini boleh dibeli dan direalisasi sendiri oleh pengaju setelah disetujui, tanpa menunggu tim Pengadaan. Di atas nilai ini, realisasi wajib dilakukan oleh tim Pengadaan. Perubahan berlaku seketika tanpa build ulang.
                     </p>
                 </form>
             </Card>

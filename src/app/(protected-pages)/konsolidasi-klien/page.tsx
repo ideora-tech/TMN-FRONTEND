@@ -13,7 +13,7 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { klienService, Klien } from '@/services/klien.service'
-import { konsolidasiKlienService, KonsolidasiKlienRekap, KonsolidasiKlienTrip } from '@/services/konsolidasiKlien.service'
+import { konsolidasiKlienService, KonsolidasiKlienRekap, KonsolidasiKlienTrip, SiapTagihItem } from '@/services/konsolidasiKlien.service'
 import { projectService, Project } from '@/services/project.service'
 import { penagihanTripService } from '@/services/penagihanTrip.service'
 import { TIPE_HARGA_LABEL } from '@/constants/tipeHarga.constant'
@@ -71,8 +71,40 @@ export default function KonsolidasiKlienPage() {
             .catch(() => {})
     }, [])
 
+    const proyekTertundaRef = useRef<string | null>(null)
+    const [siapTagih, setSiapTagih] = useState<SiapTagihItem[]>([])
+    const [loadingSiapTagih, setLoadingSiapTagih] = useState(false)
+
+    const fetchSiapTagih = useCallback(async () => {
+        setLoadingSiapTagih(true)
+        try {
+            setSiapTagih(await konsolidasiKlienService.siapTagih())
+        } catch {
+            setSiapTagih([])
+        } finally {
+            setLoadingSiapTagih(false)
+        }
+    }, [])
+
+    useEffect(() => { fetchSiapTagih() }, [fetchSiapTagih])
+
+    const pilihSiapTagih = (item: SiapTagihItem) => {
+        if (item.tanggal_pertama) setDari(item.tanggal_pertama)
+        if (item.tanggal_terakhir) setSampai(item.tanggal_terakhir)
+        setSumber('')
+        setSelectedIds([])
+        if (item.id_klien === selectedKlien) {
+            setProyekFilter(item.id_proyek)
+            return
+        }
+        proyekTertundaRef.current = item.id_proyek
+        gantiKlien(item.id_klien)
+    }
+
     useEffect(() => {
-        setProyekFilter('')
+        const tertunda = proyekTertundaRef.current
+        proyekTertundaRef.current = null
+        setProyekFilter(tertunda ?? '')
         setSelectedIds([])
         if (!selectedKlien) { setProyekOptions([]); return }
         projectService.listByKlien(selectedKlien, 1, 100)
@@ -149,6 +181,7 @@ export default function KonsolidasiKlienPage() {
             setSubmitting(false)
             setDialogOpen(false)
             fetchRekap()
+            fetchSiapTagih()
         }
     }
 
@@ -278,6 +311,48 @@ export default function KonsolidasiKlienPage() {
                     Rekap laporan perjalanan per klien — cocokkan dengan klien, lalu pilih trip untuk dibuat draft invoice
                 </p>
             </div>
+
+            <Card bodyClass="p-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                    <div>
+                        <p className="font-semibold text-gray-800 dark:text-gray-100">Siap Ditagih</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Klien dan proyek yang punya trip selesai ber-laporan tapi belum masuk invoice. Klik untuk langsung memuat rekapnya.</p>
+                    </div>
+                    {siapTagih.length > 0 && (
+                        <Tag className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-0">{formatNum(siapTagih.length)} proyek</Tag>
+                    )}
+                </div>
+                {loadingSiapTagih ? (
+                    <div className="flex items-center justify-center py-6"><Spinner /></div>
+                ) : siapTagih.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">Semua trip selesai sudah ditagihkan</p>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
+                        {siapTagih.map(item => {
+                            const aktif = item.id_klien === selectedKlien && item.id_proyek === proyekFilter
+                            return (
+                                <div key={item.id_proyek}
+                                    className={`rounded-xl border px-4 py-3 cursor-pointer transition-colors ${aktif ? 'border-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                                    onClick={() => pilihSiapTagih(item)}>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="text-xs text-gray-400 truncate">{item.nama_klien}</p>
+                                            <p className="font-semibold text-sm truncate">{item.kode_proyek ? `${item.kode_proyek} — ` : ''}{item.nama_proyek ?? '—'}</p>
+                                        </div>
+                                        <Tag className={`border-0 shrink-0 ${item.borongan ? 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
+                                            {formatNum(item.jumlah_trip)} trip
+                                        </Tag>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {item.tanggal_pertama ? dayjs(item.tanggal_pertama).format('DD MMM YYYY') : '…'} – {item.tanggal_terakhir ? dayjs(item.tanggal_terakhir).format('DD MMM YYYY') : '…'}
+                                        {item.borongan ? ' · borongan, ditagih lewat faktur proyek' : ''}
+                                    </p>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </Card>
 
             <Card bodyClass="p-0">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">

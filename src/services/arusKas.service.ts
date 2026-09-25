@@ -4,11 +4,12 @@ import type { PerawatanArmadaWithArmada } from './perawatanArmada.service'
 import type { PembelianSparepart } from './pembelianSparepart.service'
 import type { PayrollPeriode, RingkasanPayroll } from './payroll.service'
 import type { InvoiceVendor } from './invoice-vendor.service'
+import type { PermintaanPembelian } from './permintaanPembelian.service'
 
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
 export type KeputusanApproval = 'setuju' | 'tolak'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'lainnya'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -64,6 +65,7 @@ export interface PengajuanPengeluaran {
     id_perawatan: string | null
     id_armada_perawatan?: string | null
     id_pembelian: string | null
+    id_permintaan_pembelian?: string | null
     id_periode: string | null
     id_invoice_vendor?: string | null
     id_supir: string | null
@@ -226,6 +228,7 @@ export type RincianSumberPengajuan =
     | { tipe: 'payroll'; data: RincianPayroll }
     | { tipe: 'uang_jalan'; data: RincianUangJalan }
     | { tipe: 'invoice_vendor'; data: InvoiceVendor }
+    | { tipe: 'permintaan_pembelian'; data: PermintaanPembelian }
 
 export const arusKasService = {
     async getRekap(params?: { dari?: string; sampai?: string; arah?: ArahArusKas; sumber?: SumberArusKas }) {

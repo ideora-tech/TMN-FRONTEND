@@ -35,7 +35,23 @@ export interface KonsolidasiKlienRekap {
     trips: KonsolidasiKlienTrip[]
 }
 
+export interface SiapTagihItem {
+    id_klien: string
+    nama_klien: string
+    id_proyek: string
+    kode_proyek: string | null
+    nama_proyek: string | null
+    borongan: boolean
+    jumlah_trip: number
+    tanggal_pertama: string | null
+    tanggal_terakhir: string | null
+}
+
 export const konsolidasiKlienService = {
+    async siapTagih() {
+        const { data } = await axios.get(API_ENDPOINTS.KONSOLIDASI_KLIEN_SIAP_TAGIH)
+        return data.data as SiapTagihItem[]
+    },
     async rekap(idKlien: string, dari?: string, sampai?: string, sumber?: string, idProyek?: string) {
         const { data } = await axios.get(API_ENDPOINTS.KONSOLIDASI_KLIEN, {
             params: { id_klien: idKlien, dari: dari || undefined, sampai: sampai || undefined, sumber: sumber || undefined, id_proyek: idProyek || undefined },

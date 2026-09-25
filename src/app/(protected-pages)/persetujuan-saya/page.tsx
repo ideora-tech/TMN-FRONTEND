@@ -1,13 +1,14 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, Tag, Button, Dialog, Input, Spinner, toast, Notification } from '@/components/ui'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Card, Tag, Button, Drawer, Input, Spinner, toast, Notification } from '@/components/ui'
 import Tabs from '@/components/ui/Tabs'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
 import ApprovalTimeline, { type StatusApprovalReferensi } from '@/components/shared/ApprovalTimeline'
+import RincianDokumenApproval from '@/components/shared/RincianDokumenApproval'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
@@ -15,7 +16,7 @@ import { HiOutlineCheck, HiOutlineX, HiOutlineEye, HiOutlineSearch, HiOutlineCli
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { approvalService, ApprovalPengajuanSaya, ApprovalRiwayatSaya } from '@/services/approval.service'
+import { approvalService, ApprovalPengajuanSaya, ApprovalRiwayatSaya, Rincian } from '@/services/approval.service'
 import { arusKasService, PengajuanKeuanganInfo } from '@/services/arusKas.service'
 import { KODE_PENGAJUAN_PENGELUARAN, isKodePengeluaran } from '@/constants/pengeluaran.constant'
 
@@ -25,6 +26,8 @@ const DETAIL_ROUTE: Record<string, (id: string) => string> = {
     faktur:         (id) => ROUTES.FAKTUR_DETAIL(id),
     invoice_vendor: (id) => ROUTES.INVOICE_VENDOR_DETAIL(id),
     permintaan_vendor: (id) => ROUTES.PERMINTAAN_VENDOR_DETAIL(id),
+    permintaan_pembelian: (id) => `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`,
+    permintaan_pembelian_aset: (id) => `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`,
     ...Object.fromEntries(KODE_PENGAJUAN_PENGELUARAN.map((kode): [string, () => string] => [kode, () => ROUTES.PROSES_PEMBAYARAN])),
 }
 
@@ -38,6 +41,8 @@ const PDF_EXPORT_ROUTE: Record<string, (id: string) => string> = {
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
+const BLOK_CLASS = 'pt-4 border-t border-gray-100 dark:border-gray-700'
+const LEBAR_DRAWER_DETAIL = 720
 
 const JENIS_TAG_CLASS = 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-100'
 
@@ -69,6 +74,36 @@ const STATUS_AKHIR_LABEL: Record<string, string> = {
 
 function formatTanggal(iso: string) {
     return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const subjudulPengajuan = (item: { nomor_referensi: string | null; nama_event_type: string } | null) =>
+    item ? [item.nomor_referensi, item.nama_event_type].filter(Boolean).join(' · ') : '—'
+
+function useRincianApproval(idApproval: string | null) {
+    const [hasil, setHasil] = useState<{ id: string; rincian: Rincian | null } | null>(null)
+
+    useEffect(() => {
+        if (!idApproval) { setHasil(null); return }
+        let batal = false
+        approvalService.rincian(idApproval)
+            .then(res => { if (!batal) setHasil({ id: idApproval, rincian: res.rincian ?? null }) })
+            .catch(() => { if (!batal) setHasil({ id: idApproval, rincian: null }) })
+        return () => { batal = true }
+    }, [idApproval])
+
+    const dimuat = hasil !== null && hasil.id === idApproval
+    return { rincian: dimuat ? hasil.rincian : null, loading: idApproval !== null && !dimuat }
+}
+
+function BlokRincianDokumen({ rincian, loading }: { rincian: Rincian | null; loading: boolean }) {
+    const kosong = !rincian || ((rincian.info ?? []).length === 0 && (rincian.bagian ?? []).length === 0)
+    if (!loading && kosong) return null
+    return (
+        <div className={BLOK_CLASS}>
+            <p className="text-sm font-semibold mb-3">Rincian Dokumen</p>
+            <RincianDokumenApproval rincian={rincian} loading={loading} />
+        </div>
+    )
 }
 
 export default function PersetujuanSayaPage() {
@@ -138,6 +173,17 @@ export default function PersetujuanSayaPage() {
             .catch(() => setDetailApproval(null))
     }, [detailTarget])
 
+    const rincianDetail = useRincianApproval(detailTarget?.id_approval ?? null)
+    const rincianRiwayat = useRincianApproval(riwayatDetail?.id_approval ?? null)
+    const [lebarDrawer, setLebarDrawer] = useState(LEBAR_DRAWER_DETAIL)
+
+    useEffect(() => {
+        const sesuaikan = () => setLebarDrawer(Math.min(LEBAR_DRAWER_DETAIL, window.innerWidth))
+        sesuaikan()
+        window.addEventListener('resize', sesuaikan)
+        return () => window.removeEventListener('resize', sesuaikan)
+    }, [])
+
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
@@ -152,6 +198,25 @@ export default function PersetujuanSayaPage() {
     }, [halaman, ukuranHalaman, search])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    const searchParams = useSearchParams()
+    const idApprovalDariNotif = searchParams.get('id_approval')
+    const deepLinkDiproses = useRef<string | null>(null)
+
+    useEffect(() => {
+        if (!idApprovalDariNotif || deepLinkDiproses.current === idApprovalDariNotif) return
+        deepLinkDiproses.current = idApprovalDariNotif
+        approvalService.menungguSaya(1, { limit: 1, id_approval: idApprovalDariNotif })
+            .then(hasil => {
+                if (hasil.data[0]) {
+                    setDetailTarget(hasil.data[0])
+                } else {
+                    toast.push(<Notification type="warning" title="Pengajuan ini sudah diputuskan atau tidak lagi menunggu persetujuan Anda" />)
+                }
+            })
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
+            .finally(() => router.replace(ROUTES.PERSETUJUAN_SAYA, { scroll: false }))
+    }, [idApprovalDariNotif, router])
 
     const fetchRiwayat = useCallback(async () => {
         setRiwayatLoading(true)
@@ -455,6 +520,10 @@ export default function PersetujuanSayaPage() {
     ]
 
     const rutePengajuan = detailTarget?.kode_event_type ? DETAIL_ROUTE[detailTarget.kode_event_type] : null
+    const kodeRiwayat = riwayatDetail?.kode_event_type ?? null
+    const riwayatAdaLog = isKodePengeluaran(kodeRiwayat)
+    const riwayatAdaPdf = !!kodeRiwayat && !!PDF_EXPORT_ROUTE[kodeRiwayat]
+    const riwayatAdaRute = !!kodeRiwayat && !!DETAIL_ROUTE[kodeRiwayat]
 
     return (
         <div className="flex flex-col gap-4">
@@ -562,11 +631,43 @@ export default function PersetujuanSayaPage() {
                 </div>
             </Tabs>
 
-            <Dialog isOpen={!!detailTarget} width={520}
-                onRequestClose={() => setDetailTarget(null)} onClose={() => setDetailTarget(null)}>
-                <h5 className="text-base font-semibold mb-4">Detail Pengajuan</h5>
+            <Drawer isOpen={!!detailTarget} width={lebarDrawer} bodyClass="p-0"
+                onClose={() => setDetailTarget(null)} onRequestClose={() => setDetailTarget(null)}
+                title={
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-base">Detail Pengajuan</span>
+                        <span className="text-xs text-gray-500 font-normal">{subjudulPengajuan(detailTarget)}</span>
+                    </div>
+                }
+                footer={detailTarget && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button size="sm" variant="solid"
+                                icon={<HiOutlineCheck />} onClick={() => { setSetujuTarget(detailTarget); setDetailTarget(null) }}>
+                                Setuju
+                            </Button>
+                            <Button size="sm" variant="default" className="text-red-500 border-red-300 hover:bg-red-50"
+                                icon={<HiOutlineX />}
+                                onClick={() => { setTolakTarget(detailTarget); setCatatanTolak(''); setCatatanError(''); setDetailTarget(null) }}>
+                                Tolak
+                            </Button>
+                            {detailTarget.kode_event_type && PDF_EXPORT_ROUTE[detailTarget.kode_event_type] && (
+                                <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                                    loading={downloadingPdfId === detailTarget.id_referensi}
+                                    onClick={() => cetakPdf(detailTarget)}>
+                                    Cetak PDF
+                                </Button>
+                            )}
+                        </div>
+                        {rutePengajuan && (
+                            <Button size="sm" variant="plain" onClick={() => bukaHalaman(detailTarget)}>
+                                Buka Halaman
+                            </Button>
+                        )}
+                    </div>
+                )}>
                 {detailTarget && (
-                    <div className="flex flex-col gap-4">
+                    <div className="p-5 flex flex-col gap-5">
                         <div>
                             <p className={LABEL_CLASS}>Jenis</p>
                             <Tag className={JENIS_TAG_CLASS}>
@@ -603,8 +704,9 @@ export default function PersetujuanSayaPage() {
                             <p className={LABEL_CLASS}>Keterangan</p>
                             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{detailTarget.keterangan_referensi ?? '-'}</p>
                         </div>
+                        <BlokRincianDokumen rincian={rincianDetail.rincian} loading={rincianDetail.loading} />
                         {(detailApproval?.lampiran?.length ?? 0) > 0 && (
-                            <div>
+                            <div className={BLOK_CLASS}>
                                 <p className={LABEL_CLASS}>Lampiran</p>
                                 <div className="flex flex-col gap-1 mt-1">
                                     {detailApproval!.lampiran!.map(l => (
@@ -617,41 +719,55 @@ export default function PersetujuanSayaPage() {
                                 </div>
                             </div>
                         )}
-
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-2">
-                                <Button size="sm" variant="solid"
-                                    icon={<HiOutlineCheck />} onClick={() => { setSetujuTarget(detailTarget); setDetailTarget(null) }}>
-                                    Setuju
-                                </Button>
-                                <Button size="sm" variant="default" className="text-red-500 border-red-300 hover:bg-red-50"
-                                    icon={<HiOutlineX />}
-                                    onClick={() => { setTolakTarget(detailTarget); setCatatanTolak(''); setCatatanError(''); setDetailTarget(null) }}>
-                                    Tolak
-                                </Button>
-                                {detailTarget.kode_event_type && PDF_EXPORT_ROUTE[detailTarget.kode_event_type] && (
-                                    <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                                        loading={downloadingPdfId === detailTarget.id_referensi}
-                                        onClick={() => cetakPdf(detailTarget)}>
-                                        Cetak PDF
-                                    </Button>
-                                )}
+                        {detailApproval && (
+                            <div className={BLOK_CLASS}>
+                                <p className="text-sm font-semibold mb-1">Timeline Approval</p>
+                                <p className="text-xs text-gray-400 mb-3">
+                                    {detailApproval.progress.disetujui} dari {detailApproval.progress.total} approver menyetujui
+                                </p>
+                                <ApprovalTimeline info={{ ...detailApproval, lampiran: undefined }} />
                             </div>
-                            {rutePengajuan && (
-                                <Button size="sm" variant="plain" onClick={() => bukaHalaman(detailTarget)}>
-                                    Buka Halaman
-                                </Button>
-                            )}
-                        </div>
+                        )}
                     </div>
                 )}
-            </Dialog>
+            </Drawer>
 
-            <Dialog isOpen={!!riwayatDetail} width={520}
-                onRequestClose={() => setRiwayatDetail(null)} onClose={() => setRiwayatDetail(null)}>
-                <h5 className="text-base font-semibold mb-4">Detail Riwayat Keputusan</h5>
+            <Drawer isOpen={!!riwayatDetail} width={lebarDrawer} bodyClass="p-0"
+                onClose={() => setRiwayatDetail(null)} onRequestClose={() => setRiwayatDetail(null)}
+                title={
+                    <div className="flex flex-col">
+                        <span className="font-semibold text-base">Detail Riwayat Keputusan</span>
+                        <span className="text-xs text-gray-500 font-normal">{subjudulPengajuan(riwayatDetail)}</span>
+                    </div>
+                }
+                footer={riwayatDetail && (riwayatAdaLog || riwayatAdaPdf || riwayatAdaRute) ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+                        {riwayatAdaLog && (
+                            <Button size="sm" variant="default" icon={<HiOutlineClipboardList />}
+                                onClick={() => openLog(riwayatDetail)}>
+                                Log
+                            </Button>
+                        )}
+                        {riwayatAdaPdf && (
+                            <Button size="sm" variant="default" icon={<HiOutlineDownload />}
+                                loading={downloadingPdfId === riwayatDetail.id_referensi}
+                                onClick={() => cetakPdf(riwayatDetail)}>
+                                Cetak PDF
+                            </Button>
+                        )}
+                        {riwayatAdaRute && (
+                            <Button size="sm" variant="plain"
+                                onClick={() => {
+                                    setRiwayatDetail(null)
+                                    router.push(DETAIL_ROUTE[riwayatDetail.kode_event_type as string](riwayatDetail.id_referensi))
+                                }}>
+                                Buka Halaman
+                            </Button>
+                        )}
+                    </div>
+                ) : undefined}>
                 {riwayatDetail && (
-                    <div className="flex flex-col gap-4">
+                    <div className="p-5 flex flex-col gap-5">
                         <div className="flex flex-wrap items-center gap-2">
                             <Tag className={JENIS_TAG_CLASS}>
                                 {riwayatDetail.nama_event_type}
@@ -698,7 +814,8 @@ export default function PersetujuanSayaPage() {
                             <p className={LABEL_CLASS}>Keterangan</p>
                             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{riwayatDetail.keterangan_referensi ?? '-'}</p>
                         </div>
-                        <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <BlokRincianDokumen rincian={rincianRiwayat.rincian} loading={rincianRiwayat.loading} />
+                        <div className={BLOK_CLASS}>
                             <div className="flex items-center justify-between gap-3 mb-1">
                                 <p className="text-sm font-semibold">Timeline Approval</p>
                                 {riwayatApproval && (
@@ -715,9 +832,7 @@ export default function PersetujuanSayaPage() {
                             {riwayatApprovalLoading ? (
                                 <div className="flex justify-center py-6"><Spinner size={24} /></div>
                             ) : riwayatApproval ? (
-                                <div className="max-h-[40vh] overflow-y-auto pr-1">
-                                    <ApprovalTimeline info={riwayatApproval} />
-                                </div>
+                                <ApprovalTimeline info={riwayatApproval} />
                             ) : (
                                 <p className="text-sm text-gray-400 py-2">Timeline approval tidak tersedia.</p>
                             )}
@@ -728,33 +843,9 @@ export default function PersetujuanSayaPage() {
                                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{riwayatDetail.catatan_saya}</p>
                             </div>
                         )}
-                        <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-                            {isKodePengeluaran(riwayatDetail.kode_event_type) && (
-                                <Button size="sm" variant="default" icon={<HiOutlineClipboardList />}
-                                    onClick={() => openLog(riwayatDetail)}>
-                                    Log
-                                </Button>
-                            )}
-                            {riwayatDetail.kode_event_type && PDF_EXPORT_ROUTE[riwayatDetail.kode_event_type] && (
-                                <Button size="sm" variant="default" icon={<HiOutlineDownload />}
-                                    loading={downloadingPdfId === riwayatDetail.id_referensi}
-                                    onClick={() => cetakPdf(riwayatDetail)}>
-                                    Cetak PDF
-                                </Button>
-                            )}
-                            {riwayatDetail.kode_event_type && DETAIL_ROUTE[riwayatDetail.kode_event_type] && (
-                                <Button size="sm" variant="plain"
-                                    onClick={() => {
-                                        setRiwayatDetail(null)
-                                        router.push(DETAIL_ROUTE[riwayatDetail.kode_event_type as string](riwayatDetail.id_referensi))
-                                    }}>
-                                    Buka Halaman
-                                </Button>
-                            )}
-                        </div>
                     </div>
                 )}
-            </Dialog>
+            </Drawer>
 
             <ConfirmDialog isOpen={!!setujuTarget} type="info" title="Setujui Pengajuan"
                 confirmText="Ya, Setujui" cancelText="Batal"

@@ -41,6 +41,12 @@ export default function LaporanPembelianTab() {
 
     const selisihPositif = (laporan?.ringkasan.selisih ?? 0) > 0
 
+    const perArmada = laporan?.per_armada ?? []
+    const totalTanpaArmada = Number(laporan?.tanpa_armada?.total_aktual ?? 0)
+    const jumlahTanpaArmada = Number(laporan?.tanpa_armada?.jumlah ?? 0)
+    const totalSemuaArmada = perArmada.reduce((acc, a) => acc + Number(a.total_aktual), 0) + totalTanpaArmada
+    const jumlahSemuaArmada = perArmada.reduce((acc, a) => acc + Number(a.jumlah), 0) + jumlahTanpaArmada
+
     return (
         <div className="flex flex-col gap-4">
             <Card bodyClass="px-4 py-3">
@@ -109,19 +115,35 @@ export default function LaporanPembelianTab() {
             </div>
 
             <Card>
-                <p className="font-semibold mb-3">Per Armada</p>
+                <p className="font-semibold">Per Armada (pembelian tertaut perawatan)</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                    Hanya pembelian yang ditautkan ke perawatan sebuah unit. Pembelian untuk stok tidak terikat ke unit tertentu dan dijumlahkan di baris terpisah.
+                </p>
                 <table className="w-full text-sm">
                     <thead><tr className="bg-blue-50 dark:bg-blue-500/10 text-left">
                         <th className="px-3 py-2">Nopol</th><th className="px-3 py-2 text-right">Total Aktual</th>
                         <th className="px-3 py-2 text-right">Jumlah Pembelian</th></tr></thead>
-                    <tbody>{(laporan?.per_armada ?? []).map(a => (
-                        <tr key={a.nopol} className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="px-3 py-2 font-semibold">{a.nopol}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatRupiah(Number(a.total_aktual))}</td>
-                            <td className="px-3 py-2 text-right">{formatNum(Number(a.jumlah))}</td>
-                        </tr>))}
-                        {(laporan?.per_armada ?? []).length === 0 && (
-                            <tr><td colSpan={3} className="px-3 py-6 text-center text-gray-400">Belum ada pembelian terkait armada</td></tr>)}
+                    <tbody>
+                        {(laporan?.per_armada ?? []).map(a => (
+                            <tr key={a.nopol} className="border-b border-gray-100 dark:border-gray-700">
+                                <td className="px-3 py-2 font-semibold">{a.nopol}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{formatRupiah(Number(a.total_aktual))}</td>
+                                <td className="px-3 py-2 text-right">{formatNum(Number(a.jumlah))}</td>
+                            </tr>))}
+                        {jumlahTanpaArmada > 0 && (
+                            <tr className="border-b border-gray-100 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                <td className="px-3 py-2 italic">Pembelian stok, tanpa armada</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{formatRupiah(totalTanpaArmada)}</td>
+                                <td className="px-3 py-2 text-right">{formatNum(jumlahTanpaArmada)}</td>
+                            </tr>)}
+                        {jumlahSemuaArmada === 0 ? (
+                            <tr><td colSpan={3} className="px-3 py-6 text-center text-gray-400">Belum ada pembelian pada periode ini</td></tr>
+                        ) : (
+                            <tr className="font-semibold bg-gray-50 dark:bg-gray-700/40">
+                                <td className="px-3 py-2">Total</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{formatRupiah(totalSemuaArmada)}</td>
+                                <td className="px-3 py-2 text-right">{formatNum(jumlahSemuaArmada)}</td>
+                            </tr>)}
                     </tbody>
                 </table>
             </Card>

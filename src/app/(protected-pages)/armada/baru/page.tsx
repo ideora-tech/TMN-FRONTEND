@@ -1,16 +1,19 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import UploadBerkas from '@/components/shared/UploadBerkas'
-import { HiArrowLeft } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlineTruck } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { armadaService } from '@/services/armada.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
+import { permintaanPembelianService } from '@/services/permintaanPembelian.service'
+
+type SumberPr = { id_permintaan: string; id_item: string; nomor_permintaan: string; nama_item: string; qty: number; qty_diterima: number }
 
 type Status = 'tersedia' | 'digunakan' | 'perawatan' | 'tidak_aktif'
 
@@ -41,6 +44,10 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 
 export default function ArmadaBaruPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const idPermintaanParam = searchParams.get('id_permintaan')
+    const idItemParam = searchParams.get('id_item')
+    const [sumberPr, setSumberPr] = useState<SumberPr | null>(null)
     const [form, setForm] = useState({
         nopol: '', merk: '', model: '',
         tahun: new Date().getFullYear().toString(),
@@ -61,6 +68,41 @@ export default function ArmadaBaruPage() {
             .then(res => setJenisOptions(res.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => setJenisOptions([]))
     }, [])
+
+    useEffect(() => {
+        if (!idPermintaanParam || !idItemParam) return
+        let aktif = true
+        permintaanPembelianService.get(idPermintaanParam)
+            .then(pr => {
+                if (!aktif) return
+                const item = pr.items.find(i => i.id_item === idItemParam)
+                if (!item || pr.tipe !== 'aset') {
+                    toast.push(<Notification type="danger" title="Item unit pada permintaan pembelian tidak ditemukan" />)
+                    return
+                }
+                if (pr.status !== 'dibeli') {
+                    toast.push(<Notification type="danger" title="PR belum atau tidak lagi berstatus dibeli, unit tidak bisa ditautkan" />)
+                    return
+                }
+                if ((item.qty_diterima ?? 0) >= item.qty) {
+                    toast.push(<Notification type="danger" title="Semua unit item ini sudah terdaftar" />)
+                    return
+                }
+                setSumberPr({ id_permintaan: pr.id_permintaan, id_item: item.id_item, nomor_permintaan: pr.nomor_permintaan, nama_item: item.nama_item, qty: item.qty, qty_diterima: item.qty_diterima ?? 0 })
+                setForm(p => ({
+                    ...p,
+                    id_jenis_kendaraan: item.id_jenis_kendaraan ?? p.id_jenis_kendaraan,
+                    merk:               item.merk ?? p.merk,
+                    model:              item.model ?? p.model,
+                    tahun:              item.tahun ? String(item.tahun) : p.tahun,
+                    harga_beli:         item.harga_aktual !== null && item.harga_aktual !== undefined ? String(Math.round(item.harga_aktual)) : p.harga_beli,
+                    tanggal_beli:       pr.tanggal_pembelian ?? p.tanggal_beli,
+                    kondisi_beli:       'baru',
+                }))
+            })
+            .catch(err => { if (aktif) toast.push(<Notification type="danger" title={parseApiError(err)} />) })
+        return () => { aktif = false }
+    }, [idPermintaanParam, idItemParam])
 
     const validate = () => {
         const e: Partial<typeof form> = {}
@@ -95,9 +137,10 @@ export default function ArmadaBaruPage() {
                 harga_beli:          form.harga_beli ? Number(form.harga_beli) : undefined,
                 kondisi_beli:        form.kondisi_beli || undefined,
                 keterangan:          form.keterangan || undefined,
+                id_permintaan_pembelian_item: sumberPr?.id_item,
             }, foto)
-            toast.push(<Notification type="success" title="Armada berhasil ditambahkan" />)
-            router.push(ROUTES.ARMADA)
+            toast.push(<Notification type="success" title={sumberPr ? `Unit terdaftar dan tercatat diterima pada PR ${sumberPr.nomor_permintaan}` : 'Armada berhasil ditambahkan'} />)
+            router.push(sumberPr ? `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${sumberPr.id_permintaan}` : ROUTES.ARMADA)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -114,9 +157,15 @@ export default function ArmadaBaruPage() {
                 </button>
                 <div>
                     <h3 className="font-bold">Tambah Armada Baru</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Daftarkan armada baru ke sistem</p>
+                    <p className="text-gray-500 text-sm mt-0.5">{sumberPr ? 'Daftarkan unit hasil pengadaan ke master Armada' : 'Daftarkan armada baru ke sistem'}</p>
                 </div>
             </div>
+            {sumberPr && (
+                <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
+                    <HiOutlineTruck className="text-lg flex-shrink-0" />
+                    <span>Dari <strong className="font-mono">{sumberPr.nomor_permintaan}</strong> · {sumberPr.nama_item} · unit {formatNum(sumberPr.qty_diterima + 1)} dari {formatNum(sumberPr.qty)}</span>
+                </div>
+            )}
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">

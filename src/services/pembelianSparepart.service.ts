@@ -38,6 +38,8 @@ export interface PembelianSparepart {
     nama_supplier: string | null
     id_perawatan: string | null
     nopol_armada: string | null
+    id_permintaan_pembelian: string | null
+    nomor_permintaan: string | null
     status: StatusPembelian
     alasan_ditolak: string | null
     disetujui_manager_pada: string | null
@@ -70,12 +72,13 @@ export interface LaporanPembelian {
     per_bulan: { bulan: string; total_estimasi: number; total_aktual: number; jumlah: number }[]
     per_kategori: { kategori: string; total_aktual: number }[]
     per_armada: { nopol: string; total_aktual: number; jumlah: number }[]
+    tanpa_armada: { total_aktual: number; jumlah: number }
 }
 
 type ListMeta = { page: number; total: number; totalPages: number; limit: number }
 
 export const pembelianSparepartService = {
-    async list(params?: { page?: number; limit?: number; search?: string; status?: string; id_supplier?: string; dari?: string; sampai?: string }) {
+    async list(params?: { page?: number; limit?: number; search?: string; status?: string; id_supplier?: string; dari?: string; sampai?: string; sumber?: 'langsung' | 'pr' }) {
         const { data } = await axios.get(API_ENDPOINTS.PEMBELIAN_SPAREPART, { params })
         return data as { data: PembelianSparepart[]; meta: ListMeta }
     },
@@ -105,9 +108,15 @@ export const pembelianSparepartService = {
     async remove(id: string) {
         await axios.delete(API_ENDPOINTS.PEMBELIAN_SPAREPART_DETAIL(id))
     },
-    async realisasi(id: string, payload: { tanggal_pembelian: string; items: { id_item: string; harga_aktual: number }[] }) {
+    async realisasi(id: string, payload: { tanggal_pembelian: string; id_supplier?: string | null; items: { id_item: string; harga_aktual: number }[] }) {
         const { data } = await axios.patch(API_ENDPOINTS.PEMBELIAN_SPAREPART_REALISASI(id), payload)
         return data.data as PembelianSparepart
+    },
+    async batasMandiri(): Promise<number> {
+        const { data } = await axios.get(API_ENDPOINTS.PEMBELIAN_SPAREPART_BATAS_MANDIRI)
+        const batas = Number(data.data?.batas)
+        if (!Number.isFinite(batas)) throw new Error('Batas realisasi mandiri tidak tersedia')
+        return batas
     },
     async uploadBukti(id: string, files: File[]) {
         const form = new FormData()

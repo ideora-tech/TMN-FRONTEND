@@ -51,6 +51,15 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             </a>
         )
     }
+    if (p.id_permintaan_pembelian) {
+        return (
+            <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${p.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
+                    Dari PR <HiOutlineExternalLink className="text-xs" />
+                </Tag>
+            </a>
+        )
+    }
     if (p.id_pembelian) {
         return (
             <a href={ROUTES.PEMBELIAN_SPAREPART_DETAIL(p.id_pembelian)} target="_blank" rel="noreferrer" className="w-fit">
@@ -218,7 +227,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {(p.id_perawatan || p.id_pembelian || p.id_periode || p.id_invoice_vendor || p.periode_dari || p.id_supir) && (
+                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.periode_dari || p.id_supir) && (
                         <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 

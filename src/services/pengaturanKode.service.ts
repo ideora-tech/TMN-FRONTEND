@@ -14,6 +14,8 @@ export type EntitasKode =
     | 'tipe_pembayaran'
     | 'vendor'
     | 'sparepart'
+    | 'barang'
+    | 'permintaan_pembelian'
 export type ResetKode = 'tidak' | 'bulanan' | 'tahunan'
 
 export interface PengaturanKode {

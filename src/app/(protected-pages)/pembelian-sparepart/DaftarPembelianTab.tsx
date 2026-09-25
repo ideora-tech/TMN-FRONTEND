@@ -25,7 +25,7 @@ const STATUS_OPTIONS: Option[] = [
     ...Object.entries(STATUS_LABEL).filter(([value]) => value !== 'disetujui_manager').map(([value, label]) => ({ value, label })),
 ]
 
-export default function DaftarPembelianTab() {
+export default function DaftarPembelianTab({ sumber }: { sumber?: 'langsung' | 'pr' } = {}) {
     const router = useRouter()
     const { session } = useCurrentSession()
     const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
@@ -78,6 +78,7 @@ export default function DaftarPembelianTab() {
                 id_supplier: supplierFilter || undefined,
                 dari: dari ? dayjs(dari).format('YYYY-MM-DD') : undefined,
                 sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
+                sumber,
             })
             setList(res.data)
             setTotal(res.meta.total)
@@ -86,7 +87,7 @@ export default function DaftarPembelianTab() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter, supplierFilter, dari, sampai])
+    }, [currentPage, pageSize, search, statusFilter, supplierFilter, dari, sampai, sumber])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -118,7 +119,14 @@ export default function DaftarPembelianTab() {
         {
             header: 'Nomor', accessorKey: 'nomor_pengajuan', size: 180,
             cell: ({ row }) => (
-                <span className="font-mono font-semibold">{row.original.nomor_pengajuan}</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono font-semibold">{row.original.nomor_pengajuan}</span>
+                    {row.original.id_permintaan_pembelian && (
+                        <Tooltip title={`Dari ${row.original.nomor_permintaan ?? 'Permintaan Pembelian'}`}>
+                            <Tag className="text-[10px] font-semibold px-1.5 py-0 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300">PR</Tag>
+                        </Tooltip>
+                    )}
+                </div>
             ),
         },
         {
@@ -192,7 +200,7 @@ export default function DaftarPembelianTab() {
                             <HiOutlineClipboardList className="text-lg" />
                         </span>
                     </Tooltip>
-                    {bolehDiubahAtauDihapus(row.original.status) && bolehKelola && (
+                    {bolehDiubahAtauDihapus(row.original.status) && bolehKelola && !row.original.id_permintaan_pembelian && (
                         <Tooltip title="Hapus">
                             <span
                                 className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"

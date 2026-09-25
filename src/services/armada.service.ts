@@ -22,6 +22,7 @@ export interface Armada {
     url_foto?: string | null
     keterangan?: string | null
     jumlah_penugasan_aktif?: number | null
+    id_permintaan_pembelian_item?: string | null
 }
 
 export interface ArmadaServisJatuhTempo {

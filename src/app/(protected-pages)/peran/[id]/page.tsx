@@ -250,7 +250,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                             Tidak ada menu yang cocok dengan &quot;{cariMenu}&quot;
                         </p>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto lg:overflow-x-visible">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr>

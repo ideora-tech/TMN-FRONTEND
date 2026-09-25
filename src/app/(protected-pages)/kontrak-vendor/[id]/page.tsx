@@ -6,7 +6,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineClipboardList, HiOutlinePaperAirplane } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineCheckCircle } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
@@ -91,8 +91,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [data, setData]     = useState<KontrakVendor | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
-    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; pajak_str?: string; termin_str?: string }>({})
+    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; pajak_str?: string; termin_str?: string; jumlah_trip_str?: string; jumlah_hari_str?: string }>({})
     const [saving, setSaving]   = useState(false)
+    const [errorRate, setErrorRate] = useState('')
+    const [selesaiOpen, setSelesaiOpen] = useState(false)
+    const [menyelesaikan, setMenyelesaikan] = useState(false)
     const [unitTerikat, setUnitTerikat]   = useState<ArmadaVendor[]>([])
     const [supirTerikat, setSupirTerikat] = useState<SupirVendor[]>([])
     const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
@@ -121,6 +124,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         rate_str:          d.rate != null ? String(d.rate) : '',
         pajak_str:         d.pajak_persen != null ? String(d.pajak_persen) : '',
         termin_str:        d.termin_pembayaran_hari != null ? String(d.termin_pembayaran_hari) : '',
+        jumlah_trip_str:   d.jumlah_trip != null ? String(d.jumlah_trip) : '',
+        jumlah_hari_str:   d.jumlah_hari != null ? String(d.jumlah_hari) : '',
     })
 
     useEffect(() => {
@@ -178,6 +183,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     }, [data?.id_vendor, id])
 
     const handleSave = async () => {
+        if (form.rate_str && form.nilai_kontrak_str && Number(form.rate_str) > Number(form.nilai_kontrak_str)) {
+            setErrorRate('Rate tidak boleh lebih besar dari nilai kontrak')
+            return
+        }
+        setErrorRate('')
         setSaving(true)
         try {
             const updated = await kontrakVendorService.update(id, {
@@ -188,6 +198,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 satuan:          form.satuan || null,
                 pajak_persen:    form.pajak_str ? Number(form.pajak_str) : null,
                 termin_pembayaran_hari: form.termin_str ? Number(form.termin_str) : null,
+                jumlah_trip:     form.jumlah_trip_str ? Number(form.jumlah_trip_str) : null,
+                jumlah_hari:     form.jumlah_hari_str ? Number(form.jumlah_hari_str) : null,
                 nilai_kontrak:   Number(form.nilai_kontrak_str || '0'),
                 tanggal_mulai:   form.tanggal_mulai ?? null,
                 tanggal_selesai: form.tanggal_selesai ?? null,
@@ -206,6 +218,21 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     }
 
     const [ajukanOpen, setAjukanOpen] = useState(false)
+
+    const handleSelesaikan = async () => {
+        setMenyelesaikan(true)
+        try {
+            const updated = await kontrakVendorService.selesaikan(id)
+            setData(updated)
+            setForm(toFormState(updated))
+            setSelesaiOpen(false)
+            toast.push(<Notification type="success" title="Kontrak ditandai selesai" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyelesaikan(false)
+        }
+    }
 
     const handleExport = async () => {
         setDownloadingExport(true)
@@ -505,6 +532,13 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const nilaiPayung = data.nilai_kontrak ?? 0
     const persenPakaiPlafon = nilaiPayung > 0 ? Math.round((totalNilaiTurunan / nilaiPayung) * 100) : 0
     const melebihiPlafon = nilaiPayung > 0 && totalNilaiTurunan > nilaiPayung
+    const estimasiRate = (() => {
+        const rate = Number(form.rate_str)
+        if (!form.rate_str || !rate) return null
+        if (form.satuan === 'per trip' && form.jumlah_trip_str) return `Estimasi: rate × ${form.jumlah_trip_str} trip = Rp ${formatNum(rate * Number(form.jumlah_trip_str))}`
+        if (form.satuan === 'per hari' && form.jumlah_hari_str) return `Estimasi: rate × ${form.jumlah_hari_str} hari = Rp ${formatNum(rate * Number(form.jumlah_hari_str))}`
+        return null
+    })()
 
     return (
         <div className="flex flex-col gap-4">
@@ -542,6 +576,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                             {data.status === 'draft' && (
                                 <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
                                     {ditolakInternal ? 'Ajukan Ulang' : 'Ajukan Approval'}
+                                </Button>
+                            )}
+                            {data.status === 'aktif' && (
+                                <Button size="sm" variant="default" icon={<HiOutlineCheckCircle />} onClick={() => setSelesaiOpen(true)}>
+                                    Selesaikan Kontrak
                                 </Button>
                             )}
                         </>
@@ -583,9 +622,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         <PiFilePdfDuotone className="text-lg" />
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Edit">
-                                    <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)} />
-                                </Tooltip>
+                                {data.status !== 'selesai' && (
+                                    <Tooltip title="Edit">
+                                        <Button variant="solid" size="sm" icon={<HiOutlinePencilAlt />} onClick={() => { setErrorRate(''); setEditing(true) }} />
+                                    </Tooltip>
+                                )}
                             </div>
                         </div>
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
@@ -609,6 +650,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 { label: 'Satuan Kontrak',    value: data.satuan ?? <span className="text-gray-400">—</span> },
                                 { label: 'Pajak',             value: data.pajak_persen != null ? `${data.pajak_persen} %` : <span className="text-gray-400">—</span> },
                                 { label: 'Termin Pembayaran', value: data.termin_pembayaran_hari != null ? `${data.termin_pembayaran_hari} hari` : <span className="text-gray-400">—</span> },
+                                { label: 'Jumlah Trip',       value: data.jumlah_trip != null ? `${data.jumlah_trip} trip` : <span className="text-gray-400">—</span> },
+                                { label: 'Jumlah Hari',       value: data.jumlah_hari != null ? `${data.jumlah_hari} hari` : <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Mulai',     value: data.tanggal_mulai ?? <span className="text-gray-400">—</span> },
                                 { label: 'Tanggal Selesai',   value: data.tanggal_selesai ?? <span className="text-gray-400">—</span> },
                             ]).map(({ label, value }) => (
@@ -647,10 +690,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.nilai_kontrak_str ? formatNum(Number(form.nilai_kontrak_str)) : ''}
                                     onChange={e => setForm(p => ({ ...p, nilai_kontrak_str: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
-                            <FormItem label="Rate">
+                            <FormItem label="Rate" invalid={!!errorRate} errorMessage={errorRate}>
                                 <Input prefix="Rp" placeholder="0"
                                     value={form.rate_str ? formatNum(Number(form.rate_str)) : ''}
-                                    onChange={e => setForm(p => ({ ...p, rate_str: e.target.value.replace(/\D/g, '') }))} />
+                                    onChange={e => { setErrorRate(''); setForm(p => ({ ...p, rate_str: e.target.value.replace(/\D/g, '') })) }} />
+                                {estimasiRate && <p className="text-xs text-gray-400 mt-1">{estimasiRate}</p>}
                             </FormItem>
                             <FormItem label="Satuan Kontrak">
                                 <Select isSearchable={false} isClearable placeholder="Pilih satuan..."
@@ -670,6 +714,16 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 <Input suffix="hari" placeholder="0"
                                     value={form.termin_str ?? ''}
                                     onChange={e => setForm(p => ({ ...p, termin_str: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Jumlah Trip">
+                                <Input suffix="trip" placeholder="0"
+                                    value={form.jumlah_trip_str ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, jumlah_trip_str: e.target.value.replace(/\D/g, '') }))} />
+                            </FormItem>
+                            <FormItem label="Jumlah Hari">
+                                <Input suffix="hari" placeholder="0"
+                                    value={form.jumlah_hari_str ?? ''}
+                                    onChange={e => setForm(p => ({ ...p, jumlah_hari_str: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
                             <FormItem label="Tanggal Mulai">
                                 <DatePicker inputFormat="DD/MM/YYYY"
@@ -700,6 +754,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="plain" onClick={() => {
                                 setEditing(false)
+                                setErrorRate('')
                                 setForm(toFormState(data))
                             }}>Batal</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
@@ -1141,6 +1196,23 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                     <Button variant="solid" onClick={() => setDaftarGagal(null)}>Tutup</Button>
                 </div>
             </Dialog>
+
+            <ConfirmDialog
+                isOpen={selesaiOpen}
+                type="info"
+                title="Selesaikan Kontrak"
+                confirmText="Ya, Selesaikan"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: menyelesaikan }}
+                onClose={() => setSelesaiOpen(false)}
+                onCancel={() => setSelesaiOpen(false)}
+                onConfirm={handleSelesaikan}
+            >
+                <p className="text-sm">
+                    Kontrak <span className="font-semibold">{data.nomor_kontrak || `Kontrak ${data.id_kontrak_vendor.slice(0, 8)}`}</span> akan ditandai selesai.
+                    Unit dan supir vendor dalam kontrak ini tidak lagi bisa ditugaskan ke proyek. Lanjutkan?
+                </p>
+            </ConfirmDialog>
 
             <LogApprovalDialog
                 isOpen={logOpen}

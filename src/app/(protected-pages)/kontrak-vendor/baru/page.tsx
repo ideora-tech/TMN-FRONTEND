@@ -81,7 +81,7 @@ export default function KontrakVendorBaruPage() {
     const [form, setForm] = useState({
         id_vendor: '', mekanisme: 'unit_only', nilai_kontrak: '',
         nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '',
-        pajak_persen: '', termin_pembayaran_hari: '',
+        pajak_persen: '', termin_pembayaran_hari: '', jumlah_trip: '', jumlah_hari: '',
         tanggal_mulai: '', tanggal_selesai: '', id_proyek: '',
     })
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
@@ -240,12 +240,21 @@ export default function KontrakVendorBaruPage() {
         setHapusSemuaTarget(null)
     }
 
+    const estimasiRate = (() => {
+        const rate = Number(form.rate)
+        if (!form.rate || !rate) return null
+        if (form.satuan === 'per trip' && form.jumlah_trip) return `Estimasi: rate × ${form.jumlah_trip} trip = Rp ${formatNum(rate * Number(form.jumlah_trip))}`
+        if (form.satuan === 'per hari' && form.jumlah_hari) return `Estimasi: rate × ${form.jumlah_hari} hari = Rp ${formatNum(rate * Number(form.jumlah_hari))}`
+        return null
+    })()
+
     const validate = () => {
         const e: Record<string, string> = {}
         if (!form.id_vendor) e.id_vendor = 'Vendor wajib dipilih'
         if (!form.nomor_kontrak.trim()) e.nomor_kontrak = 'No. kontrak wajib diisi'
         if (!form.nilai_kontrak) e.nilai_kontrak = 'Nilai kontrak wajib diisi'
         if (!form.rate) e.rate = 'Rate wajib diisi'
+        else if (form.nilai_kontrak && Number(form.rate) > Number(form.nilai_kontrak)) e.rate = 'Rate tidak boleh lebih besar dari nilai kontrak'
         if (!form.satuan) e.satuan = 'Satuan kontrak wajib dipilih'
         if (!form.tanggal_mulai) e.tanggal_mulai = 'Tanggal mulai wajib diisi'
         if (!form.tanggal_selesai) e.tanggal_selesai = 'Tanggal selesai wajib diisi'
@@ -276,6 +285,8 @@ export default function KontrakVendorBaruPage() {
                 satuan: form.satuan || null,
                 pajak_persen: form.pajak_persen ? Number(form.pajak_persen) : null,
                 termin_pembayaran_hari: form.termin_pembayaran_hari ? Number(form.termin_pembayaran_hari) : null,
+                jumlah_trip: form.jumlah_trip ? Number(form.jumlah_trip) : null,
+                jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
                 nilai_kontrak: form.nilai_kontrak ? Number(form.nilai_kontrak) : null,
                 tanggal_mulai: form.tanggal_mulai || null,
                 tanggal_selesai: form.tanggal_selesai || null,
@@ -399,6 +410,7 @@ export default function KontrakVendorBaruPage() {
                         <Input prefix="Rp" placeholder="0"
                             value={form.rate ? formatNum(Number(form.rate)) : ''}
                             onChange={e => setForm(p => ({ ...p, rate: e.target.value.replace(/\D/g, '') }))} />
+                        {estimasiRate && <p className="text-xs text-gray-400 mt-1">{estimasiRate}</p>}
                     </FormItem>
                     <FormItem label="Satuan Kontrak" asterisk invalid={!!errors.satuan} errorMessage={errors.satuan}>
                         <Select isSearchable={false} isClearable placeholder="Pilih satuan..."
@@ -428,6 +440,16 @@ export default function KontrakVendorBaruPage() {
                         <Input suffix="hari" placeholder="0"
                             value={form.termin_pembayaran_hari}
                             onChange={e => setForm(p => ({ ...p, termin_pembayaran_hari: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Jumlah Trip">
+                        <Input suffix="trip" placeholder="0"
+                            value={form.jumlah_trip}
+                            onChange={e => setForm(p => ({ ...p, jumlah_trip: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
+                    <FormItem label="Jumlah Hari">
+                        <Input suffix="hari" placeholder="0"
+                            value={form.jumlah_hari}
+                            onChange={e => setForm(p => ({ ...p, jumlah_hari: e.target.value.replace(/\D/g, '') }))} />
                     </FormItem>
                 </div>
 

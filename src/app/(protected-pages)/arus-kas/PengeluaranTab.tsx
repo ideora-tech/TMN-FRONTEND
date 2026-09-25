@@ -75,6 +75,13 @@ export default function PengeluaranTab() {
                                 </Tag>
                             </a>
                         )}
+                        {p.id_permintaan_pembelian && (
+                            <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${p.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
+                                    Dari PR <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
                         {p.id_pembelian && (
                             <a href={ROUTES.PEMBELIAN_SPAREPART_DETAIL(p.id_pembelian)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-lime-100 text-lime-600 dark:bg-lime-500/20 dark:text-lime-300 cursor-pointer hover:opacity-80">

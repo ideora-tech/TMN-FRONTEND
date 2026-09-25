@@ -1,8 +1,9 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
-import { useEffect, useMemo, useState } from 'react'
+import LampiranPreview from '@/components/shared/LampiranPreview'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
+import { Alert, Card, Button, FormItem, Input, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
@@ -31,30 +32,6 @@ type Props = {
 
 const EMPTY_ROW: ItemRow = { id_sparepart: '', qty: '1', harga_estimasi: '' }
 
-function LampiranPreview({ file }: { file: File }) {
-    const isGambar = file.type.startsWith('image/')
-    const url = useMemo(() => (isGambar ? URL.createObjectURL(file) : null), [file, isGambar])
-    useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
-
-    if (!url) {
-        const ekstensi = (file.name.split('.').pop() ?? '').toLowerCase()
-        return (
-            <div className="w-full h-32 flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400">
-                <HiOutlineDocumentText className="text-3xl" />
-                <span className="text-xs font-semibold uppercase">{ekstensi || 'File'}</span>
-            </div>
-        )
-    }
-
-    return (
-        <img
-            src={url}
-            alt={file.name}
-            className="w-full max-h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-        />
-    )
-}
-
 export default function PembelianForm({ mode, initial }: Props) {
     const { klik } = usePratinjauBerkas()
     const router = useRouter()
@@ -82,8 +59,12 @@ export default function PembelianForm({ mode, initial }: Props) {
     const [perawatanOptions, setPerawatanOptions] = useState<Option[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [loading, setLoading] = useState(false)
+    const [batasMandiri, setBatasMandiri] = useState<number | null>(null)
 
     useEffect(() => {
+        pembelianSparepartService.batasMandiri()
+            .then(setBatasMandiri)
+            .catch(() => {})
         supplierService.list({ limit: 999, aktif: 1 })
             .then(r => setSupplierOptions(r.data.map(s => ({ value: s.id_supplier, label: s.nama }))))
             .catch(() => {})
@@ -125,6 +106,7 @@ export default function PembelianForm({ mode, initial }: Props) {
     const hapusRow = (index: number) => setItems(prev => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))
 
     const totalEstimasi = items.reduce((sum, row) => sum + (Number(row.qty) || 0) * (Number(row.harga_estimasi) || 0), 0)
+    const melebihiBatas = batasMandiri !== null && totalEstimasi > batasMandiri
 
     const tandaiHapusBuktiLama = (idBukti: string) => {
         setBuktiAkanDihapus(prev => (prev.includes(idBukti) ? prev.filter(id => id !== idBukti) : [...prev, idBukti]))
@@ -164,6 +146,7 @@ export default function PembelianForm({ mode, initial }: Props) {
     }
 
     const handleSubmit = async () => {
+        if (melebihiBatas) return
         if (!validate()) {
             toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
             return
@@ -285,8 +268,19 @@ export default function PembelianForm({ mode, initial }: Props) {
                         </div>
                         <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3">
                             <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Estimasi</span>
-                            <span className="font-bold text-lg tabular-nums">{formatRupiah(totalEstimasi)}</span>
+                            <span className={`font-bold text-lg tabular-nums ${melebihiBatas ? 'text-amber-600 dark:text-amber-400' : ''}`}>{formatRupiah(totalEstimasi)}</span>
                         </div>
+                        {melebihiBatas && (
+                            <Alert type="warning" showIcon className="mt-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span>Total melebihi batas {formatRupiah(batasMandiri)}. Ajukan lewat Permintaan Pembelian.</span>
+                                    <Button type="button" size="xs" variant="plain"
+                                        onClick={() => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN_BARU}?tipe=sparepart${idArmada ? `&id_armada=${idArmada}` : ''}${idPerawatan ? `&id_perawatan=${idPerawatan}` : ''}`)}>
+                                        Buat Permintaan Pembelian
+                                    </Button>
+                                </div>
+                            </Alert>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 mt-3">
@@ -385,7 +379,7 @@ export default function PembelianForm({ mode, initial }: Props) {
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
-                        <Button type="submit" variant="solid" loading={loading}>
+                        <Button type="submit" variant="solid" loading={loading} disabled={melebihiBatas}>
                             {mode === 'edit' ? 'Simpan Perubahan' : 'Ajukan Pembelian'}
                         </Button>
                     </div>

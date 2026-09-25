@@ -3,18 +3,22 @@ import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Button, FormItem, Input, Tag, Dialog, Tooltip, Upload, toast, Notification } from '@/components/ui'
+import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
 import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineClipboardList, HiOutlinePaperClip } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineClipboardList, HiOutlinePaperClip, HiOutlineExternalLink } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { pembelianSparepartService, PembelianSparepart } from '@/services/pembelianSparepart.service'
+import { supplierService } from '@/services/supplier.service'
 import { STATUS_TAG, STATUS_LABEL, bolehDiubahAtauDihapus } from '../status'
+
+type Option = { value: string; label: string }
 
 const isGambar = (url: string) => /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
 
@@ -45,6 +49,8 @@ export default function PembelianDetailPage() {
     const [realisasiOpen, setRealisasiOpen] = useState(false)
     const [tanggalBeli, setTanggalBeli] = useState(dayjs().format('YYYY-MM-DD'))
     const [hargaAktual, setHargaAktual] = useState<Record<string, string>>({})
+    const [idSupplierRealisasi, setIdSupplierRealisasi] = useState('')
+    const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
     const [errRealisasi, setErrRealisasi] = useState('')
     const [hapusOpen, setHapusOpen] = useState(false)
     const [hapusBuktiTarget, setHapusBuktiTarget] = useState<string | null>(null)
@@ -83,9 +89,15 @@ export default function PembelianDetailPage() {
         const awal: Record<string, string> = {}
         data.items.forEach(i => { awal[i.id_item] = String(i.harga_aktual ?? i.harga_estimasi) })
         setHargaAktual(awal)
+        setIdSupplierRealisasi(data.id_supplier ?? '')
         setTanggalBeli(dayjs().format('YYYY-MM-DD'))
         setErrRealisasi('')
         setRealisasiOpen(true)
+        if (supplierOptions.length === 0) {
+            supplierService.list({ limit: 999, aktif: 1 })
+                .then(r => setSupplierOptions(r.data.map(s => ({ value: s.id_supplier, label: s.nama }))))
+                .catch(() => {})
+        }
     }
 
     const handleRealisasi = () => {
@@ -97,6 +109,7 @@ export default function PembelianDetailPage() {
         }
         jalankan(() => pembelianSparepartService.realisasi(id, {
             tanggal_pembelian: tanggalBeli,
+            id_supplier: idSupplierRealisasi || null,
             items: data.items.map(i => ({ id_item: i.id_item, harga_aktual: Number(hargaAktual[i.id_item]) })),
         }), 'Realisasi tersimpan, stok diperbarui', () => setRealisasiOpen(false))
     }
@@ -122,15 +135,25 @@ export default function PembelianDetailPage() {
 
     if (!data) return null
 
+    const dariPr = !!data.id_permintaan_pembelian
     const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
     const bolehEksekusiPengadaan = bolehKelola || punyaPeran('pengadaan')
-    const bolehUploadBukti = bolehEksekusiPengadaan && (data.status === 'disetujui_finance' || data.status === 'dibeli')
-    const bolehRealisasi = bolehEksekusiPengadaan && (!data.wajib_pengadaan || punyaPeran('pengadaan', 'superadmin'))
+    const bolehUploadBukti = bolehEksekusiPengadaan && (data.status === 'dibeli' || (data.status === 'disetujui_finance' && !dariPr))
+    const bolehRealisasi = !dariPr && bolehEksekusiPengadaan && (!data.wajib_pengadaan || punyaPeran('pengadaan', 'superadmin'))
+    const bolehUbahHapus = bolehDiubahAtauDihapus(data.status) && bolehKelola && !dariPr
+    const langkahAktif = dariPr && data.status === 'disetujui_finance'
+        ? {
+            judul: 'Disetujui lewat PR, siap direalisasi',
+            keterangan: `Catat realisasi (supplier, harga aktual, nota) dari PR ${data.nomor_permintaan ?? ''} — PR otomatis ditandai diterima dan pengajuan pembayaran dibuat setelah realisasi.`,
+        }
+        : null
     const bukaLogApproval = () => {
         if (!data.pengajuan_keuangan) {
-            toast.push(<Notification type="info" title={data.id_perawatan
-                ? 'Approval pembelian ini mengikuti pengajuan perawatan terkait'
-                : 'Belum ada pengajuan pengeluaran untuk pembelian ini'} />)
+            toast.push(<Notification type="info" title={dariPr
+                ? `Approval pembelian ini dilakukan di PR ${data.nomor_permintaan ?? ''}`
+                : data.id_perawatan
+                    ? 'Approval pembelian ini mengikuti pengajuan perawatan terkait'
+                    : 'Belum ada pengajuan pengeluaran untuk pembelian ini'} />)
             return
         }
         setLogOpen(true)
@@ -152,6 +175,13 @@ export default function PembelianDetailPage() {
                                     Wajib Pengadaan
                                 </Tag>
                             )}
+                            {dariPr && (
+                                <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${data.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                                    <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
+                                        Dari {data.nomor_permintaan ?? 'PR'} <HiOutlineExternalLink className="text-xs" />
+                                    </Tag>
+                                </a>
+                            )}
                         </div>
                         <p className="text-gray-500 text-sm mt-0.5">
                             Diajukan {dayjs(data.tanggal_pengajuan).format('DD MMM YYYY')} · {data.nama_supplier ?? '—'}
@@ -159,7 +189,7 @@ export default function PembelianDetailPage() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    {bolehDiubahAtauDihapus(data.status) && bolehKelola && (
+                    {bolehUbahHapus && (
                         <>
                             <Tooltip title="Hapus">
                                 <Button variant="default" size="sm" icon={<HiOutlineTrash />}
@@ -186,7 +216,7 @@ export default function PembelianDetailPage() {
             <PanelAlurStatus
                 judul="Alur Pembelian"
                 alat={(
-                    <Tooltip title="Log Approval">
+                    <Tooltip title="Log Aktivitas Approval">
                         <span className={KELAS_IKON_LOG_APPROVAL} onClick={bukaLogApproval}>
                             <HiOutlineClipboardList className="text-lg" />
                         </span>
@@ -201,7 +231,7 @@ export default function PembelianDetailPage() {
                 catatan={data.status === 'ditolak' && data.alasan_ditolak
                     ? [{ warna: 'merah', judul: 'Pengajuan ditolak approver', isi: `“${data.alasan_ditolak}”` }]
                     : []}
-                langkah={{
+                langkah={langkahAktif ?? {
                     judul: LANGKAH_PEMBELIAN[data.status]?.judul ?? STATUS_LABEL[data.status] ?? data.status,
                     keterangan: data.status === 'diajukan'
                         ? (data.id_perawatan
@@ -211,7 +241,13 @@ export default function PembelianDetailPage() {
                 }}
                 aksi={(
                     <>
-                        {data.status === 'disetujui_finance' && bolehRealisasi && (
+                        {dariPr && data.status === 'disetujui_finance' && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />}
+                                onClick={() => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${data.id_permintaan_pembelian}`)}>
+                                Buka PR {data.nomor_permintaan ?? ''}
+                            </Button>
+                        )}
+                        {!dariPr && data.status === 'disetujui_finance' && bolehRealisasi && (
                             <Button size="sm" variant="solid" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
                                 Catat Realisasi
                             </Button>
@@ -360,7 +396,9 @@ export default function PembelianDetailPage() {
                 <p className="font-semibold mb-3">Bukti Nota</p>
                 {data.bukti.length === 0 ? (
                     <p className="text-sm text-gray-400">
-                        Belum ada bukti nota{data.status === 'disetujui_finance' ? ' — wajib unggah minimal 1 sebelum realisasi' : ''}
+                        {dariPr && data.status === 'disetujui_finance'
+                            ? `Unggah nota dan catat realisasi di PR ${data.nomor_permintaan ?? ''} terkait`
+                            : `Belum ada bukti nota${data.status === 'disetujui_finance' ? ' — wajib unggah minimal 1 sebelum realisasi' : ''}`}
                     </p>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -393,15 +431,12 @@ export default function PembelianDetailPage() {
                 <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Batal</Button>
             </div>
 
-            {data.pengajuan_keuangan && (
-                <LogApprovalDialog
-                    isOpen={logOpen}
-                    onClose={() => setLogOpen(false)}
-                    kode="sparepart"
-                    idReferensi={data.pengajuan_keuangan.id_pengajuan}
-                    emptyMessage="Belum ada pengajuan approval untuk pembelian ini."
-                />
-            )}
+            <LogAktivitasKeuanganDialog
+                isOpen={logOpen}
+                info={data.pengajuan_keuangan}
+                emptyMessage="Belum ada pengajuan keuangan."
+                onClose={() => setLogOpen(false)}
+            />
 
             <Dialog isOpen={realisasiOpen} onClose={() => setRealisasiOpen(false)} onRequestClose={() => setRealisasiOpen(false)}>
                 <h5 className="mb-4">Realisasi Pembelian</h5>
@@ -413,6 +448,12 @@ export default function PembelianDetailPage() {
                         <DatePicker inputFormat="DD/MM/YYYY"
                             value={tanggalBeli ? dayjs(tanggalBeli).toDate() : null}
                             onChange={date => setTanggalBeli(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                    </FormItem>
+                    <FormItem label="Supplier (opsional)">
+                        <Select<Option> isSearchable isClearable placeholder="Pilih supplier tempat membeli..."
+                            options={supplierOptions}
+                            value={supplierOptions.find(o => o.value === idSupplierRealisasi) ?? null}
+                            onChange={opt => setIdSupplierRealisasi((opt as Option | null)?.value ?? '')} />
                     </FormItem>
                     <p className="font-semibold text-sm mb-2">Harga Aktual per Item</p>
                     <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">

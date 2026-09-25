@@ -7,14 +7,16 @@ import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL, KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiOutlinePlus, HiOutlineClipboardList, HiOutlinePaperAirplane } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineDocumentText, HiOutlinePlus, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineCog, HiOutlineBan } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { ROUTES } from '@/constants/route.constant'
 import { permintaanVendorService, PermintaanVendor, itemUnitDiminta, ringkasanUnitDiminta, UnitDimintaPayload } from '@/services/permintaan-vendor.service'
 import { projectService } from '@/services/project.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
+import { STATUS_LABEL, STATUS_TAG, MEKANISME_LABEL } from '../status'
 
 const MEKANISME_OPTIONS = [
     { value: 'unit_only',   label: 'Unit Only' },
@@ -22,36 +24,27 @@ const MEKANISME_OPTIONS = [
     { value: 'full',        label: 'All In' },
 ]
 
-const MEKANISME_LABEL: Record<string, string> = {
-    unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
-}
-
-const STATUS_CLASS: Record<string, string> = {
-    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
-    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
-    disetujui:         'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
-    dikontrakkan:      'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', menunggu_approval: 'Menunggu Approval', disetujui: 'Disetujui', ditolak: 'Ditolak', dikontrakkan: 'Dikontrakkan',
-}
-
 const TAHAP_PERMINTAAN = [
     { status: 'draft',             label: 'Draft' },
     { status: 'menunggu_approval', label: 'Approval' },
     { status: 'disetujui',         label: 'Disetujui' },
+    { status: 'diproses',          label: 'Diproses' },
     { status: 'dikontrakkan',      label: 'Dikontrakkan' },
+    { status: 'selesai',           label: 'Selesai' },
 ]
 
 const LANGKAH_PERMINTAAN: Record<string, { judul: string; keterangan: string }> = {
     draft:             { judul: 'Siap diajukan?',                             keterangan: 'Permintaan perlu disetujui approver dulu sebelum bisa dibuatkan kontrak vendor.' },
     menunggu_approval: { judul: 'Menunggu keputusan approver',                keterangan: 'Data tidak bisa diubah sampai ada keputusan.' },
     ditolak:           { judul: 'Perbaiki lalu ajukan ulang',                 keterangan: 'Edit permintaan ini — setelah disimpan, status kembali ke Draft dan bisa diajukan approval lagi.' },
-    disetujui:         { judul: 'Permintaan disetujui',                       keterangan: 'Lanjutkan dengan membuat kontrak vendor dari permintaan ini.' },
-    dikontrakkan:      { judul: 'Permintaan sudah dikontrakkan',              keterangan: 'Kontrak vendor sudah dibuat dari permintaan ini — tidak ada aksi lanjutan.' },
+    disetujui:         { judul: 'Permintaan disetujui',                       keterangan: 'Tim Pengadaan dapat menandai permintaan ini sedang diproses atau langsung membuat kontrak vendor.' },
+    diproses:          { judul: 'Sedang dicarikan vendor oleh Pengadaan',     keterangan: 'Lanjutkan dengan membuat kontrak vendor dari permintaan ini.' },
+    dikontrakkan:      { judul: 'Permintaan sudah dikontrakkan',              keterangan: 'Permintaan akan selesai otomatis saat kontrak vendor aktif.' },
+    selesai:           { judul: 'Kontrak vendor aktif, permintaan selesai',   keterangan: 'Tidak ada aksi lanjutan untuk permintaan ini.' },
+    dibatalkan:        { judul: 'Permintaan dibatalkan',                      keterangan: 'Permintaan ini tidak diproses lebih lanjut.' },
 }
+
+const BISA_BATAL = ['draft', 'menunggu_approval', 'disetujui', 'diproses']
 
 type FormState = {
     id_proyek: string
@@ -78,6 +71,9 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     const { id } = use(params)
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { session } = useCurrentSession()
+    const authority = ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase())
+    const punyaPeran = (...roles: string[]) => roles.some(r => authority.includes(r))
     const kembali = () => {
         if (typeof window !== 'undefined' && window.history.length > 1) {
             router.back()
@@ -99,6 +95,11 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     const [logOpen, setLogOpen]       = useState(false)
     const [hapusOpen, setHapusOpen]   = useState(false)
     const [menghapus, setMenghapus]   = useState(false)
+    const [prosesOpen, setProsesOpen] = useState(false)
+    const [memproses, setMemproses]   = useState(false)
+    const [batalOpen, setBatalOpen]   = useState(false)
+    const [alasanBatal, setAlasanBatal] = useState('')
+    const [membatalkan, setMembatalkan] = useState(false)
 
     const bisaUbah = data?.status === 'draft' || data?.status === 'ditolak'
 
@@ -182,10 +183,64 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
         }
     }
 
+    const terapkanHasil = (updated: PermintaanVendor) => {
+        setData(updated)
+        setForm(toFormState(updated))
+        setUnitRows(toUnitRows(updated))
+    }
+
+    const handleProses = async () => {
+        setMemproses(true)
+        try {
+            const updated = await permintaanVendorService.proses(id)
+            terapkanHasil(updated)
+            toast.push(<Notification type="success" title="Permintaan mulai diproses Pengadaan" />)
+            setProsesOpen(false)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMemproses(false)
+        }
+    }
+
+    const handleBatal = async () => {
+        const alasan = alasanBatal.trim()
+        if (!alasan) return
+        setMembatalkan(true)
+        try {
+            const updated = await permintaanVendorService.batal(id, alasan)
+            terapkanHasil(updated)
+            toast.push(<Notification type="success" title="Permintaan dibatalkan" />)
+            setBatalOpen(false)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMembatalkan(false)
+        }
+    }
+
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!data) return <div className="p-6 text-red-500">Permintaan tidak ditemukan.</div>
 
     const unitItems = itemUnitDiminta(data)
+    const bisaBatal = BISA_BATAL.includes(data.status)
+    const bisaProses = data.status === 'disetujui' && !punyaPeran('sales')
+    const bisaBuatKontrak = data.status === 'disetujui' || data.status === 'diproses'
+    const sudahDikontrakkan = data.status === 'dikontrakkan' || data.status === 'selesai'
+    const infoDitangani = ['diproses', 'dikontrakkan', 'selesai'].includes(data.status) && data.nama_diproses_oleh
+        ? `Ditangani oleh ${data.nama_diproses_oleh}${data.diproses_pada ? ` sejak ${dayjs(data.diproses_pada).format('DD MMM YYYY HH:mm')}` : ''}`
+        : null
+    const catatanAlur = [
+        ...(data.status === 'ditolak' && data.alasan_ditolak
+            ? [{ warna: 'merah' as const, judul: 'Permintaan ditolak approver — perlu revisi', isi: `“${data.alasan_ditolak}”` }]
+            : []),
+        ...(data.status === 'dibatalkan'
+            ? [{ warna: 'merah' as const, judul: 'Permintaan dibatalkan', isi: data.alasan_batal ? `“${data.alasan_batal}”` : undefined }]
+            : []),
+        ...(infoDitangani
+            ? [{ warna: 'biru' as const, judul: infoDitangani, isi: undefined }]
+            : []),
+    ]
     const periode = (!data.periode_dari && !data.periode_sampai)
         ? null
         : `${data.periode_dari ? dayjs(data.periode_dari).format('DD/MM/YYYY') : '…'} – ${data.periode_sampai ? dayjs(data.periode_sampai).format('DD/MM/YYYY') : '…'}`
@@ -215,15 +270,20 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                     tahap={TAHAP_PERMINTAAN}
                     status={data.status}
                     statusLabel={STATUS_LABEL[data.status] ?? data.status}
-                    kelasIkon={STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-600'}
+                    kelasIkon={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}
                     tahapGagal={data.status === 'ditolak' ? 1 : undefined}
-                    selesai={data.status === 'dikontrakkan'}
-                    catatan={data.status === 'ditolak' && data.alasan_ditolak
-                        ? [{ warna: 'merah', judul: 'Permintaan ditolak approver — perlu revisi', isi: `“${data.alasan_ditolak}”` }]
-                        : []}
+                    selesai={data.status === 'selesai'}
+                    gagal={data.status === 'dibatalkan' ? 'Permintaan dibatalkan — tidak dilanjutkan ke kontrak vendor' : undefined}
+                    catatan={catatanAlur}
                     langkah={LANGKAH_PERMINTAAN[data.status]}
                     aksi={(
                         <>
+                            {bisaBatal && (
+                                <Button size="sm" variant="plain" className={KELAS_TOMBOL_BATAL} icon={<HiOutlineBan />}
+                                    onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>
+                                    Batalkan
+                                </Button>
+                            )}
                             {data.status === 'ditolak' && (
                                 <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={() => setEditing(true)}>
                                     Perbaiki Permintaan
@@ -234,13 +294,18 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                     Ajukan Approval
                                 </Button>
                             )}
-                            {data.status === 'disetujui' && (
+                            {bisaProses && (
+                                <Button size="sm" variant="default" icon={<HiOutlineCog />} onClick={() => setProsesOpen(true)}>
+                                    Proses
+                                </Button>
+                            )}
+                            {bisaBuatKontrak && (
                                 <Button size="sm" variant="solid" icon={<HiOutlineDocumentText />}
                                     onClick={() => router.push(`${ROUTES.KONTRAK_VENDOR_BARU}?id_permintaan=${id}`)}>
                                     Buat Kontrak
                                 </Button>
                             )}
-                            {data.status === 'dikontrakkan' && data.id_kontrak_vendor && (
+                            {sudahDikontrakkan && data.id_kontrak_vendor && (
                                 <Button size="sm" variant="solid" icon={<HiOutlineDocumentText />}
                                     onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(data.id_kontrak_vendor!))}>
                                     Lihat Kontrak
@@ -286,6 +351,9 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                 { label: 'Proyek',           value: data.nama_proyek ?? <span className="text-gray-400">—</span> },
                                 { label: 'Mekanisme',        value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
                                 { label: 'Periode',          value: periode ?? <span className="text-gray-400">—</span> },
+                                { label: 'Ditangani',        value: data.nama_diproses_oleh
+                                    ? <>{data.nama_diproses_oleh}{data.diproses_pada && <span className="text-gray-400 font-normal"> · {dayjs(data.diproses_pada).format('DD MMM YYYY HH:mm')}</span>}</>
+                                    : <span className="text-gray-400">—</span> },
                                 { label: 'Kontrak Terkait',  value: data.id_kontrak_vendor
                                     ? <span className="cursor-pointer text-blue-600 hover:underline"
                                         onClick={() => router.push(ROUTES.KONTRAK_VENDOR_DETAIL(data.id_kontrak_vendor!))}>
@@ -423,6 +491,36 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                 onConfirm={handleDelete}
             >
                 <p className="text-sm">Permintaan <span className="font-semibold">{data.nomor_permintaan}</span> akan dihapus secara permanen. Lanjutkan?</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={prosesOpen}
+                type="info"
+                title="Proses Permintaan"
+                confirmText="Ya, Proses"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: memproses }}
+                onClose={() => setProsesOpen(false)}
+                onCancel={() => setProsesOpen(false)}
+                onConfirm={handleProses}
+            >
+                <p className="text-sm">Tandai permintaan <span className="font-semibold">{data.nomor_permintaan}</span> sedang diproses Pengadaan (dicarikan vendor)? Pengaju akan mendapat notifikasi.</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={batalOpen}
+                type="danger"
+                title="Batalkan Permintaan"
+                confirmText="Ya, Batalkan"
+                cancelText="Kembali"
+                confirmButtonProps={{ loading: membatalkan, disabled: !alasanBatal.trim(), customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
+                onClose={() => setBatalOpen(false)}
+                onCancel={() => setBatalOpen(false)}
+                onConfirm={handleBatal}
+            >
+                <p className="text-sm mb-3">Permintaan <span className="font-semibold">{data.nomor_permintaan}</span> akan dibatalkan{data.status === 'menunggu_approval' ? ' dan pengajuan approval-nya ikut dibatalkan' : ''}.</p>
+                <p className="text-sm font-semibold mb-1">Alasan pembatalan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} maxLength={500} placeholder="Tuliskan alasan pembatalan..." value={alasanBatal} onChange={e => setAlasanBatal(e.target.value)} />
             </ConfirmDialog>
 
             <LogApprovalDialog

@@ -49,6 +49,12 @@ export const ROUTES = {
     PEMBELIAN_SPAREPART_DETAIL:  (id: string) => `/pembelian-sparepart/${id}`,
     PEMBELIAN_SPAREPART_EDIT:    (id: string) => `/pembelian-sparepart/${id}/edit`,
 
+    PERMINTAAN_PEMBELIAN:      '/permintaan-pembelian',
+    PERMINTAAN_PEMBELIAN_BARU: '/permintaan-pembelian/baru',
+    PERMINTAAN_PEMBELIAN_EDIT: (id: string) => `/permintaan-pembelian/${id}/edit`,
+    MASTER_BARANG:             '/master-barang',
+    PENGADAAN:                 '/pengadaan',
+
     SHIFT:        '/shift',
     SHIFT_BARU:   '/shift/baru',
     SHIFT_DETAIL: (id: string) => `/shift/${id}`,

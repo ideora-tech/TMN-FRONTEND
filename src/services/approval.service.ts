@@ -60,6 +60,41 @@ export type MetaPersetujuan = {
     totalNominal: number
 }
 
+export type NilaiTipe = 'rupiah' | 'tanggal' | 'angka' | 'teks'
+
+export interface RincianInfo {
+    label: string
+    value: string | number | null
+    tipe?: NilaiTipe
+}
+
+export interface RincianKolom {
+    key: string
+    label: string
+    align?: 'left' | 'right'
+    tipe?: NilaiTipe
+}
+
+export interface RincianBagian {
+    judul: string
+    kolom: RincianKolom[]
+    baris: Record<string, string | number | null>[]
+    total?: { label: string; value: number }
+}
+
+export interface Rincian {
+    kode: string
+    judul: string
+    info: RincianInfo[]
+    bagian: RincianBagian[]
+    link?: string | null
+}
+
+export interface RincianApproval {
+    kode: string
+    rincian: Rincian | null
+}
+
 export const approvalService = {
     async listEventType() {
         const { data } = await axios.get(API_ENDPOINTS.APPROVAL_EVENT_TYPE)
@@ -87,9 +122,9 @@ export const approvalService = {
     async hapusConfigApprover(idEventType: string, idConfig: string) {
         await axios.delete(API_ENDPOINTS.APPROVAL_EVENT_TYPE_APPROVER_DETAIL(idEventType, idConfig))
     },
-    async menungguSaya(page = 1, opsi: { limit?: number; search?: string } = {}) {
+    async menungguSaya(page = 1, opsi: { limit?: number; search?: string; id_approval?: string } = {}) {
         const { data } = await axios.get(API_ENDPOINTS.APPROVAL_MENUNGGU_SAYA, {
-            params: { page, limit: opsi.limit ?? 10, search: opsi.search || undefined },
+            params: { page, limit: opsi.limit ?? 10, search: opsi.search || undefined, id_approval: opsi.id_approval || undefined },
         })
         return { data: data.data as ApprovalPengajuanSaya[], meta: data.meta as MetaPersetujuan }
     },
@@ -102,6 +137,10 @@ export const approvalService = {
             params: { page, limit: opsi.limit ?? 10, search: opsi.search || undefined },
         })
         return { data: data.data as ApprovalRiwayatSaya[], meta: data.meta as MetaPersetujuan }
+    },
+    async rincian(idApproval: string) {
+        const { data } = await axios.get(API_ENDPOINTS.APPROVAL_RINCIAN(idApproval))
+        return data.data as RincianApproval
     },
     async exportSaya() {
         const res = await axios.get(API_ENDPOINTS.APPROVAL_EXPORT_SAYA, { responseType: 'blob' })

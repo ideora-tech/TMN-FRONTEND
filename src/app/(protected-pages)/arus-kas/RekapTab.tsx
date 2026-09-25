@@ -82,6 +82,10 @@ const KATEGORI_TAG_META: Record<KategoriPengajuan, { label: string; tag: string 
         label: 'Pembayaran Vendor',
         tag: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300',
     },
+    pengadaan: {
+        label: 'Pengadaan',
+        tag: 'bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-300',
+    },
     lainnya: {
         label: 'Lainnya',
         tag: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',

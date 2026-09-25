@@ -22,6 +22,8 @@ const LABEL_ENTITAS: Record<EntitasKode, string> = {
     tipe_pembayaran: 'Tipe Pembayaran',
     vendor: 'Vendor',
     sparepart: 'Spare Part',
+    barang: 'Barang',
+    permintaan_pembelian: 'Permintaan Pembelian',
 }
 
 const URUTAN_ENTITAS: EntitasKode[] = [
@@ -35,6 +37,8 @@ const URUTAN_ENTITAS: EntitasKode[] = [
     'lokasi_kantor',
     'tipe_pembayaran',
     'sparepart',
+    'barang',
+    'permintaan_pembelian',
     'jabatan',
     'departemen',
 ]

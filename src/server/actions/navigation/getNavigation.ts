@@ -18,6 +18,25 @@ type ApiMenuItem = {
     children?: ApiMenuItem[]
 }
 
+const MENU_DISEMBUNYIKAN_WEB = new Set(['/pembelian-sparepart'])
+
+function saringItem(item: ApiMenuItem): ApiMenuItem | null {
+    if (item.path && MENU_DISEMBUNYIKAN_WEB.has(item.path)) return null
+
+    const asalPunyaAnak = (item.children?.length ?? 0) > 0
+    const children = item.children
+        ? item.children.map(saringItem).filter((anak): anak is ApiMenuItem => anak !== null)
+        : item.children
+
+    if (!item.path && asalPunyaAnak && (children?.length ?? 0) === 0) return null
+
+    return { ...item, children }
+}
+
+function saringMenu(items: ApiMenuItem[]): ApiMenuItem[] {
+    return items.map(saringItem).filter((item): item is ApiMenuItem => item !== null)
+}
+
 function mapMenuTree(items: ApiMenuItem[]): NavigationTree[] {
     return items.map((item) => {
         const hasPath     = !!item.path
@@ -71,7 +90,7 @@ export async function getNavigation(): Promise<NavigationTree[]> {
 
         if (items.length === 0) return []
 
-        return mapMenuTree(items)
+        return mapMenuTree(saringMenu(items))
     } catch {
         return navigationConfig
     }

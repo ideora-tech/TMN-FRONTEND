@@ -21,7 +21,7 @@ export default function KontrakVendorPage() {
     const [totalPermintaan, setTotalPermintaan] = useState<number | null>(null)
 
     useEffect(() => {
-        permintaanVendorService.list(1, { limit: 1, status: 'disetujui' })
+        permintaanVendorService.list(1, { limit: 1, status: 'disetujui,diproses' })
             .then(res => setTotalPermintaan(res.meta.total))
             .catch(() => setTotalPermintaan(null))
     }, [])
