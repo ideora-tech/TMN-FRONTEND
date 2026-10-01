@@ -167,7 +167,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(menu); setErrors({}) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(menu); setErrors({}) }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -175,7 +175,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>

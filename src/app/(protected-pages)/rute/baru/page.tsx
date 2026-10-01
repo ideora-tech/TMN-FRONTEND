@@ -36,7 +36,7 @@ export default function RuteBaruPage() {
                 value: l.id_lokasi,
                 label: `${l.nama_lokasi}${l.kota && l.kota.trim().toLowerCase() !== l.nama_lokasi.trim().toLowerCase() ? ' — ' + l.kota : ''}`,
             }))))
-            .catch(() => {})
+            .catch(err => toast.push(<Notification type="danger" title={`Gagal memuat lokasi: ${parseApiError(err)}`} />))
     }, [])
 
     const set = (field: keyof FormState, value: string | boolean) =>
@@ -125,7 +125,7 @@ export default function RuteBaruPage() {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.RUTE)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.RUTE)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan Rute</Button>
                     </div>
                 </form>

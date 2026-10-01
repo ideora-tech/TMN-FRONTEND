@@ -1,11 +1,20 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { TipeHarga } from '@/constants/tipeHarga.constant'
+import { NilaiParameterPenawaran } from '@/constants/parameterPenawaran.constant'
 
 export type PenawaranStatus = 'draft' | 'menunggu_approval' | 'terkirim' | 'negosiasi' | 'disetujui' | 'ditolak'
 export type TipeHargaPenawaran = TipeHarga
 
-export interface Penawaran {
+export const MAKS_LAMPIRAN_PENAWARAN = 10
+
+export interface LampiranPenawaran {
+    id_lampiran: string
+    url_file: string
+    nama_asli: string
+}
+
+export interface Penawaran extends NilaiParameterPenawaran {
     id_penawaran: string
     id_perusahaan: string
     id_klien: string | null
@@ -35,9 +44,10 @@ export interface Penawaran {
     dibuat_pada: string
     diubah_pada: string
     items?: PenawaranItem[]
+    lampiran?: LampiranPenawaran[]
 }
 
-export interface PenawaranPayload {
+export interface PenawaranPayload extends Partial<NilaiParameterPenawaran> {
     nomor_penawaran?: string
     judul: string
     id_klien?: string | null
@@ -64,6 +74,8 @@ export interface PenawaranItem {
     jumlah_hari: number | null
     subtotal: number
     keterangan: string | null
+    unit_aset?: number | null
+    unit_vendor?: number | null
 }
 
 export interface PenawaranItemPayload {
@@ -73,6 +85,8 @@ export interface PenawaranItemPayload {
     estimasi_ritase?: number
     jumlah_hari?: number | null
     keterangan?: string | null
+    unit_aset?: number | null
+    unit_vendor?: number | null
 }
 
 export const penawaranService = {
@@ -105,4 +119,13 @@ export const penawaranService = {
 
     delete: (id: string): Promise<void> =>
         axios.delete(API_ENDPOINTS.PENAWARAN_DETAIL(id)).then(() => undefined),
+
+    uploadLampiran: (id: string, files: File[]): Promise<Penawaran> => {
+        const form = new FormData()
+        files.forEach(f => form.append('lampiran[]', f))
+        return axios.post(API_ENDPOINTS.PENAWARAN_LAMPIRAN(id), form).then(r => r.data?.data)
+    },
+
+    hapusLampiran: (id: string, idLampiran: string): Promise<void> =>
+        axios.delete(API_ENDPOINTS.PENAWARAN_LAMPIRAN_DETAIL(id, idLampiran)).then(() => undefined),
 }

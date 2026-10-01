@@ -7,7 +7,7 @@ import Select from '@/components/ui/Select'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext, Row, DataTableResetHandle } from '@/components/shared/DataTable'
-import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -120,6 +120,7 @@ export default function PenugasanVendorTab() {
     const [dlgLoading, setDlgLoading]                 = useState(false)
     const [checkedIds, setCheckedIds]                 = useState<string[]>([])
     const [rowSupir, setRowSupir]                     = useState<Record<string, string>>({})
+    const [unitSearchInput, setUnitSearchInput]       = useState('')
     const [unitSearch, setUnitSearch]                 = useState('')
     const [dlgForm, setDlgForm]                       = useState<DialogFormState>(EMPTY_DIALOG_FORM)
     const [dlgErrors, setDlgErrors]                   = useState<DialogErrors>({})
@@ -238,6 +239,9 @@ export default function PenugasanVendorTab() {
             (a.merk ?? '').toLowerCase().includes(q))
     }, [dlgArmadaList, unitSearch])
 
+    const handleUnitSearchSubmit = () => setUnitSearch(unitSearchInput.trim())
+    const handleUnitSearchClear  = () => { setUnitSearchInput(''); setUnitSearch('') }
+
     const allFilteredChecked = filteredArmada.length > 0
         && filteredArmada.every(a => checkedIds.includes(a.id_armada_vendor))
 
@@ -276,6 +280,7 @@ export default function PenugasanVendorTab() {
         setDlgSupirVendorList([])
         setCheckedIds([])
         setRowSupir({})
+        setUnitSearchInput('')
         setUnitSearch('')
         setDlgForm(EMPTY_DIALOG_FORM)
         setDlgErrors({})
@@ -868,7 +873,7 @@ export default function PenugasanVendorTab() {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={editSubmitting}>Simpan</Button>
                     </div>
                 </form>
@@ -969,10 +974,14 @@ export default function PenugasanVendorTab() {
                     <div className="flex items-center justify-between gap-4 mb-3 mt-2">
                         <Input
                             size="sm"
-                            className="max-w-xs"
-                            placeholder="Cari nopol / merk..."
-                            value={unitSearch}
-                            onChange={e => setUnitSearch(e.target.value)}
+                            className="max-w-sm"
+                            placeholder="Cari nopol / merk... (tekan Enter)"
+                            suffix={unitSearchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleUnitSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleUnitSearchSubmit} />}
+                            value={unitSearchInput}
+                            onChange={e => setUnitSearchInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleUnitSearchSubmit() } }}
                         />
                         <span className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
                             {checkedIds.length} unit dipilih
@@ -1104,7 +1113,7 @@ export default function PenugasanVendorTab() {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeCreateDialog}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={closeCreateDialog}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={createSubmitting} disabled={dlgLoading}>
                             Simpan
                         </Button>

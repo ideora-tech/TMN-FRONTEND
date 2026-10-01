@@ -617,7 +617,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 setEditing(false)
                                 setForm(toFormState(data))
                                 setFormErrors({})
-                            }}>Batal</Button>
+                            }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -862,7 +862,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
@@ -886,7 +886,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         Pengajuan masuk ke menu Proses Pembayaran (approval → verifikasi → transfer). Pembayaran tercatat otomatis di invoice ini setelah ditransfer.
                     </p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setShowBayar(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setShowBayar(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingBayar}>Ajukan</Button>
                     </div>
                 </form>

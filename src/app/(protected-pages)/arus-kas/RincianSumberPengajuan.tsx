@@ -11,8 +11,9 @@ import type { PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/pera
 import type { PembelianSparepart } from '@/services/pembelianSparepart.service'
 import type { InvoiceVendor } from '@/services/invoice-vendor.service'
 import type { PermintaanPembelian } from '@/services/permintaanPembelian.service'
+import type { UangJalan } from '@/services/uangJalan.service'
 import { STATUS_LABEL as STATUS_PEMBELIAN_LABEL, STATUS_TAG as STATUS_PEMBELIAN_TAG } from '../pembelian-sparepart/status'
-import { STATUS_LABEL as STATUS_PR_LABEL, STATUS_TAG as STATUS_PR_TAG } from '../permintaan-pembelian/status'
+import { STATUS_LABEL as STATUS_PR_LABEL, STATUS_TAG as STATUS_PR_TAG, adaKomponenBiaya, rincianBiaya } from '../permintaan-pembelian/status'
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
@@ -30,6 +31,7 @@ const JUDUL: Record<RincianSumber['tipe'], string> = {
     pembelian:      'Rincian Pembelian Sparepart',
     payroll:        'Rincian Payroll',
     uang_jalan:     'Rincian Uang Jalan',
+    uang_jalan_manual: 'Rincian Uang Jalan',
     invoice_vendor: 'Rincian Invoice Vendor',
     permintaan_pembelian: 'Rincian Permintaan Pembelian',
 }
@@ -283,6 +285,7 @@ function RincianPembelian({ data }: { data: PembelianSparepart }) {
 function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian }) {
     const items = data.items ?? []
     const adaAktual = items.some(i => i.harga_aktual != null)
+    const barisBiaya = adaKomponenBiaya(data) ? rincianBiaya(data).baris : []
 
     return (
         <>
@@ -317,6 +320,12 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
                     <p className={LABEL_CLASS}>Tanggal Pembelian</p>
                     <p className={VALUE_CLASS}>{data.tanggal_pembelian ? dayjs(data.tanggal_pembelian).format('DD MMM YYYY') : '—'}</p>
                 </div>
+                {data.nomor_po && (
+                    <div>
+                        <p className={LABEL_CLASS}>No. PO</p>
+                        <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_po}</p>
+                    </div>
+                )}
             </div>
 
             {data.alasan && (
@@ -368,6 +377,12 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
                                     <td className="py-2 px-3 text-right whitespace-nowrap">
                                         {formatRupiah(i.subtotal_aktual ?? i.subtotal_estimasi)}
                                     </td>
+                                </tr>
+                            ))}
+                            {barisBiaya.map((b, idx) => (
+                                <tr key={b.label} className={idx === 0 ? 'border-t border-gray-200 dark:border-gray-600' : undefined}>
+                                    <td colSpan={adaAktual ? 4 : 3} className="py-2 px-3 text-right text-gray-500 dark:text-gray-400">{b.label}</td>
+                                    <td className="py-2 px-3 text-right whitespace-nowrap">{b.nilai}</td>
                                 </tr>
                             ))}
                             <tr className="border-t border-gray-200 dark:border-gray-600">
@@ -470,6 +485,63 @@ function RincianUangJalanBlok({ data }: { data: RincianUangJalan }) {
                     </div>
                 )}
             </div>
+        </>
+    )
+}
+
+function RincianUangJalanManualBlok({ data }: { data: UangJalan }) {
+    return (
+        <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <p className={LABEL_CLASS}>No. Uang Jalan</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_uang_jalan}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Tanggal</p>
+                    <p className={VALUE_CLASS}>{dayjs(data.tanggal).format('DD MMM YYYY')}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nama Driver</p>
+                    <p className={VALUE_CLASS}>{data.nama_driver}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Status</p>
+                    <p className={VALUE_CLASS}>
+                        {data.tipe_driver === 'vendor' ? `Driver Vendor ${data.nama_vendor ?? ''}`.trim() : 'Driver Internal'}
+                    </p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>No. Polisi</p>
+                    <p className={VALUE_CLASS}>{data.nopol}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Rute</p>
+                    <p className={VALUE_CLASS}>{data.rute}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>UJ per Trip</p>
+                    <p className={VALUE_CLASS}>{formatRupiah(data.uang_jalan_per_trip)} × {formatNum(data.jumlah_trip)} trip</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nominal Transfer</p>
+                    <p className={VALUE_CLASS}>{formatRupiah(data.nominal)}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nomor Rekening</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_rekening}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Bank</p>
+                    <p className={VALUE_CLASS}>{data.nama_bank}</p>
+                </div>
+            </div>
+            {data.catatan && (
+                <div className="mt-4">
+                    <p className={LABEL_CLASS}>Catatan</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{data.catatan}</p>
+                </div>
+            )}
         </>
     )
 }
@@ -682,6 +754,7 @@ export default function RincianSumberPengajuan({ idPengajuan }: { idPengajuan: s
             {!loading && !error && rincian?.tipe === 'pembelian' && <RincianPembelian data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'payroll' && <RincianPayrollBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'uang_jalan' && <RincianUangJalanBlok data={rincian.data} />}
+            {!loading && !error && rincian?.tipe === 'uang_jalan_manual' && <RincianUangJalanManualBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'invoice_vendor' && <RincianInvoiceVendorBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'permintaan_pembelian' && <RincianPermintaanPembelianBlok data={rincian.data} />}
         </div>

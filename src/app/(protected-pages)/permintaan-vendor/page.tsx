@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
@@ -15,11 +16,13 @@ import {
     PiCheckCircleDuotone,
     PiXCircleDuotone,
     PiArchiveDuotone,
+    PiProhibitDuotone,
 } from 'react-icons/pi'
 import { permintaanVendorService, PermintaanVendor, PermintaanVendorStatus, ringkasanUnitDiminta } from '@/services/permintaan-vendor.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
+import { formatDurasiMenit } from '@/utils/formatDurasi'
 import { STATUS_LABEL, STATUS_TAG, STATUS_URUT, MEKANISME_LABEL } from './status'
 
 type StatusOption = { value: '' | PermintaanVendorStatus; label: string }
@@ -37,6 +40,7 @@ const KARTU_STATUS: { key: PermintaanVendorStatus; icon: ReactNode; bg: string; 
     { key: 'dikontrakkan',      icon: <PiFileTextDuotone className="text-3xl text-violet-500" />,       bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400',   ring: 'ring-violet-400' },
     { key: 'selesai',           icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,   bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-400' },
     { key: 'ditolak',           icon: <PiXCircleDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400',         ring: 'ring-red-400' },
+    { key: 'ditolak_pengadaan', icon: <PiProhibitDuotone className="text-3xl text-rose-500" />,        bg: 'bg-rose-50 dark:bg-rose-500/10',       text: 'text-rose-600 dark:text-rose-400',       ring: 'ring-rose-400' },
     { key: 'dibatalkan',        icon: <PiArchiveDuotone className="text-3xl text-gray-500" />,          bg: 'bg-gray-50 dark:bg-gray-500/10',       text: 'text-gray-600 dark:text-gray-400',       ring: 'ring-gray-400' },
 ]
 
@@ -50,10 +54,12 @@ export default function PermintaanVendorPage() {
     const [data, setData]               = useState<PermintaanVendor[]>([])
     const [loading, setLoading]         = useState(true)
     const [ringkasan, setRingkasan]     = useState<Partial<Record<PermintaanVendorStatus, number>>>({})
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
     const [status, setStatus]           = useState<'' | PermintaanVendorStatus>(statusAwal)
     const [currentPage, setCurrentPage] = useState(1)
     const [total, setTotal]             = useState(0)
+    const [kpi, setKpi]                 = useState<{ jumlah_terpenuhi: number; rata_rata_menit: number | null } | null>(null)
     const pageSize = 10
 
     const [deleteTarget, setDeleteTarget]   = useState<PermintaanVendor | null>(null)
@@ -66,12 +72,15 @@ export default function PermintaanVendorPage() {
             search: search || undefined,
             status: status || undefined,
         })
-            .then(res => { setData(res.data ?? []); setTotal(res.meta?.total ?? 0); setRingkasan(res.meta?.ringkasan ?? {}) })
+            .then(res => { setData(res.data ?? []); setTotal(res.meta?.total ?? 0); setRingkasan(res.meta?.ringkasan ?? {}); setKpi(res.meta?.kpi ?? null) })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
     }, [currentPage, search, status])
 
     useEffect(() => { load() }, [load])
+
+    const handleSearchSubmit = () => { setSearch(searchInput.trim()); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const handleDelete = async () => {
         if (!deleteTarget) return
@@ -94,21 +103,29 @@ export default function PermintaanVendorPage() {
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) =>
                 (currentPage - 1) * pageSize + row.index + 1,
         },
-        { header: 'Permintaan', accessorKey: 'nomor_permintaan',
+        { header: 'Permintaan', accessorKey: 'nomor_permintaan', size: 210,
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) => (
                 <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 font-bold text-sm flex-shrink-0 select-none">
                         {row.original.nomor_permintaan.charAt(0).toUpperCase()}
                     </div>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm leading-tight">{row.original.nomor_permintaan}</p>
+                    <Link href={ROUTES.PERMINTAAN_VENDOR_DETAIL(row.original.id_permintaan)} className="text-sm font-semibold leading-tight text-blue-500 hover:underline whitespace-nowrap">{row.original.nomor_permintaan}</Link>
                 </div>
             ),
         },
         { header: 'Proyek', id: 'proyek',
-            cell: ({ row }: CellContext<PermintaanVendor, unknown>) =>
-                row.original.nama_proyek
-                    ? <span className="text-sm text-gray-700 dark:text-gray-300">{row.original.nama_proyek}</span>
-                    : <span className="text-gray-400">—</span>,
+            cell: ({ row }: CellContext<PermintaanVendor, unknown>) => (
+                <div className="flex flex-col">
+                    {row.original.nama_proyek
+                        ? <span className="text-sm text-gray-700 dark:text-gray-300">{row.original.nama_proyek}</span>
+                        : <span className="text-gray-400">—</span>}
+                    {row.original.id_penawaran && row.original.nomor_penawaran && (
+                        <Link href={ROUTES.PENAWARAN_DETAIL(row.original.id_penawaran)} className="text-xs text-blue-500 hover:underline whitespace-nowrap">
+                            Dari {row.original.nomor_penawaran}
+                        </Link>
+                    )}
+                </div>
+            ),
         },
         { header: 'Kebutuhan', id: 'kebutuhan', size: 170,
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) => (
@@ -121,6 +138,12 @@ export default function PermintaanVendorPage() {
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) => (
                 <span className="text-sm text-gray-600 dark:text-gray-300">{MEKANISME_LABEL[row.original.mekanisme] ?? row.original.mekanisme}</span>
             ),
+        },
+        { header: 'Harga Penawaran', id: 'harga_penawaran', size: 150,
+            cell: ({ row }: CellContext<PermintaanVendor, unknown>) =>
+                row.original.harga_penawaran != null
+                    ? <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{formatRupiah(row.original.harga_penawaran)}</span>
+                    : <span className="text-gray-400">—</span>,
         },
         { header: 'Periode', id: 'periode', size: 190,
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) => {
@@ -142,6 +165,17 @@ export default function PermintaanVendorPage() {
                 row.original.nama_diproses_oleh
                     ? <span className="text-sm text-gray-700 dark:text-gray-300">{row.original.nama_diproses_oleh}</span>
                     : <span className="text-gray-400">—</span>,
+        },
+        { header: 'Lama Pemenuhan', id: 'lama_pemenuhan', size: 150,
+            cell: ({ row }: CellContext<PermintaanVendor, unknown>) => {
+                const p = row.original
+                if (p.lama_pemenuhan_menit == null) return <span className="text-gray-400">—</span>
+                return (
+                    <span className={`text-sm whitespace-nowrap ${p.pemenuhan_berjalan ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {formatDurasiMenit(p.lama_pemenuhan_menit)}{p.pemenuhan_berjalan && ' (berjalan)'}
+                    </span>
+                )
+            },
         },
         { header: '', id: 'aksi', size: 120,
             cell: ({ row }: CellContext<PermintaanVendor, unknown>) => {
@@ -174,6 +208,12 @@ export default function PermintaanVendorPage() {
                 <div>
                     <h3 className="font-bold">Permintaan Vendor</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Kebutuhan unit dari vendor — disetujui dulu sebelum dibuatkan kontrak</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                        KPI pemenuhan (disetujui → dikontrakkan):{' '}
+                        <span className="font-semibold text-gray-600 dark:text-gray-300">
+                            {kpi && kpi.rata_rata_menit != null ? `rata-rata ${formatDurasiMenit(kpi.rata_rata_menit)} dari ${formatNum(kpi.jumlah_terpenuhi)} permintaan` : 'belum ada data'}
+                        </span>
+                    </p>
                 </div>
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                     onClick={() => router.push(ROUTES.PERMINTAAN_VENDOR_BARU)}>
@@ -181,7 +221,7 @@ export default function PermintaanVendorPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4">
                 {KARTU_STATUS.map(k => {
                     const aktif = status === k.key
                     return (
@@ -205,12 +245,13 @@ export default function PermintaanVendorPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
-                            placeholder="Cari nomor permintaan..."
-                            suffix={search
-                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setSearch(''); setCurrentPage(1) }} />
-                                : <HiOutlineSearch className="text-gray-400" />}
-                            value={search}
-                            onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
+                            placeholder="Cari nomor permintaan... (tekan Enter)"
+                            suffix={searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
                         />
                     </div>
                     <div className="w-full sm:w-48">

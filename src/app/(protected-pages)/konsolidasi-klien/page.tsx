@@ -253,6 +253,10 @@ export default function KonsolidasiKlienPage() {
             ),
         },
         {
+            header: 'No Surat Jalan', accessorKey: 'no_surat_jalan', size: 140,
+            cell: ({ row }) => <span className="whitespace-nowrap font-mono text-xs">{row.original.no_surat_jalan || '—'}</span>,
+        },
+        {
             header: 'Jarak', accessorKey: 'jarak_tempuh_km', size: 100,
             cell: ({ row }) => (
                 <span className="whitespace-nowrap">
@@ -489,7 +493,7 @@ export default function KonsolidasiKlienPage() {
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting} disabled={!tanggalFaktur}>Buat Invoice</Button>
                     </div>
                 </form>

@@ -39,6 +39,7 @@ export default function InputHarianTab() {
     const [rows, setRows]       = useState<AbsensiHarianRow[]>([])
     const [loading, setLoading] = useState(false)
     const [saving, setSaving]   = useState(false)
+    const [cariInput, setCariInput] = useState('')
     const [cari, setCari]       = useState('')
 
     const [pengaturan, setPengaturan]         = useState<PengaturanAbsensi>(PENGATURAN_DEFAULT)
@@ -173,12 +174,13 @@ export default function InputHarianTab() {
                     </div>
                     <Input
                         className="flex-1 min-w-52"
-                        placeholder="Cari nama atau NIK..."
-                        suffix={cari
-                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setCari('')} />
-                            : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                        value={cari}
-                        onChange={(e) => setCari(e.target.value)}
+                        placeholder="Cari nama atau NIK... (tekan Enter)"
+                        suffix={cariInput
+                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariInput(''); setCari('') }} />
+                            : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setCari(cariInput.trim())} />}
+                        value={cariInput}
+                        onChange={(e) => setCariInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') setCari(cariInput.trim()) }}
                     />
                     <span className="text-xs text-gray-400 shrink-0">{terisi}/{rows.length} terisi</span>
                     <Button variant="solid" size="sm" className="shrink-0" loading={saving}
@@ -321,7 +323,7 @@ export default function InputHarianTab() {
                             onChange={e => setPengaturanForm(p => ({ ...p, toleransi_terlambat_menit: Number(e.target.value) }))} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setPengaturanOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setPengaturanOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingPengaturan}
                             disabled={!pengaturanForm.jam_masuk || !pengaturanForm.jam_pulang}>
                             Simpan

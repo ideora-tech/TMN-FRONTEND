@@ -223,7 +223,7 @@ export default function PenilaianVendorTab({ onTersimpan }: { onTersimpan?: () =
                     </div>
                     {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={tutupDialog}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={tutupDialog}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                     </div>
                 </form>

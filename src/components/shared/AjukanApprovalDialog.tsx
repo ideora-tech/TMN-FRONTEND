@@ -105,7 +105,7 @@ export default function AjukanApprovalDialog({ isOpen, onClose, kode, idReferens
                 )}
             </div>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <Button type="button" variant="plain" onClick={tutup} disabled={submitting}>Batal</Button>
+                <Button type="button" variant="plain" onClick={tutup} disabled={submitting}>Kembali</Button>
                 <Button type="button" variant="solid" loading={submitting} onClick={handleAjukan}>Ajukan</Button>
             </div>
         </Dialog>

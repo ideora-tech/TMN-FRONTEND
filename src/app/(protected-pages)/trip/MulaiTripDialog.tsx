@@ -260,7 +260,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                             terapkanDefaultUangJalan(row?.uang_jalan ?? defaultUangJalanPenugasan)
                         }} />
                 </FormItem>
-                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Terisi otomatis dari uang jalan penugasan/tarif rute — bisa diubah. Menjadi dasar pengajuan uang jalan ke Keuangan</span>}>
+                <FormItem label="Uang Jalan (opsional)" extra={<span className="text-xs text-gray-400">Terisi otomatis dari uang jalan penugasan/tarif rute — bisa diubah. Hanya sebagai alokasi biaya trip</span>}>
                     <Input prefix="Rp" placeholder="0"
                         value={uangJalan ? formatNum(Number(uangJalan)) : ''}
                         onChange={e => { uangJalanManual.current = true; setUangJalan(e.target.value.replace(/\D/g, '')) }} />
@@ -280,7 +280,7 @@ export default function MulaiTripDialog({ isOpen, onClose, onSukses, idPenugasan
                     </FormItem>
                 )}
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={onClose}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={onClose}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={saving} disabled={!pilihPenugasan}>
                         Mulai Trip
                     </Button>

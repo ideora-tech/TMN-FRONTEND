@@ -260,7 +260,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 { label: 'Rute', value: penugasan.id_rute
                                     ? (ruteOptions.find(o => o.value === penugasan.id_rute)?.label ?? <span className="text-gray-400 font-mono text-xs">{shortId(penugasan.id_rute)}</span>)
                                     : <span className="text-gray-400">—</span> },
-                                { label: 'Uang Jalan', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },
+                                { label: 'Estimasi Uang Jalan', value: penugasan.estimasi_biaya != null ? formatRupiah(penugasan.estimasi_biaya) : <span className="text-gray-400">—</span> },
                                 { label: 'Dibuat',        value: dayjs(penugasan.dibuat_pada).format('DD MMM YYYY HH:mm') },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -392,7 +392,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                             setIdRuteEstimasi(opt?.value ?? '')
                                         }} />
                                 </FormItem>
-                                <FormItem label="Uang Jalan" extra="Terisi otomatis dari uang jalan rute proyek — bisa diubah">
+                                <FormItem label="Estimasi Uang Jalan" extra="Terisi otomatis dari uang jalan rute proyek — bisa diubah">
                                     <Input prefix="Rp" placeholder="0"
                                         value={form.estimasi_biaya ? formatNum(Number(form.estimasi_biaya)) : ''}
                                         onChange={e => setForm(p => ({ ...p, estimasi_biaya: e.target.value.replace(/\D/g, '') ? Number(e.target.value.replace(/\D/g, '')) : null }))} />
@@ -402,7 +402,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                                 </FormItem>
                             </div>
                             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                <Button type="button" variant="plain" onClick={() => { bolehAutoFill.current = false; setEditing(false); setForm(penugasan) }}>Batal</Button>
+                                <Button type="button" variant="plain" onClick={() => { bolehAutoFill.current = false; setEditing(false); setForm(penugasan) }}>Kembali</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>
@@ -477,7 +477,7 @@ export default function PenugasanDetailPage({ params }: { params: Promise<{ id: 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>

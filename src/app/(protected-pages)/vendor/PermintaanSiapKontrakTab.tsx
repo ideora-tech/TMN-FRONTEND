@@ -1,11 +1,13 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineDocumentAdd, HiOutlineCog } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
+import { formatDurasiMenit } from '@/utils/formatDurasi'
 import { ROUTES } from '@/constants/route.constant'
 import { permintaanVendorService, PermintaanVendor, ringkasanUnitDiminta } from '@/services/permintaan-vendor.service'
 import dayjs from 'dayjs'
@@ -68,7 +70,10 @@ export default function PermintaanSiapKontrakTab() {
             header: 'No. Permintaan', accessorKey: 'nomor_permintaan', size: 190,
             cell: ({ row }) => (
                 <div>
-                    <span className="font-mono text-sm font-semibold">{row.original.nomor_permintaan}</span>
+                    <Link href={ROUTES.PERMINTAAN_VENDOR_DETAIL(row.original.id_permintaan)}
+                        className="font-mono text-sm font-semibold text-blue-500 hover:underline whitespace-nowrap">
+                        {row.original.nomor_permintaan}
+                    </Link>
                     {row.original.dibuat_pada && (
                         <p className="text-xs text-gray-400 mt-0.5">Diajukan {dayjs(row.original.dibuat_pada).format('DD MMM YYYY')}</p>
                     )}
@@ -114,6 +119,18 @@ export default function PermintaanSiapKontrakTab() {
             ),
         },
         {
+            header: 'Lama Pemenuhan', id: 'lama_pemenuhan', size: 150,
+            cell: ({ row }) => {
+                const p = row.original
+                if (p.lama_pemenuhan_menit == null) return <span className="text-gray-400">—</span>
+                return (
+                    <span className={`text-sm whitespace-nowrap ${p.pemenuhan_berjalan ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {formatDurasiMenit(p.lama_pemenuhan_menit)}{p.pemenuhan_berjalan && ' (berjalan)'}
+                    </span>
+                )
+            },
+        },
+        {
             header: '', id: 'aksi', size: 130,
             cell: ({ row }) => (
                 <div className="flex items-center justify-end gap-2">
@@ -154,7 +171,7 @@ export default function PermintaanSiapKontrakTab() {
                 <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                     <Input
                         className="w-full sm:w-80"
-                        placeholder="Cari nomor permintaan / proyek..."
+                        placeholder="Cari nomor permintaan / proyek... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />

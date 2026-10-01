@@ -87,18 +87,23 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 <FormItem label="Rute" asterisk>
                     <div className="flex items-center gap-2">
                         <div className="flex-1">
-                            <Select<Option> placeholder="Pilih rute..." options={ruteOptions}
+                            <Select<Option> placeholder="Pilih rute..." options={ruteOptions} isDisabled={hargaTerkunci}
                                 value={ruteOptions.find(o => o.value === value.id_rute) ?? null}
                                 onChange={opt => setField({ id_rute: opt?.value ?? '' })} />
                         </div>
-                        <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />}
-                            onClick={() => setShowRuteBaru(true)}>
-                            Rute Baru
-                        </Button>
+                        {!hargaTerkunci && (
+                            <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />}
+                                onClick={() => setShowRuteBaru(true)}>
+                                Rute Baru
+                            </Button>
+                        )}
                     </div>
+                    {hargaTerkunci && (
+                        <p className="text-xs text-amber-500 mt-1">Rute terkunci — ubah lewat penawaran revisi</p>
+                    )}
                 </FormItem>
                 <FormItem label="Jenis Kendaraan">
-                    <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua}
+                    <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua} isDisabled={hargaTerkunci}
                         value={jenisOptionsSemua.find(o => o.value === value.id_jenis_kendaraan) ?? JENIS_SEMUA}
                         onChange={opt => setField({ id_jenis_kendaraan: opt?.value ?? '' })} />
                 </FormItem>

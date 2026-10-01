@@ -57,6 +57,8 @@ export const protectedRoutes: Routes = {
     '/konsolidasi-klien': { key: 'konsolidasi-klien', authority: [] },
     '/arus-kas': { key: 'arus-kas', authority: [] },
     '/proses-pembayaran': { key: 'proses-pembayaran', authority: [] },
+    ...listRoute('uang-jalan', 'uang-jalan'),
+    '/uang-jalan/[id]/edit': { key: 'uang-jalan', authority: [], dynamicRoute: true },
     '/konfigurasi-approval': { key: 'konfigurasi-approval', authority: ['superadmin', 'admin'] },
     ...listRoute('pengguna', 'pengguna', ADMIN_ONLY),
     ...listRoute('peran', 'peran', ADMIN_ONLY),

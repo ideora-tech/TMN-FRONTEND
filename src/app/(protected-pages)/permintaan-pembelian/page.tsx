@@ -1,8 +1,9 @@
 'use client'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import axios from 'axios'
-import { Button, Card, Input, Tag, Tooltip, Switcher, toast, Notification } from '@/components/ui'
+import { Button, Card, Input, Spinner, Tag, Tooltip, Switcher, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import Tabs from '@/components/ui/Tabs'
@@ -27,7 +28,6 @@ import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { permintaanPembelianService, type PermintaanPembelian, type StatusPermintaan } from '@/services/permintaanPembelian.service'
 import { pembelianSparepartService } from '@/services/pembelianSparepart.service'
 import { STATUS_LABEL, STATUS_TAG, STATUS_URUT, TIPE_LABEL, TIPE_TAG } from './status'
-import DetailPermintaanDrawer from './DetailPermintaanDrawer'
 import LaporanPengadaanTab from './LaporanPengadaanTab'
 import DaftarPembelianTab from '../pembelian-sparepart/DaftarPembelianTab'
 
@@ -103,14 +103,11 @@ export default function PermintaanPembelianPage() {
     const [pageSize, setPageSize] = useState(10)
     const [total, setTotal] = useState(0)
     const detailParam = searchParams.get('detail')
-    const [detailId, setDetailId] = useState<string | null>(detailParam)
+    const bukaDetail = (idPermintaan: string) => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(idPermintaan))
 
-    useEffect(() => { if (detailParam) setDetailId(detailParam) }, [detailParam])
-
-    const tutupDetail = () => {
-        setDetailId(null)
-        if (detailParam) router.replace(ROUTES.PERMINTAAN_PEMBELIAN, { scroll: false })
-    }
+    useEffect(() => {
+        if (detailParam) router.replace(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(detailParam))
+    }, [detailParam, router])
 
     const fetchData = useCallback(async () => {
         setLoading(true)
@@ -134,7 +131,9 @@ export default function PermintaanPembelianPage() {
     useEffect(() => { fetchData() }, [fetchData])
 
     const columns: ColumnDef<PermintaanPembelian>[] = [
-        { header: 'Nomor', accessorKey: 'nomor_permintaan', size: 150, cell: ({ row }) => <span className="font-mono font-semibold text-xs">{row.original.nomor_permintaan}</span> },
+        { header: 'Nomor', accessorKey: 'nomor_permintaan', size: 150, cell: ({ row }) => (
+            <Link href={ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(row.original.id_permintaan)} className="font-mono font-semibold text-xs text-blue-500 hover:underline whitespace-nowrap">{row.original.nomor_permintaan}</Link>
+        ) },
         { header: 'Judul', accessorKey: 'judul', cell: ({ row }) => (
             <div>
                 <div className="flex items-center gap-2">
@@ -150,9 +149,11 @@ export default function PermintaanPembelianPage() {
         { header: 'Aktual', accessorKey: 'total_aktual', size: 140, cell: ({ row }) => row.original.total_aktual !== null ? <span className="tabular-nums font-semibold">{formatRupiah(row.original.total_aktual)}</span> : <span className="text-gray-400">—</span> },
         { header: 'Status', accessorKey: 'status', size: 160, cell: ({ row }) => <Tag className={`text-xs font-semibold ${STATUS_TAG[row.original.status]}`}>{STATUS_LABEL[row.original.status]}</Tag> },
         { header: '', id: 'aksi', size: 60, cell: ({ row }) => (
-            <Tooltip title="Detail"><span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300" onClick={() => setDetailId(row.original.id_permintaan)}><HiOutlineEye className="text-lg" /></span></Tooltip>
+            <Tooltip title="Detail"><span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300" onClick={() => bukaDetail(row.original.id_permintaan)}><HiOutlineEye className="text-lg" /></span></Tooltip>
         ) },
     ]
+
+    if (detailParam) return <div className="py-16 text-center"><Spinner className="inline-block" size={32} /></div>
 
     return (
         <div className="flex flex-col gap-4">
@@ -223,13 +224,11 @@ export default function PermintaanPembelianPage() {
                     )}
                     {bolehLaporan && (
                         <Tabs.TabContent value="laporan">
-                            <div className="mt-4"><LaporanPengadaanTab onBukaPr={setDetailId} /></div>
+                            <div className="mt-4"><LaporanPengadaanTab onBukaPr={bukaDetail} /></div>
                         </Tabs.TabContent>
                     )}
                 </div>
             </Tabs>
-
-            <DetailPermintaanDrawer id={detailId} onClose={tutupDetail} onRefresh={fetchData} />
         </div>
     )
 }

@@ -14,7 +14,12 @@ import PanelAlurStatus, { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAl
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExternalLink, HiPlusCircle, HiOutlineTrash, HiOutlineViewList, HiOutlineMail, HiOutlineDocumentText, HiOutlineBan, HiOutlineChat, HiOutlineCheckCircle, HiOutlinePaperAirplane, HiOutlineBriefcase } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
-import { penawaranService, Penawaran, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
+import { LampiranPenawaranCard } from '../LampiranPenawaran'
+import { IsianParameterPenawaranFields, TampilanParameterPenawaran } from '../ParameterPenawaran'
+import { isianParameterDari, payloadParameterDari, parameterTerisiDari } from '@/constants/parameterPenawaran.constant'
+import { penawaranService, Penawaran, PenawaranItem, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
+import { useRingkasanKetersediaan, PetunjukKetersediaan, InputJumlahUnit, angkaAtauNull, labelSumberUnit } from '../SumberUnitPenawaran'
+import PermintaanVendorPenawaranCard from '../PermintaanVendorPenawaranCard'
 import { projectService } from '@/services/project.service'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
@@ -25,19 +30,10 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { kontenKeHtml } from '@/utils/richText'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
+import { PENAWARAN_STATUS_CLASS, PENAWARAN_STATUS_LABEL } from '@/utils/penawaranStatus'
 
-const STATUS_CLASS: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
-    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
-    terkirim: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    negosiasi: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
-    disetujui: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    ditolak: 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', negosiasi: 'Negosiasi', disetujui: 'Disetujui', ditolak: 'Ditolak',
-}
+const STATUS_CLASS: Record<string, string> = PENAWARAN_STATUS_CLASS
+const STATUS_LABEL: Record<string, string> = PENAWARAN_STATUS_LABEL
 
 const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
     draft: [],
@@ -48,21 +44,22 @@ const NEXT_STATUS: Record<PenawaranStatus, PenawaranStatus[]> = {
     ditolak: [],
 }
 
-const TAHAP_PENAWARAN = [
-    { status: 'draft',             label: 'Draft' },
-    { status: 'menunggu_approval', label: 'Approval' },
-    { status: 'terkirim',          label: 'Terkirim' },
-    { status: 'disetujui',         label: 'Disetujui' },
-]
+const INDEKS_TAHAP: Record<PenawaranStatus, number> = {
+    draft: 0, menunggu_approval: 0, terkirim: 1, negosiasi: 2, disetujui: 2, ditolak: 2,
+}
+
+const LABEL_TAHAP_KEPUTUSAN: Record<string, string> = {
+    negosiasi: 'Negosiasi', disetujui: 'Deal', ditolak: 'Batal',
+}
 
 const LANGKAH_PENAWARAN: Record<string, { judul: string; keterangan: string }> = {
     draft:                { judul: 'Siap dikirim ke klien?',               keterangan: 'Penawaran perlu disetujui reviewer internal dulu sebelum bisa dikirim ke klien.' },
     draft_ditolak:        { judul: 'Perbaiki lalu ajukan ulang',           keterangan: 'Revisi data penawaran sesuai catatan reviewer, lalu ajukan approval kembali.' },
-    draft_tanpa_approval: { judul: 'Siap dikirim ke klien?',               keterangan: 'Approval internal sedang nonaktif — penawaran bisa langsung ditandai terkirim.' },
+    draft_tanpa_approval: { judul: 'Siap dikirim ke klien?',               keterangan: 'Approval internal sedang nonaktif — penawaran bisa langsung di-approve.' },
     menunggu_approval:    { judul: 'Menunggu keputusan reviewer internal',  keterangan: 'Belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan penawaran ke Draft.' },
-    terkirim:             { judul: 'Menunggu respons klien',                keterangan: 'Perbarui status sesuai jawaban klien: masuk negosiasi, disetujui, atau ditolak.' },
-    negosiasi:            { judul: 'Sedang negosiasi dengan klien',         keterangan: 'Perbarui status setelah ada keputusan akhir dari klien.' },
-    ditolak:              { judul: 'Penawaran ditolak klien',               keterangan: 'Tidak ada aksi lanjutan untuk penawaran ini.' },
+    terkirim:             { judul: 'Menunggu respons klien',                keterangan: 'Perbarui status sesuai jawaban klien: Negosiasi, Deal, atau Batal.' },
+    negosiasi:            { judul: 'Sedang negosiasi dengan klien',         keterangan: 'Perbarui status setelah ada keputusan akhir dari klien: Deal atau Batal.' },
+    ditolak:              { judul: 'Penawaran batal',               keterangan: 'Tidak ada aksi lanjutan untuk penawaran ini.' },
 }
 
 interface EditForm {
@@ -82,6 +79,8 @@ interface ItemForm {
     jumlah_hari_str: string
     estimasi_ritase_str: string
     keterangan: string
+    unit_aset_str: string
+    unit_vendor_str: string
 }
 
 type Option = { value: string; label: string }
@@ -89,7 +88,19 @@ type Option = { value: string; label: string }
 const ITEM_KOSONG: ItemForm = {
     id_rute: '', id_jenis_kendaraan: '',
     harga_satuan_str: '', jumlah_hari_str: '', estimasi_ritase_str: '1', keterangan: '',
+    unit_aset_str: '', unit_vendor_str: '',
 }
+
+const itemFormDari = (it: PenawaranItem): ItemForm => ({
+    id_rute: it.id_rute,
+    id_jenis_kendaraan: it.id_jenis_kendaraan,
+    harga_satuan_str: String(Math.round(it.harga_satuan)),
+    jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
+    estimasi_ritase_str: String(it.estimasi_ritase),
+    keterangan: it.keterangan ?? '',
+    unit_aset_str: it.unit_aset != null ? String(it.unit_aset) : '',
+    unit_vendor_str: it.unit_vendor != null ? String(it.unit_vendor) : '',
+})
 
 export default function PenawaranDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -105,11 +116,13 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({})
 
     const [items, setItems] = useState<ItemForm[]>([])
+    const [parameter, setParameter] = useState(isianParameterDari())
     const [itemError, setItemError] = useState('')
     const [ruteOptions, setRuteOptions] = useState<Option[]>([])
     const [jenisOptions, setJenisOptions] = useState<Option[]>([])
     const [klienOptions, setKlienOptions] = useState<Option[]>([])
     const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
+    const ringkasanKetersediaan = useRingkasanKetersediaan()
 
     const [showJadikanProyek, setShowJadikanProyek] = useState(false)
     const [jpForm, setJpForm] = useState({ nama_proyek: '', tanggal_mulai: '', tanggal_selesai: '' })
@@ -202,14 +215,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     jumlah_hari: d.jumlah_hari != null ? String(d.jumlah_hari) : '',
                     catatan: d.catatan ?? '',
                 })
-                setItems((d.items ?? []).map(it => ({
-                    id_rute: it.id_rute,
-                    id_jenis_kendaraan: it.id_jenis_kendaraan,
-                    harga_satuan_str: String(Math.round(it.harga_satuan)),
-                    jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
-                    estimasi_ritase_str: String(it.estimasi_ritase),
-                    keterangan: it.keterangan ?? '',
-                })))
+                setParameter(isianParameterDari(d))
+                setItems((d.items ?? []).map(itemFormDari))
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
             .finally(() => setLoading(false))
@@ -233,6 +240,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 tanggal_penawaran: form.tanggal_penawaran || null,
                 jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
                 catatan: form.catatan || null,
+                ...payloadParameterDari(parameter),
                 items: items.map(it => ({
                     id_rute: it.id_rute,
                     id_jenis_kendaraan: it.id_jenis_kendaraan,
@@ -240,18 +248,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     jumlah_hari: it.jumlah_hari_str ? Number(it.jumlah_hari_str) : null,
                     estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                     keterangan: it.keterangan.trim() || null,
+                    unit_aset: angkaAtauNull(it.unit_aset_str),
+                    unit_vendor: angkaAtauNull(it.unit_vendor_str),
                 })),
             })
             setData(updated)
             setForm(p => ({ ...p, tipe_harga: updated.tipe_harga ?? p.tipe_harga }))
-            setItems((updated.items ?? []).map(it => ({
-                id_rute: it.id_rute,
-                id_jenis_kendaraan: it.id_jenis_kendaraan,
-                harga_satuan_str: String(Math.round(it.harga_satuan)),
-                jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
-                estimasi_ritase_str: String(it.estimasi_ritase),
-                keterangan: it.keterangan ?? '',
-            })))
+            setParameter(isianParameterDari(updated))
+            setItems((updated.items ?? []).map(itemFormDari))
             setEditing(false)
             setErrors({})
             toast.push(<Notification type="success" title="Penawaran berhasil diperbarui" />)
@@ -381,12 +385,17 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
     const langkahAlur = data.status === 'draft'
         ? LANGKAH_PENAWARAN[tanpaApproval ? 'draft_tanpa_approval' : ditolakInternal ? 'draft_ditolak' : 'draft']
         : data.status === 'disetujui'
-            ? { judul: 'Penawaran disetujui klien', keterangan: data.id_proyek ? 'Penawaran ini sudah terhubung ke proyek.' : 'Langkah selanjutnya: jadikan proyek berdasarkan penawaran ini, lalu tambahkan penugasan di halaman proyek.' }
+            ? { judul: 'Penawaran deal dengan klien', keterangan: data.id_proyek ? 'Penawaran ini sudah terhubung ke proyek.' : 'Langkah selanjutnya: jadikan proyek berdasarkan penawaran ini, lalu tambahkan penugasan di halaman proyek.' }
             : LANGKAH_PENAWARAN[data.status]
     const kelasIkonAlur = ditolakInternal
         ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300'
         : (STATUS_CLASS[data.status] ?? 'bg-gray-100 text-gray-600')
     const nilaiTetap = tipeHargaNilaiTetap(data.tipe_harga)
+    const tahapPenawaran = [
+        { status: 'draft', label: 'Draft / Quotation' },
+        { status: 'terkirim', label: 'Approve' },
+        { status: 'keputusan', label: LABEL_TAHAP_KEPUTUSAN[data.status] ?? 'Deal / Negosiasi / Batal' },
+    ]
 
     const statusBelumBisaKirimEmail = data.status === 'draft' || data.status === 'menunggu_approval'
     const tooltipKirimEmail = statusBelumBisaKirimEmail
@@ -411,14 +420,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
 
             <PanelAlurStatus
                 judul="Alur Penawaran"
-                tahap={TAHAP_PENAWARAN}
+                tahap={tahapPenawaran}
                 status={data.status}
-                statusLabel={ditolakInternal ? 'Draft — Ditolak' : (STATUS_LABEL[data.status] ?? data.status)}
+                statusLabel={ditolakInternal ? 'Draft / Quotation — Approval Ditolak' : data.status === 'menunggu_approval' ? 'Draft / Quotation — Menunggu Approval' : (STATUS_LABEL[data.status] ?? data.status)}
                 kelasIkon={kelasIkonAlur}
-                tahapAktif={data.status === 'negosiasi' ? 2 : undefined}
-                tahapGagal={ditolakInternal ? 1 : undefined}
+                tahapAktif={INDEKS_TAHAP[data.status]}
+                tahapGagal={ditolakInternal ? 0 : undefined}
                 selesai={data.status === 'disetujui'}
-                gagal={data.status === 'ditolak' ? 'Penawaran ini ditolak oleh klien dan tidak bisa diproses lebih lanjut.' : undefined}
+                gagal={data.status === 'ditolak' ? 'Penawaran ini berstatus Batal dan tidak bisa diproses lebih lanjut.' : undefined}
                 catatan={[
                     ...(ditolakInternal ? [{ warna: 'merah' as const, judul: 'Approval ditolak — perlu revisi', isi: `“${data.alasan_ditolak_internal}”` }] : []),
                     ...(data.proyek_status === 'batal' ? [{
@@ -432,22 +441,22 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     <>
                         {nextStatuses.includes('ditolak') && (
                             <Button size="sm" variant="plain" icon={<HiOutlineBan />} className={KELAS_TOMBOL_BATAL} onClick={() => setPendingStatus('ditolak')}>
-                                Ditolak Klien
+                                Batal
                             </Button>
                         )}
                         {nextStatuses.includes('negosiasi') && (
                             <Button size="sm" variant="default" icon={<HiOutlineChat />} onClick={() => setPendingStatus('negosiasi')}>
-                                Masuk Negosiasi
+                                Negosiasi
                             </Button>
                         )}
                         {nextStatuses.includes('disetujui') && (
                             <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setPendingStatus('disetujui')}>
-                                Disetujui Klien
+                                Deal
                             </Button>
                         )}
                         {data.status === 'draft' && (tanpaApproval ? (
                             <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setTandaiTerkirimOpen(true)}>
-                                Tandai Terkirim
+                                Approve
                             </Button>
                         ) : (
                             <Button size="sm" variant="solid" icon={<HiOutlinePaperAirplane />} onClick={() => setAjukanOpen(true)}>
@@ -567,6 +576,11 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                         </div>
 
                         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                            <p className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Parameter Penawaran</p>
+                            <TampilanParameterPenawaran data={parameterTerisiDari(data)} kosong="Belum ada parameter penawaran." />
+                        </div>
+
+                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
                             <p className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Item Rute</p>
                             {data.items && data.items.length > 0 ? (
                                 <div className="overflow-x-auto">
@@ -578,6 +592,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                 {!nilaiTetap && <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>}
                                                 <th className="px-3 py-2 font-semibold w-24">Hari</th>
                                                 <th className="px-3 py-2 font-semibold w-24">Trip</th>
+                                                <th className="px-3 py-2 font-semibold min-w-[130px]" title="Internal — tidak tercetak di PDF">Sumber Unit</th>
                                                 {!nilaiTetap && <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>}
                                             </tr>
                                         </thead>
@@ -589,6 +604,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                     {!nilaiTetap && <td className="px-3 py-2">{formatRupiah(it.harga_satuan)}</td>}
                                                     <td className="px-3 py-2">{it.jumlah_hari ?? '-'}</td>
                                                     <td className="px-3 py-2">{it.estimasi_ritase}</td>
+                                                    <td className="px-3 py-2 whitespace-nowrap">{labelSumberUnit(it.unit_aset, it.unit_vendor)}</td>
                                                     {!nilaiTetap && <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatRupiah(it.subtotal)}</td>}
                                                 </tr>
                                             ))}
@@ -675,6 +691,11 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 </FormItem>
                             </div>
 
+                            <IsianParameterPenawaranFields
+                                nilai={parameter}
+                                onChange={(kolom, nilai) => setParameter(p => ({ ...p, [kolom]: nilai }))}
+                            />
+
                             <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
                                 <div className="flex items-center justify-between mb-3">
                                     <div>
@@ -709,6 +730,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                     )}
                                                     <th className="px-3 py-2 font-semibold w-24">Hari</th>
                                                     <th className="px-3 py-2 font-semibold w-24">Trip</th>
+                                                    <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari aset perusahaan (internal, tidak tercetak di PDF)">Unit Aset</th>
+                                                    <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari vendor (internal, tidak tercetak di PDF)">Unit Vendor</th>
                                                     {form.tipe_harga === 'per_rit' && (
                                                         <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
                                                     )}
@@ -733,6 +756,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                                 menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
                                                                 styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                                 onChange={opt => setItemJenis(i, opt?.value ?? '')} />
+                                                            <PetunjukKetersediaan ringkasan={ringkasanKetersediaan} idJenis={it.id_jenis_kendaraan} />
                                                         </td>
                                                         {form.tipe_harga === 'per_rit' && (
                                                             <td className="px-3 py-2">
@@ -752,6 +776,12 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                             <Input type="number" min="1"
                                                                 value={it.estimasi_ritase_str}
                                                                 onChange={e => updateItem(i, { estimasi_ritase_str: e.target.value })} />
+                                                        </td>
+                                                        <td className="px-3 py-2">
+                                                            <InputJumlahUnit value={it.unit_aset_str} onChange={v => updateItem(i, { unit_aset_str: v })} />
+                                                        </td>
+                                                        <td className="px-3 py-2">
+                                                            <InputJumlahUnit value={it.unit_vendor_str} onChange={v => updateItem(i, { unit_vendor_str: v })} />
                                                         </td>
                                                         {form.tipe_harga === 'per_rit' && (
                                                             <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
@@ -783,9 +813,16 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                 <Button
                                     type="button"
                                     variant="plain"
-                                    onClick={() => { setEditing(false); setErrors({}) }}
+                                    onClick={() => {
+                                        setEditing(false)
+                                        setErrors({})
+                                        if (data) {
+                                            setParameter(isianParameterDari(data))
+                                            setItems((data.items ?? []).map(itemFormDari))
+                                        }
+                                    }}
                                 >
-                                    Batal
+                                    Kembali
                                 </Button>
                                 <Button type="submit" variant="solid" loading={saving}>
                                     Simpan
@@ -796,10 +833,14 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
+
+            <PermintaanVendorPenawaranCard penawaran={data} />
+
+            <LampiranPenawaranCard penawaran={data} onChange={setData} />
 
             <ConfirmDialog
                 isOpen={!!pendingStatus}
@@ -880,7 +921,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => setKirimEmailOpen(false)}>Batal</Button>
+                    <Button variant="plain" onClick={() => setKirimEmailOpen(false)}>Kembali</Button>
                     <Button variant="solid" loading={sendingEmail} onClick={handleKirimEmail}>Kirim</Button>
                 </div>
             </Dialog>
@@ -912,7 +953,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => setShowJadikanProyek(false)}>Batal</Button>
+                    <Button variant="plain" onClick={() => setShowJadikanProyek(false)}>Kembali</Button>
                     <Button variant="solid" loading={jpSaving} onClick={handleJadikanProyek}>Simpan</Button>
                 </div>
             </Dialog>
@@ -927,8 +968,8 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
             <ConfirmDialog
                 isOpen={tandaiTerkirimOpen}
                 type="info"
-                title="Tandai Terkirim"
-                confirmText="Ya, Tandai Terkirim"
+                title="Approve Penawaran"
+                confirmText="Ya, Approve"
                 cancelText="Batal"
                 confirmButtonProps={{ loading: menandaiTerkirim }}
                 onClose={() => setTandaiTerkirimOpen(false)}
@@ -938,7 +979,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     try {
                         const updated = await penawaranService.ajukanApproval(id)
                         setData(updated)
-                        toast.push(<Notification type="success" title="Penawaran ditandai terkirim" />)
+                        toast.push(<Notification type="success" title="Penawaran berstatus Approve" />)
                     } catch (err) {
                         toast.push(<Notification type="danger" title={parseApiError(err)} />)
                     } finally {
@@ -947,7 +988,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     }
                 }}
             >
-                <p className="text-sm">Approval internal sedang nonaktif, jadi <span className="font-semibold">{data.nomor_penawaran}</span> akan langsung berstatus Terkirim tanpa melalui approver. Lanjutkan?</p>
+                <p className="text-sm">Approval internal sedang nonaktif, jadi <span className="font-semibold">{data.nomor_penawaran}</span> akan langsung berstatus Approve tanpa melalui approver. Lanjutkan?</p>
             </ConfirmDialog>
 
             <AjukanApprovalDialog

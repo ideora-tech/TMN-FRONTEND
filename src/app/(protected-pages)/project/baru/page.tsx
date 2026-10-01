@@ -65,7 +65,10 @@ export default function ProjectBaruPage() {
     useEffect(() => {
         if (!fromPenawaran) return
         penawaranService.get(fromPenawaran)
-            .then(p => setPreviewPenawaran(p))
+            .then(p => {
+                setPreviewPenawaran(p)
+                setForm(prev => ({ ...prev, harga_penawaran: p.nilai_penawaran != null ? String(p.nilai_penawaran) : '' }))
+            })
             .catch(() => {})
     }, [fromPenawaran])
 
@@ -216,10 +219,16 @@ export default function ProjectBaruPage() {
                         <DatePicker value={form.tanggal_selesai ? new Date(form.tanggal_selesai) : null}
                             onChange={(date) => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
-                    <FormItem label={tipeHargaNilaiTetap(form.tipe_harga) ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)'}>
-                        <Input prefix="Rp" placeholder="0"
+                    <FormItem
+                        label={fromPenawaran
+                            ? (tipeHargaNilaiTetap(form.tipe_harga) ? 'Nilai Kontrak' : 'Harga Penawaran')
+                            : (tipeHargaNilaiTetap(form.tipe_harga) ? 'Nilai Kontrak (opsional)' : 'Harga Penawaran (opsional)')}
+                        extra={fromPenawaran ? <span className="text-xs text-gray-400">Mengikuti nilai penawaran — ubah lewat penawaran revisi</span> : undefined}
+                    >
+                        <Input prefix="Rp" placeholder="0" readOnly={!!fromPenawaran}
                             value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
                             onChange={(e) => {
+                                if (fromPenawaran) return
                                 const v = e.target.value.replace(/\D/g, '')
                                 setHargaDiketikManual(m => ({ ...m, penawaran: v !== '' }))
                                 setForm(p => ({ ...p, harga_penawaran: v }))
@@ -304,7 +313,7 @@ export default function ProjectBaruPage() {
                 )}
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
                 </form>

@@ -184,7 +184,7 @@ export default function IntervalPerawatanBaruPage() {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan Paket Servis</Button>
                     </div>
                 </form>

@@ -53,10 +53,14 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
     const [importResult, setImportResult] = useState<ImportResultPayroll | null>(null)
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
 
+    const [cariInput, setCariInput]     = useState('')
     const [cari, setCari]               = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+    const handleCariSubmit = () => { setCari(cariInput.trim()); setCurrentPage(1) }
+    const handleCariClear  = () => { setCariInput(''); setCari(''); setCurrentPage(1) }
 
     const handleDownloadSlip = async (s: PayrollSlip) => {
         setDownloadingId(s.id_slip)
@@ -418,12 +422,13 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                         <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                             <Input
                                 className="flex-1 min-w-60"
-                                placeholder="Cari nama atau NIK karyawan..."
-                                suffix={cari
-                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCari(''); setCurrentPage(1) }} />
-                                    : <HiOutlineSearch className="text-gray-400 text-lg" />}
-                                value={cari}
-                                onChange={(e) => { setCari(e.target.value); setCurrentPage(1) }}
+                                placeholder="Cari nama atau NIK karyawan... (tekan Enter)"
+                                suffix={cariInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariClear} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSubmit} />}
+                                value={cariInput}
+                                onChange={(e) => setCariInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleCariSubmit() }}
                             />
                         </div>
                         <DataTable
@@ -439,7 +444,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     </>
                 )}
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
 
@@ -499,7 +504,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => setEditTarget(null)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={savingEdit}>Simpan</Button>
                 </div>
                 </form>

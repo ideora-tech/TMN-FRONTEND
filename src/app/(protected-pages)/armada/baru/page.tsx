@@ -140,7 +140,7 @@ export default function ArmadaBaruPage() {
                 id_permintaan_pembelian_item: sumberPr?.id_item,
             }, foto)
             toast.push(<Notification type="success" title={sumberPr ? `Unit terdaftar dan tercatat diterima pada PR ${sumberPr.nomor_permintaan}` : 'Armada berhasil ditambahkan'} />)
-            router.push(sumberPr ? `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${sumberPr.id_permintaan}` : ROUTES.ARMADA)
+            router.push(sumberPr ? ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(sumberPr.id_permintaan) : ROUTES.ARMADA)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -259,7 +259,7 @@ export default function ArmadaBaruPage() {
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
             </form>

@@ -20,29 +20,20 @@ import {
     type FilterKetersediaan,
     type HasilKetersediaan,
     type StatusKetersediaan,
-    type SumberUnit,
     type UnitKetersediaan,
 } from '@/services/ketersediaanVendor.service'
 import DetailUnitDrawer from './DetailUnitDrawer'
 import {
-    STATUS_KETERSEDIAAN, SUMBER_UNIT, TH_CLASS, formatTanggal, keteranganStatus, kontakPemilik, ringkasSpesifikasi, tagDokumen,
+    STATUS_KETERSEDIAAN, TH_CLASS, formatTanggal, keteranganStatus, ringkasSpesifikasi, tagDokumen,
 } from './ketersediaanVendor.shared'
 
-type Option = { value: string; label: string }
 type FilterStatus = StatusKetersediaan | ''
-type FilterSumber = SumberUnit | ''
 type Kartu = { status: FilterStatus; label: string; icon: ReactNode; bg: string; text: string; ring: string }
 
 const PAGE_SIZE_OPTIONS = [
     { value: 10, label: '10 / halaman' },
     { value: 20, label: '20 / halaman' },
     { value: 50, label: '50 / halaman' },
-]
-
-const OPSI_SUMBER: { value: FilterSumber; label: string }[] = [
-    { value: '',       label: 'Semua Sumber' },
-    { value: 'aset',   label: 'Aset Milik' },
-    { value: 'vendor', label: 'Vendor' },
 ]
 
 const KARTU: Kartu[] = [
@@ -69,8 +60,6 @@ export default function KetersediaanVendorPage() {
     const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
     const [statusFilter, setStatusFilter] = useState<FilterStatus>('tersedia')
-    const [sumberFilter, setSumberFilter] = useState<FilterSumber>('')
-    const [vendorFilter, setVendorFilter] = useState('')
     const [jenisFilter, setJenisFilter]   = useState('')
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
@@ -78,10 +67,9 @@ export default function KetersediaanVendorPage() {
     const filter = useMemo<FilterKetersediaan>(() => ({
         search: search || undefined,
         status: statusFilter || undefined,
-        sumber: sumberFilter || undefined,
-        id_vendor: vendorFilter || undefined,
+        sumber: 'aset',
         id_jenis_kendaraan: jenisFilter || undefined,
-    }), [search, statusFilter, sumberFilter, vendorFilter, jenisFilter])
+    }), [search, statusFilter, jenisFilter])
 
     useEffect(() => {
         let aktif = true
@@ -102,22 +90,12 @@ export default function KetersediaanVendorPage() {
     const total = galat ? 0 : hasil?.meta.total ?? 0
     const ringkasan = galat ? null : hasil?.meta.ringkasan ?? null
     const perJenis = hasil?.meta.per_jenis ?? []
-    const vendorOptions = useMemo<Option[]>(
-        () => (hasil?.meta.opsi_vendor ?? []).map(v => ({ value: v.id_vendor, label: v.nama_vendor })),
-        [hasil?.meta.opsi_vendor],
-    )
 
     const handleSearchSubmit = () => { setSearch(searchInput.trim()); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const pilihStatus = (status: FilterStatus) => {
         setStatusFilter(prev => (status !== '' && prev === status ? '' : status))
-        setCurrentPage(1)
-    }
-
-    const pilihSumber = (sumber: FilterSumber) => {
-        setSumberFilter(sumber)
-        if (sumber === 'aset') setVendorFilter('')
         setCurrentPage(1)
     }
 
@@ -164,7 +142,7 @@ export default function KetersediaanVendorPage() {
                 <div>
                     <h3 className="font-bold">Ketersediaan Unit</h3>
                     <p className="text-gray-500 text-sm mt-0.5">
-                        Unit aset milik dan unit vendor beserta status ketersediaannya — acuan tim marketing sebelum meminta unit ke pengadaan
+                        Unit aset milik beserta status ketersediaannya — acuan tim marketing sebelum meminta unit ke pengadaan
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -190,8 +168,7 @@ export default function KetersediaanVendorPage() {
                 onConfirm={keFormPermintaan}
             >
                 <p className="text-sm">
-                    Saat ini masih ada <strong>{formatNum(unitTersedia)} unit tersedia</strong> untuk {labelCakupan}
-                    {jenisTerpilih && ` (${formatNum(jenisTerpilih.tersedia_aset)} aset milik · ${formatNum(jenisTerpilih.tersedia_vendor)} vendor)`}.
+                    Saat ini masih ada <strong>{formatNum(unitTersedia)} unit tersedia</strong> untuk {labelCakupan}.
                     Permintaan vendor sebaiknya dibuat setelah unit yang ada benar-benar tidak mencukupi. Tetap lanjut?
                 </p>
             </ConfirmDialog>
@@ -220,7 +197,7 @@ export default function KetersediaanVendorPage() {
                 <div className="flex flex-col sm:flex-row items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
-                        placeholder="Cari nopol, merk, jenis, atau vendor... (tekan Enter)"
+                        placeholder="Cari nopol, merk, atau jenis... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -230,26 +207,6 @@ export default function KetersediaanVendorPage() {
                         onChange={e => setSearchInput(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
                     />
-                    <div className="w-full sm:w-60 shrink-0">
-                        <Select
-                            placeholder="Semua Vendor"
-                            isClearable
-                            isDisabled={sumberFilter === 'aset'}
-                            options={vendorOptions}
-                            value={vendorOptions.find(o => o.value === vendorFilter) ?? null}
-                            onChange={opt => { setVendorFilter((opt as Option | null)?.value ?? ''); setCurrentPage(1) }}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
-                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mr-1">Sumber</span>
-                    {OPSI_SUMBER.map(o => (
-                        <button key={o.value || 'semua'} type="button" onClick={() => pilihSumber(o.value)}
-                            className={`px-3 py-1 rounded-full border text-xs font-semibold transition-colors ${sumberFilter === o.value ? CHIP_AKTIF : CHIP_BIASA}`}>
-                            {o.label}
-                        </button>
-                    ))}
                 </div>
 
                 {perJenis.length > 0 && (
@@ -262,7 +219,7 @@ export default function KetersediaanVendorPage() {
                         {perJenis.map(j => {
                             const dapatDifilter = !!j.id_jenis_kendaraan
                             const aktif = dapatDifilter && jenisFilter === j.id_jenis_kendaraan
-                            const rincian = `${j.tersedia} tersedia (${j.tersedia_aset} aset · ${j.tersedia_vendor} vendor) · ${j.terjadwal} terjadwal · ${j.dipakai} sedang dipakai · ${j.perawatan} perawatan · ${j.total} unit`
+                            const rincian = `${j.tersedia} tersedia · ${j.terjadwal} terjadwal · ${j.dipakai} sedang dipakai · ${j.perawatan} perawatan · ${j.total} unit`
                             return (
                                 <Tooltip key={j.id_jenis_kendaraan ?? j.nama_jenis}
                                     title={dapatDifilter ? rincian : `${rincian} — jenis belum terdaftar di master sehingga tidak bisa difilter`}>
@@ -289,7 +246,6 @@ export default function KetersediaanVendorPage() {
                             <tr className="border-b border-gray-100 dark:border-gray-700">
                                 <th className={`${TH_CLASS} w-12`}>No</th>
                                 <th className={TH_CLASS}>Unit</th>
-                                <th className={TH_CLASS}>Kepemilikan</th>
                                 <th className={TH_CLASS}>Status</th>
                                 <th className={TH_CLASS}>Riwayat Pemakaian</th>
                                 <th className={TH_CLASS}>Dokumen</th>
@@ -299,31 +255,29 @@ export default function KetersediaanVendorPage() {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="py-10 text-center"><Spinner className="inline-block" size={28} /></td>
+                                    <td colSpan={6} className="py-10 text-center"><Spinner className="inline-block" size={28} /></td>
                                 </tr>
                             ) : galat ? (
                                 <tr>
-                                    <td colSpan={7} className="py-10 text-center">
+                                    <td colSpan={6} className="py-10 text-center">
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{galat}</p>
                                         <Button size="sm" onClick={() => setPercobaan(n => n + 1)}>Coba lagi</Button>
                                     </td>
                                 </tr>
                             ) : list.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="py-10 text-center text-gray-400">
+                                    <td colSpan={6} className="py-10 text-center text-gray-400">
                                         Tidak ada unit yang sesuai filter
                                     </td>
                                 </tr>
                             ) : list.map((u, idx) => {
                                 const status = STATUS_KETERSEDIAAN[u.status_ketersediaan]
-                                const sumber = SUMBER_UNIT[u.sumber]
                                 const ket = keteranganStatus(u)
                                 const stnk = tagDokumen('STNK', u.masa_berlaku_stnk)
                                 const kir = tagDokumen('KIR', u.masa_berlaku_kir)
                                 const spesifikasi = ringkasSpesifikasi(u)
-                                const kontak = kontakPemilik(u)
                                 return (
-                                    <tr key={`${u.sumber}-${u.id_unit}`} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                                    <tr key={u.id_unit} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
                                         onClick={() => setUnitTerpilih(u)}>
                                         <td className="py-3 px-3 align-top">{(currentPage - 1) * pageSize + idx + 1}</td>
                                         <td className="py-3 px-3 align-top">
@@ -332,11 +286,6 @@ export default function KetersediaanVendorPage() {
                                                 {u.nopol}
                                             </span>
                                             {spesifikasi && <p className="text-xs text-gray-500 mt-1">{spesifikasi}</p>}
-                                        </td>
-                                        <td className="py-3 px-3 align-top">
-                                            <Tag className={`text-xs font-semibold ${sumber.tag}`}>{sumber.label}</Tag>
-                                            {u.sumber === 'vendor' && <p className="font-semibold mt-1">{u.nama_vendor}</p>}
-                                            {kontak && <p className="text-xs text-gray-500 mt-0.5">{kontak}</p>}
                                         </td>
                                         <td className="py-3 px-3 align-top">
                                             <Tag className={`text-xs font-semibold ${status.tag}`}>{status.label}</Tag>

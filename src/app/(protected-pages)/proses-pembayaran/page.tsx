@@ -141,7 +141,8 @@ export default function ProsesPembayaranPage() {
     }
 
     const editOtomatis = !!(editTarget && (editTarget.id_trip || editTarget.id_perawatan || editTarget.id_pembelian || editTarget.id_periode || editTarget.periode_dari || editTarget.id_invoice_vendor))
-    const kategoriFormOptions = editOtomatis && form.kategori
+    const kategoriDiLuarOpsi = !!form.kategori && !KATEGORI_OPTIONS_FORM.some(o => o.value === form.kategori)
+    const kategoriFormOptions = (editOtomatis || kategoriDiLuarOpsi) && form.kategori
         ? [{ value: form.kategori, label: KATEGORI_LABEL[form.kategori] }]
         : KATEGORI_OPTIONS_FORM
 
@@ -287,7 +288,7 @@ export default function ProsesPembayaranPage() {
                             <FormItem label="Kategori" asterisk>
                                 <Select
                                     isSearchable={false}
-                                    isDisabled={editOtomatis}
+                                    isDisabled={editOtomatis || kategoriDiLuarOpsi}
                                     placeholder="Pilih kategori..."
                                     options={kategoriFormOptions}
                                     value={kategoriFormOptions.find(o => o.value === form.kategori) ?? null}
@@ -332,7 +333,7 @@ export default function ProsesPembayaranPage() {
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeForm}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={closeForm}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting}
                             disabled={!form.kategori || !form.nominal || !form.tanggal_pengajuan || !form.penerima.trim()}>
                             Simpan

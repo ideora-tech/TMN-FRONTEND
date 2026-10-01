@@ -141,7 +141,7 @@ export default function KontrakVendorTab() {
                 const status = row.original.status
                 if (status === 'draft') return <Tag className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Draft</Tag>
                 if (status === 'menunggu_approval') return <Tag className="bg-violet-50 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">Menunggu Approval</Tag>
-                if (status === 'batal') return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Batal</Tag>
+                if (status === 'batal') return <Tag className="bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400">Kembali</Tag>
                 if (status === 'selesai') return <Tag className="bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">Selesai</Tag>
                 const tgl = row.original.tanggal_selesai
                 const expired = tgl ? dayjs(tgl).isBefore(dayjs(), 'day') : false
@@ -183,7 +183,7 @@ export default function KontrakVendorTab() {
                 <div className="px-4 py-3">
                     <Input
                         className="w-full sm:w-80"
-                        placeholder="Cari nama vendor / mekanisme..."
+                        placeholder="Cari nama vendor / mekanisme... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
@@ -209,7 +209,7 @@ export default function KontrakVendorTab() {
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus kontrak ini? Tindakan ini tidak dapat dibatalkan.</p>
-                <p className="text-sm text-gray-500 mt-2">Unit &amp; supir yang tertaut akan dilepas menjadi milik vendor umum. Kontrak yang sudah punya riwayat penugasan tidak bisa dihapus — nonaktifkan saja.</p>
+                <p className="text-sm text-gray-500 mt-2">Unit &amp; supir yang tertaut akan dilepas menjadi milik vendor umum, pengajuan approval yang berjalan dibatalkan, dan permintaan vendor asalnya dikembalikan ke Pengadaan. Kontrak yang sudah punya riwayat penugasan, invoice vendor, atau sudah memenuhi permintaan vendor tidak bisa dihapus — nonaktifkan saja.</p>
             </ConfirmDialog>
         </div>
     )

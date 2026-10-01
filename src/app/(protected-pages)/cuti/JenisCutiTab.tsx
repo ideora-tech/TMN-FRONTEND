@@ -187,7 +187,7 @@ export default function JenisCutiTab() {
                             onChange={e => setForm(p => ({ ...p, keterangan: e.target.value }))} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving} disabled={!form.nama_jenis.trim()}>Simpan</Button>
                     </div>
                 </form>

@@ -16,6 +16,7 @@ export interface KonsolidasiKlienTrip {
     supir_nama: string | null
     sumber: 'internal' | 'vendor'
     jarak_tempuh_km: number | null
+    no_surat_jalan: string | null
     tarif: { harga: number; perkiraan: boolean } | null
     borongan: boolean
     tipe_harga: TipeHarga

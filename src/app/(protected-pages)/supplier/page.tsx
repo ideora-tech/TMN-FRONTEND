@@ -165,7 +165,7 @@ export default function SupplierPage() {
                         <Switcher checked={form.aktif} onChange={checked => setForm({ ...form, aktif: checked })} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" onClick={() => setFormOpen(false)}>Batal</Button>
+                        <Button type="button" onClick={() => setFormOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting}>Simpan</Button>
                     </div>
                 </form>

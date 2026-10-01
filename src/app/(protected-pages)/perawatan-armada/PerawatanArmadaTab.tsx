@@ -712,7 +712,7 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail, onDa
                                         {detailData?.permintaan_pembelian?.map(pr => (
                                             <div key={pr.id_permintaan}
                                                 className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
-                                                onClick={() => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${pr.id_permintaan}`)}>
+                                                onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(pr.id_permintaan))}>
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold font-mono truncate">{pr.nomor_permintaan}</p>
                                                     <p className="text-xs text-gray-400 truncate">{dayjs(pr.tanggal_permintaan).format('DD MMM YYYY')}</p>

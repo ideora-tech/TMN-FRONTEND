@@ -51,6 +51,7 @@ export const ROUTES = {
 
     PERMINTAAN_PEMBELIAN:      '/permintaan-pembelian',
     PERMINTAAN_PEMBELIAN_BARU: '/permintaan-pembelian/baru',
+    PERMINTAAN_PEMBELIAN_DETAIL: (id: string) => `/permintaan-pembelian/${id}`,
     PERMINTAAN_PEMBELIAN_EDIT: (id: string) => `/permintaan-pembelian/${id}/edit`,
     MASTER_BARANG:             '/master-barang',
     PENGADAAN:                 '/pengadaan',
@@ -81,6 +82,10 @@ export const ROUTES = {
 
     ARUS_KAS: '/arus-kas',
     PROSES_PEMBAYARAN: '/proses-pembayaran',
+    UANG_JALAN:        '/uang-jalan',
+    UANG_JALAN_BARU:   '/uang-jalan/baru',
+    UANG_JALAN_DETAIL: (id: string) => `/uang-jalan/${id}`,
+    UANG_JALAN_EDIT:   (id: string) => `/uang-jalan/${id}/edit`,
     KONFIGURASI_APPROVAL: '/konfigurasi-approval',
     PERSETUJUAN_SAYA: '/persetujuan-saya',
 
@@ -104,6 +109,12 @@ export const ROUTES = {
     TIPE_PEMBAYARAN:        '/tipe-pembayaran',
     TIPE_PEMBAYARAN_BARU:   '/tipe-pembayaran/baru',
     TIPE_PEMBAYARAN_DETAIL: (id: string) => `/tipe-pembayaran/${id}`,
+    JUDUL_PERMINTAAN:        '/judul-permintaan',
+    JUDUL_PERMINTAAN_BARU:   '/judul-permintaan/baru',
+    JUDUL_PERMINTAAN_DETAIL: (id: string) => `/judul-permintaan/${id}`,
+    TIPE_PERMINTAAN:        '/tipe-permintaan',
+    TIPE_PERMINTAAN_BARU:   '/tipe-permintaan/baru',
+    TIPE_PERMINTAAN_DETAIL: (id: string) => `/tipe-permintaan/${id}`,
 
     LOKASI_KANTOR:        '/lokasi-kantor',
     LOKASI_KANTOR_BARU:   '/lokasi-kantor/baru',

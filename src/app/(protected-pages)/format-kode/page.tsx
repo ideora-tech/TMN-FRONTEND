@@ -24,6 +24,7 @@ const LABEL_ENTITAS: Record<EntitasKode, string> = {
     sparepart: 'Spare Part',
     barang: 'Barang',
     permintaan_pembelian: 'Permintaan Pembelian',
+    purchase_order: 'Purchase Order (PO)',
 }
 
 const URUTAN_ENTITAS: EntitasKode[] = [
@@ -39,6 +40,7 @@ const URUTAN_ENTITAS: EntitasKode[] = [
     'sparepart',
     'barang',
     'permintaan_pembelian',
+    'purchase_order',
     'jabatan',
     'departemen',
 ]

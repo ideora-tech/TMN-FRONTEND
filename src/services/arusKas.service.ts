@@ -5,6 +5,7 @@ import type { PembelianSparepart } from './pembelianSparepart.service'
 import type { PayrollPeriode, RingkasanPayroll } from './payroll.service'
 import type { InvoiceVendor } from './invoice-vendor.service'
 import type { PermintaanPembelian } from './permintaanPembelian.service'
+import type { UangJalan } from './uangJalan.service'
 
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
@@ -68,6 +69,7 @@ export interface PengajuanPengeluaran {
     id_permintaan_pembelian?: string | null
     id_periode: string | null
     id_invoice_vendor?: string | null
+    id_uang_jalan?: string | null
     id_supir: string | null
     id_proyek: string | null
     periode_dari: string | null
@@ -227,6 +229,7 @@ export type RincianSumberPengajuan =
     | { tipe: 'pembelian'; data: PembelianSparepart }
     | { tipe: 'payroll'; data: RincianPayroll }
     | { tipe: 'uang_jalan'; data: RincianUangJalan }
+    | { tipe: 'uang_jalan_manual'; data: UangJalan }
     | { tipe: 'invoice_vendor'; data: InvoiceVendor }
     | { tipe: 'permintaan_pembelian'; data: PermintaanPembelian }
 

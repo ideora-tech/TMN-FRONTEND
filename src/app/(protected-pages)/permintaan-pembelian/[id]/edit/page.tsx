@@ -27,14 +27,14 @@ export default function PermintaanEditPage() {
         try {
             await permintaanPembelianService.update(id, payload)
             toast.push(<Notification type="success" title="Permintaan berhasil diperbarui" />)
-            router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`)
+            router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(id))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
             throw err
         }
     }
 
-    const kembali = () => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`)
+    const kembali = () => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(id))
 
     return (
         <div className="flex flex-col gap-4">

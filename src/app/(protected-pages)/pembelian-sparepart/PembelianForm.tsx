@@ -378,7 +378,7 @@ export default function PembelianForm({ mode, initial }: Props) {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={loading} disabled={melebihiBatas}>
                             {mode === 'edit' ? 'Simpan Perubahan' : 'Ajukan Pembelian'}
                         </Button>

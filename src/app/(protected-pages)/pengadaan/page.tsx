@@ -25,7 +25,6 @@ import { permintaanPembelianService, type StatusPermintaan } from '@/services/pe
 import { permintaanVendorService, type PermintaanVendorStatus } from '@/services/permintaan-vendor.service'
 import { STATUS_LABEL as STATUS_LABEL_PR, STATUS_TAG as STATUS_TAG_PR } from '../permintaan-pembelian/status'
 import { STATUS_LABEL as STATUS_LABEL_PV, STATUS_TAG as STATUS_TAG_PV, MEKANISME_LABEL } from '../permintaan-vendor/status'
-import DetailPermintaanDrawer from '../permintaan-pembelian/DetailPermintaanDrawer'
 
 type KartuStatus<K extends string> = { key: K; icon: ReactNode; bg: string; text: string; ring: string }
 
@@ -100,7 +99,6 @@ export default function PengadaanPage() {
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
-    const [detailPrId, setDetailPrId] = useState<string | null>(null)
     const [filterKartu, setFilterKartu] = useState<{ jenis: 'pr' | 'pv'; status: string } | null>(null)
     const [dataFilter, setDataFilter] = useState<BarisAntrian[]>([])
     const [loadingFilter, setLoadingFilter] = useState(false)
@@ -165,7 +163,7 @@ export default function PengadaanPage() {
         : 'Hasil filter dari kartu yang dipilih. Klik kartu yang sama lagi untuk kembali ke antrian.'
 
     const bukaBaris = (b: BarisAntrian) => {
-        if (b.jenis === 'pr') setDetailPrId(b.id)
+        if (b.jenis === 'pr') router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(b.id))
         else router.push(ROUTES.PERMINTAAN_VENDOR_DETAIL(b.id))
     }
 
@@ -287,8 +285,6 @@ export default function PengadaanPage() {
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
-
-            <DetailPermintaanDrawer id={detailPrId} onClose={() => setDetailPrId(null)} onRefresh={() => { fetchData(); fetchFilter() }} />
         </div>
     )
 }

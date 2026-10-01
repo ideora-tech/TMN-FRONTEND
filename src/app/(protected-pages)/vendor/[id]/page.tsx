@@ -523,7 +523,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor); setErrors({}) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(vendor); setErrors({}) }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -575,7 +575,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button size="sm" variant="plain" icon={<HiOutlineX />}
                                 onClick={() => { setShowDocForm(false); setDocFile(null); setDocForm({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' }) }}>
-                                Batal
+                                Kembali
                             </Button>
                             <Button size="sm" variant="solid" loading={addingDoc}
                                 disabled={!docForm.jenis_dokumen || !docFile}
@@ -704,7 +704,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" size="sm" variant="plain" icon={<HiOutlineX />}
                                 onClick={() => { setShowRekForm(false); setRekForm({ ...REKENING_FORM_KOSONG }); setRekErrors({}) }}>
-                                Batal
+                                Kembali
                             </Button>
                             <Button type="submit" size="sm" variant="solid" loading={addingRek}>
                                 Simpan
@@ -975,7 +975,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                             <Button type="submit" variant="solid" loading={addingKontrak}>
                                 Simpan Kontrak
                             </Button>
-                            <Button type="button" variant="plain" onClick={() => setShowKontrakForm(false)}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => setShowKontrakForm(false)}>Kembali</Button>
                         </div>
                         </form>
                     </div>
@@ -1042,7 +1042,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
@@ -1080,7 +1080,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => { setEditDocTarget(null); setEditDocFile(null) }}>Batal</Button>
+                    <Button variant="plain" onClick={() => { setEditDocTarget(null); setEditDocFile(null) }}>Kembali</Button>
                     <Button variant="solid" loading={updatingDoc} onClick={handleEditDokumen}>Simpan</Button>
                 </div>
             </Dialog>
@@ -1124,7 +1124,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => { setEditRekTarget(null); setEditRekErrors({}) }}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => { setEditRekTarget(null); setEditRekErrors({}) }}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={updatingRek}>Simpan</Button>
                 </div>
                 </form>

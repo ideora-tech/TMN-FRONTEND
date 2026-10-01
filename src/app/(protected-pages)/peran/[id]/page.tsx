@@ -31,6 +31,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
     const [permsAwal, setPermsAwal] = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving]   = useState(false)
+    const [cariMenuInput, setCariMenuInput] = useState('')
     const [cariMenu, setCariMenu] = useState('')
 
     const loadData = useCallback(async () => {
@@ -95,6 +96,9 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
             return next
         })
     }
+
+    const handleCariMenuSubmit = () => setCariMenu(cariMenuInput.trim())
+    const handleCariMenuClear  = () => { setCariMenuInput(''); setCariMenu('') }
 
     // Filter pencarian: cocokkan nama grup (tampilkan seluruh isinya) atau
     // nama/path menu; grup tanpa hasil disembunyikan.
@@ -269,13 +273,13 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         <Input
                             className="max-w-sm"
                             size="sm"
-                            placeholder="Cari menu atau path..."
-                            prefix={<HiOutlineSearch className="text-lg text-gray-400" />}
-                            suffix={cariMenu
-                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setCariMenu('')} />
-                                : null}
-                            value={cariMenu}
-                            onChange={e => setCariMenu(e.target.value)}
+                            placeholder="Cari menu atau path... (tekan Enter)"
+                            suffix={cariMenuInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariMenuClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariMenuSubmit} />}
+                            value={cariMenuInput}
+                            onChange={e => setCariMenuInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCariMenuSubmit() } }}
                         />
                     </div>
 
@@ -383,7 +387,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                 </form>
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
             <Dialog isOpen={ubahOpen} onClose={() => setUbahOpen(false)} onRequestClose={() => setUbahOpen(false)}>
@@ -404,7 +408,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         </div>
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" variant="plain" onClick={() => setUbahOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setUbahOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={menyimpanUbah}>Simpan</Button>
                     </div>
                 </form>

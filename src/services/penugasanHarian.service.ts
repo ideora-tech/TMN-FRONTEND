@@ -71,57 +71,11 @@ export interface AssignHarianGagal {
     alasan: string
 }
 
-export interface ParseUnitBaris {
-    id_armada: string
-    nopol: string
-    id_supir: string
-    nama_supir: string
-    id_rute: string
-    label_rute: string
-}
-
-export interface ParseUnitHasil {
-    baris_valid: ParseUnitBaris[]
-    baris_gagal: { baris: number; alasan: string }[]
-}
-
 export interface AssignHarianHasil {
     sukses: number
     gagal: AssignHarianGagal[]
     dilewati: string[]
-    peringatan: string[]
     penugasan: Penugasan[]
-}
-
-export interface PeriodeSinkron {
-    lama_mulai: string
-    lama_selesai: string | null
-    baru_mulai: string
-    baru_selesai: string | null
-}
-
-export interface RingkasanUnitSinkron {
-    nopol: string | null
-    nama_supir: string | null
-    jumlah: number
-    dari: string
-    sampai: string
-}
-
-export interface PratinjauSinkron {
-    tambah: { nopol: string | null; nama_supir: string | null; dari: string; sampai: string; jumlah_hari: number }[]
-    total_tambah: number
-    hapus: RingkasanUnitSinkron[]
-    total_hapus: number
-    terkunci: RingkasanUnitSinkron[]
-    total_terkunci: number
-}
-
-export interface HasilSinkron {
-    dibuat: number
-    dihapus: number
-    terkunci: number
-    gagal: { unit: string | null; tanggal: string; alasan: string }[]
 }
 
 export const penugasanHarianService = {
@@ -136,21 +90,6 @@ export const penugasanHarianService = {
     async assign(payload: AssignHarianPayload) {
         const { data } = await axios.post(API_ENDPOINTS.PENUGASAN_HARIAN, payload)
         return data.data as AssignHarianHasil
-    },
-    async pratinjauSinkronProyek(idProyek: string, periode: PeriodeSinkron) {
-        const { data } = await axios.post(API_ENDPOINTS.PROYEK_SINKRON_PENUGASAN_PRATINJAU(idProyek), periode)
-        return data.data as PratinjauSinkron
-    },
-    async sinkronProyek(idProyek: string, periode: PeriodeSinkron) {
-        const { data } = await axios.post(API_ENDPOINTS.PROYEK_SINKRON_PENUGASAN(idProyek), periode)
-        return data.data as HasilSinkron
-    },
-    async parseUnitExcel(file: File, idProyek: string) {
-        const form = new FormData()
-        form.append('file', file)
-        form.append('id_proyek', idProyek)
-        const { data } = await axios.post(API_ENDPOINTS.PENUGASAN_PARSE_UNIT, form)
-        return data.data as ParseUnitHasil
     },
     async hapus(idPenugasan: string) {
         await penugasanService.delete(idPenugasan)

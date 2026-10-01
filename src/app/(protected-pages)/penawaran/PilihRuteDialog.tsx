@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Button, Dialog, Input, Tooltip, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineSearch, HiPlusCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineSearch, HiOutlineX, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { parseApiError } from '@/utils/error.util'
 import { RuteBaruForm } from '@/components/shared/RuteBaruDialog'
@@ -27,8 +27,8 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
     const [ruteEdit, setRuteEdit] = useState<Rute | null>(null)
     const [ruteBaruDibuat, setRuteBaruDibuat] = useState<Rute | null>(null)
 
+    const [cariInput, setCariInput] = useState('')
     const [cari, setCari] = useState('')
-    const [cariDebounced, setCariDebounced] = useState('')
     const [ruteRows, setRuteRows] = useState<Rute[]>([])
     const [page, setPage] = useState(1)
     const [total, setTotal] = useState(0)
@@ -41,20 +41,15 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         setTampilan('daftar')
         setRuteEdit(null)
         setRuteBaruDibuat(null)
+        setCariInput('')
         setCari('')
-        setCariDebounced('')
     }, [isOpen])
-
-    useEffect(() => {
-        const t = setTimeout(() => setCariDebounced(cari), 300)
-        return () => clearTimeout(t)
-    }, [cari])
 
     useEffect(() => {
         if (!isOpen) return
         let aktif = true
         setMemuatRute(true)
-        ruteService.list({ page: 1, limit: LIMIT_RUTE, search: cariDebounced || undefined })
+        ruteService.list({ page: 1, limit: LIMIT_RUTE, search: cari || undefined })
             .then(res => {
                 if (!aktif) return
                 setRuteRows((res.data ?? []) as Rute[])
@@ -64,14 +59,17 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
             .catch(err => { if (aktif) toast.push(<Notification type="danger" title={parseApiError(err)} />) })
             .finally(() => { if (aktif) setMemuatRute(false) })
         return () => { aktif = false }
-    }, [isOpen, cariDebounced, versiDaftar])
+    }, [isOpen, cari, versiDaftar])
+
+    const handleCariSubmit = () => setCari(cariInput.trim())
+    const handleCariClear  = () => { setCariInput(''); setCari('') }
 
     const adaLagi = ruteRows.length < total
 
     const muatLebihBanyak = async () => {
         setMemuatLagi(true)
         try {
-            const res = await ruteService.list({ page: page + 1, limit: LIMIT_RUTE, search: cariDebounced || undefined })
+            const res = await ruteService.list({ page: page + 1, limit: LIMIT_RUTE, search: cari || undefined })
             setRuteRows(prev => [...prev, ...((res.data ?? []) as Rute[])])
             setTotal(res.meta?.total ?? 0)
             setPage(p => p + 1)
@@ -85,6 +83,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
     const pilihRute = (idRute: string) => {
         onPilih({ id_rute: idRute })
         toast.push(<Notification type="success" title={`Item ditambahkan ke ${konteks}`} />)
+        onClose()
     }
 
     const bukaFormBuat = () => setTampilan('buat')
@@ -98,8 +97,8 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         onRuteBaru(rute)
         setRuteBaruDibuat(rute)
         toast.push(<Notification type="success" title={`Rute berhasil dibuat — pilih dari daftar untuk menambahkannya ke ${konteks}`} />)
+        setCariInput('')
         setCari('')
-        setCariDebounced('')
         setVersiDaftar(v => v + 1)
         setTampilan('daftar')
     }
@@ -124,10 +123,13 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
                     <div className="flex items-center gap-2 mb-4">
                         <div className="flex-1">
                             <Input
-                                placeholder="Cari nama, kode, asal, atau tujuan..."
-                                prefix={<HiOutlineSearch className="text-lg" />}
-                                value={cari}
-                                onChange={e => setCari(e.target.value)}
+                                placeholder="Cari nama, kode, asal, atau tujuan... (tekan Enter)"
+                                suffix={cariInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariClear} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSubmit} />}
+                                value={cariInput}
+                                onChange={e => setCariInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCariSubmit() } }}
                             />
                         </div>
                         <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />} onClick={bukaFormBuat}>

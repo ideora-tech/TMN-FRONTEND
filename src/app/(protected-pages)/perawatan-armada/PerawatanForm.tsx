@@ -493,7 +493,7 @@ export default function PerawatanForm({ editId, editArmadaId, presetArmadaId, pr
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PERAWATAN_ARMADA)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PERAWATAN_ARMADA)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving} disabled={!canSubmit}>Simpan</Button>
                     </div>
                 </form>

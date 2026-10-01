@@ -163,7 +163,7 @@ export default function ArmadaVendorBaruPage() {
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
                 </form>

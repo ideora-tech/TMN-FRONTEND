@@ -11,10 +11,11 @@ RUN npm ci --legacy-peer-deps
 FROM node:20-alpine AS builder
 
 ARG BACKEND_INTERNAL_URL=http://backend:4019
+ARG NODE_HEAP_MB=1536
 ENV BACKEND_URL=$BACKEND_INTERNAL_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=1536
+ENV NODE_OPTIONS=--max-old-space-size=$NODE_HEAP_MB
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

@@ -442,7 +442,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 </div>
 
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
 
@@ -665,7 +665,7 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setEditOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setEditOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingEdit} disabled={!editValid}>Simpan Perubahan</Button>
                     </div>
                 </form>

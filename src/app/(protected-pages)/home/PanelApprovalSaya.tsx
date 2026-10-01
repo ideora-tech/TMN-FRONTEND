@@ -195,7 +195,7 @@ export default function PanelApprovalSaya() {
                     <div className="flex justify-end gap-2 mt-4">
                         <Button type="button" variant="plain"
                             onClick={() => { setTolakTarget(null); setCatatanTolak(''); setErrTolak('') }}>
-                            Batal
+                            Kembali
                         </Button>
                         <Button type="submit" variant="solid"
                             customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}>

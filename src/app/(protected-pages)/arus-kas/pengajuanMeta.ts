@@ -14,7 +14,6 @@ export const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
 }
 
 export const KATEGORI_OPTIONS_FORM: { value: KategoriPengajuan; label: string }[] = [
-    { value: 'uang_jalan', label: 'Uang Jalan' },
     { value: 'legalitas',  label: 'Legalitas' },
     { value: 'perawatan',  label: 'Perawatan' },
     { value: 'pembelian_aset',      label: 'Pembelian Aset' },

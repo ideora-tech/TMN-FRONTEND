@@ -275,7 +275,7 @@ export default function IntervalPerawatanJenisPage({ params }: { params: Promise
                         )}
                         <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="default" icon={<HiArrowLeft />}
-                                onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN)}>Batal</Button>
+                                onClick={() => router.push(ROUTES.INTERVAL_PERAWATAN)}>Kembali</Button>
                         </div>
                     </>
                 ) : (
@@ -381,7 +381,7 @@ export default function IntervalPerawatanJenisPage({ params }: { params: Promise
                         </div>
 
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" disabled={saving} onClick={() => setEditing(false)}>Batal</Button>
+                            <Button type="button" variant="plain" disabled={saving} onClick={() => setEditing(false)}>Kembali</Button>
                             <Button type="button" variant="solid" loading={saving} onClick={handleSimpan}>Simpan Perubahan</Button>
                         </div>
                     </>

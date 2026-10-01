@@ -7,9 +7,12 @@ import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
+import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { permintaanVendorService, UnitDimintaPayload } from '@/services/permintaan-vendor.service'
+import { permintaanVendorService, PermintaanVendor, UnitDimintaPayload, itemUnitDiminta } from '@/services/permintaan-vendor.service'
+import { STATUS_TIDAK_DIHITUNG } from '../status'
 import { projectService } from '@/services/project.service'
+import { penawaranService, Penawaran } from '@/services/penawaran.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 
 const MEKANISME_OPTIONS = [
@@ -25,9 +28,12 @@ export default function PermintaanVendorBaruPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const presetJenis = searchParams.get('id_jenis_kendaraan') ?? ''
+    const idPenawaran = searchParams.get('id_penawaran') ?? ''
+    const [penawaranAsal, setPenawaranAsal] = useState<Penawaran | null>(null)
+    const [statusPenawaran, setStatusPenawaran] = useState<'tanpa' | 'memuat' | 'siap' | 'gagal'>(idPenawaran ? 'memuat' : 'tanpa')
     const [form, setForm] = useState({
         id_proyek: '',
-        mekanisme: 'unit_only', periode_dari: '', periode_sampai: '', catatan: '',
+        mekanisme: 'unit_only', periode_dari: '', periode_sampai: '', catatan: '', harga_penawaran: '',
     })
     const [unitRows, setUnitRows] = useState<UnitRow[]>([{ ...emptyUnitRow(), id_jenis_kendaraan: presetJenis }])
     const [loading, setLoading] = useState(false)
@@ -43,6 +49,39 @@ export default function PermintaanVendorBaruPage() {
             .then(res => setJenisOptions(res.data.map((j: JenisKendaraan) => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => {})
     }, [])
+
+    useEffect(() => {
+        if (!idPenawaran) return
+        Promise.all([
+            penawaranService.get(idPenawaran),
+            permintaanVendorService.list(1, { id_penawaran: idPenawaran, limit: 100 }).then(res => res.data).catch(() => [] as PermintaanVendor[]),
+        ])
+            .then(([p, sudahDiminta]) => {
+                setPenawaranAsal(p)
+                setForm(f => ({ ...f, id_proyek: p.id_proyek ?? '' }))
+                const sisa = new Map<string, number>()
+                for (const it of p.items ?? []) {
+                    if (!it.unit_vendor) continue
+                    sisa.set(it.id_jenis_kendaraan, (sisa.get(it.id_jenis_kendaraan) ?? 0) + it.unit_vendor)
+                }
+                for (const pv of sudahDiminta.filter(x => !STATUS_TIDAK_DIHITUNG.includes(x.status))) {
+                    for (const u of itemUnitDiminta(pv)) {
+                        if (u.id_jenis_kendaraan && sisa.has(u.id_jenis_kendaraan)) {
+                            sisa.set(u.id_jenis_kendaraan, (sisa.get(u.id_jenis_kendaraan) ?? 0) - u.jumlah_unit)
+                        }
+                    }
+                }
+                const baris = [...sisa].filter(([, jumlah]) => jumlah > 0)
+                if (baris.length > 0) {
+                    setUnitRows(baris.map(([idJenis, jumlah]) => ({ id_jenis_kendaraan: idJenis, jumlah_unit: String(jumlah) })))
+                }
+                setStatusPenawaran('siap')
+            })
+            .catch(err => {
+                setStatusPenawaran('gagal')
+                toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            })
+    }, [idPenawaran])
 
     const ubahUnitRow = (i: number, patch: Partial<UnitRow>) =>
         setUnitRows(prev => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)))
@@ -76,11 +115,13 @@ export default function PermintaanVendorBaruPage() {
             }))
             const dibuat = await permintaanVendorService.create({
                 id_proyek: form.id_proyek || null,
+                id_penawaran: idPenawaran || null,
                 unit,
                 mekanisme: form.mekanisme,
                 periode_dari: form.periode_dari || null,
                 periode_sampai: form.periode_sampai || null,
                 catatan: form.catatan.trim() || null,
+                harga_penawaran: form.harga_penawaran ? Number(form.harga_penawaran) : null,
             })
             toast.push(<Notification type="success" title="Permintaan tersimpan sebagai draft — ajukan approval dari halaman detail" />)
             router.push(ROUTES.PERMINTAAN_VENDOR_DETAIL(dibuat.id_permintaan))
@@ -104,10 +145,23 @@ export default function PermintaanVendorBaruPage() {
                 </div>
             </div>
             <Card>
+                {penawaranAsal && (
+                    <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-sm px-3 py-2 mb-4">
+                        Dari penawaran <span className="font-semibold">{penawaranAsal.nomor_penawaran}</span> — {penawaranAsal.judul}.
+                        {' '}Unit diisi otomatis dari sisa kolom Unit Vendor di item penawaran yang belum diminta.
+                    </div>
+                )}
+                {statusPenawaran === 'gagal' && (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300 text-sm px-3 py-2 mb-4">
+                        Data penawaran gagal dimuat — muat ulang halaman sebelum menyimpan.
+                    </div>
+                )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Proyek (opsional)">
-                        <Select isSearchable isClearable placeholder="Pilih proyek..."
+                        <Select isSearchable isClearable
+                            placeholder={idPenawaran ? 'Otomatis saat penawaran jadi proyek' : 'Pilih proyek...'}
+                            isDisabled={!!idPenawaran}
                             options={proyekOptions}
                             value={proyekOptions.find(o => o.value === form.id_proyek) ?? null}
                             onChange={opt => setForm(p => ({ ...p, id_proyek: opt?.value ?? '' }))} />
@@ -162,6 +216,11 @@ export default function PermintaanVendorBaruPage() {
                                 periode_sampai: akhir ? dayjs(akhir).format('YYYY-MM-DD') : '',
                             }))} />
                     </FormItem>
+                    <FormItem label="Harga Penawaran (Rp)" className="sm:col-span-2">
+                        <Input prefix="Rp" placeholder="0 (opsional)"
+                            value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
+                            onChange={e => setForm(p => ({ ...p, harga_penawaran: e.target.value.replace(/\D/g, '') }))} />
+                    </FormItem>
                     <FormItem label="Catatan" className="sm:col-span-2">
                         <Input textArea rows={3} placeholder="Kebutuhan khusus, spesifikasi unit, dsb. (opsional)"
                             value={form.catatan}
@@ -169,8 +228,9 @@ export default function PermintaanVendorBaruPage() {
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
-                    <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
+                    <Button type="submit" variant="solid" loading={loading}
+                        disabled={statusPenawaran === 'memuat' || statusPenawaran === 'gagal'}>Simpan</Button>
                 </div>
                 </form>
             </Card>

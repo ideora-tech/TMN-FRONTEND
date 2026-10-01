@@ -9,7 +9,7 @@ import { HiOutlinePencilAlt, HiPlusCircle, HiOutlineDocumentText, HiOutlineTrash
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { tripService, Trip } from '@/services/trip.service'
-import { laporanPerjalananService, LaporanPerjalanan, FotoLaporan } from '@/services/laporanPerjalanan.service'
+import { laporanPerjalananService, LaporanPerjalanan, FotoLaporan, SuratJalan, SuratJalanInput } from '@/services/laporanPerjalanan.service'
 import { jenisBbmService, JenisBbm } from '@/services/jenisBbm.service'
 
 const EKSTENSI_GAMBAR = ['jpg', 'jpeg', 'png', 'gif', 'webp']
@@ -86,7 +86,7 @@ const emptyLaporanForm = () => ({
     uang_tol:         '',
     jarak_tempuh_km:  '',
     catatan_insiden:  '',
-    no_surat_jalan:   '',
+    surat_jalan:      [] as SuratJalanInput[],
     id_jenis_bbm:     '',
     jumlah_liter:     '',
     biaya_lain:       [] as BiayaLainRow[],
@@ -177,21 +177,49 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
         return grup
     }, [laporan])
 
+    const titikDropTrip = useMemo(() => trip?.titik_drop_detail ?? [], [trip])
+
+    const opsiTitikDrop = useMemo(() => [
+        { value: '', label: 'Tanpa titik drop' },
+        ...titikDropTrip.map(d => ({ value: d.id_titik_drop, label: `Drop ${d.urutan}: ${d.lokasi}` })),
+    ], [titikDropTrip])
+
+    const barisSuratJalanAwal = (tersimpan: SuratJalan[]): SuratJalanInput[] => {
+        const idDropTrip = new Set(titikDropTrip.map(d => d.id_titik_drop))
+        const baris: SuratJalanInput[] = []
+        for (const d of titikDropTrip) {
+            const milikDrop = tersimpan.filter(s => s.id_titik_drop === d.id_titik_drop)
+            if (milikDrop.length === 0) baris.push({ id_titik_drop: d.id_titik_drop, no_surat_jalan: '' })
+            milikDrop.forEach(s => baris.push({ id_titik_drop: d.id_titik_drop, no_surat_jalan: s.no_surat_jalan }))
+        }
+        tersimpan
+            .filter(s => !s.id_titik_drop || !idDropTrip.has(s.id_titik_drop))
+            .forEach(s => baris.push({ id_titik_drop: null, no_surat_jalan: s.no_surat_jalan }))
+        return baris.length > 0 ? baris : [{ id_titik_drop: null, no_surat_jalan: '' }]
+    }
+
+    const ubahSuratJalan = (idx: number, perubahan: Partial<SuratJalanInput>) =>
+        setLaporanForm(p => ({ ...p, surat_jalan: p.surat_jalan.map((s, i) => (i === idx ? { ...s, ...perubahan } : s)) }))
+
     const handleOpenCreateLaporan = () => {
-        setLaporanForm(emptyLaporanForm())
+        setLaporanForm({ ...emptyLaporanForm(), surat_jalan: barisSuratJalanAwal([]) })
         setLaporanFotoLabel({})
         setShowLaporanForm(true)
     }
 
     const handleOpenEditLaporan = () => {
-        if (!laporan) return
+        if (!laporan || !trip) return
         setLaporanForm({
             biaya_bbm:       String(laporan.biaya_bbm ?? ''),
             uang_jalan:      String(laporan.uang_jalan ?? ''),
             uang_tol:        String(laporan.uang_tol ?? ''),
             jarak_tempuh_km: String(laporan.jarak_tempuh_km ?? ''),
             catatan_insiden: laporan.catatan_insiden ?? '',
-            no_surat_jalan:  laporan.no_surat_jalan ?? '',
+            surat_jalan:     barisSuratJalanAwal(
+                laporan.surat_jalan?.length || !laporan.no_surat_jalan
+                    ? (laporan.surat_jalan ?? [])
+                    : [{ id_surat_jalan: '', id_titik_drop: null, urutan_drop: null, lokasi_drop: null, urutan: 1, no_surat_jalan: laporan.no_surat_jalan }],
+            ),
             id_jenis_bbm:    laporan.id_jenis_bbm ?? '',
             jumlah_liter:    laporan.jumlah_liter != null ? String(laporan.jumlah_liter) : '',
             biaya_lain:      laporan.biaya_lain.map(b => ({ nama_biaya: b.nama_biaya, nominal: String(b.nominal) })),
@@ -266,8 +294,10 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                 uang_tol:        sembunyikanBiayaOps ? 0 : Number(laporanForm.uang_tol) || 0,
                 jarak_tempuh_km: Number(laporanForm.jarak_tempuh_km) || 0,
                 catatan_insiden: laporanForm.catatan_insiden || null,
-                no_surat_jalan:  laporanForm.no_surat_jalan || null,
-                id_jenis_bbm:    sembunyikanBiayaOps ? null : laporanForm.id_jenis_bbm || null,
+                surat_jalan:     laporanForm.surat_jalan
+                    .filter(s => s.no_surat_jalan.trim())
+                    .map(s => ({ no_surat_jalan: s.no_surat_jalan.trim(), id_titik_drop: s.id_titik_drop || null })),
+                id_jenis_bbm:   sembunyikanBiayaOps ? null : laporanForm.id_jenis_bbm || null,
                 jumlah_liter:    sembunyikanBiayaOps ? null : Number(laporanForm.jumlah_liter) || null,
                 biaya_lain: sembunyikanBiayaOps ? [] : laporanForm.biaya_lain
                     .filter(b => b.nama_biaya.trim())
@@ -334,7 +364,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                 <h5>Laporan Perjalanan</h5>
                 {laporanLoading && <span className="text-xs text-gray-400">Memuat...</span>}
                 {!laporanLoading && !showLaporanForm && laporan && (
-                    <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={handleOpenEditLaporan}>
+                    <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} disabled={!trip} onClick={handleOpenEditLaporan}>
                         Ubah
                     </Button>
                 )}
@@ -475,13 +505,46 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                                         </div>
                                         {label === 'Surat Jalan' && (
                                             <div className="mt-3">
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Nomor Surat Jalan</p>
-                                                <Input
-                                                    size="sm"
-                                                    placeholder="Contoh: SJ-2026-0001"
-                                                    value={laporanForm.no_surat_jalan}
-                                                    onChange={e => setLaporanForm(p => ({ ...p, no_surat_jalan: e.target.value }))}
-                                                />
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Nomor Surat Jalan
+                                                        {titikDropTrip.length > 0 && <span className="ml-1">(1 per titik drop)</span>}
+                                                    </p>
+                                                    <Button type="button" size="xs" variant="solid" icon={<HiPlusCircle />}
+                                                        disabled={laporanForm.surat_jalan.length >= 20}
+                                                        onClick={() => setLaporanForm(p => ({ ...p, surat_jalan: [...p.surat_jalan, { id_titik_drop: null, no_surat_jalan: '' }] }))}>
+                                                        Tambah Surat Jalan
+                                                    </Button>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    {laporanForm.surat_jalan.map((row, i) => (
+                                                        <div key={i} className="flex items-center gap-2">
+                                                            <span className="text-xs text-gray-400 w-5 text-right">{i + 1}.</span>
+                                                            {titikDropTrip.length > 0 && (
+                                                                <div className="w-64 shrink-0">
+                                                                    <Select
+                                                                        size="sm"
+                                                                        options={opsiTitikDrop}
+                                                                        value={opsiTitikDrop.find(o => o.value === (row.id_titik_drop ?? '')) ?? opsiTitikDrop[0]}
+                                                                        onChange={opt => ubahSuratJalan(i, { id_titik_drop: opt?.value || null })}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            <Input
+                                                                size="sm"
+                                                                placeholder="Contoh: SJ-2026-0001"
+                                                                maxLength={100}
+                                                                value={row.no_surat_jalan}
+                                                                onChange={e => ubahSuratJalan(i, { no_surat_jalan: e.target.value })}
+                                                            />
+                                                            <button type="button"
+                                                                onClick={() => setLaporanForm(p => ({ ...p, surat_jalan: p.surat_jalan.filter((_, idx) => idx !== i) }))}
+                                                                className="inline-flex shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors">
+                                                                <HiOutlineTrash />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                         {tersimpan.length > 0 && (
@@ -631,7 +694,7 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoLabel({}) }}>
-                            Batal
+                            Kembali
                         </Button>
                         <Button type="submit" size="sm" variant="solid" loading={savingLaporan}>
                             Simpan
@@ -654,7 +717,21 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                             { label: 'Uang Jalan',     value: formatRupiah(laporan.uang_jalan) },
                             { label: 'Uang Tol',       value: formatRupiah(laporan.uang_tol) },
                             { label: 'Jarak Tempuh',   value: laporan.jarak_tempuh_km != null ? `${formatNum(laporan.jarak_tempuh_km)} km` : '-' },
-                            { label: 'No Surat Jalan',  value: laporan.no_surat_jalan || '-' },
+                            {
+                                label: 'No Surat Jalan',
+                                value: laporan.surat_jalan?.length ? (
+                                    <span className="flex flex-col gap-0.5">
+                                        {laporan.surat_jalan.map(s => (
+                                            <span key={s.id_surat_jalan}>
+                                                {s.no_surat_jalan}
+                                                {s.lokasi_drop && (
+                                                    <span className="text-xs text-gray-400 ml-1">(Drop {s.urutan_drop}: {s.lokasi_drop})</span>
+                                                )}
+                                            </span>
+                                        ))}
+                                    </span>
+                                ) : (laporan.no_surat_jalan || '-'),
+                            },
                             { label: 'Catatan Insiden', value: laporan.catatan_insiden || '-' },
                         ].map(({ label, value }) => (
                             <div key={label}>

@@ -310,7 +310,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             </a>
                         )}
                         {p.id_permintaan_pembelian && (
-                            <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${p.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                            <a href={ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(p.id_permintaan_pembelian)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
                                     Dari PR <HiOutlineExternalLink className="text-xs" />
                                 </Tag>
@@ -327,6 +327,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             <a href={ROUTES.PAYROLL_DETAIL(p.id_periode)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 cursor-pointer hover:opacity-80">
                                     Dari Payroll <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
+                        {p.id_uang_jalan && (
+                            <a href={ROUTES.UANG_JALAN_DETAIL(p.id_uang_jalan)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 cursor-pointer hover:opacity-80">
+                                    Dari Uang Jalan <HiOutlineExternalLink className="text-xs" />
                                 </Tag>
                             </a>
                         )}
@@ -402,7 +409,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && onEdit && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && onEdit && (
                             <Tooltip title="Edit">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -411,7 +418,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && onDelete && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && onDelete && (
                             <Tooltip title="Hapus">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
@@ -538,7 +545,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                         <UploadBerkas file={buktiTransferSatuan} onChange={f => validasiFile(f, setBuktiTransferSatuan)} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => { setTransferTarget(null); setBuktiTransferSatuan(null) }}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={aksiSatuLoading} disabled={!tanggalTransferSatuan || !buktiTransferSatuan}>Transfer</Button>
                     </div>
                 </form>
@@ -596,7 +603,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                     </FormItem>
                     <p className="text-xs text-gray-400 mt-1">Bukti yang sama (mis. rekap transfer massal dari bank) dilampirkan ke semua pengajuan terpilih.</p>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => { setBulkTransferOpen(false); setBulkBuktiTransfer(null) }}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => { setBulkTransferOpen(false); setBulkBuktiTransfer(null) }}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={bulkSubmitting} disabled={!bulkTanggalTransfer || !bulkBuktiTransfer}>Transfer</Button>
                     </div>
                 </form>

@@ -29,7 +29,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                 value: l.id_lokasi,
                 label: `${l.nama_lokasi}${l.kota && l.kota.trim().toLowerCase() !== l.nama_lokasi.trim().toLowerCase() ? ' — ' + l.kota : ''}`,
             }))))
-            .catch(() => {})
+            .catch(err => toast.push(<Notification type="danger" title={`Gagal memuat lokasi: ${parseApiError(err)}`} />))
     }, [])
 
     useEffect(() => {
@@ -224,7 +224,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                                         estimasi_durasi_menit_str: data.estimasi_durasi_menit != null ? String(data.estimasi_durasi_menit) : '',
                                     })
                                     setErrors({})
-                                }}>Batal</Button>
+                                }}>Kembali</Button>
                                 <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                             </div>
                         </form>
@@ -232,7 +232,7 @@ export default function RuteDetailPage({ params }: { params: Promise<{ id: strin
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>

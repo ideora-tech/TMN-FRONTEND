@@ -1,14 +1,15 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Dialog, Drawer, FormItem, Input, Spinner, Tag, Tooltip, Upload, toast, Notification } from '@/components/ui'
+import { Button, Card, Dialog, FormItem, Input, Spinner, Tag, Tooltip, Upload, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogAktivitasKeuanganDialog, { PENGAJUAN_LABEL, PENGAJUAN_TAG } from '@/components/shared/LogAktivitasKeuanganDialog'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import LampiranPreview from '@/components/shared/LampiranPreview'
-import { HiOutlinePencilAlt, HiOutlineTrash, HiOutlinePaperClip, HiOutlineClipboardList, HiOutlineExternalLink, HiOutlinePlus } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlinePaperClip, HiOutlineClipboardList, HiOutlineExternalLink, HiOutlinePlus } from 'react-icons/hi'
+import { PiFilePdfDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -17,7 +18,7 @@ import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { permintaanPembelianService, type PermintaanPembelian, type PermintaanItem, type TahapBukti, type Termin, type TerminPayload } from '@/services/permintaanPembelian.service'
 import { barangService, type Barang } from '@/services/barang.service'
 import { supplierService } from '@/services/supplier.service'
-import { STATUS_LABEL, STATUS_TAG, JENIS_LABEL, TAHAP_LABEL, TIPE_LABEL, TIPE_TAG, bolehDiubah } from './status'
+import { STATUS_LABEL, STATUS_TAG, JENIS_LABEL, TAHAP_LABEL, TIPE_LABEL, TIPE_TAG, bolehDiubah, adaKomponenBiaya, rincianBiaya } from './status'
 import { STATUS_LABEL as STATUS_LABEL_PS, STATUS_TAG as STATUS_TAG_PS } from '../pembelian-sparepart/status'
 
 const JENIS_TAG: Record<string, string> = {
@@ -36,11 +37,16 @@ const TERMIN_TAG: Record<string, string> = {
 type Option = { value: string; label: string }
 type TerminRow = { nama: string; nominal: string; jatuh_tempo: string }
 const namaUnit = (i: PermintaanItem) => [i.merk, i.model, i.tahun].filter(Boolean).join(' ') || i.nama_item
+const rapikanPersen = (nilai: string) => {
+    const [bulat, ...pecahan] = nilai.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.')
+    return pecahan.length > 0 ? `${bulat}.${pecahan.join('').slice(0, 2)}` : bulat
+}
+type FormDibeli = { id_supplier: string; tanggal: string; harga: Record<string, string>; barang: Record<string, string>; diskon: string; ppn_persen: string; ongkir: string }
 const LABEL = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE = 'text-sm font-medium text-gray-800 dark:text-gray-200'
 const TH = 'py-2 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
-export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id: string | null; onClose: () => void; onRefresh: () => void }) {
+export default function DetailPermintaan({ id }: { id: string }) {
     const router = useRouter()
     const { klik } = usePratinjauBerkas()
     const { session } = useCurrentSession()
@@ -52,9 +58,10 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
 
     const [data, setData] = useState<PermintaanPembelian | null>(null)
     const [loading, setLoading] = useState(false)
-    const [lebar, setLebar] = useState(720)
+    const [gagal, setGagal] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
+    const [mengunduhPo, setMengunduhPo] = useState(false)
     const [prosesOpen, setProsesOpen] = useState(false)
     const [hapusOpen, setHapusOpen] = useState(false)
     const [batalOpen, setBatalOpen] = useState(false)
@@ -62,7 +69,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
     const [dibeliOpen, setDibeliOpen] = useState(false)
     const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
     const [barangOptions, setBarangOptions] = useState<Option[]>([])
-    const [dibeli, setDibeli] = useState<{ id_supplier: string; tanggal: string; harga: Record<string, string>; barang: Record<string, string> }>({ id_supplier: '', tanggal: dayjs().format('YYYY-MM-DD'), harga: {}, barang: {} })
+    const [dibeli, setDibeli] = useState<FormDibeli>({ id_supplier: '', tanggal: dayjs().format('YYYY-MM-DD'), harga: {}, barang: {}, diskon: '', ppn_persen: '', ongkir: '' })
     const [terminRows, setTerminRows] = useState<TerminRow[]>([])
     const [notaDibeli, setNotaDibeli] = useState<File[]>([])
     const [realisasiOpen, setRealisasiOpen] = useState(false)
@@ -74,26 +81,20 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
     const [buatCepatUntuk, setBuatCepatUntuk] = useState<string | null>(null)
     const [buatCepat, setBuatCepat] = useState({ nama: '', satuan: 'pcs' })
 
-    useEffect(() => {
-        const sesuaikan = () => setLebar(Math.min(720, window.innerWidth))
-        sesuaikan()
-        window.addEventListener('resize', sesuaikan)
-        return () => window.removeEventListener('resize', sesuaikan)
-    }, [])
-
     const muat = useCallback(async () => {
-        if (!id) return
         setLoading(true)
         try {
             setData(await permintaanPembelianService.get(id))
+            setGagal(false)
         } catch (err) {
+            setGagal(true)
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
     }, [id])
 
-    useEffect(() => { setData(null); muat() }, [muat])
+    useEffect(() => { setData(null); setGagal(false); muat() }, [muat])
 
     const jalankan = async (aksi: () => Promise<unknown>, sukses: string, tutup?: () => void, muatUlang = true) => {
         if (submitting) return
@@ -103,7 +104,6 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
             toast.push(<Notification type="success" title={sukses} />)
             tutup?.()
             if (muatUlang) await muat()
-            onRefresh()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -116,7 +116,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
         const harga: Record<string, string> = {}
         const barang: Record<string, string> = {}
         data.items.forEach(i => { harga[i.id_item] = String(i.harga_aktual ?? i.harga_estimasi); barang[i.id_item] = i.id_barang ?? '' })
-        setDibeli({ id_supplier: data.id_supplier ?? '', tanggal: dayjs().format('YYYY-MM-DD'), harga, barang })
+        setDibeli({ id_supplier: data.id_supplier ?? '', tanggal: dayjs().format('YYYY-MM-DD'), harga, barang, diskon: '', ppn_persen: '', ongkir: '' })
         setTerminRows(data.tipe === 'aset' ? [{ nama: '', nominal: '', jatuh_tempo: '' }] : [])
         setNotaDibeli([])
         try {
@@ -165,6 +165,9 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
             return permintaanPembelianService.dibeli(idPermintaan, {
                 id_supplier: dibeli.id_supplier, tanggal_pembelian: dibeli.tanggal,
                 items: data.items.map(i => ({ id_item: i.id_item, harga_aktual: Number(dibeli.harga[i.id_item]) || 0, id_barang: i.jenis === 'barang' ? (dibeli.barang[i.id_item] || null) : null })),
+                diskon: Number(dibeli.diskon) || 0,
+                ppn_persen: Number(dibeli.ppn_persen) || 0,
+                ongkir: Number(dibeli.ongkir) || 0,
                 ...(termin ? { termin } : {}),
             })
         }, isAset ? `Ditandai dibeli, ${termin?.length ?? 0} termin pembayaran dibuat` : 'Ditandai dibeli, pengajuan pembayaran dibuat', () => setDibeliOpen(false))
@@ -221,6 +224,27 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
         }), 'Penerimaan dikonfirmasi', () => setTerimaOpen(false))
     }
 
+    const cetakPo = async () => {
+        if (!data?.nomor_po || mengunduhPo) return
+        const nomorPo = data.nomor_po
+        setMengunduhPo(true)
+        try {
+            const blob = await permintaanPembelianService.cetakPo(data.id_permintaan)
+            const href = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = href
+            link.download = `${nomorPo}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(href)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMengunduhPo(false)
+        }
+    }
+
     const handleUpload = (files: File[], tahap: TahapBukti) => {
         if (!data || files.length === 0) return
         jalankan(() => permintaanPembelianService.uploadBukti(data.id_permintaan, files, tahap), 'Lampiran diunggah')
@@ -244,7 +268,14 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
         : null
     const tampilKartuPs = !!data && sparepart && !!ps && ['diproses', 'diterima', 'selesai'].includes(data.status)
     const daftarTermin = data?.termin ?? []
-    const totalAktualDibeli = (data?.items ?? []).reduce((s, i) => s + i.qty * (Number(dibeli.harga[i.id_item]) || 0), 0)
+    const subtotalDibeli = (data?.items ?? []).reduce((s, i) => s + i.qty * (Number(dibeli.harga[i.id_item]) || 0), 0)
+    const diskonDibeli = Number(dibeli.diskon) || 0
+    const ppnPersenDibeli = Number(dibeli.ppn_persen) || 0
+    const ppnDibeli = Math.round((subtotalDibeli - diskonDibeli) * ppnPersenDibeli / 100)
+    const totalAktualDibeli = subtotalDibeli - diskonDibeli + ppnDibeli + (Number(dibeli.ongkir) || 0)
+    const diskonMelebihi = Math.round(diskonDibeli * 100) > Math.round(subtotalDibeli * 100)
+    const ppnMelebihi = ppnPersenDibeli > 100
+    const biaya = data && (data.nomor_po || adaKomponenBiaya(data)) ? rincianBiaya(data) : null
     const totalAktualRealisasi = (data?.items ?? []).reduce((s, i) => s + i.qty * (Number(realisasi.harga[i.id_item]) || 0), 0)
     const overBatasRealisasi = !pengadaan && data?.batas_mandiri != null && totalAktualRealisasi > data.batas_mandiri
     const hargaRealisasiValid = (data?.items ?? []).every(i => realisasi.harga[i.id_item] !== '' && Number(realisasi.harga[i.id_item]) >= 0)
@@ -255,139 +286,187 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
 
     return (
         <>
-        <Drawer isOpen={!!id} width={lebar} onClose={onClose} onRequestClose={onClose} bodyClass="p-0"
-            title={
-                <div className="flex flex-col">
-                    <span className="font-semibold text-base">{data?.judul ?? 'Detail Permintaan'}</span>
-                    <span className="text-xs text-gray-500 font-mono">{data?.nomor_permintaan ?? '—'}</span>
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+                <button type="button" onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN)}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors">
+                    <HiArrowLeft className="text-xl" />
+                </button>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bold truncate">{data?.judul ?? 'Detail Permintaan'}</h3>
+                    <p className="text-gray-500 text-sm mt-0.5 font-mono">{data?.nomor_permintaan ?? '—'}</p>
                 </div>
-            }>
-            {loading || !data ? (
-                <div className="py-16 text-center"><Spinner className="inline-block" size={32} /></div>
+                {loading && data && <Spinner size={20} />}
+            </div>
+
+            {!data ? (
+                <Card>
+                    {gagal ? (
+                        <div className="flex flex-col items-center gap-3 py-8 text-center">
+                            <p className="text-gray-500">Permintaan tidak ditemukan atau Anda tidak memiliki akses</p>
+                            <Button size="sm" variant="default" onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN)}>Kembali ke daftar</Button>
+                        </div>
+                    ) : (
+                        <div className="py-16 text-center"><Spinner className="inline-block" size={32} /></div>
+                    )}
+                </Card>
             ) : (
-                <div className="p-5 flex flex-col gap-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Tag className={`text-xs font-semibold ${STATUS_TAG[data.status]}`}>{STATUS_LABEL[data.status]}</Tag>
-                        {data.tipe !== 'umum' && <Tag className={`text-xs font-semibold ${TIPE_TAG[data.tipe]}`}>{TIPE_LABEL[data.tipe]}</Tag>}
-                        <div className="flex-1" />
-                        {!aset && <Tooltip title="Log Aktivitas Pembayaran"><Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} /></Tooltip>}
-                        {tahapUpload && (pengaju || kelola) && (
-                            <Upload accept=".jpg,.jpeg,.png,.webp,.pdf" showList={false} multiple disabled={submitting} onChange={(semua, sebelumnya) => handleUpload(semua.slice(sebelumnya.length), tahapUpload)}>
-                                <Tooltip title={`Unggah ${TAHAP_LABEL[tahapUpload]}`}><Button type="button" size="sm" variant="default" icon={<HiOutlinePaperClip />} loading={submitting} /></Tooltip>
-                            </Upload>
-                        )}
-                        {bolehEdit && (
-                            <>
-                                <Tooltip title="Hapus"><Button size="sm" variant="default" icon={<HiOutlineTrash />} customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'} onClick={() => setHapusOpen(true)} /></Tooltip>
-                                <Tooltip title="Edit"><Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_EDIT(data.id_permintaan))} /></Tooltip>
-                            </>
-                        )}
-                        {bolehBatal && <Button size="sm" variant="default" onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>Batalkan</Button>}
-                        {pengadaan && data.status === 'disetujui' && <Button size="sm" variant="solid" onClick={() => setProsesOpen(true)}>Mulai Proses</Button>}
-                        {bolehDibeli && <Button size="sm" variant="solid" onClick={bukaDibeli}>Tandai Dibeli</Button>}
-                        {bolehRealisasiSparepart && <Button size="sm" variant="solid" onClick={bukaRealisasi}>Catat Realisasi</Button>}
-                        {bolehTerima && <Button size="sm" variant="solid" onClick={bukaTerima}>Konfirmasi Penerimaan</Button>}
-                    </div>
-
-                    {sparepart && data.batas_mandiri !== null && ['disetujui', 'diproses'].includes(data.status) && (
-                        <div className={`rounded-xl border px-4 py-3 text-sm ${data.boleh_realisasi_mandiri ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'}`}>
-                            {data.boleh_realisasi_mandiri
-                                ? `Nilainya di bawah batas mandiri (${formatRupiah(data.batas_mandiri)}) — pengaju boleh beli sendiri lalu catat realisasi di sini.`
-                                : `Di atas batas mandiri (${formatRupiah(data.batas_mandiri)}) — realisasi hanya bisa dicatat oleh tim Pengadaan.`}
-                        </div>
-                    )}
-
-                    {tampilKartuPs && ps && (
-                        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-500/30 dark:bg-violet-500/10">
-                            <div className="flex-1 min-w-48">
-                                <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-violet-700 dark:text-violet-300">
-                                    <span>Pembelian Sparepart <span className="font-mono">{ps.nomor_pengajuan}</span> ·</span>
-                                    <Tag className={`text-[10px] font-semibold ${STATUS_TAG_PS[ps.status] ?? 'bg-gray-100 text-gray-600'}`}>{STATUS_LABEL_PS[ps.status] ?? ps.status}</Tag>
-                                </div>
-                            </div>
-                            <Button size="sm" variant="default" icon={<HiOutlineExternalLink />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(ps.id_pembelian))}>Buka</Button>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                        <div><p className={LABEL}>Pemohon</p><p className={VALUE}>{data.username_pengaju ?? '—'}</p></div>
-                        <div><p className={LABEL}>Departemen</p><p className={VALUE}>{data.nama_departemen ?? '—'}</p></div>
-                        <div><p className={LABEL}>Tanggal Permintaan</p><p className={VALUE}>{dayjs(data.tanggal_permintaan).format('DD MMM YYYY')}</p></div>
-                        <div><p className={LABEL}>Dibutuhkan</p><p className={VALUE}>{data.tanggal_dibutuhkan ? dayjs(data.tanggal_dibutuhkan).format('DD MMM YYYY') : '—'}</p></div>
-                        <div><p className={LABEL}>Supplier</p><p className={VALUE}>{data.nama_supplier ?? '—'}</p></div>
-                        <div><p className={LABEL}>Tanggal Pembelian</p><p className={VALUE}>{data.tanggal_pembelian ? dayjs(data.tanggal_pembelian).format('DD MMM YYYY') : '—'}</p></div>
-                        {data.id_perawatan && (
-                            <div className="col-span-2">
-                                <p className={LABEL}>Perawatan</p>
-                                <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer inline-flex items-center gap-1"
-                                    onClick={() => router.push(`${ROUTES.PERAWATAN_ARMADA}?detail=${data.id_perawatan}`)}>
-                                    {data.nopol_perawatan ?? '—'} · {data.tanggal_perawatan ? dayjs(data.tanggal_perawatan).format('DD MMM YYYY') : '—'}
-                                    <HiOutlineExternalLink />
-                                </span>
-                            </div>
-                        )}
-                        <div><p className={LABEL}>Total Estimasi</p><p className={`${VALUE} font-bold`}>{formatRupiah(data.total_estimasi)}</p></div>
-                        <div><p className={LABEL}>Total Aktual</p><p className={`${VALUE} font-bold`}>{data.total_aktual !== null ? formatRupiah(data.total_aktual) : '—'}</p></div>
-                        <div><p className={LABEL}>Diterima</p><p className={VALUE}>{data.tanggal_diterima ? dayjs(data.tanggal_diterima).format('DD MMM YYYY') : '—'}</p></div>
-                        <div><p className={LABEL}>Dibayar</p><p className={VALUE}>{data.tanggal_pembayaran ? dayjs(data.tanggal_pembayaran).format('DD MMM YYYY') : '—'}</p></div>
-                        <div className="col-span-2"><p className={LABEL}>Alasan Permintaan</p><p className="text-sm whitespace-pre-line">{data.alasan}</p></div>
-                        {data.alasan_ditolak && <div className="col-span-2"><p className={LABEL}>Alasan Ditolak</p><p className="text-sm text-red-500">{data.alasan_ditolak}</p></div>}
-                        {data.alasan_batal && <div className="col-span-2"><p className={LABEL}>Alasan Dibatalkan</p><p className="text-sm text-red-500">{data.alasan_batal}</p></div>}
-                    </div>
-
-                    <div>
-                        <p className={`${LABEL} mb-2`}>{aset ? 'Unit yang Diajukan' : 'Item'}</p>
-                        <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
-                            <table className="w-full text-sm">
-                                {aset ? (
-                                    <thead className="bg-blue-50 dark:bg-blue-500/10"><tr>
-                                        <th className={TH}>Unit</th><th className={`${TH} text-right`}>Jumlah</th><th className={`${TH} text-right`}>Estimasi</th><th className={`${TH} text-right`}>Aktual</th><th className={TH}>Terdaftar</th><th className={`${TH} text-right`}>Subtotal</th>
-                                    </tr></thead>
-                                ) : (
-                                    <thead className="bg-blue-50 dark:bg-blue-500/10"><tr>
-                                        <th className={TH}>Jenis</th><th className={TH}>Nama</th><th className={`${TH} text-right`}>Qty</th><th className={`${TH} text-right`}>Estimasi</th><th className={`${TH} text-right`}>Aktual</th><th className={`${TH} text-right`}>Diterima</th><th className={`${TH} text-right`}>Subtotal</th>
-                                    </tr></thead>
+                <>
+                    <Card>
+                        <div className="flex flex-col gap-5">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Tag className={`text-xs font-semibold ${STATUS_TAG[data.status]}`}>{STATUS_LABEL[data.status]}</Tag>
+                                {data.tipe !== 'umum' && <Tag className={`text-xs font-semibold ${TIPE_TAG[data.tipe]}`}>{TIPE_LABEL[data.tipe]}</Tag>}
+                                <div className="flex-1" />
+                                {data.nomor_po && (
+                                    <Tooltip title="Cetak PO">
+                                        <span
+                                            className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${mengunduhPo ? 'opacity-50 pointer-events-none' : ''}`}
+                                            onClick={cetakPo}
+                                        >
+                                            <PiFilePdfDuotone className="text-lg" />
+                                        </span>
+                                    </Tooltip>
                                 )}
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {data.items.map(i => aset ? (
-                                        <tr key={i.id_item}>
-                                            <td className="py-2 px-3"><p className="font-medium">{namaUnit(i)}</p><p className="text-xs text-gray-400">{i.nama_jenis_kendaraan ?? '—'}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
-                                            <td className="py-2 px-3">
-                                                <p className="font-medium whitespace-nowrap">{formatNum(i.qty_diterima ?? 0)}/{formatNum(i.qty)}</p>
-                                                {(i.armada_terdaftar ?? []).length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                        {(i.armada_terdaftar ?? []).map(a => (
-                                                            <span key={a.id_armada} className="font-mono text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => router.push(ROUTES.ARMADA_DETAIL(a.id_armada))}>{a.nopol}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {bolehDaftarUnit && (
-                                                    <Button type="button" size="xs" variant="solid" className="mt-1.5" disabled={(i.qty_diterima ?? 0) >= i.qty} onClick={() => bukaArmadaBaru(i.id_item)}>Daftarkan Unit</Button>
-                                                )}
-                                            </td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">{formatRupiah(i.subtotal_aktual ?? i.subtotal_estimasi)}</td>
-                                        </tr>
-                                    ) : (
-                                        <tr key={i.id_item}>
-                                            <td className="py-2 px-3"><Tag className={`text-[10px] font-semibold ${JENIS_TAG[i.jenis] ?? JENIS_TAG.jasa}`}>{JENIS_LABEL[i.jenis]}</Tag></td>
-                                            <td className="py-2 px-3"><p className="font-medium">{i.nama_item}</p><p className="text-xs text-gray-400">{i.kode_sparepart ?? i.kode_barang ?? (i.jenis === 'barang' ? 'belum ditautkan ke master' : '')}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
-                                            <td className="py-2 px-3 text-right">{i.qty_diterima !== null ? formatNum(i.qty_diterima) : '—'}</td>
-                                            <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">{formatRupiah(i.subtotal_aktual ?? i.subtotal_estimasi)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                {!aset && <Tooltip title="Log Aktivitas Pembayaran"><Button size="sm" variant="default" icon={<HiOutlineClipboardList />} onClick={() => setLogOpen(true)} /></Tooltip>}
+                                {tahapUpload && (pengaju || kelola) && (
+                                    <Upload accept=".jpg,.jpeg,.png,.webp,.pdf" showList={false} multiple disabled={submitting} onChange={(semua, sebelumnya) => handleUpload(semua.slice(sebelumnya.length), tahapUpload)}>
+                                        <Tooltip title={`Unggah ${TAHAP_LABEL[tahapUpload]}`}><Button type="button" size="sm" variant="default" icon={<HiOutlinePaperClip />} loading={submitting} /></Tooltip>
+                                    </Upload>
+                                )}
+                                {bolehEdit && (
+                                    <>
+                                        <Tooltip title="Hapus"><Button size="sm" variant="default" icon={<HiOutlineTrash />} customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'} onClick={() => setHapusOpen(true)} /></Tooltip>
+                                        <Tooltip title="Edit"><Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_EDIT(data.id_permintaan))} /></Tooltip>
+                                    </>
+                                )}
+                                {bolehBatal && <Button size="sm" variant="default" onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>Batalkan</Button>}
+                                {pengadaan && data.status === 'disetujui' && <Button size="sm" variant="solid" onClick={() => setProsesOpen(true)}>Mulai Proses</Button>}
+                                {bolehDibeli && <Button size="sm" variant="solid" onClick={bukaDibeli}>Tandai Dibeli</Button>}
+                                {bolehRealisasiSparepart && <Button size="sm" variant="solid" onClick={bukaRealisasi}>Catat Realisasi</Button>}
+                                {bolehTerima && <Button size="sm" variant="solid" onClick={bukaTerima}>Konfirmasi Penerimaan</Button>}
+                            </div>
+
+                            {sparepart && data.batas_mandiri !== null && ['disetujui', 'diproses'].includes(data.status) && (
+                                <div className={`rounded-xl border px-4 py-3 text-sm ${data.boleh_realisasi_mandiri ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'}`}>
+                                    {data.boleh_realisasi_mandiri
+                                        ? `Nilainya di bawah batas mandiri (${formatRupiah(data.batas_mandiri)}) — pengaju boleh beli sendiri lalu catat realisasi di sini.`
+                                        : `Di atas batas mandiri (${formatRupiah(data.batas_mandiri)}) — realisasi hanya bisa dicatat oleh tim Pengadaan.`}
+                                </div>
+                            )}
+
+                            {tampilKartuPs && ps && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-500/30 dark:bg-violet-500/10">
+                                    <div className="flex-1 min-w-48">
+                                        <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-violet-700 dark:text-violet-300">
+                                            <span>Pembelian Sparepart <span className="font-mono">{ps.nomor_pengajuan}</span> ·</span>
+                                            <Tag className={`text-[10px] font-semibold ${STATUS_TAG_PS[ps.status] ?? 'bg-gray-100 text-gray-600'}`}>{STATUS_LABEL_PS[ps.status] ?? ps.status}</Tag>
+                                        </div>
+                                    </div>
+                                    <Button size="sm" variant="default" icon={<HiOutlineExternalLink />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(ps.id_pembelian))}>Buka</Button>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+                                <div><p className={LABEL}>Pemohon</p><p className={VALUE}>{data.username_pengaju ?? '—'}</p></div>
+                                <div><p className={LABEL}>Departemen</p><p className={VALUE}>{data.nama_departemen ?? '—'}</p></div>
+                                <div><p className={LABEL}>Tanggal Permintaan</p><p className={VALUE}>{dayjs(data.tanggal_permintaan).format('DD MMM YYYY')}</p></div>
+                                <div><p className={LABEL}>Dibutuhkan</p><p className={VALUE}>{data.tanggal_dibutuhkan ? dayjs(data.tanggal_dibutuhkan).format('DD MMM YYYY') : '—'}</p></div>
+                                <div><p className={LABEL}>Supplier</p><p className={VALUE}>{data.nama_supplier ?? '—'}</p></div>
+                                <div><p className={LABEL}>Tanggal Pembelian</p><p className={VALUE}>{data.tanggal_pembelian ? dayjs(data.tanggal_pembelian).format('DD MMM YYYY') : '—'}</p></div>
+                                {data.nomor_po && <div className="col-span-2"><p className={LABEL}>No. PO</p><p className={`${VALUE} font-mono`}>{data.nomor_po}</p></div>}
+                                {data.id_perawatan && (
+                                    <div className="col-span-2">
+                                        <p className={LABEL}>Perawatan</p>
+                                        <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer inline-flex items-center gap-1"
+                                            onClick={() => router.push(`${ROUTES.PERAWATAN_ARMADA}?detail=${data.id_perawatan}`)}>
+                                            {data.nopol_perawatan ?? '—'} · {data.tanggal_perawatan ? dayjs(data.tanggal_perawatan).format('DD MMM YYYY') : '—'}
+                                            <HiOutlineExternalLink />
+                                        </span>
+                                    </div>
+                                )}
+                                <div><p className={LABEL}>Total Estimasi</p><p className={`${VALUE} font-bold`}>{formatRupiah(data.total_estimasi)}</p></div>
+                                <div><p className={LABEL}>Total Aktual</p><p className={`${VALUE} font-bold`}>{data.total_aktual !== null ? formatRupiah(data.total_aktual) : '—'}</p></div>
+                                <div><p className={LABEL}>Diterima</p><p className={VALUE}>{data.tanggal_diterima ? dayjs(data.tanggal_diterima).format('DD MMM YYYY') : '—'}</p></div>
+                                <div><p className={LABEL}>Dibayar</p><p className={VALUE}>{data.tanggal_pembayaran ? dayjs(data.tanggal_pembayaran).format('DD MMM YYYY') : '—'}</p></div>
+                                <div className="col-span-2 lg:col-span-4"><p className={LABEL}>Alasan Permintaan</p><p className="text-sm whitespace-pre-line">{data.alasan}</p></div>
+                                {data.alasan_ditolak && <div className="col-span-2 lg:col-span-4"><p className={LABEL}>Alasan Ditolak</p><p className="text-sm text-red-500">{data.alasan_ditolak}</p></div>}
+                                {data.alasan_batal && <div className="col-span-2 lg:col-span-4"><p className={LABEL}>Alasan Dibatalkan</p><p className="text-sm text-red-500">{data.alasan_batal}</p></div>}
+                            </div>
                         </div>
-                    </div>
+                    </Card>
+
+                    <Card>
+                        <div>
+                            <p className={`${LABEL} mb-2`}>{aset ? 'Unit yang Diajukan' : 'Item'}</p>
+                            <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+                                <table className="w-full text-sm">
+                                    {aset ? (
+                                        <thead className="bg-blue-50 dark:bg-blue-500/10"><tr>
+                                            <th className={TH}>Unit</th><th className={`${TH} text-right`}>Jumlah</th><th className={`${TH} text-right`}>Estimasi</th><th className={`${TH} text-right`}>Aktual</th><th className={TH}>Terdaftar</th><th className={`${TH} text-right`}>Subtotal</th>
+                                        </tr></thead>
+                                    ) : (
+                                        <thead className="bg-blue-50 dark:bg-blue-500/10"><tr>
+                                            <th className={TH}>Jenis</th><th className={TH}>Nama</th><th className={`${TH} text-right`}>Qty</th><th className={`${TH} text-right`}>Estimasi</th><th className={`${TH} text-right`}>Aktual</th><th className={`${TH} text-right`}>Diterima</th><th className={`${TH} text-right`}>Subtotal</th>
+                                        </tr></thead>
+                                    )}
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {data.items.map(i => aset ? (
+                                            <tr key={i.id_item}>
+                                                <td className="py-2 px-3"><p className="font-medium">{namaUnit(i)}</p><p className="text-xs text-gray-400">{i.nama_jenis_kendaraan ?? '—'}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
+                                                <td className="py-2 px-3">
+                                                    <p className="font-medium whitespace-nowrap">{formatNum(i.qty_diterima ?? 0)}/{formatNum(i.qty)}</p>
+                                                    {(i.armada_terdaftar ?? []).length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {(i.armada_terdaftar ?? []).map(a => (
+                                                                <span key={a.id_armada} className="font-mono text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => router.push(ROUTES.ARMADA_DETAIL(a.id_armada))}>{a.nopol}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {bolehDaftarUnit && (
+                                                        <Button type="button" size="xs" variant="solid" className="mt-1.5" disabled={(i.qty_diterima ?? 0) >= i.qty} onClick={() => bukaArmadaBaru(i.id_item)}>Daftarkan Unit</Button>
+                                                    )}
+                                                </td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">{formatRupiah(i.subtotal_aktual ?? i.subtotal_estimasi)}</td>
+                                            </tr>
+                                        ) : (
+                                            <tr key={i.id_item}>
+                                                <td className="py-2 px-3"><Tag className={`text-[10px] font-semibold ${JENIS_TAG[i.jenis] ?? JENIS_TAG.jasa}`}>{JENIS_LABEL[i.jenis]}</Tag></td>
+                                                <td className="py-2 px-3"><p className="font-medium">{i.nama_item}</p><p className="text-xs text-gray-400">{i.kode_sparepart ?? i.kode_barang ?? (i.jenis === 'barang' ? 'belum ditautkan ke master' : '')}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
+                                                <td className="py-2 px-3 text-right">{i.qty_diterima !== null ? formatNum(i.qty_diterima) : '—'}</td>
+                                                <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">{formatRupiah(i.subtotal_aktual ?? i.subtotal_estimasi)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {biaya && (
+                                <div className="flex justify-end mt-3">
+                                    <div className="w-full max-w-xs flex flex-col gap-1">
+                                        {biaya.baris.map(b => (
+                                            <div key={b.label} className="flex items-center justify-between px-4 text-sm text-gray-500 dark:text-gray-400">
+                                                <span>{b.label}</span>
+                                                <span className="tabular-nums">{b.nilai}</span>
+                                            </div>
+                                        ))}
+                                        <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-2 mt-1">
+                                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">Total</span>
+                                            <span className="font-bold text-gray-800 dark:text-gray-100 tabular-nums">{formatRupiah(biaya.total)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
 
                     {aset && daftarTermin.length > 0 && (
-                        <div>
+                        <Card>
                             <div className="flex items-center justify-between mb-2">
                                 <p className={LABEL}>Termin Pembayaran ({daftarTermin.length})</p>
                                 {data.termin_lunas && <Tag className={`text-[10px] font-semibold ${TERMIN_TAG.ditransfer}`}>Lunas</Tag>}
@@ -412,29 +491,35 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </Card>
                     )}
 
-                    {(['pengajuan', 'pembelian', 'penerimaan'] as TahapBukti[]).map(tahap => {
-                        const daftar = data.bukti.filter(b => b.tahap === tahap)
-                        if (daftar.length === 0) return null
-                        return (
-                            <div key={tahap}>
-                                <p className={`${LABEL} mb-2`}>{TAHAP_LABEL[tahap]} ({daftar.length})</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {daftar.map(b => (
-                                        <div key={b.id_bukti} className="flex items-center gap-1">
-                                            <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"><HiOutlinePaperClip /> {b.nama_asli}</a>
-                                            {(pengaju || kelola) && <span className="text-red-400 cursor-pointer text-xs" onClick={() => jalankan(() => permintaanPembelianService.hapusBukti(data.id_permintaan, b.id_bukti), 'Lampiran dihapus')}>hapus</span>}
+                    {data.bukti.length > 0 && (
+                        <Card>
+                            <div className="flex flex-col gap-5">
+                                {(['pengajuan', 'pembelian', 'penerimaan'] as TahapBukti[]).map(tahap => {
+                                    const daftar = data.bukti.filter(b => b.tahap === tahap)
+                                    if (daftar.length === 0) return null
+                                    return (
+                                        <div key={tahap}>
+                                            <p className={`${LABEL} mb-2`}>{TAHAP_LABEL[tahap]} ({daftar.length})</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {daftar.map(b => (
+                                                    <div key={b.id_bukti} className="flex items-center gap-1">
+                                                        <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))} target="_blank" rel="noreferrer" className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"><HiOutlinePaperClip /> {b.nama_asli}</a>
+                                                        {(pengaju || kelola) && <span className="text-red-400 cursor-pointer text-xs" onClick={() => jalankan(() => permintaanPembelianService.hapusBukti(data.id_permintaan, b.id_bukti), 'Lampiran dihapus')}>hapus</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    )
+                                })}
                             </div>
-                        )
-                    })}
-                </div>
+                        </Card>
+                    )}
+                </>
             )}
-        </Drawer>
+        </div>
 
         <LogAktivitasKeuanganDialog isOpen={logOpen && !aset} info={data?.pengajuan_keuangan} judul="Log Aktivitas — Pembayaran PR"
             emptyMessage={sparepart ? 'Pengajuan pembayaran dibuat setelah realisasi Pembelian Sparepart.' : 'Pengajuan pembayaran dibuat setelah Pengadaan menandai Dibeli.'} onClose={() => setLogOpen(false)} />
@@ -450,7 +535,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
 
         <ConfirmDialog isOpen={hapusOpen} type="danger" title="Hapus Permintaan" confirmText="Ya, Hapus" cancelText="Batal"
             confirmButtonProps={{ loading: submitting }} onClose={() => setHapusOpen(false)} onCancel={() => setHapusOpen(false)}
-            onConfirm={() => data && jalankan(() => permintaanPembelianService.remove(data.id_permintaan), 'Permintaan dihapus', () => { setHapusOpen(false); onClose() }, false)}>
+            onConfirm={() => data && jalankan(() => permintaanPembelianService.remove(data.id_permintaan), 'Permintaan dihapus', () => { setHapusOpen(false); router.push(ROUTES.PERMINTAAN_PEMBELIAN) }, false)}>
             <p>Hapus PR {data?.nomor_permintaan}? Tindakan ini tidak dapat dibatalkan.</p>
         </ConfirmDialog>
 
@@ -464,7 +549,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
 
         <Dialog isOpen={dibeliOpen} onRequestClose={() => setDibeliOpen(false)} onClose={() => setDibeliOpen(false)} width={680}>
             <h5 className="font-bold mb-1">Tandai Dibeli</h5>
-            <p className="text-xs text-gray-400 mb-4">{aset ? 'Isi supplier, harga aktual per unit, rincian termin pembayaran, dan unggah nota/PO supplier. Satu pengajuan pengeluaran (kategori Pembelian Aset) dibuat per termin.' : 'Isi supplier, harga aktual, dan unggah nota/PO supplier. Item barang yang belum ada di Master Barang wajib ditautkan/didaftarkan.'}</p>
+            <p className="text-xs text-gray-400 mb-4">{aset ? 'Isi supplier, harga aktual per unit, rincian termin pembayaran, dan unggah nota/PO supplier. Satu pengajuan pengeluaran (kategori Pembelian Aset) dibuat per termin. Nomor PO terbit otomatis saat disimpan.' : 'Isi supplier, harga aktual, dan unggah nota/PO supplier. Item barang yang belum ada di Master Barang wajib ditautkan/didaftarkan. Nomor PO terbit otomatis saat disimpan.'}</p>
             <div className="grid grid-cols-2 gap-3">
                 <FormItem label="Supplier" asterisk><Select<Option> isSearchable options={supplierOptions} value={supplierOptions.find(o => o.value === dibeli.id_supplier) ?? null} onChange={opt => setDibeli(p => ({ ...p, id_supplier: (opt as Option | null)?.value ?? '' }))} /></FormItem>
                 <FormItem label="Tanggal Pembelian" asterisk><DatePicker inputFormat="DD/MM/YYYY" value={dayjs(dibeli.tanggal).toDate()} onChange={d => setDibeli(p => ({ ...p, tanggal: d ? dayjs(d).format('YYYY-MM-DD') : '' }))} /></FormItem>
@@ -507,12 +592,44 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
                             <FormItem label={aset ? 'Harga Aktual / unit' : 'Harga Aktual / satuan'} className="mb-0"><Input prefix="Rp" value={dibeli.harga[i.id_item] ? formatNum(Number(dibeli.harga[i.id_item])) : ''} onChange={e => setDibeli(p => ({ ...p, harga: { ...p.harga, [i.id_item]: e.target.value.replace(/\D/g, '') } }))} /></FormItem>
                             {i.jenis === 'barang' && (
                                 <FormItem label="Master Barang" className="mb-0" extra={<span className="text-xs text-blue-600 cursor-pointer" onClick={() => { setBuatCepatUntuk(i.id_item); setBuatCepat({ nama: i.nama_item, satuan: i.satuan }) }}>+ daftarkan baru</span>}>
-                                    <Select<Option> isSearchable options={barangOptions} value={barangOptions.find(o => o.value === dibeli.barang[i.id_item]) ?? null} onChange={opt => setDibeli(p => ({ ...p, barang: { ...p.barang, [i.id_item]: (opt as Option | null)?.value ?? '' } }))} />
+                                    <Select<Option> isSearchable options={barangOptions} value={barangOptions.find(o => o.value === dibeli.barang[i.id_item]) ?? null}
+                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                        styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                        onChange={opt => setDibeli(p => ({ ...p, barang: { ...p.barang, [i.id_item]: (opt as Option | null)?.value ?? '' } }))} />
                                 </FormItem>
                             )}
                         </div>
                     </div>
                 ))}
+                <div className="rounded-lg border border-gray-100 dark:border-gray-700 p-3">
+                    <p className="text-sm font-semibold mb-3">Ringkasan Biaya</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <FormItem label="Subtotal" className="mb-0">
+                            <p className="h-12 flex items-center text-sm font-semibold tabular-nums">{formatRupiah(subtotalDibeli)}</p>
+                        </FormItem>
+                        <FormItem label="Diskon" className="mb-0">
+                            <Input prefix="Rp" placeholder="0" invalid={diskonMelebihi} value={dibeli.diskon ? formatNum(Number(dibeli.diskon)) : ''}
+                                onChange={e => setDibeli(p => ({ ...p, diskon: e.target.value.replace(/\D/g, '') }))} />
+                            {diskonMelebihi && <p className="text-xs text-red-500 dark:text-red-400 mt-1">Diskon tidak boleh melebihi subtotal ({formatRupiah(subtotalDibeli)})</p>}
+                        </FormItem>
+                        <FormItem label="PPN" className="mb-0">
+                            <div className="flex items-center gap-2">
+                                <Input className="w-24" suffix="%" placeholder="0" invalid={ppnMelebihi} value={dibeli.ppn_persen}
+                                    onChange={e => setDibeli(p => ({ ...p, ppn_persen: rapikanPersen(e.target.value) }))} />
+                                <Input className="flex-1" prefix="Rp" placeholder="0" readOnly value={dibeli.ppn_persen ? formatNum(ppnDibeli) : ''} />
+                            </div>
+                            {ppnMelebihi && <p className="text-xs text-red-500 dark:text-red-400 mt-1">PPN tidak boleh melebihi 100%</p>}
+                        </FormItem>
+                        <FormItem label="Ongkos Kirim" className="mb-0">
+                            <Input prefix="Rp" placeholder="0" value={dibeli.ongkir ? formatNum(Number(dibeli.ongkir)) : ''}
+                                onChange={e => setDibeli(p => ({ ...p, ongkir: e.target.value.replace(/\D/g, '') }))} />
+                        </FormItem>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</span>
+                        <span className="font-bold text-lg tabular-nums">{formatRupiah(totalAktualDibeli)}</span>
+                    </div>
+                </div>
                 {aset && (
                     <div className="rounded-lg border border-sky-200 bg-sky-50/40 dark:border-sky-500/30 dark:bg-sky-500/5 p-3">
                         <div className="flex items-center justify-between mb-2">
@@ -543,8 +660,8 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
                 )}
             </div>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <Button type="button" variant="plain" onClick={() => setDibeliOpen(false)}>Batal</Button>
-                <Button type="button" variant="solid" loading={submitting} disabled={!dibeli.id_supplier || !dibeli.tanggal || !adaNota || (aset && !terminValid)} onClick={submitDibeli}>Simpan</Button>
+                <Button type="button" variant="plain" onClick={() => setDibeliOpen(false)}>Kembali</Button>
+                <Button type="button" variant="solid" loading={submitting} disabled={!dibeli.id_supplier || !dibeli.tanggal || !adaNota || diskonMelebihi || ppnMelebihi || (aset && !terminValid)} onClick={submitDibeli}>Simpan</Button>
             </div>
         </Dialog>
 
@@ -605,7 +722,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
                 <span className="font-bold text-lg tabular-nums">{formatRupiah(totalAktualRealisasi)}</span>
             </div>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <Button type="button" variant="plain" onClick={() => setRealisasiOpen(false)}>Batal</Button>
+                <Button type="button" variant="plain" onClick={() => setRealisasiOpen(false)}>Kembali</Button>
                 <Button type="button" variant="solid" loading={submitting} disabled={!realisasi.tanggal || !adaNotaRealisasi || overBatasRealisasi || !hargaRealisasiValid} onClick={submitRealisasi}>Simpan</Button>
             </div>
         </Dialog>
@@ -615,7 +732,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
             <FormItem label="Nama" asterisk><Input value={buatCepat.nama} onChange={e => setBuatCepat(p => ({ ...p, nama: e.target.value }))} /></FormItem>
             <FormItem label="Satuan" asterisk><Input value={buatCepat.satuan} onChange={e => setBuatCepat(p => ({ ...p, satuan: e.target.value }))} /></FormItem>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <Button type="button" variant="plain" onClick={() => setBuatCepatUntuk(null)}>Batal</Button>
+                <Button type="button" variant="plain" onClick={() => setBuatCepatUntuk(null)}>Kembali</Button>
                 <Button type="button" variant="solid" disabled={!buatCepat.nama.trim() || !buatCepat.satuan.trim()} onClick={submitBuatCepat}>Daftarkan</Button>
             </div>
         </Dialog>
@@ -634,7 +751,7 @@ export default function DetailPermintaanDrawer({ id, onClose, onRefresh }: { id:
             </div>
             <FormItem label="Keterangan" className="mt-3"><Input textArea rows={2} value={terima.keterangan} onChange={e => setTerima(p => ({ ...p, keterangan: e.target.value }))} /></FormItem>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <Button type="button" variant="plain" onClick={() => setTerimaOpen(false)}>Batal</Button>
+                <Button type="button" variant="plain" onClick={() => setTerimaOpen(false)}>Kembali</Button>
                 <Button type="button" variant="solid" loading={submitting} disabled={!terima.tanggal} onClick={submitTerima}>Konfirmasi</Button>
             </div>
         </Dialog>

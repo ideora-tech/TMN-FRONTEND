@@ -9,6 +9,7 @@ export const STATUS_LABEL: Record<PermintaanVendorStatus, string> = {
     selesai:           'Selesai',
     ditolak:           'Ditolak',
     dibatalkan:        'Dibatalkan',
+    ditolak_pengadaan: 'Ditolak Pengadaan',
 }
 
 export const STATUS_TAG: Record<PermintaanVendorStatus, string> = {
@@ -20,9 +21,12 @@ export const STATUS_TAG: Record<PermintaanVendorStatus, string> = {
     selesai:           'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
     ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300',
     dibatalkan:        'bg-gray-200 text-gray-600 dark:bg-gray-600/30 dark:text-gray-300',
+    ditolak_pengadaan: 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300',
 }
 
-export const STATUS_URUT: PermintaanVendorStatus[] = ['draft', 'menunggu_approval', 'disetujui', 'diproses', 'dikontrakkan', 'selesai', 'ditolak', 'dibatalkan']
+export const STATUS_TIDAK_DIHITUNG: PermintaanVendorStatus[] = ['dibatalkan', 'ditolak', 'ditolak_pengadaan']
+
+export const STATUS_URUT: PermintaanVendorStatus[] = ['draft', 'menunggu_approval', 'disetujui', 'diproses', 'dikontrakkan', 'selesai', 'ditolak', 'ditolak_pengadaan', 'dibatalkan']
 
 export const MEKANISME_LABEL: Record<PermintaanVendorMekanisme, string> = {
     unit_only:   'Unit Only',

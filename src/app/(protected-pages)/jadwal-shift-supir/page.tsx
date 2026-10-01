@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, Tooltip, toast, Notification, Dialog, Input, Checkbox, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiPlusCircle } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import PapanShift from './PapanShift'
@@ -37,6 +37,7 @@ export default function JadwalShiftSupirPage() {
 
     const [tambahDialogOpen, setTambahDialogOpen] = useState(false)
     const [checkedIds, setCheckedIds]             = useState<string[]>([])
+    const [cariSupirTambahInput, setCariSupirTambahInput] = useState('')
     const [cariSupirTambah, setCariSupirTambah]   = useState('')
     const [tambahError, setTambahError]           = useState<string | undefined>(undefined)
     const [tambahSubmitting, setTambahSubmitting] = useState(false)
@@ -64,7 +65,9 @@ export default function JadwalShiftSupirPage() {
     }, [])
 
     useEffect(() => {
-        jadwalShiftService.opsiSupirVendor().then(setSupirVendorList).catch(() => {})
+        jadwalShiftService.opsiSupirVendor()
+            .then(setSupirVendorList)
+            .catch(err => toast.push(<Notification type="danger" title={`Gagal memuat supir vendor: ${parseApiError(err)}`} />))
     }, [])
 
     useEffect(() => {
@@ -74,7 +77,7 @@ export default function JadwalShiftSupirPage() {
                 label: `${p.kode_proyek} — ${p.nama_proyek}`,
                 namaKlien: p.nama_klien ?? null,
             })))
-        }).catch(() => {})
+        }).catch(err => toast.push(<Notification type="danger" title={`Gagal memuat data proyek: ${parseApiError(err)}`} />))
     }, [])
 
     const fetchData = useCallback(async () => {
@@ -104,6 +107,9 @@ export default function JadwalShiftSupirPage() {
             s.nama.toLowerCase().includes(q) || (s.no_sim ?? '').toLowerCase().includes(q))
     }, [supirBelumTerdaftar, cariSupirTambah])
 
+    const handleCariSupirTambahSubmit = () => setCariSupirTambah(cariSupirTambahInput.trim())
+    const handleCariSupirTambahClear  = () => { setCariSupirTambahInput(''); setCariSupirTambah('') }
+
     const allFilteredChecked = filteredSupirTambah.length > 0
         && filteredSupirTambah.every(s => checkedIds.includes(s.id_supir))
 
@@ -123,6 +129,7 @@ export default function JadwalShiftSupirPage() {
     const openTambahDialog = () => {
         if (!selectedProyek) return
         setCheckedIds([])
+        setCariSupirTambahInput('')
         setCariSupirTambah('')
         setTambahError(undefined)
         setTambahDialogOpen(true)
@@ -242,10 +249,14 @@ export default function JadwalShiftSupirPage() {
                             <div className="flex items-center justify-between gap-4 mb-3">
                                 <Input
                                     size="sm"
-                                    className="max-w-xs"
-                                    placeholder="Cari nama supir / no. SIM..."
-                                    value={cariSupirTambah}
-                                    onChange={e => setCariSupirTambah(e.target.value)}
+                                    className="max-w-sm"
+                                    placeholder="Cari nama supir / no. SIM... (tekan Enter)"
+                                    suffix={cariSupirTambahInput
+                                        ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSupirTambahClear} />
+                                        : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSupirTambahSubmit} />}
+                                    value={cariSupirTambahInput}
+                                    onChange={e => setCariSupirTambahInput(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCariSupirTambahSubmit() } }}
                                 />
                                 <span className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-2">
                                     {checkedIds.length} supir dipilih
@@ -315,7 +326,7 @@ export default function JadwalShiftSupirPage() {
                     )}
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeTambahDialog}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={closeTambahDialog}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={tambahSubmitting}
                             disabled={supirAktifLoading || supirAktifError || supirBelumTerdaftar.length === 0}>
                             Simpan

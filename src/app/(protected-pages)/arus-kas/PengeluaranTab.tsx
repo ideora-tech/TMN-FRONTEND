@@ -76,7 +76,7 @@ export default function PengeluaranTab() {
                             </a>
                         )}
                         {p.id_permintaan_pembelian && (
-                            <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${p.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                            <a href={ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(p.id_permintaan_pembelian)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
                                     Dari PR <HiOutlineExternalLink className="text-xs" />
                                 </Tag>
@@ -93,6 +93,13 @@ export default function PengeluaranTab() {
                             <a href={ROUTES.PAYROLL_DETAIL(p.id_periode)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 cursor-pointer hover:opacity-80">
                                     Dari Payroll <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
+                        {p.id_uang_jalan && (
+                            <a href={ROUTES.UANG_JALAN_DETAIL(p.id_uang_jalan)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 cursor-pointer hover:opacity-80">
+                                    Dari Uang Jalan <HiOutlineExternalLink className="text-xs" />
                                 </Tag>
                             </a>
                         )}

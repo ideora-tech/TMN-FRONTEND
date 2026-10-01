@@ -26,8 +26,8 @@ const DETAIL_ROUTE: Record<string, (id: string) => string> = {
     faktur:         (id) => ROUTES.FAKTUR_DETAIL(id),
     invoice_vendor: (id) => ROUTES.INVOICE_VENDOR_DETAIL(id),
     permintaan_vendor: (id) => ROUTES.PERMINTAAN_VENDOR_DETAIL(id),
-    permintaan_pembelian: (id) => `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`,
-    permintaan_pembelian_aset: (id) => `${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${id}`,
+    permintaan_pembelian: (id) => ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(id),
+    permintaan_pembelian_aset: (id) => ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(id),
     ...Object.fromEntries(KODE_PENGAJUAN_PENGELUARAN.map((kode): [string, () => string] => [kode, () => ROUTES.PROSES_PEMBAYARAN])),
 }
 
@@ -607,11 +607,12 @@ export default function PersetujuanSayaPage() {
                             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-3">
                                 <Input
                                     className="flex-1 min-w-60"
-                                    placeholder="Cari nomor, keterangan, pihak, atau pengaju..."
+                                    placeholder="Cari nomor, keterangan, pihak, atau pengaju — tekan Enter"
                                     suffix={riwayatSearchInput
                                         ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600"
                                             onClick={() => { setRiwayatSearchInput(''); setRiwayatSearch(''); setRiwayatHalaman(1) }} />
-                                        : <HiOutlineSearch className="text-gray-400 text-lg" />}
+                                        : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600"
+                                            onClick={() => { setRiwayatSearch(riwayatSearchInput); setRiwayatHalaman(1) }} />}
                                     value={riwayatSearchInput}
                                     onChange={e => setRiwayatSearchInput(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter') { setRiwayatSearch(riwayatSearchInput); setRiwayatHalaman(1) } }}

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Upload, Segment, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, Upload, Tag, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
@@ -15,6 +15,7 @@ import { departemenService } from '@/services/departemen.service'
 import { barangService, type Barang } from '@/services/barang.service'
 import { sparepartService, type Sparepart } from '@/services/sparepart.service'
 import { jenisKendaraanService, type JenisKendaraan } from '@/services/jenis-kendaraan.service'
+import { judulPermintaanService, type JudulPermintaan } from '@/services/judul-permintaan.service'
 import LampiranPreview from '@/components/shared/LampiranPreview'
 import { JENIS_LABEL, TIPE_LABEL } from './status'
 
@@ -69,12 +70,12 @@ const ITEM_HINT: Record<TipePermintaan, string> = {
 
 const JENIS_OPTIONS: Option[] = (['barang', 'jasa'] as JenisItem[]).map(j => ({ value: j, label: JENIS_LABEL[j] }))
 
-const TIPE_OPTIONS = (Object.keys(TIPE_LABEL) as TipePermintaan[]).map(t => ({ value: t, label: TIPE_LABEL[t] }))
-
 export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idPerawatanAwal, onSubmit }: Props) {
     const router = useRouter()
     const [tipe, setTipe] = useState<TipePermintaan>(awal?.tipe ?? tipeAwal ?? 'umum')
-    const [judul, setJudul] = useState(awal?.judul ?? '')
+    const [idJudul, setIdJudul] = useState(awal?.id_judul_permintaan ?? '')
+    const [judulList, setJudulList] = useState<JudulPermintaan[]>([])
+    const [judulLoading, setJudulLoading] = useState(true)
     const [alasan, setAlasan] = useState(awal?.alasan ?? '')
     const [idDepartemen, setIdDepartemen] = useState(awal?.id_departemen ?? '')
     const [idArmada, setIdArmada] = useState(idArmadaAwal ?? '')
@@ -109,6 +110,13 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
     const [perawatanOptions, setPerawatanOptions] = useState<Option[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        judulPermintaanService.opsiAktif()
+            .then(setJudulList)
+            .catch(() => {})
+            .finally(() => setJudulLoading(false))
+    }, [])
 
     useEffect(() => {
         departemenService.list(1, 999, undefined, '1')
@@ -171,6 +179,35 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
         setErrors(p => ({ ...p, [`item_${index}`]: '' }))
     }
 
+    const judulTersedia = (!awal && tipeAwal && tipeAwal !== 'umum')
+        ? judulList.filter(j => j.tipe === tipeAwal)
+        : judulList
+    const judulOptions: Option[] = judulTersedia.map(j => ({ value: j.id_judul_permintaan, label: j.nama_judul }))
+    const judulTerpilih = judulList.find(j => j.id_judul_permintaan === idJudul)
+        ?? (awal && !idJudul ? judulList.find(j => j.nama_judul.toLowerCase() === awal.judul.toLowerCase()) : undefined)
+    const judulLama = !judulTerpilih && awal && !judulLoading ? awal.judul : null
+
+    useEffect(() => {
+        if (judulLoading || idJudul) return
+        if (awal) {
+            const cocok = judulList.find(j => j.nama_judul.toLowerCase() === awal.judul.toLowerCase())
+            if (cocok) setIdJudul(cocok.id_judul_permintaan)
+            return
+        }
+        if (tipeAwal && tipeAwal !== 'umum') {
+            const kandidat = judulList.filter(j => j.tipe === tipeAwal)
+            if (kandidat.length === 1) pilihJudul(kandidat[0].id_judul_permintaan)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [judulLoading, judulList])
+
+    const pilihJudul = (id: string) => {
+        setIdJudul(id)
+        setErrors(p => ({ ...p, judul: '' }))
+        const master = judulList.find(j => j.id_judul_permintaan === id)
+        if (master && master.tipe !== tipe) gantiTipe(master.tipe)
+    }
+
     const gantiTipe = (baru: TipePermintaan) => {
         if (!baru || baru === tipe) return
         setTipe(baru)
@@ -217,7 +254,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!judul.trim()) e.judul = 'Judul permintaan wajib diisi'
+        if (!judulTerpilih && !judulLama) e.judul = 'Judul permintaan wajib dipilih'
         if (!alasan.trim()) e.alasan = 'Alasan / kebutuhan wajib diisi'
         if (!tanggalPermintaan) e.tanggal_permintaan = 'Tanggal permintaan wajib diisi'
         if (tanggalDibutuhkan && tanggalPermintaan && dayjs(tanggalDibutuhkan).isBefore(dayjs(tanggalPermintaan), 'day')) {
@@ -250,8 +287,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
             return
         }
         const payload: PermintaanPayload = {
-            tipe,
-            judul: judul.trim(),
+            ...(judulTerpilih ? { id_judul_permintaan: judulTerpilih.id_judul_permintaan } : { tipe, judul: judulLama ?? '' }),
             alasan: alasan.trim(),
             id_departemen: idDepartemen || null,
             ...(tipe === 'sparepart' ? { id_perawatan: idPerawatan || null } : {}),
@@ -313,9 +349,21 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
         <Card>
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Judul Permintaan" asterisk invalid={!!errors.judul} errorMessage={errors.judul} className="sm:col-span-2">
-                        <Input placeholder="Contoh: ATK bulan Oktober, jasa servis AC kantor"
-                            value={judul} onChange={e => { setJudul(e.target.value); setErrors(p => ({ ...p, judul: '' })) }} />
+                    <FormItem label="Judul Permintaan" asterisk invalid={!!errors.judul} errorMessage={errors.judul} className="sm:col-span-2"
+                        extra={judulTerpilih || judulLama ? (
+                            <Tag className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border-0">Tipe: {judulTerpilih?.nama_tipe ?? TIPE_LABEL[tipe]}</Tag>
+                        ) : undefined}>
+                        <Select<Option> isSearchable isClearable={false} isLoading={judulLoading}
+                            placeholder={judulLoading ? 'Memuat judul...' : 'Pilih judul permintaan...'}
+                            noOptionsMessage={() => 'Belum ada judul permintaan — minta admin menambahkannya di Data Master'}
+                            options={judulOptions}
+                            value={judulTerpilih
+                                ? { value: judulTerpilih.id_judul_permintaan, label: judulTerpilih.nama_judul }
+                                : judulLama ? { value: '', label: `${judulLama} (judul lama)` } : null}
+                            onChange={opt => opt && pilihJudul(opt.value)} />
+                        {(judulTerpilih || judulLama) && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{TIPE_HINT[tipe]}</p>
+                        )}
                     </FormItem>
                     <FormItem label="Alasan / Kebutuhan" asterisk invalid={!!errors.alasan} errorMessage={errors.alasan} className="sm:col-span-2">
                         <Input textArea rows={3} placeholder="Jelaskan kebutuhan dan tujuan pembelian"
@@ -342,14 +390,6 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                 </div>
 
                 <div className="mt-4">
-                    <FormItem label="Tipe Permintaan" asterisk>
-                        <Segment size="sm" value={tipe} onChange={val => gantiTipe(val as TipePermintaan)}>
-                            {TIPE_OPTIONS.map(o => (
-                                <Segment.Item key={o.value} value={o.value} type="button">{o.label}</Segment.Item>
-                            ))}
-                        </Segment>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{TIPE_HINT[tipe]}</p>
-                    </FormItem>
                     {tipe === 'sparepart' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                             <FormItem label="Armada (opsional)"
@@ -584,7 +624,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                 )}
 
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={loading}>
                         {mode === 'edit' ? 'Simpan Perubahan' : 'Ajukan Permintaan'}
                     </Button>

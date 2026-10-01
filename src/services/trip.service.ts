@@ -23,6 +23,7 @@ export interface Trip {
     mekanisme?: 'unit_only' | 'unit_driver' | 'full' | null
     id_penugasan?: string | null
     titik_drop?: string[]
+    titik_drop_detail?: { id_titik_drop: string; urutan: number; lokasi: string }[]
     sudah_difakturkan?: boolean
     punya_laporan?: boolean
     pengajuan_uang_jalan?: PengajuanUangJalanTrip | null

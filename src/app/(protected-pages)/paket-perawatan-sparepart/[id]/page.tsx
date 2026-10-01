@@ -248,7 +248,7 @@ export default function PaketPerawatanSparepartDetailPage({ params }: { params: 
                         </div>
                         <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <Button type="button" variant="default" icon={<HiArrowLeft />}
-                                onClick={() => router.push(ROUTES.SPAREPART_TAB_PAKET)}>Batal</Button>
+                                onClick={() => router.push(ROUTES.SPAREPART_TAB_PAKET)}>Kembali</Button>
                         </div>
                     </>
                 ) : (
@@ -323,7 +323,7 @@ export default function PaketPerawatanSparepartDetailPage({ params }: { params: 
                         </div>
 
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={batalEdit}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={batalEdit}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan Perubahan</Button>
                         </div>
                     </form>

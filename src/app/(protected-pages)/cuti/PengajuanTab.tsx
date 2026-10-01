@@ -362,7 +362,7 @@ export default function PengajuanTab() {
                 </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={saving}
                         disabled={!form.id_orang || !form.id_jenis_cuti || !form.tanggal_mulai || !form.tanggal_selesai}>
                         Ajukan
@@ -384,7 +384,7 @@ export default function PengajuanTab() {
                             onChange={e => setCatatanTolak(e.target.value)} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setTolakTarget(null)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setTolakTarget(null)}>Kembali</Button>
                         <Button type="submit" variant="solid" className="bg-red-600 hover:bg-red-700" loading={prosesId === tolakTarget?.id_pengajuan}>
                             Tolak Pengajuan
                         </Button>

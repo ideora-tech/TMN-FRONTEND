@@ -97,7 +97,19 @@ export interface HasilKetersediaan {
     }
 }
 
+export interface RingkasanKetersediaanJenis {
+    id_jenis_kendaraan: string
+    aset_total: number
+    aset_tersedia: number
+    vendor_total: number
+    vendor_tersedia: number
+}
+
 export const ketersediaanVendorService = {
+    async ringkasanPerJenis() {
+        const { data } = await axios.get(API_ENDPOINTS.KETERSEDIAAN_VENDOR_RINGKASAN_JENIS)
+        return data.data as RingkasanKetersediaanJenis[]
+    },
     async list(params: FilterKetersediaan & { page?: number; limit?: number }) {
         const { data } = await axios.get(API_ENDPOINTS.KETERSEDIAAN_VENDOR, { params })
         return data as HasilKetersediaan

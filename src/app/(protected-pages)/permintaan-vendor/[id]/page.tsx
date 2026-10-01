@@ -1,6 +1,7 @@
 'use client'
 import { use, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Button, FormItem, Input, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
@@ -17,6 +18,8 @@ import { permintaanVendorService, PermintaanVendor, itemUnitDiminta, ringkasanUn
 import { projectService } from '@/services/project.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { STATUS_LABEL, STATUS_TAG, MEKANISME_LABEL } from '../status'
+import { formatDurasiMenit } from '@/utils/formatDurasi'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 
 const MEKANISME_OPTIONS = [
     { value: 'unit_only',   label: 'Unit Only' },
@@ -42,6 +45,7 @@ const LANGKAH_PERMINTAAN: Record<string, { judul: string; keterangan: string }> 
     dikontrakkan:      { judul: 'Permintaan sudah dikontrakkan',              keterangan: 'Permintaan akan selesai otomatis saat kontrak vendor aktif.' },
     selesai:           { judul: 'Kontrak vendor aktif, permintaan selesai',   keterangan: 'Tidak ada aksi lanjutan untuk permintaan ini.' },
     dibatalkan:        { judul: 'Permintaan dibatalkan',                      keterangan: 'Permintaan ini tidak diproses lebih lanjut.' },
+    ditolak_pengadaan: { judul: 'Permintaan ditolak Pengadaan',               keterangan: 'Pengadaan tidak dapat memenuhi permintaan ini. Buat permintaan baru bila kebutuhan masih ada.' },
 }
 
 const BISA_BATAL = ['draft', 'menunggu_approval', 'disetujui', 'diproses']
@@ -52,6 +56,7 @@ type FormState = {
     periode_dari: string
     periode_sampai: string
     catatan: string
+    harga_penawaran: string
 }
 
 const toFormState = (d: PermintaanVendor): FormState => ({
@@ -60,6 +65,7 @@ const toFormState = (d: PermintaanVendor): FormState => ({
     periode_dari: d.periode_dari ?? '',
     periode_sampai: d.periode_sampai ?? '',
     catatan: d.catatan ?? '',
+    harga_penawaran: d.harga_penawaran != null ? String(Math.round(d.harga_penawaran)) : '',
 })
 
 type UnitRow = { id_jenis_kendaraan: string; jumlah_unit: string }
@@ -100,6 +106,11 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     const [batalOpen, setBatalOpen]   = useState(false)
     const [alasanBatal, setAlasanBatal] = useState('')
     const [membatalkan, setMembatalkan] = useState(false)
+    const [tolakOpen, setTolakOpen]   = useState(false)
+    const [alasanTolak, setAlasanTolak] = useState('')
+    const [menolak, setMenolak]       = useState(false)
+    const [revisiOpen, setRevisiOpen] = useState(false)
+    const [merevisi, setMerevisi]     = useState(false)
 
     const bisaUbah = data?.status === 'draft' || data?.status === 'ditolak'
 
@@ -111,6 +122,9 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                 setUnitRows(toUnitRows(d))
                 if (searchParams.get('edit') === '1' && (d.status === 'draft' || d.status === 'ditolak')) {
                     setEditing(true)
+                }
+                if (searchParams.get('revisi') === '1' && d.status === 'disetujui') {
+                    setRevisiOpen(true)
                 }
             })
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
@@ -157,6 +171,7 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                 periode_dari: form.periode_dari || null,
                 periode_sampai: form.periode_sampai || null,
                 catatan: form.catatan.trim() || null,
+                harga_penawaran: form.harga_penawaran ? Number(form.harga_penawaran) : null,
             })
             setData(updated)
             setForm(toFormState(updated))
@@ -203,6 +218,37 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
         }
     }
 
+    const handleTolak = async () => {
+        const alasan = alasanTolak.trim()
+        if (!alasan) return
+        setMenolak(true)
+        try {
+            const updated = await permintaanVendorService.tolak(id, alasan)
+            terapkanHasil(updated)
+            toast.push(<Notification type="success" title="Permintaan ditolak Pengadaan" />)
+            setTolakOpen(false)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenolak(false)
+        }
+    }
+
+    const handleRevisi = async () => {
+        setMerevisi(true)
+        try {
+            const updated = await permintaanVendorService.revisi(id)
+            terapkanHasil(updated)
+            toast.push(<Notification type="success" title="Permintaan kembali ke Draft — silakan revisi lalu ajukan approval ulang" />)
+            setRevisiOpen(false)
+            setEditing(true)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMerevisi(false)
+        }
+    }
+
     const handleBatal = async () => {
         const alasan = alasanBatal.trim()
         if (!alasan) return
@@ -223,8 +269,10 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
     if (!data) return <div className="p-6 text-red-500">Permintaan tidak ditemukan.</div>
 
     const unitItems = itemUnitDiminta(data)
-    const bisaBatal = BISA_BATAL.includes(data.status)
+    const bisaTolak = (data.status === 'disetujui' || data.status === 'diproses') && !punyaPeran('sales')
+    const bisaBatal = BISA_BATAL.includes(data.status) && !bisaTolak
     const bisaProses = data.status === 'disetujui' && !punyaPeran('sales')
+    const bisaRevisi = data.status === 'disetujui' && !punyaPeran('pengadaan')
     const bisaBuatKontrak = data.status === 'disetujui' || data.status === 'diproses'
     const sudahDikontrakkan = data.status === 'dikontrakkan' || data.status === 'selesai'
     const infoDitangani = ['diproses', 'dikontrakkan', 'selesai'].includes(data.status) && data.nama_diproses_oleh
@@ -236,6 +284,9 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
             : []),
         ...(data.status === 'dibatalkan'
             ? [{ warna: 'merah' as const, judul: 'Permintaan dibatalkan', isi: data.alasan_batal ? `“${data.alasan_batal}”` : undefined }]
+            : []),
+        ...(data.status === 'ditolak_pengadaan'
+            ? [{ warna: 'merah' as const, judul: `Permintaan ditolak Pengadaan${data.nama_ditolak_pengadaan_oleh ? ` oleh ${data.nama_ditolak_pengadaan_oleh}` : ''}`, isi: data.alasan_tolak_pengadaan ? `“${data.alasan_tolak_pengadaan}”` : undefined }]
             : []),
         ...(infoDitangani
             ? [{ warna: 'biru' as const, judul: infoDitangani, isi: undefined }]
@@ -273,15 +324,26 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                     kelasIkon={STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600'}
                     tahapGagal={data.status === 'ditolak' ? 1 : undefined}
                     selesai={data.status === 'selesai'}
-                    gagal={data.status === 'dibatalkan' ? 'Permintaan dibatalkan — tidak dilanjutkan ke kontrak vendor' : undefined}
+                    gagal={data.status === 'dibatalkan' ? 'Permintaan dibatalkan — tidak dilanjutkan ke kontrak vendor' : data.status === 'ditolak_pengadaan' ? 'Permintaan ditolak Pengadaan — tidak dilanjutkan ke kontrak vendor' : undefined}
                     catatan={catatanAlur}
                     langkah={LANGKAH_PERMINTAAN[data.status]}
                     aksi={(
                         <>
+                            {bisaTolak && (
+                                <Button size="sm" variant="plain" className={KELAS_TOMBOL_BATAL} icon={<HiOutlineBan />}
+                                    onClick={() => { setAlasanTolak(''); setTolakOpen(true) }}>
+                                    Tolak
+                                </Button>
+                            )}
                             {bisaBatal && (
                                 <Button size="sm" variant="plain" className={KELAS_TOMBOL_BATAL} icon={<HiOutlineBan />}
                                     onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>
                                     Batalkan
+                                </Button>
+                            )}
+                            {bisaRevisi && (
+                                <Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => setRevisiOpen(true)}>
+                                    Revisi
                                 </Button>
                             )}
                             {data.status === 'ditolak' && (
@@ -349,8 +411,16 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                 { label: 'No. Permintaan',   value: data.nomor_permintaan },
                                 { label: 'Status',           value: STATUS_LABEL[data.status] ?? data.status },
                                 { label: 'Proyek',           value: data.nama_proyek ?? <span className="text-gray-400">—</span> },
+                                ...(data.id_penawaran && data.nomor_penawaran ? [{
+                                    label: 'Penawaran Asal',
+                                    value: <Link href={ROUTES.PENAWARAN_DETAIL(data.id_penawaran)} className="text-blue-500 hover:underline">{data.nomor_penawaran}</Link>,
+                                }] : []),
                                 { label: 'Mekanisme',        value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
                                 { label: 'Periode',          value: periode ?? <span className="text-gray-400">—</span> },
+                                { label: 'Harga Penawaran',  value: data.harga_penawaran != null ? formatRupiah(data.harga_penawaran) : <span className="text-gray-400">—</span> },
+                                { label: 'Lama Pemenuhan',   value: data.lama_pemenuhan_menit != null
+                                    ? <>{formatDurasiMenit(data.lama_pemenuhan_menit)}{data.pemenuhan_berjalan && <span className="text-amber-600 dark:text-amber-400 font-normal"> · masih berjalan</span>}</>
+                                    : <span className="text-gray-400">—</span> },
                                 { label: 'Ditangani',        value: data.nama_diproses_oleh
                                     ? <>{data.nama_diproses_oleh}{data.diproses_pada && <span className="text-gray-400 font-normal"> · {dayjs(data.diproses_pada).format('DD MMM YYYY HH:mm')}</span>}</>
                                     : <span className="text-gray-400">—</span> },
@@ -382,7 +452,7 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                             </div>
                         </div>
                         <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={kembali}>Batal</Button>
+                            <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={kembali}>Kembali</Button>
                         </div>
                     </>
                 ) : form && (
@@ -403,8 +473,10 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Proyek (opsional)">
-                                <Select isSearchable isClearable placeholder="Pilih proyek..."
+                            <FormItem label="Proyek (opsional)"
+                                extra={data.id_penawaran ? <span className="text-xs text-gray-400 ml-1">(mengikuti penawaran {data.nomor_penawaran})</span> : undefined}>
+                                <Select isSearchable isClearable placeholder={data.id_penawaran ? 'Otomatis saat penawaran jadi proyek' : 'Pilih proyek...'}
+                                    isDisabled={!!data.id_penawaran}
                                     options={proyekOptions}
                                     value={proyekOptions.find(o => o.value === form.id_proyek) ?? null}
                                     onChange={opt => setForm(p => p && ({ ...p, id_proyek: opt?.value ?? '' }))} />
@@ -459,6 +531,11 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                         periode_sampai: akhir ? dayjs(akhir).format('YYYY-MM-DD') : '',
                                     }))} />
                             </FormItem>
+                        <FormItem label="Harga Penawaran (Rp)" className="sm:col-span-2">
+                            <Input prefix="Rp" placeholder="0 (opsional)"
+                                value={form.harga_penawaran ? formatNum(Number(form.harga_penawaran)) : ''}
+                                onChange={e => setForm(p => p && ({ ...p, harga_penawaran: e.target.value.replace(/\D/g, '') }))} />
+                        </FormItem>
                             <FormItem label="Catatan" className="sm:col-span-2">
                                 <Input textArea rows={3} placeholder="Kebutuhan khusus, spesifikasi unit, dsb. (opsional)"
                                     value={form.catatan}
@@ -471,7 +548,7 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                                 setForm(toFormState(data))
                                 setUnitRows(toUnitRows(data))
                                 setErrors({})
-                            }}>Batal</Button>
+                            }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -521,6 +598,36 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                 <p className="text-sm mb-3">Permintaan <span className="font-semibold">{data.nomor_permintaan}</span> akan dibatalkan{data.status === 'menunggu_approval' ? ' dan pengajuan approval-nya ikut dibatalkan' : ''}.</p>
                 <p className="text-sm font-semibold mb-1">Alasan pembatalan <span className="text-red-500">*</span></p>
                 <Input textArea rows={3} maxLength={500} placeholder="Tuliskan alasan pembatalan..." value={alasanBatal} onChange={e => setAlasanBatal(e.target.value)} />
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={revisiOpen}
+                type="warning"
+                title="Revisi Permintaan"
+                confirmText="Ya, Revisi"
+                cancelText="Kembali"
+                confirmButtonProps={{ loading: merevisi }}
+                onClose={() => setRevisiOpen(false)}
+                onCancel={() => setRevisiOpen(false)}
+                onConfirm={handleRevisi}
+            >
+                <p className="text-sm">Permintaan <span className="font-semibold">{data.nomor_permintaan}</span> akan dikembalikan ke <span className="font-semibold">Draft</span> supaya bisa diubah. Setelah direvisi, permintaan wajib diajukan approval ulang. Tim Pengadaan akan diberi tahu untuk menunda prosesnya.</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={tolakOpen}
+                type="danger"
+                title="Tolak Permintaan"
+                confirmText="Ya, Tolak"
+                cancelText="Kembali"
+                confirmButtonProps={{ loading: menolak, disabled: !alasanTolak.trim(), customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
+                onClose={() => setTolakOpen(false)}
+                onCancel={() => setTolakOpen(false)}
+                onConfirm={handleTolak}
+            >
+                <p className="text-sm mb-3">Permintaan <span className="font-semibold">{data.nomor_permintaan}</span> akan ditolak Pengadaan. Pengaju akan mendapat notifikasi beserta alasannya.</p>
+                <p className="text-sm font-semibold mb-1">Alasan penolakan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} maxLength={500} placeholder="Tuliskan alasan penolakan..." value={alasanTolak} onChange={e => setAlasanTolak(e.target.value)} />
             </ConfirmDialog>
 
             <LogApprovalDialog

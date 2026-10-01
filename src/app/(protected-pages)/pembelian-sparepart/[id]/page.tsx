@@ -135,7 +135,8 @@ export default function PembelianDetailPage() {
 
     if (!data) return null
 
-    const dariPr = !!data.id_permintaan_pembelian
+    const idPrAsal = data.id_permintaan_pembelian ?? ''
+    const dariPr = idPrAsal !== ''
     const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
     const bolehEksekusiPengadaan = bolehKelola || punyaPeran('pengadaan')
     const bolehUploadBukti = bolehEksekusiPengadaan && (data.status === 'dibeli' || (data.status === 'disetujui_finance' && !dariPr))
@@ -176,7 +177,7 @@ export default function PembelianDetailPage() {
                                 </Tag>
                             )}
                             {dariPr && (
-                                <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${data.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+                                <a href={ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(idPrAsal)} target="_blank" rel="noreferrer" className="w-fit">
                                     <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
                                         Dari {data.nomor_permintaan ?? 'PR'} <HiOutlineExternalLink className="text-xs" />
                                     </Tag>
@@ -243,7 +244,7 @@ export default function PembelianDetailPage() {
                     <>
                         {dariPr && data.status === 'disetujui_finance' && (
                             <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />}
-                                onClick={() => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${data.id_permintaan_pembelian}`)}>
+                                onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(idPrAsal))}>
                                 Buka PR {data.nomor_permintaan ?? ''}
                             </Button>
                         )}
@@ -428,7 +429,7 @@ export default function PembelianDetailPage() {
             </Card>
 
             <div className="flex justify-end">
-                <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Batal</Button>
+                <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART)}>Kembali</Button>
             </div>
 
             <LogAktivitasKeuanganDialog
@@ -473,7 +474,7 @@ export default function PembelianDetailPage() {
                     </div>
                     {errRealisasi && <p className="text-red-500 text-sm mt-2">{errRealisasi}</p>}
                     <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" onClick={() => setRealisasiOpen(false)}>Batal</Button>
+                        <Button type="button" onClick={() => setRealisasiOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting}>Simpan Realisasi</Button>
                     </div>
                 </form>

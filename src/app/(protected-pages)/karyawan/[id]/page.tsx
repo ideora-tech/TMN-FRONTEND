@@ -748,7 +748,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(isiForm(karyawan)); setErrors({}) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(isiForm(karyawan)); setErrors({}) }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -911,7 +911,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
 
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
@@ -978,7 +978,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setDokumenOpen(false)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => setDokumenOpen(false)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={dokumenSaving}
                         disabled={!dokumenForm.jenis_dokumen || (!dokumenEdit && !dokumenFile)}>
                         Simpan
@@ -1050,7 +1050,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setKontrakOpen(false)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => setKontrakOpen(false)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={kontrakSaving}>Simpan</Button>
                 </div>
                 </form>
@@ -1115,7 +1115,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                     </div>
 
                     <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setExitOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setExitOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" className="bg-red-600 hover:bg-red-700" loading={exitSaving}
                             disabled={!exitForm.jenis_exit || !exitForm.tanggal_efektif}>
                             Proses Exit

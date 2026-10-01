@@ -8,6 +8,10 @@ import RichTextEditor from '@/components/shared/RichTextEditor'
 import dayjs from 'dayjs'
 import { HiArrowLeft, HiPlusCircle, HiOutlineTrash, HiOutlineViewList } from 'react-icons/hi'
 import PilihRuteDialog, { PilihanItemRute } from '../PilihRuteDialog'
+import { PilihLampiranPenawaran } from '../LampiranPenawaran'
+import { IsianParameterPenawaranFields } from '../ParameterPenawaran'
+import { useRingkasanKetersediaan, PetunjukKetersediaan, InputJumlahUnit, angkaAtauNull } from '../SumberUnitPenawaran'
+import { isianParameterDari, payloadParameterDari } from '@/constants/parameterPenawaran.constant'
 import { penawaranService, TipeHargaPenawaran } from '@/services/penawaran.service'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
@@ -45,6 +49,8 @@ interface ItemForm {
     jumlah_hari_str: string
     estimasi_ritase_str: string
     keterangan: string
+    unit_aset_str: string
+    unit_vendor_str: string
 }
 
 type Option = { value: string; label: string }
@@ -53,6 +59,7 @@ type TipeHargaOption = { value: TipeHargaPenawaran; label: string }
 const ITEM_KOSONG: ItemForm = {
     id_rute: '', id_jenis_kendaraan: '',
     harga_satuan_str: '', jumlah_hari_str: '', estimasi_ritase_str: '1', keterangan: '',
+    unit_aset_str: '', unit_vendor_str: '',
 }
 
 export default function PenawaranBaruPage() {
@@ -62,11 +69,14 @@ export default function PenawaranBaruPage() {
     const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
     const [items, setItems] = useState<ItemForm[]>([])
+    const [parameter, setParameter] = useState(isianParameterDari())
+    const [lampiran, setLampiran] = useState<File[]>([])
     const [itemError, setItemError] = useState('')
     const [ruteOptions, setRuteOptions] = useState<Option[]>([])
     const [jenisOptions, setJenisOptions] = useState<Option[]>([])
     const [klienOptions, setKlienOptions] = useState<Option[]>([])
     const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
+    const ringkasanKetersediaan = useRingkasanKetersediaan()
 
     useEffect(() => {
         ruteService.list({ limit: 100 })
@@ -86,6 +96,7 @@ export default function PenawaranBaruPage() {
     const totalItems = items.reduce(
         (sum, it) => sum + Number(it.harga_satuan_str || 0) * Number(it.estimasi_ritase_str || 1), 0)
     const nilaiOtomatis = form.tipe_harga === 'per_rit' && items.length > 0
+    const totalUnitVendor = items.reduce((sum, it) => sum + Number(it.unit_vendor_str || 0), 0)
 
     const updateItem = (index: number, patch: Partial<ItemForm>) => {
         setItems(prev => {
@@ -156,6 +167,7 @@ export default function PenawaranBaruPage() {
                 tanggal_penawaran: form.tanggal_penawaran || null,
                 jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
                 catatan: form.catatan.trim() || null,
+                ...payloadParameterDari(parameter),
                 items: items.length > 0
                     ? items.map(it => ({
                         id_rute: it.id_rute,
@@ -164,9 +176,20 @@ export default function PenawaranBaruPage() {
                         jumlah_hari: it.jumlah_hari_str ? Number(it.jumlah_hari_str) : null,
                         estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                         keterangan: it.keterangan.trim() || null,
+                        unit_aset: angkaAtauNull(it.unit_aset_str),
+                        unit_vendor: angkaAtauNull(it.unit_vendor_str),
                     }))
                     : undefined,
             })
+            if (lampiran.length > 0) {
+                try {
+                    await penawaranService.uploadLampiran(created.id_penawaran, lampiran)
+                } catch (err) {
+                    toast.push(<Notification type="warning" title={`Penawaran tersimpan, tetapi lampiran gagal diunggah: ${parseApiError(err)}`} />)
+                    router.push(ROUTES.PENAWARAN_DETAIL(created.id_penawaran))
+                    return
+                }
+            }
             toast.push(<Notification type="success" title={`Penawaran ${created.nomor_penawaran} berhasil dibuat`} />)
             router.push(ROUTES.PENAWARAN_DETAIL(created.id_penawaran))
         } catch (err) {
@@ -251,6 +274,13 @@ export default function PenawaranBaruPage() {
                         </FormItem>
                     </div>
 
+                    <IsianParameterPenawaranFields
+                        nilai={parameter}
+                        onChange={(kolom, nilai) => setParameter(p => ({ ...p, [kolom]: nilai }))}
+                    />
+
+                    <PilihLampiranPenawaran files={lampiran} onChange={setLampiran} />
+
                     <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-3">
                             <div>
@@ -285,6 +315,8 @@ export default function PenawaranBaruPage() {
                                             )}
                                             <th className="px-3 py-2 font-semibold w-24">Hari</th>
                                             <th className="px-3 py-2 font-semibold w-24">Trip</th>
+                                            <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari aset perusahaan (internal, tidak tercetak di PDF)">Unit Aset</th>
+                                            <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari vendor (internal, tidak tercetak di PDF)">Unit Vendor</th>
                                             {form.tipe_harga === 'per_rit' && (
                                                 <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
                                             )}
@@ -309,6 +341,7 @@ export default function PenawaranBaruPage() {
                                                         menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
                                                         styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                                                         onChange={opt => setItemJenis(i, opt?.value ?? '')} />
+                                                    <PetunjukKetersediaan ringkasan={ringkasanKetersediaan} idJenis={it.id_jenis_kendaraan} />
                                                 </td>
                                                 {form.tipe_harga === 'per_rit' && (
                                                     <td className="px-3 py-2">
@@ -328,6 +361,12 @@ export default function PenawaranBaruPage() {
                                                     <Input type="number" min="1"
                                                         value={it.estimasi_ritase_str}
                                                         onChange={e => updateItem(i, { estimasi_ritase_str: e.target.value })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <InputJumlahUnit value={it.unit_aset_str} onChange={v => updateItem(i, { unit_aset_str: v })} />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <InputJumlahUnit value={it.unit_vendor_str} onChange={v => updateItem(i, { unit_vendor_str: v })} />
                                                 </td>
                                                 {form.tipe_harga === 'per_rit' && (
                                                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">
@@ -355,9 +394,19 @@ export default function PenawaranBaruPage() {
                         )}
                     </div>
 
+                    <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+                        <p className="font-semibold text-gray-800 dark:text-gray-100">Permintaan Vendor</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            Kebutuhan unit vendor dari item rute:{' '}
+                            <span className="font-semibold text-gray-600 dark:text-gray-300">{totalUnitVendor} unit</span>.
+                            {' '}Isi kolom Unit Vendor di Item Rute, simpan penawaran, lalu ajukan permintaan vendor dari kartu
+                            {' '}<span className="font-semibold text-gray-600 dark:text-gray-300">Permintaan Vendor</span> di halaman detail penawaran.
+                        </p>
+                    </div>
+
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PENAWARAN)}>
-                            Batal
+                            Kembali
                         </Button>
                         <Button type="submit" variant="solid" loading={saving}>
                             Buat Penawaran

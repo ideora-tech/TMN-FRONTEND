@@ -457,7 +457,7 @@ export default function KonfigurasiApprovalPage() {
                         </FormItem>
                     )}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                     </div>
                 </form>
@@ -485,7 +485,7 @@ export default function KonfigurasiApprovalPage() {
                             onChange={opt => setEventTypeForm(p => ({ ...p, mode_resolusi: (opt?.value as 'pinned' | 'relatif') ?? 'pinned' }))} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setFormEventTypeOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setFormEventTypeOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingEventType}>Simpan</Button>
                     </div>
                 </form>
@@ -518,7 +518,7 @@ export default function KonfigurasiApprovalPage() {
                             onChange={opt => setEventTypeEditForm(p => ({ ...p, mode_resolusi: (opt?.value as 'pinned' | 'relatif') ?? 'pinned' }))} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setEventTypeEditOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setEventTypeEditOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingEventTypeEdit}>Simpan</Button>
                     </div>
                 </form>

@@ -7,44 +7,25 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
-import { penawaranService, Penawaran, PenawaranStatus } from '@/services/penawaran.service'
+import { penawaranService, Penawaran } from '@/services/penawaran.service'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
+import { PENAWARAN_STATUS_CLASS as STATUS_CLASS, PENAWARAN_STATUS_LABEL as STATUS_LABEL, PENAWARAN_FILTER_OPTIONS } from '@/utils/penawaranStatus'
 
-type StatusOption = { value: '' | PenawaranStatus; label: string }
-const STATUS_OPTIONS: StatusOption[] = [
-    { value: '',                  label: 'Semua Status' },
-    { value: 'draft',             label: 'Draft' },
-    { value: 'menunggu_approval', label: 'Menunggu Approval' },
-    { value: 'terkirim',          label: 'Terkirim' },
-    { value: 'negosiasi',         label: 'Negosiasi' },
-    { value: 'disetujui',         label: 'Disetujui' },
-    { value: 'ditolak',           label: 'Ditolak' },
-]
-
-const STATUS_CLASS: Record<string, string> = {
-    draft:             'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
-    menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
-    terkirim:          'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
-    negosiasi:         'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
-    disetujui:         'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
-    ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-400',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-    draft: 'Draft', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', negosiasi: 'Negosiasi', disetujui: 'Disetujui', ditolak: 'Ditolak',
-}
+type StatusOption = { value: string; label: string }
+const STATUS_OPTIONS: StatusOption[] = PENAWARAN_FILTER_OPTIONS
 
 export default function PenawaranPage() {
     const router = useRouter()
     const [data, setData]               = useState<Penawaran[]>([])
     const [loading, setLoading]         = useState(true)
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
-    const [status, setStatus]           = useState<'' | PenawaranStatus>('')
+    const [status, setStatus]           = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [total, setTotal]             = useState(0)
     const pageSize = 10
@@ -65,6 +46,9 @@ export default function PenawaranPage() {
     }, [currentPage, search, status])
 
     useEffect(() => { load() }, [load])
+
+    const handleSearchSubmit = () => { setSearch(searchInput.trim()); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const handleDelete = async () => {
         if (!deleteId) return
@@ -225,10 +209,15 @@ export default function PenawaranPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
-                            placeholder="Cari nomor atau judul penawaran..."
-                            suffix={<HiOutlineSearch className="text-gray-400" />}
-                            value={search}
-                            onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
+                            placeholder="Cari nomor atau judul penawaran... (tekan Enter)"
+                            suffix={
+                                searchInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />
+                            }
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
                         />
                     </div>
                     <div className="w-full sm:w-48">

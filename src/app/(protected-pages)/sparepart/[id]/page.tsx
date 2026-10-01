@@ -393,7 +393,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setErrors({}); setForm(formDariSparepart(sparepart)) }}>Batal</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setErrors({}); setForm(formDariSparepart(sparepart)) }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                     </form>
@@ -537,7 +537,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
@@ -563,7 +563,7 @@ export default function SparepartDetailPage({ params }: { params: Promise<{ id: 
                             onChange={e => setStokForm(p => ({ ...p, keterangan: e.target.value }))} />
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setStokOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setStokOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={stokSaving}>Simpan</Button>
                     </div>
                 </form>

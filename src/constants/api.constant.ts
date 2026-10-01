@@ -18,6 +18,9 @@ export const API_ENDPOINTS = {
     PROYEK_STATUS: (id: string) => `/api/proxy/proyek/${id}/status`,
     PROYEK_RUTE:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/rute`,
     PROYEK_RUTE_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/rute/${id}`,
+    PROYEK_UNIT:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/unit`,
+    PROYEK_UNIT_OPSI:   (idProyek: string) => `/api/proxy/proyek/${idProyek}/unit/opsi`,
+    PROYEK_UNIT_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/unit/${id}`,
     PROYEK_PDF:         (id: string) => `/api/proxy/proyek/${id}/pdf`,
     PROYEK_PENAWARAN_REVISI: (id: string) => `/api/proxy/proyek/${id}/penawaran-revisi`,
     PROYEK_FAKTUR_BORONGAN:  (id: string) => `/api/proxy/proyek/${id}/faktur-borongan`,
@@ -86,6 +89,7 @@ export const API_ENDPOINTS = {
     KETERSEDIAAN_VENDOR:        '/api/proxy/ketersediaan-vendor',
     KETERSEDIAAN_VENDOR_DETAIL: (sumber: string, id: string) => `/api/proxy/ketersediaan-vendor/${sumber}/${id}`,
     KETERSEDIAAN_VENDOR_EXPORT: '/api/proxy/ketersediaan-vendor/export/excel',
+    KETERSEDIAAN_VENDOR_RINGKASAN_JENIS: '/api/proxy/ketersediaan-vendor/ringkasan-jenis',
 
     // Kategori Sparepart
     KATEGORI_SPAREPART:        '/api/proxy/kategori-sparepart',
@@ -129,6 +133,7 @@ export const API_ENDPOINTS = {
     PERMINTAAN_PEMBELIAN_BUKTI_DETAIL: (id: string, idBukti: string) => `/api/proxy/permintaan-pembelian/${id}/bukti/${idBukti}`,
     PERMINTAAN_PEMBELIAN_PENGAJUAN:    (id: string) => `/api/proxy/permintaan-pembelian/${id}/pengajuan`,
     PERMINTAAN_PEMBELIAN_REALISASI_SPAREPART: (id: string) => `/api/proxy/permintaan-pembelian/${id}/realisasi-sparepart`,
+    PERMINTAAN_PEMBELIAN_PO_PDF:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/po/pdf`,
     PERMINTAAN_PEMBELIAN_LAPORAN:              '/api/proxy/permintaan-pembelian/laporan',
     PERMINTAAN_PEMBELIAN_LAPORAN_EXPORT:       (format: 'excel' | 'pdf') => `/api/proxy/permintaan-pembelian/laporan/export/${format}`,
 
@@ -175,10 +180,13 @@ export const API_ENDPOINTS = {
 
     // Permintaan Vendor
     PERMINTAAN_VENDOR:        '/api/proxy/permintaan-vendor',
+    PERMINTAAN_VENDOR_JUMLAH_AKTIF: '/api/proxy/permintaan-vendor/jumlah-aktif',
     PERMINTAAN_VENDOR_DETAIL: (id: string) => `/api/proxy/permintaan-vendor/${id}`,
     PERMINTAAN_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/permintaan-vendor/${id}/ajukan-approval`,
     PERMINTAAN_VENDOR_PROSES: (id: string) => `/api/proxy/permintaan-vendor/${id}/proses`,
     PERMINTAAN_VENDOR_BATAL:  (id: string) => `/api/proxy/permintaan-vendor/${id}/batal`,
+    PERMINTAAN_VENDOR_TOLAK:  (id: string) => `/api/proxy/permintaan-vendor/${id}/tolak`,
+    PERMINTAAN_VENDOR_REVISI: (id: string) => `/api/proxy/permintaan-vendor/${id}/revisi`,
     PENGADAAN_RINGKASAN:      '/api/proxy/pengadaan/ringkasan',
 
     // Kontrak Vendor
@@ -283,10 +291,6 @@ export const API_ENDPOINTS = {
     PENUGASAN_DETAIL: (id: string) => `/api/proxy/penugasan/${id}`,
     PENUGASAN_OPSI_ARMADA_VENDOR: '/api/proxy/penugasan/opsi-armada-vendor',
     PENUGASAN_HARIAN: '/api/proxy/penugasan/harian',
-    PROYEK_SINKRON_PENUGASAN_PRATINJAU: (idProyek: string) => `/api/proxy/proyek/${idProyek}/sinkron-penugasan/pratinjau`,
-    PROYEK_SINKRON_PENUGASAN:           (idProyek: string) => `/api/proxy/proyek/${idProyek}/sinkron-penugasan`,
-    PENUGASAN_TEMPLATE_UNIT: '/api/proxy/penugasan/template-unit',
-    PENUGASAN_PARSE_UNIT: '/api/proxy/penugasan/parse-unit',
     PENUGASAN_BOARD:  '/api/proxy/penugasan/board',
     PENUGASAN_BOARD_AKTIVITAS: '/api/proxy/penugasan/board/aktivitas',
 
@@ -305,6 +309,12 @@ export const API_ENDPOINTS = {
     TIPE_PEMBAYARAN:            '/api/proxy/tipe-pembayaran',
     TIPE_PEMBAYARAN_OPSI_AKTIF: '/api/proxy/tipe-pembayaran/opsi-aktif',
     TIPE_PEMBAYARAN_DETAIL:     (id: string) => `/api/proxy/tipe-pembayaran/${id}`,
+    JUDUL_PERMINTAAN:            '/api/proxy/judul-permintaan',
+    JUDUL_PERMINTAAN_OPSI_AKTIF: '/api/proxy/judul-permintaan/opsi-aktif',
+    JUDUL_PERMINTAAN_DETAIL:     (id: string) => `/api/proxy/judul-permintaan/${id}`,
+    TIPE_PERMINTAAN:            '/api/proxy/tipe-permintaan',
+    TIPE_PERMINTAAN_OPSI_AKTIF: '/api/proxy/tipe-permintaan/opsi-aktif',
+    TIPE_PERMINTAAN_DETAIL:     (id: string) => `/api/proxy/tipe-permintaan/${id}`,
 
     // Lokasi Kantor
     LOKASI_KANTOR:        '/api/proxy/lokasi-kantor',
@@ -345,6 +355,8 @@ export const API_ENDPOINTS = {
     PENAWARAN_STATUS: (id: string) => `/api/proxy/penawaran/${id}/status`,
     PENAWARAN_AJUKAN_APPROVAL: (id: string) => `/api/proxy/penawaran/${id}/ajukan-approval`,
     PENAWARAN_KIRIM_EMAIL: (id: string) => `/api/proxy/penawaran/${id}/kirim-email`,
+    PENAWARAN_LAMPIRAN: (id: string) => `/api/proxy/penawaran/${id}/lampiran`,
+    PENAWARAN_LAMPIRAN_DETAIL: (id: string, idLampiran: string) => `/api/proxy/penawaran/${id}/lampiran/${idLampiran}`,
 
     // Notifikasi
     NOTIFIKASI:       '/api/proxy/notifikasi',
@@ -438,6 +450,13 @@ export const API_ENDPOINTS = {
     ARUS_KAS_PENGAJUAN_MENUNGGU_SAYA: '/api/proxy/arus-kas/pengajuan/menunggu-approval-saya',
     ARUS_KAS_PENGAJUAN_RIWAYAT:  (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/riwayat`,
     ARUS_KAS_PENGAJUAN_RINCIAN_SUMBER: (id: string) => `/api/proxy/arus-kas/pengajuan/${id}/rincian-sumber`,
+
+    // Uang Jalan
+    UANG_JALAN:         '/api/proxy/uang-jalan',
+    UANG_JALAN_DETAIL:  (id: string) => `/api/proxy/uang-jalan/${id}`,
+    UANG_JALAN_RIWAYAT: (id: string) => `/api/proxy/uang-jalan/${id}/riwayat`,
+    UANG_JALAN_OPSI:        '/api/proxy/uang-jalan/opsi',
+    UANG_JALAN_OPSI_VENDOR: (idVendor: string) => `/api/proxy/uang-jalan/opsi/vendor/${idVendor}`,
 
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',

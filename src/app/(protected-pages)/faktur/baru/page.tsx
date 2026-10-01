@@ -316,7 +316,7 @@ export default function FakturBaruPage() {
                     </div>
 
                     <div className="flex justify-end gap-2 px-5 pb-5">
-                        <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={loading}>Simpan Invoice</Button>
                     </div>
                 </Card>

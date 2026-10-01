@@ -43,6 +43,14 @@ const MEKANISME_LABEL: Record<string, string> = {
 const unitPaketVendor = (u: BoardUnitRow | null) =>
     !!u && u.tipe === 'vendor' && !!u.mekanisme && u.mekanisme !== 'unit_only'
 
+const idSupirDefault = (u: BoardUnitRow | null) =>
+    (unitPaketVendor(u) ? u?.id_supir_vendor_default : u?.id_supir_default) ?? ''
+
+const supirBedaDefault = (u: BoardUnitRow | null, idSupir: string) => {
+    const idDefault = idSupirDefault(u)
+    return !!idDefault && !!idSupir && idSupir !== idDefault
+}
+
 const kontrakBelumDisetujui = (u: BoardUnitRow | null) =>
     !!u && u.tipe === 'vendor' && (u.status_kontrak === 'draft' || u.status_kontrak === 'menunggu_approval')
 
@@ -72,7 +80,7 @@ type TitikDropRow = { lokasi: string; uang_jalan_tambahan: string }
 const emptyTitikDrop = (): TitikDropRow[] => []
 const emptyTitikDropRow = (): TitikDropRow => ({ lokasi: '', uang_jalan_tambahan: '' })
 
-type HasilAssign = { sukses: number; gagal: AssignHarianGagal[]; peringatan: string[] }
+type HasilAssign = { sukses: number; gagal: AssignHarianGagal[] }
 
 export default function BoardUnit() {
     const [bulan, setBulan] = useState<Dayjs>(dayjs().startOf('month'))
@@ -190,7 +198,10 @@ export default function BoardUnit() {
 
     const supirDefaultOptions = useMemo<Option[]>(() => {
         const peta = new Map<string, string>()
-        units.forEach(u => { if (u.id_supir_default && u.nama_supir_default) peta.set(u.id_supir_default, u.nama_supir_default) })
+        units.forEach(u => {
+            const id = idSupirDefault(u)
+            if (id && u.nama_supir_default) peta.set(id, u.nama_supir_default)
+        })
         const daftar = [...peta.entries()]
             .map(([value, label]) => ({ value, label }))
             .sort((a, b) => a.label.localeCompare(b.label))
@@ -218,8 +229,8 @@ export default function BoardUnit() {
         }
         terurut = terurut.filter(u => {
             if (!filterSupirDefault) return true
-            if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !u.id_supir_default
-            return u.id_supir_default === filterSupirDefault
+            if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !idSupirDefault(u)
+            return idSupirDefault(u) === filterSupirDefault
         })
         return terurut.sort((a, b) => a.nopol.localeCompare(b.nopol))
     }, [units, filterUnit, filterSupirDefault])
@@ -265,7 +276,7 @@ export default function BoardUnit() {
         setAssignUnit(unit)
         setAssignTanggalMulai(tanggal)
         setAssignTanggalSampai(tanggal)
-        setAssignSupirId(unitPaketVendor(unit) ? (unit.id_supir_vendor_default ?? '') : (unit.id_supir_default ?? ''))
+        setAssignSupirId(idSupirDefault(unit))
         setSupirVendorOptions([])
         if (unitPaketVendor(unit) && unit.id_vendor) {
             supirVendorService.list(1, 500, unit.id_vendor)
@@ -297,8 +308,12 @@ export default function BoardUnit() {
             .catch(() => { if (assignRuteFetchRef.current === idProyekDiminta) setAssignRuteRows([]) })
     }, [assignDialogOpen, assignProyekId])
 
+    const wajibKeteranganAssign = supirBedaDefault(assignUnit, assignSupirId)
+    const wajibKeteranganAksi = supirBedaDefault(aksiUnit, aksiSupirId)
+
     const handleSubmitAssign = async () => {
         if (!assignUnit || !assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai) return
+        if (wajibKeteranganAssign && !assignKeterangan.trim()) return
         setAssignSubmitting(true)
         try {
             const pakaiRentang = !!assignTanggalSampai && assignTanggalSampai > assignTanggalMulai
@@ -319,14 +334,11 @@ export default function BoardUnit() {
             setAssignDialogOpen(false)
             fetchBoard()
             if (hasil.gagal.length > 0) {
-                setHasilAssign({ sukses: hasil.sukses, gagal: hasil.gagal, peringatan: hasil.peringatan })
+                setHasilAssign({ sukses: hasil.sukses, gagal: hasil.gagal })
             } else {
                 toast.push(<Notification type="success" title={
                     pakaiRentang ? `${hasil.sukses} hari berhasil dijadwalkan` : 'Penugasan berhasil dijadwalkan'
                 } />)
-                if (hasil.peringatan.length > 0) {
-                    toast.push(<Notification type="warning" title="Pengajuan uang jalan" duration={6000}>{hasil.peringatan.join('; ')}</Notification>)
-                }
             }
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -408,6 +420,7 @@ export default function BoardUnit() {
 
     const handleSubmitAksi = async () => {
         if (!aksiAssignment || !aksiSupirId || !aksiRuteId) return
+        if (wajibKeteranganAksi && !aksiKeterangan.trim()) return
         setAksiSaving(true)
         try {
             await penugasanHarianService.update(aksiAssignment.id_penugasan, {
@@ -607,7 +620,7 @@ export default function BoardUnit() {
                         Klik penugasan lain untuk menambah pilihan · Shift + klik untuk memilih satu rentang sekaligus
                     </span>
                     <div className="ml-auto flex items-center gap-2">
-                        <Button size="xs" variant="plain" onClick={() => { setTerpilih({}); pilihTerakhir.current = null }}>Batal</Button>
+                        <Button size="xs" variant="plain" onClick={() => { setTerpilih({}); pilihTerakhir.current = null }}>Kembali</Button>
                         <Button type="button" size="xs" variant="solid" icon={<HiOutlineTrash />}
                             customColorClass={() => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500'}
                             onClick={() => setHapusMassalOpen(true)}>
@@ -695,7 +708,7 @@ export default function BoardUnit() {
                                                         {u.nama_jenis ?? '—'}
                                                         {u.nama_vendor && <span className="ml-1 text-blue-500">· {u.nama_vendor}</span>}
                                                     </p>
-                                                    {u.nama_supir_default && (
+                                                    {idSupirDefault(u) && u.nama_supir_default && (
                                                         <p className="text-[11px] text-gray-400 truncate">Default: {u.nama_supir_default}</p>
                                                     )}
                                                 </div>
@@ -881,7 +894,7 @@ export default function BoardUnit() {
                                 setAssignUangJalan(row?.uang_jalan != null ? String(Math.round(row.uang_jalan)) : '')
                             }} />
                     </FormItem>
-                    <FormItem label="Uang Jalan" extra="Otomatis dari rate card rute — bisa diubah">
+                    <FormItem label="Estimasi Uang Jalan" extra="Otomatis dari rate card rute — bisa diubah. Pengajuan uang jalan dibuat lewat menu Uang Jalan">
                         <Input prefix="Rp" placeholder="0"
                             value={assignUangJalan ? formatNum(Number(assignUangJalan)) : ''}
                             onChange={e => setAssignUangJalan(e.target.value.replace(/\D/g, ''))} />
@@ -915,15 +928,22 @@ export default function BoardUnit() {
                             ))}
                         </div>
                     </div>
-                    <FormItem label="Keterangan (opsional)" className="mt-3">
-                        <Input textArea rows={2} maxLength={500} placeholder="Catatan tambahan untuk penugasan ini..."
+                    <FormItem label={wajibKeteranganAssign ? 'Keterangan' : 'Keterangan (opsional)'} asterisk={wajibKeteranganAssign} className="mt-3">
+                        <Input textArea rows={2} maxLength={500}
+                            placeholder={wajibKeteranganAssign ? 'Alasan supir diganti dari supir default...' : 'Catatan tambahan untuk penugasan ini...'}
                             value={assignKeterangan}
                             onChange={e => setAssignKeterangan(e.target.value)} />
+                        {wajibKeteranganAssign && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                Supir berbeda dari supir default unit{assignUnit?.nama_supir_default ? ` (${assignUnit.nama_supir_default})` : ''} — keterangan wajib diisi.
+                            </p>
+                        )}
                     </FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setAssignDialogOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setAssignDialogOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={assignSubmitting}
-                            disabled={!assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai || kontrakBelumDisetujui(assignUnit)}>
+                            disabled={!assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai || kontrakBelumDisetujui(assignUnit)
+                                || (wajibKeteranganAssign && !assignKeterangan.trim())}>
                             Simpan
                         </Button>
                     </div>
@@ -937,11 +957,6 @@ export default function BoardUnit() {
                         <p className="text-sm text-gray-500 mb-3">
                             {hasilAssign.sukses} tanggal berhasil, {hasilAssign.gagal.length} tanggal dilewati.
                         </p>
-                        {hasilAssign.peringatan.length > 0 && (
-                            <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs px-3 py-2 mb-3">
-                                {hasilAssign.peringatan.join('; ')}
-                            </div>
-                        )}
                         <div className="overflow-x-auto max-h-64 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg">
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0">
@@ -1009,7 +1024,7 @@ export default function BoardUnit() {
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{detailAssignment?.nama_rute ?? '—'}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Uang Jalan</p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Estimasi Uang Jalan</p>
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                             {detailAssignment?.estimasi_biaya != null ? formatRupiah(detailAssignment.estimasi_biaya) : <span className="text-gray-400">—</span>}
                         </p>
@@ -1178,7 +1193,7 @@ export default function BoardUnit() {
                                 if (row?.uang_jalan != null) setAksiUangJalan(String(Math.round(row.uang_jalan)))
                             }} />
                     </FormItem>
-                    <FormItem label="Uang Jalan">
+                    <FormItem label="Estimasi Uang Jalan">
                         <Input prefix="Rp" placeholder="0"
                             value={aksiUangJalan ? formatNum(Number(aksiUangJalan)) : ''}
                             onChange={e => setAksiUangJalan(e.target.value.replace(/\D/g, ''))} />
@@ -1212,18 +1227,25 @@ export default function BoardUnit() {
                             ))}
                         </div>
                     </div>
-                    <FormItem label="Keterangan (opsional)" className="mt-3">
-                        <Input textArea rows={2} maxLength={500} placeholder="Catatan tambahan untuk penugasan ini..."
+                    <FormItem label={wajibKeteranganAksi ? 'Keterangan' : 'Keterangan (opsional)'} asterisk={wajibKeteranganAksi} className="mt-3">
+                        <Input textArea rows={2} maxLength={500}
+                            placeholder={wajibKeteranganAksi ? 'Alasan supir diganti dari supir default...' : 'Catatan tambahan untuk penugasan ini...'}
                             value={aksiKeterangan}
                             onChange={e => setAksiKeterangan(e.target.value)} />
+                        {wajibKeteranganAksi && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                Supir berbeda dari supir default unit{aksiUnit?.nama_supir_default ? ` (${aksiUnit.nama_supir_default})` : ''} — keterangan wajib diisi.
+                            </p>
+                        )}
                     </FormItem>
                     <div className="flex flex-wrap justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={tutupAksi}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={tutupAksi}>Kembali</Button>
                         <Button type="button" variant="solid" className="bg-red-600 hover:bg-red-700"
                             onClick={() => aksiAssignment && setHapusTarget(aksiAssignment)}>
                             Hapus Penugasan
                         </Button>
-                        <Button type="submit" variant="solid" loading={aksiSaving} disabled={!aksiSupirId || !aksiRuteId}>
+                        <Button type="submit" variant="solid" loading={aksiSaving}
+                            disabled={!aksiSupirId || !aksiRuteId || (wajibKeteranganAksi && !aksiKeterangan.trim())}>
                             Simpan
                         </Button>
                     </div>
@@ -1239,7 +1261,7 @@ export default function BoardUnit() {
                 <p>
                     Hapus penugasan <strong>{hapusTarget?.nama_supir ?? '—'}</strong> tanggal{' '}
                     <strong>{hapusTarget ? dayjs(hapusTarget.tanggal).format('DD MMM YYYY') : ''}</strong>?
-                    Pengajuan uang jalan yang tersinkron ikut disesuaikan otomatis.
+                    {hapusTarget?.id_pengajuan && ' Pengajuan uang jalan yang tersinkron ikut disesuaikan otomatis.'}
                 </p>
             </ConfirmDialog>
 

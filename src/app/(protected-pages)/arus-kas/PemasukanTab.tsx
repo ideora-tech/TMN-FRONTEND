@@ -348,7 +348,7 @@ export default function PemasukanTab({ tambahTrigger = 0 }: { tambahTrigger?: nu
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeForm}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={closeForm}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting}
                             disabled={!form.kategori || !form.nominal || !form.tanggal || !form.sumber_dana.trim()}>
                             Simpan

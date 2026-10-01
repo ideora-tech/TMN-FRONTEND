@@ -188,7 +188,7 @@ export default function DaftarBarangTab() {
                         <FormItem label="Aktif"><Switcher checked={form.aktif} onChange={v => setForm(p => ({ ...p, aktif: v }))} /></FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setFormOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                     </div>
                 </form>
@@ -203,7 +203,7 @@ export default function DaftarBarangTab() {
                     <FormItem label="Pemakai / Divisi" asterisk><Input value={pakai.pemakai} onChange={e => setPakai(p => ({ ...p, pemakai: e.target.value }))} /></FormItem>
                     <FormItem label="Keterangan"><Input textArea rows={2} value={pakai.keterangan} onChange={e => setPakai(p => ({ ...p, keterangan: e.target.value }))} /></FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setPakaiTarget(null)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setPakaiTarget(null)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving} disabled={!pakai.qty || !pakai.pemakai.trim() || !pakai.tanggal}>Simpan</Button>
                     </div>
                 </form>
@@ -216,7 +216,7 @@ export default function DaftarBarangTab() {
                     <FormItem label="Stok Baru (hasil opname)" asterisk><Input type="number" min={0} value={sesuai.stok_baru} onChange={e => setSesuai(p => ({ ...p, stok_baru: e.target.value }))} /></FormItem>
                     <FormItem label="Keterangan" asterisk><Input textArea rows={2} value={sesuai.keterangan} onChange={e => setSesuai(p => ({ ...p, keterangan: e.target.value }))} /></FormItem>
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setSesuaiTarget(null)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setSesuaiTarget(null)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving} disabled={sesuai.stok_baru === '' || !sesuai.keterangan.trim()}>Simpan</Button>
                     </div>
                 </form>

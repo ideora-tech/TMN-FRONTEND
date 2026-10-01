@@ -183,6 +183,10 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     }, [data?.id_vendor, id])
 
     const handleSave = async () => {
+        if (form.satuan === 'per trip' && !(Number(form.rate_str) > 0)) {
+            setErrorRate('Rate wajib diisi untuk satuan Per Trip')
+            return
+        }
         if (form.rate_str && form.nilai_kontrak_str && Number(form.rate_str) > Number(form.nilai_kontrak_str)) {
             setErrorRate('Rate tidak boleh lebih besar dari nilai kontrak')
             return
@@ -690,17 +694,18 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.nilai_kontrak_str ? formatNum(Number(form.nilai_kontrak_str)) : ''}
                                     onChange={e => setForm(p => ({ ...p, nilai_kontrak_str: e.target.value.replace(/\D/g, '') }))} />
                             </FormItem>
-                            <FormItem label="Rate" invalid={!!errorRate} errorMessage={errorRate}>
+                            <FormItem label="Rate" asterisk={form.satuan === 'per trip'} invalid={!!errorRate} errorMessage={errorRate}>
                                 <Input prefix="Rp" placeholder="0"
                                     value={form.rate_str ? formatNum(Number(form.rate_str)) : ''}
                                     onChange={e => { setErrorRate(''); setForm(p => ({ ...p, rate_str: e.target.value.replace(/\D/g, '') })) }} />
                                 {estimasiRate && <p className="text-xs text-gray-400 mt-1">{estimasiRate}</p>}
+                                {!estimasiRate && form.satuan !== 'per trip' && <p className="text-xs text-gray-400 mt-1">Opsional — wajib hanya untuk satuan Per Trip</p>}
                             </FormItem>
                             <FormItem label="Satuan Kontrak">
                                 <Select isSearchable={false} isClearable placeholder="Pilih satuan..."
                                     options={SATUAN_OPTIONS}
                                     value={SATUAN_OPTIONS.find(o => o.value === form.satuan) ?? null}
-                                    onChange={opt => setForm(p => ({ ...p, satuan: opt?.value ?? null }))} />
+                                    onChange={opt => { setErrorRate(''); setForm(p => ({ ...p, satuan: opt?.value ?? null })) }} />
                             </FormItem>
                             <FormItem label="Pajak">
                                 <Input suffix="%" placeholder="0"
@@ -756,7 +761,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 setEditing(false)
                                 setErrorRate('')
                                 setForm(toFormState(data))
-                            }}>Batal</Button>
+                            }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>
@@ -764,7 +769,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 )}
                 {!editing && (
                     <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                        <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                     </div>
                 )}
             </Card>
@@ -958,7 +963,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                             onClick={simpanTambahUnit}>
                                                             Simpan
                                                         </Button>
-                                                        <Button type="button" size="xs" variant="plain" onClick={tutupDialogTambah}>Batal</Button>
+                                                        <Button type="button" size="xs" variant="plain" onClick={tutupDialogTambah}>Kembali</Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1062,7 +1067,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                             onClick={() => simpanDraftUnit(i)}>
                                                             Simpan
                                                         </Button>
-                                                        <Button type="button" size="xs" variant="plain" onClick={() => hapusDraftUnit(i)}>Batal</Button>
+                                                        <Button type="button" size="xs" variant="plain" onClick={() => hapusDraftUnit(i)}>Kembali</Button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1118,7 +1123,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                         </FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
-                        <Button type="button" variant="plain" onClick={tutupDialogTambah}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={tutupDialogTambah}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={menyimpanTambah}>Simpan</Button>
                     </div>
                 </form>

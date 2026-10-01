@@ -226,7 +226,7 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setOpen(false)}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => setOpen(false)}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={saving}
                         disabled={!form.jenis_dokumen || (!edit && !file)}>
                         Simpan

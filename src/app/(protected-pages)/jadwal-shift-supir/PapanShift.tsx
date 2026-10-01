@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Button, FormItem, toast, Notification, Spinner, Dialog, Input, DatePicker, Tooltip, Dropdown, Tag } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlinePlus, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineSearch, HiOutlineX, HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -60,6 +60,7 @@ export default function PapanShift({
 
     const [jadwalList, setJadwalList]   = useState<JadwalShift[]>([])
     const [shiftList, setShiftList]     = useState<Shift[]>([])
+    const [cariSupirInput, setCariSupirInput] = useState('')
     const [cariSupir, setCariSupir]     = useState('')
 
     // Dialog assign (sel kosong) / ganti shift (ikon pensil) — supir & tanggal ikut sel yang diklik
@@ -101,12 +102,15 @@ export default function PapanShift({
     const fetchShiftList = useCallback(() => {
         shiftService.list(1, 100)
             .then(res => setShiftList(res.data.filter((s: Shift) => s.aktif)))
-            .catch(() => {})
+            .catch(err => toast.push(<Notification type="danger" title={`Gagal memuat data shift: ${parseApiError(err)}`} />))
     }, [])
 
     useEffect(() => { fetchShiftList() }, [fetchShiftList])
 
-    useEffect(() => { setCariSupir('') }, [idProyek])
+    useEffect(() => { setCariSupirInput(''); setCariSupir('') }, [idProyek])
+
+    const handleCariSupirSubmit = () => setCariSupir(cariSupirInput.trim())
+    const handleCariSupirClear  = () => { setCariSupirInput(''); setCariSupir('') }
 
     const fetchBoard = useCallback(async () => {
         if (!idProyek) return
@@ -127,7 +131,9 @@ export default function PapanShift({
     useEffect(() => { fetchBoard() }, [fetchBoard])
 
     useEffect(() => {
-        supirService.list(1, 100).then(res => setDaftarSupirAktif(res.data.filter((s: Supir) => s.status === 'aktif'))).catch(() => {})
+        supirService.list(1, 100)
+            .then(res => setDaftarSupirAktif(res.data.filter((s: Supir) => s.status === 'aktif')))
+            .catch(err => toast.push(<Notification type="danger" title={`Gagal memuat data supir: ${parseApiError(err)}`} />))
     }, [])
 
     const memuat = loadingJadwal || loadingSupir
@@ -668,7 +674,7 @@ export default function PapanShift({
                     <span className="text-sm font-semibold">{selList.length} sel terpilih</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{selKosong.length} kosong · {selTerisi.length} terisi</span>
                     <div className="ml-auto flex items-center gap-2">
-                        <Button size="xs" variant="plain" onClick={() => setSelCells({})}>Batal</Button>
+                        <Button size="xs" variant="plain" onClick={() => setSelCells({})}>Kembali</Button>
                         {selTerisi.length > 0 && (
                             <>
                                 <Button size="xs" variant="solid" className="bg-red-600 hover:bg-red-700"
@@ -701,10 +707,13 @@ export default function PapanShift({
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="sticky left-0 z-20 bg-blue-50 dark:bg-gray-800 text-left px-3 py-2 min-w-[280px] border-b border-r border-gray-200 dark:border-gray-600">
-                                    <Input size="sm" placeholder="Cari nama supir..."
-                                        prefix={<HiOutlineSearch className="text-gray-400" />}
-                                        value={cariSupir}
-                                        onChange={e => setCariSupir(e.target.value)} />
+                                    <Input size="sm" placeholder="Cari nama supir... (tekan Enter)"
+                                        suffix={cariSupirInput
+                                            ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSupirClear} />
+                                            : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleCariSupirSubmit} />}
+                                        value={cariSupirInput}
+                                        onChange={e => setCariSupirInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCariSupirSubmit() } }} />
                                 </th>
                                 {tanggalList.map(t => {
                                     const isToday = t.format('YYYY-MM-DD') === hariIni
@@ -937,7 +946,7 @@ export default function PapanShift({
                         </>
                     )}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}
                             disabled={!pilihShift || (!editJadwal && !bulkMode && !tanggalMulai)}>
                             Simpan

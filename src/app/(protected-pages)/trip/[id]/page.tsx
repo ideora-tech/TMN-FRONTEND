@@ -316,7 +316,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                             </Tag>
                         )}
                         <Button size="sm" variant="default" onClick={() => router.push(ROUTES.TRIP)}>
-                            Batal
+                            Kembali
                         </Button>
                     </div>
                 </div>
@@ -623,7 +623,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 )}
 
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
 
@@ -658,7 +658,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={closeTitikDropDialog}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={closeTitikDropDialog}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={savingTitikDrop}>Simpan</Button>
                     </div>
                 </form>

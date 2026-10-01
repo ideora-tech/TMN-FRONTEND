@@ -21,7 +21,7 @@ export default function PermintaanBaruPage() {
         try {
             const hasil = await permintaanPembelianService.create(payload, bukti)
             toast.push(<Notification type="success" title={`PR ${hasil.nomor_permintaan} berhasil diajukan`} />)
-            router.push(`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${hasil.id_permintaan}`)
+            router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(hasil.id_permintaan))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
             throw err

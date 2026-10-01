@@ -269,7 +269,7 @@ export default function PayrollPage() {
                         </p>
                     )}
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => setBuatOpen(false)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => setBuatOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Buat</Button>
                     </div>
                 </form>

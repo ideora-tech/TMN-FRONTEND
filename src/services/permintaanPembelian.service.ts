@@ -77,6 +77,7 @@ export interface PermintaanPembelian {
     nomor_permintaan: string
     tipe: TipePermintaan
     judul: string
+    id_judul_permintaan?: string | null
     alasan: string
     status: StatusPermintaan
     id_pengaju: string
@@ -91,10 +92,16 @@ export interface PermintaanPembelian {
     tanggal_permintaan: string
     tanggal_dibutuhkan: string | null
     tanggal_pembelian: string | null
+    nomor_po: string | null
     tanggal_diterima: string | null
     keterangan_penerimaan: string | null
     tanggal_pembayaran: string | null
     total_estimasi: number
+    subtotal_aktual: number | null
+    diskon: number
+    ppn_persen: number
+    ppn: number
+    ongkir: number
     total_aktual: number | null
     alasan_ditolak: string | null
     alasan_batal: string | null
@@ -186,14 +193,25 @@ export type ItemPayload = {
 }
 
 export type PermintaanPayload = {
-    tipe: TipePermintaan
-    judul: string
+    id_judul_permintaan?: string | null
+    tipe?: TipePermintaan
+    judul?: string
     alasan: string
     id_departemen?: string | null
     id_perawatan?: string | null
     tanggal_permintaan: string
     tanggal_dibutuhkan?: string | null
     items: ItemPayload[]
+}
+
+export type DibeliPayload = {
+    id_supplier: string
+    tanggal_pembelian: string
+    items: { id_item: string; harga_aktual: number; id_barang?: string | null }[]
+    diskon?: number
+    ppn_persen?: number
+    ongkir?: number
+    termin?: TerminPayload[]
 }
 
 type ListMeta = { page: number; total: number; totalPages: number; limit: number; ringkasan: Partial<Record<StatusPermintaan, number>> }
@@ -227,8 +245,9 @@ export const permintaanPembelianService = {
     },
     async create(payload: PermintaanPayload, bukti: File[]) {
         const form = new FormData()
-        form.append('tipe', payload.tipe)
-        form.append('judul', payload.judul)
+        if (payload.id_judul_permintaan) form.append('id_judul_permintaan', payload.id_judul_permintaan)
+        if (payload.tipe) form.append('tipe', payload.tipe)
+        if (payload.judul) form.append('judul', payload.judul)
         form.append('alasan', payload.alasan)
         if (payload.id_departemen) form.append('id_departemen', payload.id_departemen)
         if (payload.id_perawatan) form.append('id_perawatan', payload.id_perawatan)
@@ -250,9 +269,13 @@ export const permintaanPembelianService = {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PROSES(id))
         return data.data as PermintaanPembelian
     },
-    async dibeli(id: string, payload: { id_supplier: string; tanggal_pembelian: string; items: { id_item: string; harga_aktual: number; id_barang?: string | null }[]; termin?: TerminPayload[] }) {
+    async dibeli(id: string, payload: DibeliPayload) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_DIBELI(id), payload)
         return data.data as PermintaanPembelian
+    },
+    async cetakPo(id: string) {
+        const res = await axios.get(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PO_PDF(id), { responseType: 'blob' })
+        return res.data as Blob
     },
     async terima(id: string, payload: { tanggal_diterima: string; keterangan?: string; items: { id_item: string; qty_diterima: number }[] }) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_TERIMA(id), payload)

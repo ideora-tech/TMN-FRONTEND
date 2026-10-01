@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { dokumenArmadaService } from '@/services/dokumenArmada.service'
+import { permintaanVendorService } from '@/services/permintaan-vendor.service'
 import type { NavigationTree } from '@/@types/navigation'
 
 export type BadgeMenu = Record<string, { jumlah: number; keterangan: string }>
@@ -22,21 +23,36 @@ export function keteranganBadge(nav: NavigationTree, badge: BadgeMenu): string {
     return badge[nav.path]?.jumlah ? badge[nav.path].keterangan : ''
 }
 
+const SUMBER_BADGE: Record<string, () => Promise<{ jumlah: number; keterangan: string }>> = {
+    '/dokumen-armada': () => dokumenArmadaService.jumlahSegeraHabis().then(res => ({
+        jumlah: res.jumlah,
+        keterangan: [
+            res.habis > 0 ? `${res.habis} dokumen armada sudah habis masa berlaku` : '',
+            res.segera > 0 ? `${res.segera} dokumen armada habis dalam ${res.hari} hari` : '',
+        ].filter(Boolean).join(' · '),
+    })),
+    '/permintaan-vendor': () => permintaanVendorService.jumlahAktif().then(res => ({
+        jumlah: res.jumlah,
+        keterangan: [
+            res.disetujui > 0 ? `${res.disetujui} permintaan vendor dari Sales menunggu diproses` : '',
+            res.diproses > 0 ? `${res.diproses} permintaan vendor sedang dicarikan unit` : '',
+        ].filter(Boolean).join(' · '),
+    })),
+}
+
 export default function useBadgeMenu(routeKey: string): BadgeMenu {
     const [badge, setBadge] = useState<BadgeMenu>({})
 
     const muat = useCallback(() => {
-        dokumenArmadaService.jumlahSegeraHabis()
-            .then(res => setBadge({
-                '/dokumen-armada': {
-                    jumlah: res.jumlah,
-                    keterangan: [
-                        res.habis > 0 ? `${res.habis} dokumen armada sudah habis masa berlaku` : '',
-                        res.segera > 0 ? `${res.segera} dokumen armada habis dalam ${res.hari} hari` : '',
-                    ].filter(Boolean).join(' · '),
-                },
-            }))
-            .catch(() => setBadge({}))
+        Object.entries(SUMBER_BADGE).forEach(([path, ambil]) => {
+            ambil()
+                .then(isi => setBadge(sebelum => ({ ...sebelum, [path]: isi })))
+                .catch(() => setBadge(sebelum => {
+                    const sisa = { ...sebelum }
+                    delete sisa[path]
+                    return sisa
+                }))
+        })
     }, [])
 
     useEffect(() => { muat() }, [muat, routeKey])

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { TipeHarga } from '@/constants/tipeHarga.constant'
+import { ParameterPenawaranTerisi } from '@/constants/parameterPenawaran.constant'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
 import { Penawaran } from '@/services/penawaran.service'
 import { Faktur } from '@/services/faktur.service'
@@ -31,6 +32,7 @@ export interface Project {
     harga_penawaran?: number | null
     harga_proyek?: number | null
     realisasi?: RealisasiProyek | null
+    parameter_penawaran?: ParameterPenawaranTerisi[] | null
     approval_aktif?: boolean | null
     dibuat_pada?: string | null
 }

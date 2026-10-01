@@ -185,7 +185,7 @@ export default function ParameterBokDetailPage({ params }: { params: Promise<{ i
                         </FormItem>
                     </div>
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PARAMETER_BOK)}>Batal</Button>
+                        <Button type="button" variant="plain" onClick={() => router.push(ROUTES.PARAMETER_BOK)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={saving}>Simpan Parameter</Button>
                     </div>
                 </form>

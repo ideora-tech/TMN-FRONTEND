@@ -1,4 +1,5 @@
-import type { StatusPermintaan, JenisItem, TahapBukti, TipePermintaan } from '@/services/permintaanPembelian.service'
+import type { StatusPermintaan, JenisItem, TahapBukti, TipePermintaan, PermintaanPembelian } from '@/services/permintaanPembelian.service'
+import { formatRupiah } from '@/utils/formatNumber'
 
 export const STATUS_LABEL: Record<StatusPermintaan, string> = {
     diajukan:          'Diajukan',
@@ -39,3 +40,18 @@ export const TIPE_TAG: Record<TipePermintaan, string> = {
 export const TAHAP_LABEL: Record<TahapBukti, string> = { pengajuan: 'Lampiran Pengajuan', pembelian: 'Nota / PO Supplier', penerimaan: 'Bukti Penerimaan' }
 
 export const bolehDiubah = (status: StatusPermintaan) => ['menunggu_approval', 'disetujui', 'ditolak'].includes(status)
+
+export const adaKomponenBiaya = (d: PermintaanPembelian) => d.diskon > 0 || d.ppn_persen > 0 || d.ppn > 0 || d.ongkir > 0
+
+export const rincianBiaya = (d: PermintaanPembelian) => {
+    const subtotal = d.subtotal_aktual ?? (d.items ?? []).reduce((s, i) => s + (i.subtotal_aktual ?? i.subtotal_estimasi), 0)
+    return {
+        baris: [
+            { label: 'Subtotal', nilai: formatRupiah(subtotal) },
+            { label: 'Diskon', nilai: d.diskon > 0 ? `- ${formatRupiah(d.diskon)}` : formatRupiah(0) },
+            { label: d.ppn_persen > 0 ? `PPN (${d.ppn_persen}%)` : 'PPN', nilai: formatRupiah(d.ppn) },
+            { label: 'Ongkos Kirim', nilai: formatRupiah(d.ongkir) },
+        ],
+        total: d.total_aktual ?? subtotal - d.diskon + d.ppn + d.ongkir,
+    }
+}

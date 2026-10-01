@@ -9,7 +9,7 @@ import dayjs from 'dayjs'
 import { HiArrowLeft, HiPlusCircle, HiOutlineTrash, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
-import { formatNum } from '@/utils/formatNumber'
+import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { kontrakVendorService, KontrakVendor, KontrakUnitInput, KontrakSupirInput, BarisGagal } from '@/services/kontrak-vendor.service'
@@ -240,6 +240,8 @@ export default function KontrakVendorBaruPage() {
         setHapusSemuaTarget(null)
     }
 
+    const rateWajib = form.satuan === 'per trip'
+
     const estimasiRate = (() => {
         const rate = Number(form.rate)
         if (!form.rate || !rate) return null
@@ -253,8 +255,8 @@ export default function KontrakVendorBaruPage() {
         if (!form.id_vendor) e.id_vendor = 'Vendor wajib dipilih'
         if (!form.nomor_kontrak.trim()) e.nomor_kontrak = 'No. kontrak wajib diisi'
         if (!form.nilai_kontrak) e.nilai_kontrak = 'Nilai kontrak wajib diisi'
-        if (!form.rate) e.rate = 'Rate wajib diisi'
-        else if (form.nilai_kontrak && Number(form.rate) > Number(form.nilai_kontrak)) e.rate = 'Rate tidak boleh lebih besar dari nilai kontrak'
+        if (rateWajib && !(Number(form.rate) > 0)) e.rate = 'Rate wajib diisi untuk satuan Per Trip'
+        else if (form.rate && form.nilai_kontrak && Number(form.rate) > Number(form.nilai_kontrak)) e.rate = 'Rate tidak boleh lebih besar dari nilai kontrak'
         if (!form.satuan) e.satuan = 'Satuan kontrak wajib dipilih'
         if (!form.tanggal_mulai) e.tanggal_mulai = 'Tanggal mulai wajib diisi'
         if (!form.tanggal_selesai) e.tanggal_selesai = 'Tanggal selesai wajib diisi'
@@ -359,13 +361,23 @@ export default function KontrakVendorBaruPage() {
             {permintaanAsal && (
                 <Card className="border border-teal-200 bg-teal-50 dark:border-teal-500/30 dark:bg-teal-500/10">
                     <p className="text-sm font-semibold text-teal-700 dark:text-teal-400">
-                        Dari Permintaan {permintaanAsal.nomor_permintaan}
+                        Dari Permintaan{' '}
+                        <a href={ROUTES.PERMINTAAN_VENDOR_DETAIL(permintaanAsal.id_permintaan)} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 underline hover:text-blue-700">
+                            {permintaanAsal.nomor_permintaan}
+                        </a>
+                        <span className="font-normal text-xs text-teal-600 dark:text-teal-300"> (buka detail permintaan dari Sales di tab baru)</span>
                     </p>
                     <p className="text-sm text-teal-700 dark:text-teal-400 mt-1">
                         {ringkasanJenisDiminta(permintaanAsal)} · {MEKANISME_LABEL[permintaanAsal.mekanisme] ?? permintaanAsal.mekanisme}
                         {permintaanAsal.nama_proyek ? ` · Proyek ${permintaanAsal.nama_proyek}` : ''}
                         — mekanisme & periode sudah terisi otomatis, kontrak akan tertaut ke permintaan ini.
                     </p>
+                    {permintaanAsal.harga_penawaran != null && (
+                        <p className="text-sm text-teal-700 dark:text-teal-400 mt-1">
+                            Harga penawaran dari Sales: <span className="font-semibold">{formatRupiah(permintaanAsal.harga_penawaran)}</span>
+                        </p>
+                    )}
                     {permintaanAsal.catatan && (
                         <p className="text-xs text-teal-600 dark:text-teal-300 mt-1 whitespace-pre-line">Catatan permintaan: {permintaanAsal.catatan}</p>
                     )}
@@ -406,17 +418,21 @@ export default function KontrakVendorBaruPage() {
                             value={form.nilai_kontrak ? formatNum(Number(form.nilai_kontrak)) : ''}
                             onChange={e => setForm(p => ({ ...p, nilai_kontrak: e.target.value.replace(/\D/g, '') }))} />
                     </FormItem>
-                    <FormItem label="Rate" asterisk invalid={!!errors.rate} errorMessage={errors.rate}>
+                    <FormItem label="Rate" asterisk={rateWajib} invalid={!!errors.rate} errorMessage={errors.rate}>
                         <Input prefix="Rp" placeholder="0"
                             value={form.rate ? formatNum(Number(form.rate)) : ''}
                             onChange={e => setForm(p => ({ ...p, rate: e.target.value.replace(/\D/g, '') }))} />
                         {estimasiRate && <p className="text-xs text-gray-400 mt-1">{estimasiRate}</p>}
+                        {!estimasiRate && !rateWajib && <p className="text-xs text-gray-400 mt-1">Opsional — wajib hanya untuk satuan Per Trip</p>}
                     </FormItem>
                     <FormItem label="Satuan Kontrak" asterisk invalid={!!errors.satuan} errorMessage={errors.satuan}>
                         <Select isSearchable={false} isClearable placeholder="Pilih satuan..."
                             options={SATUAN_OPTIONS}
                             value={SATUAN_OPTIONS.find(o => o.value === form.satuan) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, satuan: opt?.value ?? '' }))} />
+                            onChange={opt => {
+                                setForm(p => ({ ...p, satuan: opt?.value ?? '' }))
+                                setErrors(p => ({ ...p, rate: '' }))
+                            }} />
                     </FormItem>
                     <FormItem label="Tanggal Mulai" asterisk invalid={!!errors.tanggal_mulai} errorMessage={errors.tanggal_mulai}>
                         <DatePicker inputFormat="DD/MM/YYYY"
@@ -704,7 +720,7 @@ export default function KontrakVendorBaruPage() {
                 )}
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => router.back()}>Batal</Button>
+                    <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>
                     <Button type="submit" variant="solid" loading={loading}>Simpan</Button>
                 </div>
                 </form>

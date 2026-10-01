@@ -31,6 +31,15 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             </a>
         )
     }
+    if (p.id_uang_jalan) {
+        return (
+            <a href={ROUTES.UANG_JALAN_DETAIL(p.id_uang_jalan)} target="_blank" rel="noreferrer" className="w-fit">
+                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 cursor-pointer hover:opacity-80">
+                    Dari Uang Jalan <HiOutlineExternalLink className="text-xs" />
+                </Tag>
+            </a>
+        )
+    }
     if (p.id_trip) {
         return (
             <a href={ROUTES.TRIP_DETAIL(p.id_trip)} target="_blank" rel="noreferrer" className="w-fit">
@@ -53,7 +62,7 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
     }
     if (p.id_permintaan_pembelian) {
         return (
-            <a href={`${ROUTES.PERMINTAAN_PEMBELIAN}?detail=${p.id_permintaan_pembelian}`} target="_blank" rel="noreferrer" className="w-fit">
+            <a href={ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(p.id_permintaan_pembelian)} target="_blank" rel="noreferrer" className="w-fit">
                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-300 cursor-pointer hover:opacity-80">
                     Dari PR <HiOutlineExternalLink className="text-xs" />
                 </Tag>
@@ -227,7 +236,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.periode_dari || p.id_supir) && (
+                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.periode_dari || p.id_supir) && (
                         <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 

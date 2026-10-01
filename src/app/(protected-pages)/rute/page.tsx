@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
-import { HiOutlineSearch, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { ROUTES } from '@/constants/route.constant'
 import { parseApiError } from '@/utils/error.util'
@@ -22,6 +22,7 @@ export default function RutePage() {
     const router = useRouter()
     const [data, setData]               = useState<Rute[]>([])
     const [loading, setLoading]         = useState(true)
+    const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
     const [aktif, setAktif]             = useState<'' | '1' | '0'>('')
     const [currentPage, setCurrentPage] = useState(1)
@@ -43,6 +44,9 @@ export default function RutePage() {
     }, [currentPage, search, aktif])
 
     useEffect(() => { load() }, [load])
+
+    const handleSearchSubmit = () => { setSearch(searchInput.trim()); setCurrentPage(1) }
+    const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
 
     const handleDelete = async () => {
         if (!deleteId) return
@@ -157,10 +161,13 @@ export default function RutePage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex-1">
                         <Input
-                            placeholder="Cari nama rute, kode, asal, atau tujuan..."
-                            suffix={<HiOutlineSearch className="text-gray-400" />}
-                            value={search}
-                            onChange={e => { setSearch(e.target.value); setCurrentPage(1) }}
+                            placeholder="Cari nama rute, kode, asal, atau tujuan... (tekan Enter)"
+                            suffix={searchInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSearchSubmit() }}
                         />
                     </div>
                     <div className="w-full sm:w-44">

@@ -19,6 +19,17 @@ export interface FotoLaporan {
     keterangan: string | null
 }
 
+export interface SuratJalan {
+    id_surat_jalan: string
+    id_titik_drop: string | null
+    urutan_drop: number | null
+    lokasi_drop: string | null
+    urutan: number
+    no_surat_jalan: string
+}
+
+export type SuratJalanInput = { no_surat_jalan: string; id_titik_drop: string | null }
+
 export interface LaporanPerjalanan {
     id_laporan: string
     id_trip: string
@@ -33,6 +44,7 @@ export interface LaporanPerjalanan {
     biaya_lain: BiayaLain[]
     biaya_tagihan: BiayaTagihan[]
     foto: FotoLaporan[]
+    surat_jalan?: SuratJalan[]
 }
 
 export type LaporanPerjalananPayload = {
@@ -46,6 +58,7 @@ export type LaporanPerjalananPayload = {
     jumlah_liter?: number | null
     biaya_lain: { nama_biaya: string; nominal: number }[]
     biaya_tagihan?: { nama_biaya: string; nominal: number }[]
+    surat_jalan?: SuratJalanInput[]
 }
 
 function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[], fotoKeterangan?: (string | null)[]): FormData {
@@ -65,6 +78,11 @@ function buildLaporanFormData(payload: LaporanPerjalananPayload, files: File[], 
     payload.biaya_tagihan?.forEach((b, i) => {
         fd.append(`biaya_tagihan[${i}][nama_biaya]`, b.nama_biaya)
         fd.append(`biaya_tagihan[${i}][nominal]`, String(b.nominal))
+    })
+    if (payload.surat_jalan?.length === 0) fd.append('no_surat_jalan', '')
+    payload.surat_jalan?.forEach((s, i) => {
+        fd.append(`surat_jalan[${i}][no_surat_jalan]`, s.no_surat_jalan)
+        if (s.id_titik_drop) fd.append(`surat_jalan[${i}][id_titik_drop]`, s.id_titik_drop)
     })
     files.forEach((file, i) => {
         fd.append('foto[]', file)
