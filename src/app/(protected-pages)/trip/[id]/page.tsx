@@ -5,6 +5,7 @@ import { Card, Button, Checkbox, Dialog, Input, Tag, toast, Notification } from 
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import PanelAlurStatus, { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
+import { ParameterTagihanCard } from '@/components/shared/ParameterTagihanTrip'
 import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash, HiOutlineBan, HiOutlinePlay, HiOutlineCheckCircle } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -441,6 +442,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <Card id="laporan-perjalanan-card">
                 <LaporanPerjalananPanel idTrip={id} onSaved={fetchRekap} />
             </Card>
+
+                <ParameterTagihanCard idTrip={id} statusTrip={trip.status} />
 
                 <Card>
                     <div className="flex justify-between items-center mb-4">

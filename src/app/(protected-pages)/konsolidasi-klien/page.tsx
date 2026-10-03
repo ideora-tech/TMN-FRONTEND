@@ -8,7 +8,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDocumentDownload, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineDocumentDownload, HiOutlinePencilAlt, HiPlusCircle } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -17,6 +17,7 @@ import { konsolidasiKlienService, KonsolidasiKlienRekap, KonsolidasiKlienTrip, S
 import { projectService, Project } from '@/services/project.service'
 import { penagihanTripService } from '@/services/penagihanTrip.service'
 import { TIPE_HARGA_LABEL } from '@/constants/tipeHarga.constant'
+import { ParameterTagihanDialog, ringkasKomponen } from '@/components/shared/ParameterTagihanTrip'
 
 const SUMBER_OPTIONS = [
     { value: '',         label: 'Semua Sumber' },
@@ -49,6 +50,7 @@ export default function KonsolidasiKlienPage() {
     const [jatuhTempo, setJatuhTempo]       = useState('')
     const [keteranganInvoice, setKeteranganInvoice] = useState('')
     const [submitting, setSubmitting]       = useState(false)
+    const [tripParameter, setTripParameter] = useState<KonsolidasiKlienTrip | null>(null)
 
     const [rekap, setRekap]     = useState<KonsolidasiKlienRekap | null>(null)
     const [loading, setLoading] = useState(false)
@@ -113,7 +115,7 @@ export default function KonsolidasiKlienPage() {
     }, [selectedKlien])
 
     const reqRef = useRef(0)
-    const fetchRekap = useCallback(async () => {
+    const fetchRekap = useCallback(async (pertahankanHalaman = false) => {
         if (!selectedKlien) { setRekap(null); return }
         const reqId = ++reqRef.current
         setLoading(true)
@@ -121,8 +123,8 @@ export default function KonsolidasiKlienPage() {
             const data = await konsolidasiKlienService.rekap(selectedKlien, dari, sampai, sumber, proyekFilter)
             if (reqRef.current !== reqId) return
             setRekap(data)
-            setCurrentPage(1)
-            setSelectedIds(prev => prev.filter(id => data.trips.some(t => t.id_trip === id && !t.sudah_difakturkan && t.tarif !== null)))
+            if (!pertahankanHalaman) setCurrentPage(1)
+            setSelectedIds(prev => prev.filter(id => data.trips.some(t => t.id_trip === id && !t.sudah_difakturkan && t.bisa_ditagih)))
         } catch (err) {
             if (reqRef.current !== reqId) return
             setRekap(null)
@@ -152,12 +154,12 @@ export default function KonsolidasiKlienPage() {
 
     const trips = useMemo(() => rekap?.trips ?? [], [rekap])
     const bisaDipilih = useMemo(
-        () => (proyekFilter ? trips.filter(t => !t.sudah_difakturkan && t.tarif !== null && !t.borongan) : []),
+        () => (proyekFilter ? trips.filter(t => !t.sudah_difakturkan && t.bisa_ditagih && !t.borongan) : []),
         [trips, proyekFilter],
     )
     const semuaTerpilih = bisaDipilih.length > 0 && selectedIds.length === bisaDipilih.length
     const totalEstimasi = useMemo(
-        () => trips.filter(t => selectedIds.includes(t.id_trip)).reduce((acc, t) => acc + (t.tarif?.harga ?? 0) + (t.biaya_tambahan ?? 0), 0),
+        () => trips.filter(t => selectedIds.includes(t.id_trip)).reduce((acc, t) => acc + (t.total_tagihan ?? 0), 0),
         [trips, selectedIds],
     )
     const toggleSemua = () => setSelectedIds(semuaTerpilih ? [] : bisaDipilih.map(t => t.id_trip))
@@ -195,7 +197,7 @@ export default function KonsolidasiKlienPage() {
                 <Checkbox
                     checked={selectedIds.includes(row.original.id_trip)}
                     onChange={() => toggleSatu(row.original.id_trip)}
-                    disabled={row.original.sudah_difakturkan || row.original.tarif === null || row.original.borongan}
+                    disabled={row.original.sudah_difakturkan || !row.original.bisa_ditagih || row.original.borongan}
                 />
             ),
         }] : []),
@@ -268,7 +270,14 @@ export default function KonsolidasiKlienPage() {
             header: 'Tarif', id: 'tarif', size: 130,
             cell: ({ row }) => (
                 <span className="whitespace-nowrap inline-flex items-center gap-1.5">
-                    {row.original.tarif
+                    {row.original.parameter?.cancellation
+                        ? (
+                            <>
+                                {row.original.tarif && <span className="line-through text-gray-400">{formatRupiah(row.original.tarif.harga)}</span>}
+                                <Tag className="text-xs bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-300">Dibatalkan</Tag>
+                            </>
+                        )
+                        : row.original.tarif
                         ? (
                             <>
                                 {formatRupiah(row.original.tarif.harga)}
@@ -286,10 +295,47 @@ export default function KonsolidasiKlienPage() {
             ),
         },
         {
+            header: 'Parameter', id: 'parameter', size: 190,
+            cell: ({ row }) => {
+                const t = row.original
+                const komponen = t.parameter?.komponen ?? []
+                const bisaAtur = !t.borongan && !t.sudah_difakturkan
+                return (
+                    <div className="flex items-start gap-1.5">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                            {komponen.length === 0 ? (
+                                <span className="text-gray-400">—</span>
+                            ) : (
+                                <>
+                                    {komponen.map(k => (
+                                        <span key={k.kode} className="text-xs whitespace-nowrap">{ringkasKomponen(k)}</span>
+                                    ))}
+                                    <span className="font-semibold whitespace-nowrap">{formatRupiah(t.parameter.total)}</span>
+                                </>
+                            )}
+                        </div>
+                        {bisaAtur && (
+                            <Tooltip title="Atur parameter tagihan">
+                                <Button size="xs" variant="plain" icon={<HiOutlinePencilAlt />} onClick={() => setTripParameter(t)} />
+                            </Tooltip>
+                        )}
+                    </div>
+                )
+            },
+        },
+        {
             header: 'Biaya Tambahan', accessorKey: 'biaya_tambahan', size: 130,
             cell: ({ row }) => (
                 <span className="whitespace-nowrap">
                     {row.original.biaya_tambahan ? formatRupiah(row.original.biaya_tambahan) : '—'}
+                </span>
+            ),
+        },
+        {
+            header: 'Total', accessorKey: 'total_tagihan', size: 140,
+            cell: ({ row }) => (
+                <span className="whitespace-nowrap font-semibold">
+                    {row.original.total_tagihan != null ? formatRupiah(row.original.total_tagihan) : '—'}
                 </span>
             ),
         },
@@ -320,7 +366,7 @@ export default function KonsolidasiKlienPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <div>
                         <p className="font-semibold text-gray-800 dark:text-gray-100">Siap Ditagih</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Klien dan proyek yang punya trip selesai ber-laporan tapi belum masuk invoice. Klik untuk langsung memuat rekapnya.</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Klien dan proyek yang punya trip selesai ber-laporan atau trip cancellation yang belum masuk invoice. Klik untuk langsung memuat rekapnya.</p>
                     </div>
                     {siapTagih.length > 0 && (
                         <Tag className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-0">{formatNum(siapTagih.length)} proyek</Tag>
@@ -498,6 +544,16 @@ export default function KonsolidasiKlienPage() {
                     </div>
                 </form>
             </Dialog>
+
+            <ParameterTagihanDialog
+                idTrip={tripParameter?.id_trip ?? null}
+                isOpen={tripParameter !== null}
+                info={tripParameter
+                    ? [dayjs(tripParameter.tanggal).format('DD MMM YYYY'), tripParameter.nopol, tripParameter.rute].filter(Boolean).join(' · ')
+                    : undefined}
+                onClose={() => setTripParameter(null)}
+                onSaved={() => { setTripParameter(null); fetchRekap(true); fetchSiapTagih() }}
+            />
         </div>
     )
 }

@@ -370,6 +370,7 @@ export const API_ENDPOINTS = {
 
     // Trip lanjutan
     TRIP_REKAP_BIAYA:        (id: string) => `/api/proxy/trip/${id}/rekap-biaya`,
+    TRIP_PARAMETER_TAGIHAN:  (id: string) => `/api/proxy/trip/${id}/parameter-tagihan`,
     TRIP_BATALKAN:           (id: string) => `/api/proxy/trip/${id}/batalkan`,
     TRIP_LAPORAN_PERJALANAN: (idTrip: string) => `/api/proxy/trip/${idTrip}/laporan-perjalanan`,
     TRIP_REKAP_SUPIR_EXPORT_EXCEL: '/api/proxy/trip/rekap-supir/export/excel',

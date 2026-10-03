@@ -1,9 +1,11 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { TipeHarga } from '@/constants/tipeHarga.constant'
+import { KomponenParameterTagihan } from '@/services/parameterTagihanTrip.service'
 
 export interface KonsolidasiKlienTrip {
     id_trip: string
+    status: string
     id_proyek: string | null
     id_rute: string | null
     tanggal: string
@@ -23,6 +25,15 @@ export interface KonsolidasiKlienTrip {
     sudah_difakturkan: boolean
     titik_drop: string[]
     biaya_tambahan: number
+    parameter: {
+        cancellation: boolean
+        komponen: KomponenParameterTagihan[]
+        total: number
+        keterangan: string | null
+    }
+    harga_dasar: number | null
+    bisa_ditagih: boolean
+    total_tagihan: number | null
 }
 
 export interface KonsolidasiKlienRekap {
