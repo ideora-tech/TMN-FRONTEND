@@ -53,7 +53,10 @@ export interface SiapTagihItem {
     id_proyek: string
     kode_proyek: string | null
     nama_proyek: string | null
+    tipe_harga: TipeHarga
     borongan: boolean
+    nilai_kontrak: number | null
+    sisa_kontrak: number | null
     jumlah_trip: number
     tanggal_pertama: string | null
     tanggal_terakhir: string | null

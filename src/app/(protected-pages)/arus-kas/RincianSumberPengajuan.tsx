@@ -12,6 +12,8 @@ import type { PembelianSparepart } from '@/services/pembelianSparepart.service'
 import type { InvoiceVendor } from '@/services/invoice-vendor.service'
 import type { PermintaanPembelian } from '@/services/permintaanPembelian.service'
 import type { UangJalan } from '@/services/uangJalan.service'
+import type { Kasbon } from '@/services/kasbon.service'
+import { labelBulan } from '../kasbon/kasbonMeta'
 import { STATUS_LABEL as STATUS_PEMBELIAN_LABEL, STATUS_TAG as STATUS_PEMBELIAN_TAG } from '../pembelian-sparepart/status'
 import { STATUS_LABEL as STATUS_PR_LABEL, STATUS_TAG as STATUS_PR_TAG, adaKomponenBiaya, rincianBiaya } from '../permintaan-pembelian/status'
 
@@ -32,6 +34,7 @@ const JUDUL: Record<RincianSumber['tipe'], string> = {
     payroll:        'Rincian Payroll',
     uang_jalan:     'Rincian Uang Jalan',
     uang_jalan_manual: 'Rincian Uang Jalan',
+    kasbon:         'Rincian Kasbon',
     invoice_vendor: 'Rincian Invoice Vendor',
     permintaan_pembelian: 'Rincian Permintaan Pembelian',
 }
@@ -286,6 +289,7 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
     const items = data.items ?? []
     const adaAktual = items.some(i => i.harga_aktual != null)
     const barisBiaya = adaKomponenBiaya(data) ? rincianBiaya(data).baris : []
+    const adaPenerimaan = data.tipe !== 'aset' && ['diterima_sebagian', 'diterima', 'selesai'].includes(data.status)
 
     return (
         <>
@@ -346,6 +350,14 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
                     <p className="text-sm text-red-500 dark:text-red-400">{data.alasan_batal}</p>
                 </div>
             )}
+            {data.sisa_ditutup_pada && (
+                <div className="mt-4">
+                    <p className={LABEL_CLASS}>Sisa Pesanan Ditutup</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">
+                        {dayjs(data.sisa_ditutup_pada).format('DD MMM YYYY')} — dibayar sesuai yang diterima{data.alasan_tutup_sisa ? `. ${data.alasan_tutup_sisa}` : ''}
+                    </p>
+                </div>
+            )}
 
             <div className="mt-5">
                 <p className={`${LABEL_CLASS} mb-2`}>Item Permintaan</p>
@@ -367,7 +379,12 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
                                         <span>{i.nama_item}</span>
                                         {i.spesifikasi && <p className="text-xs text-gray-400 dark:text-gray-500">{i.spesifikasi}</p>}
                                     </td>
-                                    <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
+                                    <td className="py-2 px-3 text-right whitespace-nowrap">
+                                        {formatNum(i.qty)} {i.satuan}
+                                        {adaPenerimaan && (i.qty_diterima ?? 0) < i.qty && (
+                                            <p className="text-xs text-orange-600 dark:text-orange-400">diterima {formatNum(i.qty_diterima ?? 0)} {i.satuan}</p>
+                                        )}
+                                    </td>
                                     <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
                                     {adaAktual && (
                                         <td className="py-2 px-3 text-right whitespace-nowrap">
@@ -398,7 +415,7 @@ function RincianPermintaanPembelianBlok({ data }: { data: PermintaanPembelian })
                 </div>
             </div>
 
-            <DaftarBukti judul="Nota / PO Supplier" bukti={(data.bukti ?? []).filter(b => b.tahap === 'pembelian')} />
+            <DaftarBukti judul="Nota Supplier" bukti={(data.bukti ?? []).filter(b => b.tahap === 'pembelian')} />
             <DaftarBukti judul="Bukti Penerimaan" bukti={(data.bukti ?? []).filter(b => b.tahap === 'penerimaan')} />
         </>
     )
@@ -542,6 +559,53 @@ function RincianUangJalanManualBlok({ data }: { data: UangJalan }) {
                     <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{data.catatan}</p>
                 </div>
             )}
+        </>
+    )
+}
+
+function RincianKasbonBlok({ data }: { data: Kasbon }) {
+    return (
+        <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <p className={LABEL_CLASS}>No. Kasbon</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_kasbon}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Tanggal</p>
+                    <p className={VALUE_CLASS}>{dayjs(data.tanggal).format('DD MMM YYYY')}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Karyawan</p>
+                    <p className={VALUE_CLASS}>{[data.nama_karyawan, data.nik].filter(Boolean).join(' · ') || '—'}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Jabatan</p>
+                    <p className={VALUE_CLASS}>{data.nama_jabatan ?? '—'}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nominal Kasbon</p>
+                    <p className={VALUE_CLASS}>{formatRupiah(data.nominal)}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Cicilan per Periode Gaji</p>
+                    <p className={VALUE_CLASS}>
+                        {formatRupiah(data.cicilan_per_periode)} · mulai gajian {labelBulan(data.mulai_potong)}
+                    </p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nomor Rekening</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_rekening ?? '—'}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Bank</p>
+                    <p className={VALUE_CLASS}>{data.nama_bank ?? '—'}</p>
+                </div>
+            </div>
+            <div className="mt-4">
+                <p className={LABEL_CLASS}>Keperluan</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{data.keperluan}</p>
+            </div>
         </>
     )
 }
@@ -755,6 +819,7 @@ export default function RincianSumberPengajuan({ idPengajuan }: { idPengajuan: s
             {!loading && !error && rincian?.tipe === 'payroll' && <RincianPayrollBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'uang_jalan' && <RincianUangJalanBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'uang_jalan_manual' && <RincianUangJalanManualBlok data={rincian.data} />}
+            {!loading && !error && rincian?.tipe === 'kasbon' && <RincianKasbonBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'invoice_vendor' && <RincianInvoiceVendorBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'permintaan_pembelian' && <RincianPermintaanPembelianBlok data={rincian.data} />}
         </div>

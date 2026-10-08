@@ -309,10 +309,35 @@ export default function KonfigurasiApprovalPage() {
                 </Tag>
             ),
         },
-        { header: 'Nama', accessorKey: 'nama',
+        { header: 'Jabatan / Pengguna', accessorKey: 'nama',
             cell: ({ row }: CellContext<ApprovalConfigApprover, unknown>) => (
                 <span className="font-medium">{row.original.nama ?? '—'}</span>
             ),
+        },
+        { header: 'Nama Approver', id: 'pemegang',
+            cell: ({ row }: CellContext<ApprovalConfigApprover, unknown>) => {
+                const pemegang = row.original.pemegang ?? []
+                if (pemegang.length === 0) {
+                    return (
+                        <span className="text-xs text-red-500 dark:text-red-400">
+                            {row.original.tipe === 'jabatan' ? 'Belum ada karyawan aktif di jabatan ini' : 'Pengguna tidak ditemukan'}
+                        </span>
+                    )
+                }
+                return (
+                    <div className="flex flex-wrap gap-1.5">
+                        {pemegang.map((p, i) => p.punya_akun ? (
+                            <Tag key={i} className="bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-0">{p.nama}</Tag>
+                        ) : (
+                            <Tooltip key={i} title={row.original.tipe === 'jabatan' ? 'Belum punya akun pengguna aktif — tidak menerima approval' : 'Akun pengguna nonaktif — tidak menerima approval'}>
+                                <Tag className="bg-gray-100 text-gray-500 dark:bg-gray-500/20 dark:text-gray-300 border-0">
+                                    {p.nama} ({row.original.tipe === 'jabatan' ? 'tanpa akun' : 'nonaktif'})
+                                </Tag>
+                            </Tooltip>
+                        ))}
+                    </div>
+                )
+            },
         },
         { header: '', id: 'aksi', size: 90,
             cell: ({ row }: CellContext<ApprovalConfigApprover, unknown>) => (
@@ -372,28 +397,20 @@ export default function KonfigurasiApprovalPage() {
                             icon={<HiOutlineTrash />} disabled={!eventTypeTerpilih} onClick={() => setHapusEventTypeOpen(true)} />
                     </Tooltip>
                 </div>
-                <p className="text-xs text-gray-400 mt-3">
-                    Kode berikut dikenali otomatis oleh Pengajuan Pengeluaran (dicocokkan dengan kategori pengajuan): <span className="font-mono">sparepart, perawatan, uang_jalan, penggajian, legalitas, pembelian_aset, pembayaran_pinjaman, pembayaran_vendor, pengadaan, lainnya</span> — kalau jenisnya dinonaktifkan, pengajuan kategori itu langsung disetujui tanpa approval; kalau jenisnya belum dibuat, dipakai fallback <span className="font-mono">pengajuan_pengeluaran</span>. Jenis lain (mis. penawaran, faktur, invoice_vendor, kontrak_vendor) dipakai oleh modulnya masing-masing — saat dinonaktifkan, dokumennya juga langsung lolos tanpa approval.
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                    Kode <span className="font-mono">persetujuan_transfer</span> adalah gerbang persetujuan transfer oleh dirut sebelum staf keuangan transfer dana — opsional; tanpa jenis ini (atau saat dinonaktifkan), pengajuan langsung siap transfer setelah diverifikasi keuangan.
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                    Kode <span className="font-mono">permintaan_pembelian</span> adalah approval untuk Permintaan Pembelian (PR) sebelum diproses Pengadaan — terpisah dari approval pembayarannya (kategori <span className="font-mono">pengadaan</span>).
-                </p>
             </Card>
 
-            <Card header={{ content: 'Batas Nominal Approval' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="h-full" header={{ content: 'Batas Nominal Approval' }}>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanBatas() }}>
                     <div className="flex flex-wrap items-end gap-3">
-                        <FormItem label="Batas Nominal" className="mb-0 w-full sm:w-64"
-                            extra={<span className="text-xs text-gray-400">0 = semua pengajuan wajib approval BOD</span>}>
+                        <FormItem label="Batas Nominal" className="mb-0 flex-1 min-w-[200px]">
                             <Input prefix="Rp" placeholder="0" value={batasInput ? formatNum(Number(batasInput)) : ''}
                                 disabled={loadingBatas}
                                 onChange={e => setBatasInput(e.target.value.replace(/\D/g, ''))} />
                         </FormItem>
                         <Button type="submit" variant="solid" loading={savingBatas} disabled={loadingBatas}>Simpan</Button>
                     </div>
+                    <p className="text-xs text-gray-400 mt-2">0 = semua pengajuan wajib approval BOD</p>
                     <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <Switcher checked={wajibManual} disabled={loadingBatas}
                             onChange={checked => setWajibManual(checked)} />
@@ -407,11 +424,10 @@ export default function KonfigurasiApprovalPage() {
                 </form>
             </Card>
 
-            <Card header={{ content: 'Batas Realisasi Mandiri (Pengadaan)' }}>
+            <Card className="h-full" header={{ content: 'Batas Realisasi Mandiri (Pengadaan)' }}>
                 <form onSubmit={e => { e.preventDefault(); handleSimpanBatasPengadaan() }}>
                     <div className="flex flex-wrap items-end gap-3">
-                        <FormItem label="Batas Nominal" className="mb-0 w-full sm:w-64"
-                            extra={<span className="text-xs text-gray-400">Sampai nilai ini, PR tipe Spare Part boleh direalisasi sendiri oleh pengaju setelah disetujui</span>}>
+                        <FormItem label="Batas Nominal" className="mb-0 flex-1 min-w-[200px]">
                             <Input prefix="Rp" placeholder="500.000" value={batasPengadaanInput ? formatNum(Number(batasPengadaanInput)) : ''}
                                 disabled={loadingBatas}
                                 onChange={e => setBatasPengadaanInput(e.target.value.replace(/\D/g, ''))} />
@@ -423,6 +439,7 @@ export default function KonfigurasiApprovalPage() {
                     </p>
                 </form>
             </Card>
+            </div>
 
             <Card bodyClass="p-0">
                 <div className="px-4 py-3">

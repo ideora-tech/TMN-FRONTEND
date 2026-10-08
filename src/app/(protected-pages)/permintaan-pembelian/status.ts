@@ -7,7 +7,9 @@ export const STATUS_LABEL: Record<StatusPermintaan, string> = {
     disetujui:         'Disetujui',
     ditolak:           'Ditolak',
     diproses:          'Diproses Pengadaan',
+    dipesan:           'PO Terbit',
     dibeli:            'Dibeli',
+    diterima_sebagian: 'Diterima Sebagian',
     diterima:          'Diterima',
     selesai:           'Selesai',
     dibatalkan:        'Dibatalkan',
@@ -19,13 +21,15 @@ export const STATUS_TAG: Record<StatusPermintaan, string> = {
     disetujui:         'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-100',
     ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
     diproses:          'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    dipesan:           'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200',
     dibeli:            'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300',
+    diterima_sebagian: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-200',
     diterima:          'bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-300',
     selesai:           'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     dibatalkan:        'bg-gray-200 text-gray-600 dark:bg-gray-600/30 dark:text-gray-300',
 }
 
-export const STATUS_URUT: StatusPermintaan[] = ['menunggu_approval', 'disetujui', 'diproses', 'dibeli', 'diterima', 'selesai', 'ditolak', 'dibatalkan']
+export const STATUS_URUT: StatusPermintaan[] = ['menunggu_approval', 'disetujui', 'diproses', 'dipesan', 'dibeli', 'diterima_sebagian', 'diterima', 'selesai', 'ditolak', 'dibatalkan']
 
 export const JENIS_LABEL: Record<JenisItem, string> = { barang: 'Barang', jasa: 'Jasa', sparepart: 'Spare Part', aset: 'Unit Armada' }
 
@@ -37,7 +41,7 @@ export const TIPE_TAG: Record<TipePermintaan, string> = {
     aset:      'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
 }
 
-export const TAHAP_LABEL: Record<TahapBukti, string> = { pengajuan: 'Lampiran Pengajuan', pembelian: 'Nota / PO Supplier', penerimaan: 'Bukti Penerimaan' }
+export const TAHAP_LABEL: Record<TahapBukti, string> = { pengajuan: 'Lampiran Pengajuan', pembelian: 'Nota Supplier', penerimaan: 'Bukti Penerimaan' }
 
 export const bolehDiubah = (status: StatusPermintaan) => ['menunggu_approval', 'disetujui', 'ditolak'].includes(status)
 

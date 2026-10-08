@@ -18,7 +18,7 @@ import { LampiranPenawaranCard } from '../LampiranPenawaran'
 import { IsianParameterPenawaranFields, TampilanParameterPenawaran } from '../ParameterPenawaran'
 import { isianParameterDari, payloadParameterDari, parameterTerisiDari } from '@/constants/parameterPenawaran.constant'
 import { penawaranService, Penawaran, PenawaranItem, PenawaranStatus, TipeHargaPenawaran } from '@/services/penawaran.service'
-import { useRingkasanKetersediaan, PetunjukKetersediaan, InputJumlahUnit, angkaAtauNull, labelSumberUnit } from '../SumberUnitPenawaran'
+import { useRingkasanKetersediaan, PetunjukKetersediaan, InputJumlahUnit, angkaAtauNull } from '../SumberUnitPenawaran'
 import PermintaanVendorPenawaranCard from '../PermintaanVendorPenawaranCard'
 import { projectService } from '@/services/project.service'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
@@ -79,8 +79,7 @@ interface ItemForm {
     jumlah_hari_str: string
     estimasi_ritase_str: string
     keterangan: string
-    unit_aset_str: string
-    unit_vendor_str: string
+    jumlah_unit_str: string
 }
 
 type Option = { value: string; label: string }
@@ -88,7 +87,7 @@ type Option = { value: string; label: string }
 const ITEM_KOSONG: ItemForm = {
     id_rute: '', id_jenis_kendaraan: '',
     harga_satuan_str: '', jumlah_hari_str: '', estimasi_ritase_str: '1', keterangan: '',
-    unit_aset_str: '', unit_vendor_str: '',
+    jumlah_unit_str: '',
 }
 
 const itemFormDari = (it: PenawaranItem): ItemForm => ({
@@ -98,8 +97,7 @@ const itemFormDari = (it: PenawaranItem): ItemForm => ({
     jumlah_hari_str: it.jumlah_hari != null ? String(it.jumlah_hari) : '',
     estimasi_ritase_str: String(it.estimasi_ritase),
     keterangan: it.keterangan ?? '',
-    unit_aset_str: it.unit_aset != null ? String(it.unit_aset) : '',
-    unit_vendor_str: it.unit_vendor != null ? String(it.unit_vendor) : '',
+    jumlah_unit_str: it.jumlah_unit != null ? String(it.jumlah_unit) : '',
 })
 
 export default function PenawaranDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -248,8 +246,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                     jumlah_hari: it.jumlah_hari_str ? Number(it.jumlah_hari_str) : null,
                     estimasi_ritase: Number(it.estimasi_ritase_str || 1),
                     keterangan: it.keterangan.trim() || null,
-                    unit_aset: angkaAtauNull(it.unit_aset_str),
-                    unit_vendor: angkaAtauNull(it.unit_vendor_str),
+                    jumlah_unit: angkaAtauNull(it.jumlah_unit_str),
                 })),
             })
             setData(updated)
@@ -592,7 +589,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                 {!nilaiTetap && <th className="px-3 py-2 font-semibold min-w-[150px]">Harga Satuan</th>}
                                                 <th className="px-3 py-2 font-semibold w-24">Hari</th>
                                                 <th className="px-3 py-2 font-semibold w-24">Trip</th>
-                                                <th className="px-3 py-2 font-semibold min-w-[130px]" title="Internal — tidak tercetak di PDF">Sumber Unit</th>
+                                                <th className="px-3 py-2 font-semibold w-28 whitespace-nowrap" title="Jumlah unit yang dibutuhkan (internal, tidak tercetak di PDF)">Jumlah Unit</th>
                                                 {!nilaiTetap && <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>}
                                             </tr>
                                         </thead>
@@ -604,7 +601,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                     {!nilaiTetap && <td className="px-3 py-2">{formatRupiah(it.harga_satuan)}</td>}
                                                     <td className="px-3 py-2">{it.jumlah_hari ?? '-'}</td>
                                                     <td className="px-3 py-2">{it.estimasi_ritase}</td>
-                                                    <td className="px-3 py-2 whitespace-nowrap">{labelSumberUnit(it.unit_aset, it.unit_vendor)}</td>
+                                                    <td className="px-3 py-2">{it.jumlah_unit ?? '-'}</td>
                                                     {!nilaiTetap && <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatRupiah(it.subtotal)}</td>}
                                                 </tr>
                                             ))}
@@ -730,8 +727,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                     )}
                                                     <th className="px-3 py-2 font-semibold w-24">Hari</th>
                                                     <th className="px-3 py-2 font-semibold w-24">Trip</th>
-                                                    <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari aset perusahaan (internal, tidak tercetak di PDF)">Unit Aset</th>
-                                                    <th className="px-3 py-2 font-semibold w-24" title="Jumlah unit dari vendor (internal, tidak tercetak di PDF)">Unit Vendor</th>
+                                                    <th className="px-3 py-2 font-semibold w-28 whitespace-nowrap" title="Jumlah unit yang dibutuhkan (internal, tidak tercetak di PDF)">Jumlah Unit</th>
                                                     {form.tipe_harga === 'per_rit' && (
                                                         <th className="px-3 py-2 font-semibold text-right min-w-[120px]">Subtotal</th>
                                                     )}
@@ -778,10 +774,7 @@ export default function PenawaranDetailPage({ params }: { params: Promise<{ id: 
                                                                 onChange={e => updateItem(i, { estimasi_ritase_str: e.target.value })} />
                                                         </td>
                                                         <td className="px-3 py-2">
-                                                            <InputJumlahUnit value={it.unit_aset_str} onChange={v => updateItem(i, { unit_aset_str: v })} />
-                                                        </td>
-                                                        <td className="px-3 py-2">
-                                                            <InputJumlahUnit value={it.unit_vendor_str} onChange={v => updateItem(i, { unit_vendor_str: v })} />
+                                                            <InputJumlahUnit value={it.jumlah_unit_str} onChange={v => updateItem(i, { jumlah_unit_str: v })} />
                                                         </td>
                                                         {form.tipe_harga === 'per_rit' && (
                                                             <td className="px-3 py-2 text-right font-semibold whitespace-nowrap pt-4">

@@ -15,7 +15,6 @@ import { ROUTES } from '@/constants/route.constant'
 import { STATUS_TAG as STATUS_TAG_PEMBELIAN, STATUS_LABEL as STATUS_LABEL_PEMBELIAN } from '../pembelian-sparepart/status'
 import { STATUS_TAG as STATUS_TAG_PR, STATUS_LABEL as STATUS_LABEL_PR } from '../permintaan-pembelian/status'
 import { perawatanArmadaService, PerawatanArmada, PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
-import { pembelianSparepartService } from '@/services/pembelianSparepart.service'
 import type { StatusPermintaan } from '@/services/permintaanPembelian.service'
 import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
 import { armadaService, Armada } from '@/services/armada.service'
@@ -100,14 +99,6 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail, onDa
     const [logOpen, setLogOpen]         = useState(false)
     const [logInfo, setLogInfo]         = useState<PengajuanKeuanganInfo | null>(null)
     const [logLoading, setLogLoading]   = useState(false)
-    const [batasMandiri, setBatasMandiri] = useState<number | null>(null)
-
-    useEffect(() => {
-        if (!detailTarget || batasMandiri !== null) return
-        pembelianSparepartService.batasMandiri()
-            .then(setBatasMandiri)
-            .catch(() => {})
-    }, [detailTarget, batasMandiri])
 
     const openLog = (p: PerawatanArmadaWithArmada) => {
         setLogOpen(true)
@@ -657,78 +648,61 @@ export default function PerawatanArmadaTab({ mode = 'aktif', initialDetail, onDa
                             </div>
                         )}
 
-                        {detailTarget && detailTarget.status !== 'dibatalkan' && (
+                        {detailTarget?.status !== 'dibatalkan' && (detailData?.pembelian?.length ?? 0) > 0 && (
                             <div className="mt-5">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                        Pembelian Sparepart ({detailData?.pembelian?.length ?? 0})
-                                    </p>
-                                    {detailTarget.status !== 'selesai' && (
-                                        <div className="flex flex-col items-end gap-0.5">
-                                            <Button size="xs" variant="default" icon={<HiOutlineClipboardList />}
-                                                onClick={() => router.push(`${ROUTES.PERMINTAAN_PEMBELIAN_BARU}?tipe=sparepart&id_armada=${detailTarget.id_armada}&id_perawatan=${detailTarget.id_perawatan}`)}>
-                                                Ajukan PR
-                                            </Button>
-                                            {batasMandiri !== null && (
-                                                <p className="text-[11px] text-gray-400">PR spare part sampai {formatRupiah(batasMandiri)} boleh dibeli sendiri setelah disetujui, di atasnya diproses Pengadaan</p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {(detailData?.pembelian?.length ?? 0) === 0 ? (
-                                    <p className="text-xs text-gray-400 italic">Belum ada pembelian sparepart yang ditautkan ke perawatan ini.</p>
-                                ) : (
-                                    <div className="flex flex-col gap-1.5">
-                                        {detailData?.pembelian?.map(p => (
-                                            <div key={p.id_pembelian}
-                                                className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
-                                                onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(p.id_pembelian))}>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold font-mono truncate">{p.nomor_pengajuan}</p>
-                                                    <p className="text-xs text-gray-400 truncate">
-                                                        {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}{p.nama_supplier ? ` · ${p.nama_supplier}` : ''}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <Tag className={`text-xs font-semibold border-0 ${STATUS_TAG_PEMBELIAN[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                        {STATUS_LABEL_PEMBELIAN[p.status] ?? p.status}
-                                                    </Tag>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-nowrap">
-                                                        {formatRupiah(p.total_aktual ?? p.total_estimasi)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-4 mb-2">
-                                    Permintaan Pembelian ({detailData?.permintaan_pembelian?.length ?? 0})
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                    Pembelian Sparepart ({detailData?.pembelian?.length})
                                 </p>
-                                {(detailData?.permintaan_pembelian?.length ?? 0) === 0 ? (
-                                    <p className="text-xs text-gray-400 italic">Belum ada PR spare part untuk perawatan ini.</p>
-                                ) : (
-                                    <div className="flex flex-col gap-1.5">
-                                        {detailData?.permintaan_pembelian?.map(pr => (
-                                            <div key={pr.id_permintaan}
-                                                className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
-                                                onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(pr.id_permintaan))}>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold font-mono truncate">{pr.nomor_permintaan}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{dayjs(pr.tanggal_permintaan).format('DD MMM YYYY')}</p>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <Tag className={`text-xs font-semibold border-0 ${STATUS_TAG_PR[pr.status as StatusPermintaan] ?? 'bg-gray-100 text-gray-600'}`}>
-                                                        {STATUS_LABEL_PR[pr.status as StatusPermintaan] ?? pr.status}
-                                                    </Tag>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-nowrap">
-                                                        {formatRupiah(pr.total_aktual ?? pr.total_estimasi)}
-                                                    </p>
-                                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    {detailData?.pembelian?.map(p => (
+                                        <div key={p.id_pembelian}
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                                            onClick={() => router.push(ROUTES.PEMBELIAN_SPAREPART_DETAIL(p.id_pembelian))}>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold font-mono truncate">{p.nomor_pengajuan}</p>
+                                                <p className="text-xs text-gray-400 truncate">
+                                                    {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}{p.nama_supplier ? ` · ${p.nama_supplier}` : ''}
+                                                </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <div className="text-right shrink-0">
+                                                <Tag className={`text-xs font-semibold border-0 ${STATUS_TAG_PEMBELIAN[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    {STATUS_LABEL_PEMBELIAN[p.status] ?? p.status}
+                                                </Tag>
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-nowrap">
+                                                    {formatRupiah(p.total_aktual ?? p.total_estimasi)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {detailTarget?.status !== 'dibatalkan' && (detailData?.permintaan_pembelian?.length ?? 0) > 0 && (
+                            <div className="mt-5">
+                                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                                    Permintaan Pembelian ({detailData?.permintaan_pembelian?.length})
+                                </p>
+                                <div className="flex flex-col gap-1.5">
+                                    {detailData?.permintaan_pembelian?.map(pr => (
+                                        <div key={pr.id_permintaan}
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+                                            onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(pr.id_permintaan))}>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold font-mono truncate">{pr.nomor_permintaan}</p>
+                                                <p className="text-xs text-gray-400 truncate">{dayjs(pr.tanggal_permintaan).format('DD MMM YYYY')}</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <Tag className={`text-xs font-semibold border-0 ${STATUS_TAG_PR[pr.status as StatusPermintaan] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                    {STATUS_LABEL_PR[pr.status as StatusPermintaan] ?? pr.status}
+                                                </Tag>
+                                                <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-nowrap">
+                                                    {formatRupiah(pr.total_aktual ?? pr.total_estimasi)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 

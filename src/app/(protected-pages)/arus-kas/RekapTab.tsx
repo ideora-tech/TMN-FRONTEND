@@ -86,6 +86,10 @@ const KATEGORI_TAG_META: Record<KategoriPengajuan, { label: string; tag: string 
         label: 'Pengadaan',
         tag: 'bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-300',
     },
+    kasbon: {
+        label: 'Kasbon',
+        tag: 'bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-300',
+    },
     lainnya: {
         label: 'Lainnya',
         tag: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',

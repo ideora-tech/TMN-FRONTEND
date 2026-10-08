@@ -2,7 +2,7 @@
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, Select, Dialog, Switcher, Tooltip, toast, Notification, Tag } from '@/components/ui'
+import { Alert, Card, Button, FormItem, Input, Select, Dialog, Switcher, Tooltip, toast, Notification, Tag } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
@@ -15,6 +15,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { karyawanService, Karyawan, RiwayatJabatan } from '@/services/karyawan.service'
 import { karyawanExitService, JenisExit } from '@/services/karyawanExit.service'
+import { kasbonService } from '@/services/kasbon.service'
 import { kontrakKaryawanService, KontrakKaryawan, JenisKontrak } from '@/services/kontrakKaryawan.service'
 import { dokumenKaryawanService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
 import { Jabatan } from '@/services/jabatan.service'
@@ -163,6 +164,27 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
         dapat_direkrut_kembali: boolean
     }>({ jenis_exit: '', tanggal_efektif: '', alasan: '', dapat_direkrut_kembali: true })
     const [exitSaving, setExitSaving] = useState(false)
+    const [kasbonKaryawan, setKasbonKaryawan] = useState<{ berjalan: number; sisa: number; menunggu: number; nominalMenunggu: number } | null>(null)
+
+    useEffect(() => {
+        if (!exitOpen) return
+        let batal = false
+        setKasbonKaryawan(null)
+        kasbonService.list(1, 100, { id_karyawan: id })
+            .then(res => {
+                if (batal) return
+                const berjalan = res.data.filter(k => k.status === 'berjalan')
+                const menunggu = res.data.filter(k => k.status === 'menunggu_approval' || k.status === 'menunggu_pencairan')
+                setKasbonKaryawan({
+                    berjalan: berjalan.length,
+                    sisa: berjalan.reduce((total, k) => total + k.sisa, 0),
+                    menunggu: menunggu.length,
+                    nominalMenunggu: menunggu.reduce((total, k) => total + k.nominal, 0),
+                })
+            })
+            .catch(() => {})
+        return () => { batal = true }
+    }, [exitOpen, id])
 
     const isiForm = (k: Karyawan): FormState => ({
         ...k,
@@ -1083,6 +1105,18 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                             <p className="text-gray-500 text-sm">{karyawan.nama_karyawan}</p>
                         </div>
                     </div>
+                    {kasbonKaryawan && kasbonKaryawan.berjalan > 0 && (
+                        <Alert type="warning" showIcon className="mb-3">
+                            Masih punya {kasbonKaryawan.berjalan} kasbon berjalan, sisa {formatRupiah(kasbonKaryawan.sisa)}.
+                            Sisanya dipotong sekaligus di slip gaji terakhir; bila gaji terakhir tidak cukup, minta Keuangan mencatat pelunasan di menu Kasbon.
+                        </Alert>
+                    )}
+                    {kasbonKaryawan && kasbonKaryawan.menunggu > 0 && (
+                        <Alert type="warning" showIcon className="mb-3">
+                            Ada {kasbonKaryawan.menunggu} kasbon yang belum dicairkan ({formatRupiah(kasbonKaryawan.nominalMenunggu)}).
+                            Setelah karyawan nonaktif kasbon itu tidak bisa dicairkan — tolak atau hapus pengajuannya.
+                        </Alert>
+                    )}
                     <form onSubmit={e => { e.preventDefault(); handleExit() }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                         <FormItem label="Jenis Exit" asterisk>

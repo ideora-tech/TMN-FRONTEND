@@ -13,7 +13,7 @@ import {
     PengajuanPengeluaran,
 } from '@/services/arusKas.service'
 import RincianSumberPengajuan from './RincianSumberPengajuan'
-import { KATEGORI_LABEL, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG } from './pengajuanMeta'
+import { KATEGORI_LABEL, MAKS_ALASAN_TOLAK, PENERIMA_LABEL, STATUS_LABEL, STATUS_TAG } from './pengajuanMeta'
 
 const LABEL_CLASS = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
 const VALUE_CLASS = 'text-sm font-medium text-gray-800 dark:text-gray-200'
@@ -36,6 +36,15 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             <a href={ROUTES.UANG_JALAN_DETAIL(p.id_uang_jalan)} target="_blank" rel="noreferrer" className="w-fit">
                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 cursor-pointer hover:opacity-80">
                     Dari Uang Jalan <HiOutlineExternalLink className="text-xs" />
+                </Tag>
+            </a>
+        )
+    }
+    if (p.id_kasbon) {
+        return (
+            <a href={ROUTES.KASBON_DETAIL(p.id_kasbon)} target="_blank" rel="noreferrer" className="w-fit">
+                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300 cursor-pointer hover:opacity-80">
+                    Dari Kasbon <HiOutlineExternalLink className="text-xs" />
                 </Tag>
             </a>
         )
@@ -236,7 +245,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.periode_dari || p.id_supir) && (
+                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.id_kasbon || p.periode_dari || p.id_supir) && (
                         <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 
@@ -305,9 +314,12 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
             <p>Tolak pengajuan {aksiTarget?.nomor_pengajuan}?</p>
             <div className="mt-3">
                 <p className="text-sm font-semibold mb-1">Catatan penolakan <span className="text-red-500">*</span></p>
-                <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
+                <Input textArea rows={3} maxLength={MAKS_ALASAN_TOLAK} placeholder="Jelaskan alasan penolakan..."
                     value={catatanTolak} onChange={e => { setCatatanTolak(e.target.value); setErrCatatanTolak('') }} />
-                {errCatatanTolak && <p className="text-xs text-red-500 mt-1">{errCatatanTolak}</p>}
+                <div className="flex justify-between gap-3 mt-1 text-xs">
+                    <span className="text-red-500">{errCatatanTolak}</span>
+                    <span className="text-gray-400 tabular-nums shrink-0">{catatanTolak.length}/{MAKS_ALASAN_TOLAK}</span>
+                </div>
             </div>
         </ConfirmDialog>
         </>

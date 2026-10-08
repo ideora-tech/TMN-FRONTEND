@@ -5,7 +5,7 @@ import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuangan
 import { parseApiError } from '@/utils/error.util'
 import { arusKasService, PengajuanKeuanganInfo } from '@/services/arusKas.service'
 
-export function useLogPengajuan(ambilRiwayat: (id: string) => Promise<PengajuanKeuanganInfo> = arusKasService.riwayatPengajuan) {
+export function useLogPengajuan(ambilRiwayat: (id: string) => Promise<PengajuanKeuanganInfo | null> = arusKasService.riwayatPengajuan) {
     const [open, setOpen] = useState(false)
     const [info, setInfo] = useState<PengajuanKeuanganInfo | null>(null)
     const [loading, setLoading] = useState(false)

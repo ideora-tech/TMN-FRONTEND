@@ -3,12 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import dayjs from 'dayjs'
-import { Card, Button, Tag, Tooltip, Checkbox, Dialog, FormItem, Input, Spinner, toast, Notification } from '@/components/ui'
+import { Card, Button, Tag, Tooltip, Checkbox, Dialog, FormItem, Input, Pagination, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDocumentDownload, HiOutlinePencilAlt, HiPlusCircle } from 'react-icons/hi'
+import { HiOutlineDocumentDownload, HiOutlinePencilAlt, HiOutlineSearch, HiOutlineX, HiPlusCircle } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -18,6 +18,11 @@ import { projectService, Project } from '@/services/project.service'
 import { penagihanTripService } from '@/services/penagihanTrip.service'
 import { TIPE_HARGA_LABEL } from '@/constants/tipeHarga.constant'
 import { ParameterTagihanDialog, ringkasKomponen } from '@/components/shared/ParameterTagihanTrip'
+import InvoiceTerminDialog from '@/components/shared/InvoiceTerminDialog'
+
+const UKURAN_HALAMAN_SIAP_TAGIH = 10
+
+const TH_SIAP_TAGIH = 'py-2.5 pr-4 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide'
 
 const SUMBER_OPTIONS = [
     { value: '',         label: 'Semua Sumber' },
@@ -51,6 +56,7 @@ export default function KonsolidasiKlienPage() {
     const [keteranganInvoice, setKeteranganInvoice] = useState('')
     const [submitting, setSubmitting]       = useState(false)
     const [tripParameter, setTripParameter] = useState<KonsolidasiKlienTrip | null>(null)
+    const [terminOpen, setTerminOpen]       = useState(false)
 
     const [rekap, setRekap]     = useState<KonsolidasiKlienRekap | null>(null)
     const [loading, setLoading] = useState(false)
@@ -76,6 +82,23 @@ export default function KonsolidasiKlienPage() {
     const proyekTertundaRef = useRef<string | null>(null)
     const [siapTagih, setSiapTagih] = useState<SiapTagihItem[]>([])
     const [loadingSiapTagih, setLoadingSiapTagih] = useState(false)
+    const [cariSiapInput, setCariSiapInput] = useState('')
+    const [cariSiap, setCariSiap] = useState('')
+    const [halamanSiap, setHalamanSiap] = useState(1)
+    const [siapTagihDimuat, setSiapTagihDimuat] = useState(false)
+    const [periodeSiap, setPeriodeSiap] = useState(false)
+
+    const siapTagihTersaring = useMemo(() => {
+        const kata = cariSiap.toLowerCase()
+        if (!kata) return siapTagih
+        return siapTagih.filter(item => [item.nama_klien, item.kode_proyek, item.nama_proyek]
+            .some(v => v?.toLowerCase().includes(kata)))
+    }, [siapTagih, cariSiap])
+    const halamanSiapAktif = Math.min(halamanSiap, Math.max(1, Math.ceil(siapTagihTersaring.length / UKURAN_HALAMAN_SIAP_TAGIH)))
+    const siapTagihHalaman = siapTagihTersaring.slice(
+        (halamanSiapAktif - 1) * UKURAN_HALAMAN_SIAP_TAGIH,
+        halamanSiapAktif * UKURAN_HALAMAN_SIAP_TAGIH,
+    )
 
     const fetchSiapTagih = useCallback(async () => {
         setLoadingSiapTagih(true)
@@ -85,10 +108,51 @@ export default function KonsolidasiKlienPage() {
             setSiapTagih([])
         } finally {
             setLoadingSiapTagih(false)
+            setSiapTagihDimuat(true)
         }
     }, [])
 
     useEffect(() => { fetchSiapTagih() }, [fetchSiapTagih])
+
+    const terapkanPeriodeKlien = useCallback((idKlien: string) => {
+        const tanggal = siapTagih
+            .filter(item => item.id_klien === idKlien && !item.borongan)
+            .flatMap(item => [item.tanggal_pertama, item.tanggal_terakhir])
+            .filter((t): t is string => !!t)
+            .sort()
+        if (tanggal.length === 0) {
+            setDari(dayjs().startOf('month').format('YYYY-MM-DD'))
+            setSampai(dayjs().endOf('month').format('YYYY-MM-DD'))
+            return
+        }
+        const hariIni = dayjs().format('YYYY-MM-DD')
+        const terakhir = tanggal[tanggal.length - 1]
+        setDari(tanggal[0])
+        setSampai(terakhir > hariIni ? terakhir : hariIni)
+    }, [siapTagih])
+
+    useEffect(() => {
+        if (periodeSiap || !siapTagihDimuat) return
+        if (selectedKlien) terapkanPeriodeKlien(selectedKlien)
+        setPeriodeSiap(true)
+    }, [periodeSiap, siapTagihDimuat, selectedKlien, terapkanPeriodeKlien])
+
+    const pilihKlien = (id: string) => {
+        gantiKlien(id)
+        if (id) terapkanPeriodeKlien(id)
+    }
+
+    const ubahDari = (date: Date | null) => {
+        const nilai = date ? dayjs(date).format('YYYY-MM-DD') : ''
+        setDari(nilai)
+        if (nilai && sampai && nilai > sampai) setSampai(nilai)
+    }
+
+    const ubahSampai = (date: Date | null) => {
+        const nilai = date ? dayjs(date).format('YYYY-MM-DD') : ''
+        setSampai(nilai)
+        if (nilai && dari && nilai < dari) setDari(nilai)
+    }
 
     const pilihSiapTagih = (item: SiapTagihItem) => {
         if (item.tanggal_pertama) setDari(item.tanggal_pertama)
@@ -117,6 +181,7 @@ export default function KonsolidasiKlienPage() {
     const reqRef = useRef(0)
     const fetchRekap = useCallback(async (pertahankanHalaman = false) => {
         if (!selectedKlien) { setRekap(null); return }
+        if (!periodeSiap) return
         const reqId = ++reqRef.current
         setLoading(true)
         try {
@@ -136,7 +201,7 @@ export default function KonsolidasiKlienPage() {
         } finally {
             if (reqRef.current === reqId) setLoading(false)
         }
-    }, [selectedKlien, dari, sampai, sumber, proyekFilter])
+    }, [selectedKlien, dari, sampai, sumber, proyekFilter, periodeSiap])
 
     useEffect(() => { fetchRekap() }, [fetchRekap])
 
@@ -353,6 +418,10 @@ export default function KonsolidasiKlienPage() {
 
     const pagedTrips = trips.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+    const proyekNilaiTetap = proyekFilter
+        ? siapTagih.find(item => item.id_proyek === proyekFilter && item.id_klien === selectedKlien && item.borongan) ?? null
+        : null
+
     return (
         <div className="flex flex-col gap-4">
             <div>
@@ -366,41 +435,102 @@ export default function KonsolidasiKlienPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <div>
                         <p className="font-semibold text-gray-800 dark:text-gray-100">Siap Ditagih</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Klien dan proyek yang punya trip selesai ber-laporan atau trip cancellation yang belum masuk invoice. Klik untuk langsung memuat rekapnya.</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Klien dan proyek yang punya trip selesai ber-laporan atau trip cancellation yang belum masuk invoice. Untuk proyek nilai tetap yang ditampilkan sisa nilai kontraknya, dan barisnya hilang saat kontrak habis ditagih. Klik untuk langsung memuat rekapnya.</p>
                     </div>
-                    {siapTagih.length > 0 && (
-                        <Tag className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-0">{formatNum(siapTagih.length)} proyek</Tag>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {siapTagih.length > 0 && (
+                            <Tag className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-0 whitespace-nowrap">{formatNum(siapTagih.length)} proyek</Tag>
+                        )}
+                        {siapTagih.length > UKURAN_HALAMAN_SIAP_TAGIH && (
+                            <Input
+                                size="sm"
+                                className="w-64"
+                                placeholder="Cari klien atau proyek... (tekan Enter)"
+                                suffix={cariSiapInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariSiapInput(''); setCariSiap(''); setHalamanSiap(1) }} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariSiap(cariSiapInput.trim()); setHalamanSiap(1) }} />}
+                                value={cariSiapInput}
+                                onChange={e => setCariSiapInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setCariSiap(cariSiapInput.trim()); setHalamanSiap(1) } }}
+                            />
+                        )}
+                    </div>
                 </div>
                 {loadingSiapTagih ? (
                     <div className="flex items-center justify-center py-6"><Spinner /></div>
                 ) : siapTagih.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-6">Semua trip selesai sudah ditagihkan</p>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
-                        {siapTagih.map(item => {
-                            const aktif = item.id_klien === selectedKlien && item.id_proyek === proyekFilter
-                            return (
-                                <div key={item.id_proyek}
-                                    className={`rounded-xl border px-4 py-3 cursor-pointer transition-colors ${aktif ? 'border-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
-                                    onClick={() => pilihSiapTagih(item)}>
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <p className="text-xs text-gray-400 truncate">{item.nama_klien}</p>
-                                            <p className="font-semibold text-sm truncate">{item.kode_proyek ? `${item.kode_proyek} — ` : ''}{item.nama_proyek ?? '—'}</p>
-                                        </div>
-                                        <Tag className={`border-0 shrink-0 ${item.borongan ? 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
-                                            {formatNum(item.jumlah_trip)} trip
-                                        </Tag>
-                                    </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {item.tanggal_pertama ? dayjs(item.tanggal_pertama).format('DD MMM YYYY') : '…'} – {item.tanggal_terakhir ? dayjs(item.tanggal_terakhir).format('DD MMM YYYY') : '…'}
-                                        {item.borongan ? ' · borongan, ditagih lewat faktur proyek' : ''}
-                                    </p>
-                                </div>
-                            )
-                        })}
-                    </div>
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className={`${TH_SIAP_TAGIH} text-left pl-4 w-14`}>No</th>
+                                        <th className={`${TH_SIAP_TAGIH} text-left`}>Klien</th>
+                                        <th className={`${TH_SIAP_TAGIH} text-left`}>Proyek</th>
+                                        <th className={`${TH_SIAP_TAGIH} text-left`}>Periode Trip</th>
+                                        <th className={`${TH_SIAP_TAGIH} text-right`}>Belum Ditagih</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {siapTagihHalaman.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="py-6 text-center text-gray-400">Tidak ada klien atau proyek yang cocok dengan pencarian</td>
+                                        </tr>
+                                    ) : siapTagihHalaman.map((item, i) => {
+                                        const aktif = item.id_klien === selectedKlien && item.id_proyek === proyekFilter
+                                        const satuHari = item.tanggal_pertama === item.tanggal_terakhir
+                                        return (
+                                            <tr key={item.id_proyek}
+                                                role="button" tabIndex={0}
+                                                className={`cursor-pointer transition-colors ${aktif ? 'bg-blue-50 dark:bg-blue-500/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                                                onClick={() => pilihSiapTagih(item)}
+                                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pilihSiapTagih(item) } }}>
+                                                <td className="py-2.5 pl-4 pr-4 text-gray-500 tabular-nums">{(halamanSiapAktif - 1) * UKURAN_HALAMAN_SIAP_TAGIH + i + 1}</td>
+                                                <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-300">{item.nama_klien}</td>
+                                                <td className="py-2.5 pr-4">
+                                                    <span className={`font-semibold ${aktif ? 'text-blue-700 dark:text-blue-300' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                        {item.kode_proyek ? `${item.kode_proyek} — ` : ''}{item.nama_proyek ?? '—'}
+                                                    </span>
+                                                    {item.borongan && (
+                                                        <Tooltip title="Proyek nilai tetap ditagih per termin terhadap nilai kontrak, bukan per trip">
+                                                            <Tag className="ml-2 text-xs border-0 bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">Borongan</Tag>
+                                                        </Tooltip>
+                                                    )}
+                                                </td>
+                                                <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-300 whitespace-nowrap tabular-nums">
+                                                    {item.tanggal_pertama ? dayjs(item.tanggal_pertama).format('DD MMM YYYY') : '…'}
+                                                    {!satuHari && <> – {item.tanggal_terakhir ? dayjs(item.tanggal_terakhir).format('DD MMM YYYY') : '…'}</>}
+                                                </td>
+                                                <td className="py-2.5 pr-4 text-right whitespace-nowrap">
+                                                    {!item.borongan ? (
+                                                        <Tag className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                            {formatNum(item.jumlah_trip)} trip
+                                                        </Tag>
+                                                    ) : item.sisa_kontrak !== null ? (
+                                                        <Tag className="border-0 bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
+                                                            Sisa {formatRupiah(Math.floor(item.sisa_kontrak))}
+                                                        </Tag>
+                                                    ) : (
+                                                        <Tag className="border-0 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                                                            Nilai kontrak belum diisi
+                                                        </Tag>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        {siapTagihTersaring.length > UKURAN_HALAMAN_SIAP_TAGIH && (
+                            <div className="flex justify-end px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                                <Pagination currentPage={halamanSiapAktif} pageSize={UKURAN_HALAMAN_SIAP_TAGIH}
+                                    total={siapTagihTersaring.length} onChange={setHalamanSiap} />
+                            </div>
+                        )}
+                    </>
                 )}
             </Card>
 
@@ -411,7 +541,7 @@ export default function KonsolidasiKlienPage() {
                         placeholder="Pilih klien..."
                         options={klienOptions}
                         value={klienOptions.find(o => o.value === selectedKlien) ?? null}
-                        onChange={opt => gantiKlien((opt as { value: string } | null)?.value ?? '')}
+                        onChange={opt => pilihKlien((opt as { value: string } | null)?.value ?? '')}
                     />
                     <Select
                         className="w-full sm:w-64"
@@ -425,18 +555,11 @@ export default function KonsolidasiKlienPage() {
                     <div className="flex items-center gap-2">
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={dari ? dayjs(dari).toDate() : null}
-                            onChange={date => {
-                                if (date) {
-                                    setDari(dayjs(date).format('YYYY-MM-DD'))
-                                    setSampai(dayjs(date).endOf('month').format('YYYY-MM-DD'))
-                                } else {
-                                    setDari('')
-                                }
-                            }} />
+                            onChange={ubahDari} />
                         <span className="text-gray-400 text-sm">s/d</span>
                         <DatePicker inputFormat="DD/MM/YYYY" className="w-40"
                             value={sampai ? dayjs(sampai).toDate() : null}
-                            onChange={date => setSampai(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                            onChange={ubahSampai} />
                     </div>
                     <Select
                         className="w-48"
@@ -456,7 +579,7 @@ export default function KonsolidasiKlienPage() {
 
                 {!selectedKlien ? (
                     <p className="text-gray-400 text-sm py-10 text-center">Pilih klien untuk melihat rekap perjalanannya</p>
-                ) : loading && !rekap ? (
+                ) : (loading || !periodeSiap) && !rekap ? (
                     <p className="text-gray-400 text-sm py-10 text-center">Memuat...</p>
                 ) : !rekap || rekap.trips.length === 0 ? (
                     <p className="text-gray-400 text-sm py-10 text-center">Tidak ada trip selesai ber-laporan pada periode ini</p>
@@ -495,6 +618,30 @@ export default function KonsolidasiKlienPage() {
                     </>
                 )}
 
+                {proyekNilaiTetap && (
+                    <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+                        {proyekNilaiTetap.sisa_kontrak !== null ? (
+                            <>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    Proyek nilai tetap, ditagih per termin — sisa nilai kontrak{' '}
+                                    <span className="font-semibold">{formatRupiah(Math.floor(proyekNilaiTetap.sisa_kontrak))}</span>
+                                </p>
+                                <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setTerminOpen(true)}>
+                                    Buat Invoice Termin
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-amber-600 dark:text-amber-400">
+                                    Nilai kontrak proyek ini belum diisi, jadi invoice termin belum bisa dibuat.
+                                </p>
+                                <a href={ROUTES.PROYEK_DETAIL(proyekNilaiTetap.id_proyek)} target="_blank" rel="noopener noreferrer"
+                                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">Buka proyek</a>
+                            </>
+                        )}
+                    </div>
+                )}
+
                 {selectedIds.length > 0 && (
                     <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
                         <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -512,7 +659,7 @@ export default function KonsolidasiKlienPage() {
             <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={800}>
                 <h5 className="text-base font-semibold mb-2">Buat Draft Invoice</h5>
                 <p className="text-xs text-gray-500 mb-5">
-                    {selectedIds.length} trip senilai {formatRupiah(totalEstimasi)} akan dijadikan satu item total di draft invoice.
+                    {selectedIds.length} trip senilai {formatRupiah(totalEstimasi)} akan dijadikan draft invoice, dirinci per baris: jasa angkutan, parameter tagihan (Overnight, Add Drop, Cross Cluster, Cancellation), dan biaya tambahan.
                 </p>
                 <form onSubmit={e => { e.preventDefault(); handleBuatFaktur() }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
@@ -533,7 +680,7 @@ export default function KonsolidasiKlienPage() {
                                     value={keteranganInvoice}
                                     onChange={e => setKeteranganInvoice(e.target.value)} />
                                 <p className="text-xs text-gray-400 mt-1">
-                                    Tampil sebagai deskripsi item di invoice — kosongkan untuk memakai teks otomatis.
+                                    Tampil sebagai deskripsi baris jasa angkutan di invoice — kosongkan untuk memakai teks otomatis.
                                 </p>
                             </FormItem>
                         </div>
@@ -544,6 +691,15 @@ export default function KonsolidasiKlienPage() {
                     </div>
                 </form>
             </Dialog>
+
+            <InvoiceTerminDialog
+                isOpen={terminOpen}
+                idProyek={proyekNilaiTetap?.id_proyek ?? null}
+                namaProyek={proyekNilaiTetap ? `${proyekNilaiTetap.kode_proyek ? `${proyekNilaiTetap.kode_proyek} — ` : ''}${proyekNilaiTetap.nama_proyek ?? ''}` : null}
+                nilaiKontrak={proyekNilaiTetap?.nilai_kontrak ?? null}
+                sisaKontrak={proyekNilaiTetap?.sisa_kontrak ?? null}
+                onClose={() => setTerminOpen(false)}
+            />
 
             <ParameterTagihanDialog
                 idTrip={tripParameter?.id_trip ?? null}

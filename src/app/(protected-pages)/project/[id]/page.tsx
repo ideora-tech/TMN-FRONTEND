@@ -35,6 +35,8 @@ import RuteTarifFields, {
     RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
     ruteTarifValid, toProyekRutePayload, stateFromProyekRute,
 } from '@/components/shared/RuteTarifFields'
+import InvoiceTerminDialog from '@/components/shared/InvoiceTerminDialog'
+import useAksesMenu from '@/utils/hooks/useAksesMenu'
 
 const STATUS_OPTIONS = [
     { value: 'draft',   label: 'Draft' },
@@ -136,6 +138,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [errors, setErrors]     = useState<Partial<Record<keyof Project, string>>>({})
     const [ajukanOpen, setAjukanOpen] = useState(false)
     const [logApprovalOpen, setLogApprovalOpen] = useState(false)
+    const [terminOpen, setTerminOpen] = useState(false)
+    const bolehInvoice = useAksesMenu()(ROUTES.FAKTUR)
 
     // penugasan
     const [penugasanList, setPenugasanList]   = useState<Penugasan[]>([])
@@ -925,7 +929,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
                     ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
-                    onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} />
+                    onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} modeEdit />
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Kembali</Button>
                     <Button variant="solid" loading={updatingRute} onClick={handleEditRute}>Simpan</Button>
@@ -967,18 +971,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                 </div>
                 {tipeHargaNilaiTetap(project.tipe_harga) && (
-                    <div className="mt-3 rounded-lg p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
-                        <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Sisa Belum Difakturkan</p>
-                        <p className="font-bold text-base text-amber-700 dark:text-amber-300 mt-1">
-                            {formatRupiah(project.realisasi?.sisa_belum_difakturkan ?? 0)}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-2">
-                            Daftar detail faktur proyek ini ada di menu Faktur.
-                        </p>
+                    <div className="mt-3 rounded-lg p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Sisa Belum Difakturkan</p>
+                            <p className="font-bold text-base text-amber-700 dark:text-amber-300 mt-1">
+                                {formatRupiah(project.realisasi?.sisa_belum_difakturkan ?? 0)}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2">
+                                Daftar detail faktur proyek ini ada di menu Faktur.
+                            </p>
+                        </div>
+                        {bolehInvoice && ['aktif', 'selesai'].includes(project.status) && (project.realisasi?.nilai_penawaran ?? 0) > 0 && (project.realisasi?.sisa_belum_difakturkan ?? 0) >= 1 && (
+                            <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setTerminOpen(true)}>
+                                Buat Invoice Termin
+                            </Button>
+                        )}
                     </div>
                 )}
             </Card>
             )}
+
+            <InvoiceTerminDialog
+                isOpen={terminOpen}
+                idProyek={project.id_proyek}
+                namaProyek={`${project.kode_proyek} — ${project.nama_proyek}`}
+                nilaiKontrak={project.realisasi?.nilai_penawaran ?? null}
+                sisaKontrak={project.realisasi?.sisa_belum_difakturkan ?? null}
+                onClose={() => setTerminOpen(false)}
+            />
 
             {/* Penawaran Proyek */}
             <Card>

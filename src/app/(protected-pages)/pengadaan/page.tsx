@@ -11,6 +11,7 @@ import {
     PiGearDuotone,
     PiShoppingCartDuotone,
     PiPackageDuotone,
+    PiTruckDuotone,
     PiFileTextDuotone,
     PiCheckCircleDuotone,
     PiXCircleDuotone,
@@ -32,7 +33,9 @@ const KARTU_PR: KartuStatus<StatusPermintaan>[] = [
     { key: 'menunggu_approval', icon: <PiHourglassMediumDuotone className="text-3xl text-amber-500" />, bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400',     ring: 'ring-amber-400' },
     { key: 'disetujui',         icon: <PiThumbsUpDuotone className="text-3xl text-indigo-500" />,       bg: 'bg-indigo-50 dark:bg-indigo-500/10',   text: 'text-indigo-600 dark:text-indigo-400',   ring: 'ring-indigo-400' },
     { key: 'diproses',          icon: <PiGearDuotone className="text-3xl text-blue-500" />,             bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400',       ring: 'ring-blue-400' },
+    { key: 'dipesan',           icon: <PiFileTextDuotone className="text-3xl text-cyan-500" />,         bg: 'bg-cyan-50 dark:bg-cyan-500/10',       text: 'text-cyan-600 dark:text-cyan-400',       ring: 'ring-cyan-400' },
     { key: 'dibeli',            icon: <PiShoppingCartDuotone className="text-3xl text-violet-500" />,   bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400',   ring: 'ring-violet-400' },
+    { key: 'diterima_sebagian', icon: <PiTruckDuotone className="text-3xl text-orange-500" />,          bg: 'bg-orange-50 dark:bg-orange-500/10',   text: 'text-orange-600 dark:text-orange-400',   ring: 'ring-orange-400' },
     { key: 'diterima',          icon: <PiPackageDuotone className="text-3xl text-teal-500" />,          bg: 'bg-teal-50 dark:bg-teal-500/10',       text: 'text-teal-600 dark:text-teal-400',       ring: 'ring-teal-400' },
     { key: 'selesai',           icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,   bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-400' },
     { key: 'ditolak',           icon: <PiXCircleDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400',         ring: 'ring-red-400' },
@@ -159,7 +162,7 @@ export default function PengadaanPage() {
         ? 'Menunggu Diproses'
         : `${filterKartu.jenis === 'pr' ? 'PR' : 'Permintaan Vendor'} · ${(filterKartu.jenis === 'pr' ? STATUS_LABEL_PR[filterKartu.status as StatusPermintaan] : STATUS_LABEL_PV[filterKartu.status as PermintaanVendorStatus]) ?? filterKartu.status}`
     const keteranganTabel = !filterKartu
-        ? 'PR dan Permintaan Vendor berstatus Disetujui atau Diproses, urut dari yang paling lama'
+        ? 'PR (Disetujui, Diproses, PO Terbit) dan Permintaan Vendor (Disetujui, Diproses), urut dari yang paling lama'
         : 'Hasil filter dari kartu yang dipilih. Klik kartu yang sama lagi untuk kembali ke antrian.'
 
     const bukaBaris = (b: BarisAntrian) => {
@@ -206,7 +209,7 @@ export default function PengadaanPage() {
     ]
 
     const renderKartu = <K extends string>(daftar: KartuStatus<K>[], ringkasan: Partial<Record<K, number>>, label: Record<string, string>, jenis: 'pr' | 'pv', kolomXl: string) => (
-        <div className={`grid grid-cols-2 sm:grid-cols-4 ${kolomXl} gap-4`}>
+        <div className={`grid grid-cols-2 ${kolomXl} gap-4`}>
             {daftar.map(k => (
                 <Card key={k.key} clickable onClick={() => pilihKartu(jenis, k.key)}
                     className={`${k.bg} transition-shadow ${filterKartu?.jenis === jenis && filterKartu.status === k.key ? `ring-2 ${k.ring}` : ''}`}>
@@ -249,7 +252,7 @@ export default function PengadaanPage() {
                     <h5 className="font-semibold text-gray-700 dark:text-gray-200">Permintaan Pembelian (PR)</h5>
                     <span className="text-xs text-gray-400">Klik kartu untuk menyaring tabel di bawah</span>
                 </div>
-                {renderKartu(KARTU_PR, ringkasanPR, STATUS_LABEL_PR, 'pr', 'xl:grid-cols-8')}
+                {renderKartu(KARTU_PR, ringkasanPR, STATUS_LABEL_PR, 'pr', 'sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-10')}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -257,7 +260,7 @@ export default function PengadaanPage() {
                     <h5 className="font-semibold text-gray-700 dark:text-gray-200">Permintaan Vendor</h5>
                     <span className="text-xs text-gray-400">Klik kartu untuk menyaring tabel di bawah</span>
                 </div>
-                {renderKartu(KARTU_PV, ringkasanPV, STATUS_LABEL_PV, 'pv', 'xl:grid-cols-7')}
+                {renderKartu(KARTU_PV, ringkasanPV, STATUS_LABEL_PV, 'pv', 'sm:grid-cols-4 xl:grid-cols-7')}
             </div>
 
             <Card bodyClass="p-0">

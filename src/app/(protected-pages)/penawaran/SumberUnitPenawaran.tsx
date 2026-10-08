@@ -37,12 +37,4 @@ export function InputJumlahUnit({ value, onChange }: { value: string; onChange: 
     )
 }
 
-export const labelSumberUnit = (unitAset?: number | null, unitVendor?: number | null) => {
-    const bagian = [
-        unitAset ? `${unitAset} Aset` : null,
-        unitVendor ? `${unitVendor} Vendor` : null,
-    ].filter(Boolean)
-    return bagian.length > 0 ? bagian.join(' · ') : '—'
-}
-
-export const angkaAtauNull = (teks: string) => (teks === '' ? null : Number(teks))
+export const angkaAtauNull = (teks: string) => Number(teks) || null

@@ -126,8 +126,11 @@ export const API_ENDPOINTS = {
     PERMINTAAN_PEMBELIAN:              '/api/proxy/permintaan-pembelian',
     PERMINTAAN_PEMBELIAN_DETAIL:       (id: string) => `/api/proxy/permintaan-pembelian/${id}`,
     PERMINTAAN_PEMBELIAN_PROSES:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/proses`,
+    PERMINTAAN_PEMBELIAN_PESAN:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/pesan`,
     PERMINTAAN_PEMBELIAN_DIBELI:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/dibeli`,
     PERMINTAAN_PEMBELIAN_TERIMA:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/terima`,
+    PERMINTAAN_PEMBELIAN_TUTUP_SISA:   (id: string) => `/api/proxy/permintaan-pembelian/${id}/tutup-sisa`,
+    PERMINTAAN_PEMBELIAN_AJUKAN_ULANG_PEMBAYARAN: (id: string) => `/api/proxy/permintaan-pembelian/${id}/ajukan-ulang-pembayaran`,
     PERMINTAAN_PEMBELIAN_BATAL:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/batal`,
     PERMINTAAN_PEMBELIAN_BUKTI:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/bukti`,
     PERMINTAAN_PEMBELIAN_BUKTI_DETAIL: (id: string, idBukti: string) => `/api/proxy/permintaan-pembelian/${id}/bukti/${idBukti}`,
@@ -225,6 +228,10 @@ export const API_ENDPOINTS = {
     FAKTUR_DETAIL: (id: string) => `/api/proxy/faktur/${id}`,
     FAKTUR_STATUS: (id: string) => `/api/proxy/faktur/${id}/status`,
     FAKTUR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/faktur/${id}/ajukan-approval`,
+    FAKTUR_OUTSTANDING: '/api/proxy/faktur/outstanding',
+    FAKTUR_OUTSTANDING_EXPORT: '/api/proxy/faktur/outstanding/export/excel',
+    FAKTUR_PEMBAYARAN: (id: string) => `/api/proxy/faktur/${id}/pembayaran`,
+    FAKTUR_PEMBAYARAN_HAPUS: (id: string, idPembayaran: string) => `/api/proxy/faktur/${id}/pembayaran/${idPembayaran}`,
 
 
     // Invoice Vendor
@@ -236,8 +243,10 @@ export const API_ENDPOINTS = {
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
     INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
     INVOICE_VENDOR_TRIP_SIAP_TAGIH: '/api/proxy/invoice-vendor/trip-siap-tagih',
+    INVOICE_VENDOR_RINGKASAN_KONTRAK: (idKontrak: string) => `/api/proxy/invoice-vendor/ringkasan-kontrak/${idKontrak}`,
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,
     INVOICE_VENDOR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/invoice-vendor/${id}/ajukan-approval`,
+    INVOICE_VENDOR_BATALKAN:   (id: string) => `/api/proxy/invoice-vendor/${id}/batalkan`,
     INVOICE_VENDOR_PEMBAYARAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran`,
     INVOICE_VENDOR_PEMBAYARAN_AJUKAN: (idInvoice: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/ajukan`,
     INVOICE_VENDOR_PEMBAYARAN_DELETE: (idInvoice: string, idPembayaran: string) => `/api/proxy/invoice-vendor/${idInvoice}/pembayaran/${idPembayaran}`,
@@ -458,6 +467,21 @@ export const API_ENDPOINTS = {
     UANG_JALAN_RIWAYAT: (id: string) => `/api/proxy/uang-jalan/${id}/riwayat`,
     UANG_JALAN_OPSI:        '/api/proxy/uang-jalan/opsi',
     UANG_JALAN_OPSI_VENDOR: (idVendor: string) => `/api/proxy/uang-jalan/opsi/vendor/${idVendor}`,
+    UANG_JALAN_OPSI_PROYEK: '/api/proxy/uang-jalan/opsi/proyek',
+    UANG_JALAN_TARIF_RATE_CARD: '/api/proxy/uang-jalan/tarif-rate-card',
+    UANG_JALAN_OPSI_RUTE_PROYEK: (idProyek: string) => `/api/proxy/uang-jalan/opsi/proyek/${idProyek}/rute`,
+    UANG_JALAN_OPSI_PENUGASAN: (idProyek: string) => `/api/proxy/uang-jalan/opsi/proyek/${idProyek}/penugasan`,
+
+    // Kasbon
+    KASBON:                '/api/proxy/kasbon',
+    KASBON_DETAIL:         (id: string) => `/api/proxy/kasbon/${id}`,
+    KASBON_RIWAYAT:        (id: string) => `/api/proxy/kasbon/${id}/riwayat`,
+    KASBON_CICILAN:        (id: string) => `/api/proxy/kasbon/${id}/cicilan`,
+    KASBON_PELUNASAN:      (id: string) => `/api/proxy/kasbon/${id}/pelunasan`,
+    KASBON_PELUNASAN_DETAIL: (id: string, idPembayaran: string) => `/api/proxy/kasbon/${id}/pelunasan/${idPembayaran}`,
+    KASBON_RINGKASAN:      '/api/proxy/kasbon/ringkasan',
+    KASBON_OPSI_KARYAWAN:  '/api/proxy/kasbon/opsi/karyawan',
+    KASBON_EXPORT_EXCEL:   '/api/proxy/kasbon/export/excel',
 
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',

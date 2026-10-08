@@ -825,7 +825,7 @@ export default function BoardUnit() {
                 </div>
             </Dialog>
 
-            <Dialog isOpen={assignDialogOpen} onRequestClose={() => setAssignDialogOpen(false)} onClose={() => setAssignDialogOpen(false)} width={720}>
+            <Dialog isOpen={assignDialogOpen} onRequestClose={() => setAssignDialogOpen(false)} onClose={() => setAssignDialogOpen(false)} width={880}>
                 <h5 className="text-base font-semibold mb-1">Tambah Penugasan Harian</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {assignUnit?.nopol}
@@ -845,60 +845,63 @@ export default function BoardUnit() {
                     </p>
                 )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmitAssign() }}>
-                    <FormItem label="Tanggal" asterisk
-                        extra="Pilih rentang untuk menjadwalkan beberapa hari sekaligus — hari yang sudah terisi otomatis dilewati">
-                        <DatePicker.DatePickerRange
-                            placeholder="Pilih rentang tanggal..."
-                            value={[
-                                assignTanggalMulai ? new Date(assignTanggalMulai) : null,
-                                assignTanggalSampai ? new Date(assignTanggalSampai) : null,
-                            ]}
-                            onChange={([awal, akhir]) => {
-                                setAssignTanggalMulai(awal ? dayjs(awal).format('YYYY-MM-DD') : '')
-                                setAssignTanggalSampai(akhir ? dayjs(akhir).format('YYYY-MM-DD') : '')
-                            }}
-                        />
-                    </FormItem>
-                    {unitPaketVendor(assignUnit) ? (
-                        <FormItem label="Supir Vendor" asterisk
-                            extra={<span className="text-xs text-gray-400">Unit paket — driver dari vendor {assignUnit?.nama_vendor}</span>}>
-                            <Select placeholder="Pilih supir vendor..."
-                                options={supirVendorOptions}
-                                value={supirVendorOptions.find(o => o.value === assignSupirId) ?? null}
-                                onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                        <FormItem label="Tanggal" asterisk>
+                            <DatePicker.DatePickerRange
+                                placeholder="Pilih rentang tanggal..."
+                                value={[
+                                    assignTanggalMulai ? new Date(assignTanggalMulai) : null,
+                                    assignTanggalSampai ? new Date(assignTanggalSampai) : null,
+                                ]}
+                                onChange={([awal, akhir]) => {
+                                    setAssignTanggalMulai(awal ? dayjs(awal).format('YYYY-MM-DD') : '')
+                                    setAssignTanggalSampai(akhir ? dayjs(akhir).format('YYYY-MM-DD') : '')
+                                }}
+                            />
                         </FormItem>
-                    ) : (
-                        <FormItem label="Supir" asterisk>
-                            <Select placeholder="Pilih supir..."
-                                options={supirOptions}
-                                value={supirOptions.find(o => o.value === assignSupirId) ?? null}
-                                onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                        {unitPaketVendor(assignUnit) ? (
+                            <FormItem label="Supir Vendor" asterisk
+                                extra={<span className="text-xs text-gray-400">Unit paket — driver dari vendor {assignUnit?.nama_vendor}</span>}>
+                                <Select placeholder="Pilih supir vendor..."
+                                    options={supirVendorOptions}
+                                    value={supirVendorOptions.find(o => o.value === assignSupirId) ?? null}
+                                    onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                            </FormItem>
+                        ) : (
+                            <FormItem label="Supir" asterisk>
+                                <Select placeholder="Pilih supir..."
+                                    options={supirOptions}
+                                    value={supirOptions.find(o => o.value === assignSupirId) ?? null}
+                                    onChange={opt => setAssignSupirId((opt as Option | null)?.value ?? '')} />
+                            </FormItem>
+                        )}
+                        <FormItem label="Proyek" asterisk>
+                            <Select placeholder="Pilih proyek..."
+                                options={proyekOptions}
+                                value={proyekOptions.find(o => o.value === assignProyekId) ?? null}
+                                onChange={opt => setAssignProyekId((opt as Option | null)?.value ?? '')} />
                         </FormItem>
-                    )}
-                    <FormItem label="Proyek" asterisk>
-                        <Select placeholder="Pilih proyek..."
-                            options={proyekOptions}
-                            value={proyekOptions.find(o => o.value === assignProyekId) ?? null}
-                            onChange={opt => setAssignProyekId((opt as Option | null)?.value ?? '')} />
-                    </FormItem>
-                    <FormItem label="Rute" asterisk>
-                        <Select
-                            isDisabled={!assignProyekId}
-                            placeholder={!assignProyekId ? 'Pilih proyek dahulu...' : assignRuteOptions.length === 0 ? 'Belum ada rute terdaftar untuk proyek ini' : 'Pilih rute...'}
-                            options={assignRuteOptions}
-                            value={assignRuteOptions.find(o => o.value === assignRuteId) ?? null}
-                            onChange={opt => {
-                                const idRute = (opt as Option | null)?.value ?? null
-                                setAssignRuteId(idRute)
-                                const row = idRute ? assignRuteRows.find(r => r.id_rute === idRute) : null
-                                setAssignUangJalan(row?.uang_jalan != null ? String(Math.round(row.uang_jalan)) : '')
-                            }} />
-                    </FormItem>
-                    <FormItem label="Estimasi Uang Jalan" extra="Otomatis dari rate card rute — bisa diubah. Pengajuan uang jalan dibuat lewat menu Uang Jalan">
-                        <Input prefix="Rp" placeholder="0"
-                            value={assignUangJalan ? formatNum(Number(assignUangJalan)) : ''}
-                            onChange={e => setAssignUangJalan(e.target.value.replace(/\D/g, ''))} />
-                    </FormItem>
+                        <FormItem label="Rute" asterisk>
+                            <Select
+                                isDisabled={!assignProyekId}
+                                placeholder={!assignProyekId ? 'Pilih proyek dahulu...' : assignRuteOptions.length === 0 ? 'Belum ada rute terdaftar untuk proyek ini' : 'Pilih rute...'}
+                                options={assignRuteOptions}
+                                value={assignRuteOptions.find(o => o.value === assignRuteId) ?? null}
+                                onChange={opt => {
+                                    const idRute = (opt as Option | null)?.value ?? null
+                                    setAssignRuteId(idRute)
+                                    const row = idRute ? assignRuteRows.find(r => r.id_rute === idRute) : null
+                                    setAssignUangJalan(row?.uang_jalan != null ? String(Math.round(row.uang_jalan)) : '')
+                                }} />
+                        </FormItem>
+                        <div className="sm:col-span-2">
+                            <FormItem label="Estimasi Uang Jalan" extra="Otomatis dari rate card rute — bisa diubah. Pengajuan uang jalan dibuat lewat menu Uang Jalan">
+                                <Input prefix="Rp" placeholder="0"
+                                    value={assignUangJalan ? formatNum(Number(assignUangJalan)) : ''}
+                                    onChange={e => setAssignUangJalan(e.target.value.replace(/\D/g, ''))} />
+                            </FormItem>
+                        </div>
+                    </div>
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
@@ -1155,7 +1158,7 @@ export default function BoardUnit() {
                 </div>
             </Dialog>
 
-            <Dialog isOpen={aksiDialogOpen} onRequestClose={tutupAksi} onClose={tutupAksi} width={720}>
+            <Dialog isOpen={aksiDialogOpen} onRequestClose={tutupAksi} onClose={tutupAksi} width={880}>
                 <h5 className="text-base font-semibold mb-1">Ubah Penugasan</h5>
                 <p className="text-xs text-gray-400 mb-4">
                     {aksiUnit?.nopol} — {aksiAssignment?.kode_proyek ?? '—'}
@@ -1171,33 +1174,37 @@ export default function BoardUnit() {
                     </p>
                 )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmitAksi() }}>
-                    <FormItem label={unitPaketVendor(aksiUnit) ? 'Supir Vendor' : 'Supir'} asterisk>
-                        <Select placeholder={unitPaketVendor(aksiUnit) ? 'Pilih supir vendor...' : 'Pilih supir...'}
-                            options={unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions}
-                            value={(unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions).find(o => o.value === aksiSupirId) ?? null}
-                            onChange={opt => setAksiSupirId((opt as Option | null)?.value ?? '')} />
-                        {aksiAssignment?.id_pengajuan && aksiSupirId !== (aksiAssignment?.id_supir ?? '') && (
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                Pengajuan uang jalan supir lama akan disesuaikan; tanggal ini tidak lagi punya pengajuan otomatis.
-                            </p>
-                        )}
-                    </FormItem>
-                    <FormItem label="Rute" asterisk>
-                        <Select placeholder="Pilih rute..."
-                            options={aksiRuteOptions}
-                            value={aksiRuteOptions.find(o => o.value === aksiRuteId) ?? null}
-                            onChange={opt => {
-                                const idRute = (opt as Option | null)?.value ?? null
-                                setAksiRuteId(idRute)
-                                const row = idRute ? aksiRuteRows.find(r => r.id_rute === idRute) : null
-                                if (row?.uang_jalan != null) setAksiUangJalan(String(Math.round(row.uang_jalan)))
-                            }} />
-                    </FormItem>
-                    <FormItem label="Estimasi Uang Jalan">
-                        <Input prefix="Rp" placeholder="0"
-                            value={aksiUangJalan ? formatNum(Number(aksiUangJalan)) : ''}
-                            onChange={e => setAksiUangJalan(e.target.value.replace(/\D/g, ''))} />
-                    </FormItem>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                        <FormItem label={unitPaketVendor(aksiUnit) ? 'Supir Vendor' : 'Supir'} asterisk>
+                            <Select placeholder={unitPaketVendor(aksiUnit) ? 'Pilih supir vendor...' : 'Pilih supir...'}
+                                options={unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions}
+                                value={(unitPaketVendor(aksiUnit) ? supirVendorOptions : aksiSupirOptions).find(o => o.value === aksiSupirId) ?? null}
+                                onChange={opt => setAksiSupirId((opt as Option | null)?.value ?? '')} />
+                            {aksiAssignment?.id_pengajuan && aksiSupirId !== (aksiAssignment?.id_supir ?? '') && (
+                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                    Pengajuan uang jalan supir lama akan disesuaikan; tanggal ini tidak lagi punya pengajuan otomatis.
+                                </p>
+                            )}
+                        </FormItem>
+                        <FormItem label="Rute" asterisk>
+                            <Select placeholder="Pilih rute..."
+                                options={aksiRuteOptions}
+                                value={aksiRuteOptions.find(o => o.value === aksiRuteId) ?? null}
+                                onChange={opt => {
+                                    const idRute = (opt as Option | null)?.value ?? null
+                                    setAksiRuteId(idRute)
+                                    const row = idRute ? aksiRuteRows.find(r => r.id_rute === idRute) : null
+                                    if (row?.uang_jalan != null) setAksiUangJalan(String(Math.round(row.uang_jalan)))
+                                }} />
+                        </FormItem>
+                        <div className="sm:col-span-2">
+                            <FormItem label="Estimasi Uang Jalan">
+                                <Input prefix="Rp" placeholder="0"
+                                    value={aksiUangJalan ? formatNum(Number(aksiUangJalan)) : ''}
+                                    onChange={e => setAksiUangJalan(e.target.value.replace(/\D/g, ''))} />
+                            </FormItem>
+                        </div>
+                    </div>
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-semibold">Titik Drop (opsional)</p>
@@ -1312,6 +1319,7 @@ export default function BoardUnit() {
                         idTrip={laporanDialogTrip}
                         onSaved={() => { fetchBoard(); if (detailAssignment) refreshDetailTrips(detailAssignment) }}
                         autoOpenForm
+                        onBatalIsi={() => setLaporanDialogTrip(null)}
                     />
                 )}
             </Dialog>

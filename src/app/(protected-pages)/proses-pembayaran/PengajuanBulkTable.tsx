@@ -7,6 +7,7 @@ import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, Row, DataTableResetHandle } from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
+import TeksLipat from '@/components/shared/TeksLipat'
 import {
     HiOutlineCheckCircle,
     HiOutlineXCircle,
@@ -24,7 +25,7 @@ import { formatRupiah } from '@/utils/formatNumber'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { ROUTES } from '@/constants/route.constant'
 import { arusKasService, PengajuanPengeluaran } from '@/services/arusKas.service'
-import { KATEGORI_LABEL, STATUS_LABEL, STATUS_TAG } from '../arus-kas/pengajuanMeta'
+import { KATEGORI_LABEL, MAKS_ALASAN_TOLAK, STATUS_LABEL, STATUS_TAG } from '../arus-kas/pengajuanMeta'
 
 export type BulkAction = 'cek' | 'setuju' | 'tolak' | 'transfer'
 
@@ -273,7 +274,9 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
 
     const alasanDitolakColumn: ColumnDef<PengajuanPengeluaran> = {
         header: 'Alasan Ditolak', id: 'alasan_ditolak', size: 220,
-        cell: ({ row }) => <span className="text-sm text-red-500 dark:text-red-400">{row.original.alasan_ditolak ?? '—'}</span>,
+        cell: ({ row }) => row.original.alasan_ditolak
+            ? <TeksLipat teks={row.original.alasan_ditolak} className="min-w-[180px] text-sm text-red-500 dark:text-red-400" />
+            : <span className="text-gray-400">—</span>,
     }
 
     const tanggalTransferColumn: ColumnDef<PengajuanPengeluaran> = {
@@ -334,6 +337,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                             <a href={ROUTES.UANG_JALAN_DETAIL(p.id_uang_jalan)} target="_blank" rel="noreferrer" className="w-fit">
                                 <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 cursor-pointer hover:opacity-80">
                                     Dari Uang Jalan <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
+                        {p.id_kasbon && (
+                            <a href={ROUTES.KASBON_DETAIL(p.id_kasbon)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300 cursor-pointer hover:opacity-80">
+                                    Dari Kasbon <HiOutlineExternalLink className="text-xs" />
                                 </Tag>
                             </a>
                         )}
@@ -409,7 +419,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && onEdit && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_permintaan_pembelian && onEdit && (
                             <Tooltip title="Edit">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -418,7 +428,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && onDelete && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_permintaan_pembelian && onDelete && (
                             <Tooltip title="Hapus">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
@@ -520,9 +530,12 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                 <p>Tolak pengajuan {tolakTarget?.nomor_pengajuan}?</p>
                 <div className="mt-3">
                     <p className="text-sm font-semibold mb-1">Alasan penolakan <span className="text-red-500">*</span></p>
-                    <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
+                    <Input textArea rows={3} maxLength={MAKS_ALASAN_TOLAK} placeholder="Jelaskan alasan penolakan..."
                         value={alasanSatuan} onChange={e => { setAlasanSatuan(e.target.value); setErrAlasanSatuan('') }} />
-                    {errAlasanSatuan && <p className="text-xs text-red-500 mt-1">{errAlasanSatuan}</p>}
+                    <div className="flex justify-between gap-3 mt-1 text-xs">
+                        <span className="text-red-500">{errAlasanSatuan}</span>
+                        <span className="text-gray-400 tabular-nums shrink-0">{alasanSatuan.length}/{MAKS_ALASAN_TOLAK}</span>
+                    </div>
                 </div>
             </ConfirmDialog>
 
@@ -575,9 +588,12 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                         {bulkKeputusan === 'tolak' && (
                             <div className="mt-3">
                                 <p className="text-sm font-semibold mb-1">Alasan penolakan <span className="text-red-500">*</span></p>
-                                <Input textArea rows={3} placeholder="Jelaskan alasan penolakan..."
+                                <Input textArea rows={3} maxLength={MAKS_ALASAN_TOLAK} placeholder="Jelaskan alasan penolakan..."
                                     value={bulkAlasan} onChange={e => { setBulkAlasan(e.target.value); setBulkErrAlasan('') }} />
-                                {bulkErrAlasan && <p className="text-xs text-red-500 mt-1">{bulkErrAlasan}</p>}
+                                <div className="flex justify-between gap-3 mt-1 text-xs">
+                                    <span className="text-red-500">{bulkErrAlasan}</span>
+                                    <span className="text-gray-400 tabular-nums shrink-0">{bulkAlasan.length}/{MAKS_ALASAN_TOLAK}</span>
+                                </div>
                             </div>
                         )}
                     </>

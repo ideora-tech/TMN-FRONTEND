@@ -25,6 +25,10 @@ function batasiAngka(nilai: string, maks: number): string {
     return angka === '' ? '' : String(Math.min(Number(angka), maks))
 }
 
+function usulAddDrop(jumlahTitikDrop: number): number {
+    return Math.min(Math.max(jumlahTitikDrop, 0), MAKS_ADD_DROP)
+}
+
 function adaTarifUntukMode(d: ParameterTagihanTrip): boolean {
     if (d.mode === 'cancellation') return d.tarif.cancellation != null
     return d.tarif.overnight != null || d.tarif.add_drop != null || d.tarif.cross_cluster != null
@@ -85,6 +89,12 @@ export function ParameterTagihanCard({ idTrip, statusTrip }: { idTrip: string; s
                                 : 'Penawaran proyek belum mengatur tarif Overnight, Add Drop, maupun Cross Cluster.'}
                         </p>
                     )}
+                    {data.mode === 'normal' && data.bisa_diatur && data.tarif.add_drop != null
+                        && data.jumlah_titik_drop >= 1 && data.nilai.jumlah_add_drop === 0 && !data.add_drop_manual && (
+                        <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                            Penugasan trip ini punya {data.jumlah_titik_drop} titik drop, tetapi Add Drop belum diisi.
+                        </p>
+                    )}
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -119,7 +129,14 @@ export function ParameterTagihanCard({ idTrip, statusTrip }: { idTrip: string; s
                     {data.mode === 'cancellation' && !rincian.cancellation ? (
                         <p className="text-xs text-gray-400 mt-2">Trip dibatalkan tidak ditagihkan, kecuali ditandai Cancellation.</p>
                     ) : (
-                        <p className="text-xs text-gray-400 mt-2">Biaya tagihan lain dari laporan perjalanan ikut dijumlahkan di Konsolidasi Klien.</p>
+                        <>
+                            {!data.add_drop_manual && data.nilai.jumlah_add_drop > 0 && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    Add Drop terisi otomatis dari {data.jumlah_titik_drop} titik drop di penugasan. Bisa diubah lewat tombol Atur.
+                                </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-2">Biaya tagihan lain dari laporan perjalanan ikut dijumlahkan di Konsolidasi Klien.</p>
+                        </>
                     )}
 
                     {(data.nilai.keterangan || data.diubah_oleh) && (
@@ -266,8 +283,28 @@ export function ParameterTagihanDialog({ idTrip, isOpen, data: dataAwal, info, o
                             </FormItem>
                             <FormItem label="Add Drop" extra={tarif?.add_drop != null ? <span className="text-xs text-gray-400 ml-1">({formatRupiah(tarif.add_drop)} / drop)</span> : undefined}>
                                 {tarif?.add_drop != null ? (
-                                    <Input suffix="drop" placeholder="0" value={addDrop}
-                                        onChange={e => setAddDrop(batasiAngka(e.target.value, MAKS_ADD_DROP))} />
+                                    <>
+                                        <Input suffix="drop" placeholder="0" value={addDrop}
+                                            onChange={e => setAddDrop(batasiAngka(e.target.value, MAKS_ADD_DROP))} />
+                                        {data.jumlah_titik_drop >= 1 && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                {Number(addDrop || 0) === usulAddDrop(data.jumlah_titik_drop) ? (
+                                                    data.add_drop_manual
+                                                        ? `Sama dengan ${data.jumlah_titik_drop} titik drop di penugasan`
+                                                        : `Otomatis dari ${data.jumlah_titik_drop} titik drop di penugasan, bisa diubah`
+                                                ) : (
+                                                    <>
+                                                        Penugasan punya {data.jumlah_titik_drop} titik drop
+                                                        {' — '}
+                                                        <button type="button" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                                            onClick={() => setAddDrop(String(usulAddDrop(data.jumlah_titik_drop)))}>
+                                                            isi {usulAddDrop(data.jumlah_titik_drop)}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </p>
+                                        )}
+                                    </>
                                 ) : tarifKosong}
                             </FormItem>
                             <div className="sm:col-span-2">

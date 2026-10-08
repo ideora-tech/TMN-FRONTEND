@@ -10,6 +10,7 @@ export const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     pembayaran_pinjaman: 'Pembayaran Pinjaman',
     pembayaran_vendor:   'Pembayaran Vendor',
     pengadaan:  'Pengadaan',
+    kasbon:     'Kasbon',
     lainnya:    'Lainnya',
 }
 
@@ -30,6 +31,7 @@ export const PENERIMA_LABEL: Partial<Record<KategoriPengajuan, string>> = {
     perawatan:  'Armada',
     pembayaran_vendor: 'Vendor',
     pengadaan: 'Supplier',
+    kasbon: 'Karyawan',
 }
 
 export const STATUS_LABEL: Record<StatusPengajuan, string> = {
@@ -51,6 +53,8 @@ export const STATUS_TAG: Record<StatusPengajuan, string> = {
     ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
     ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }
+
+export const MAKS_ALASAN_TOLAK = 500
 
 export const STATUS_APPROVAL_LABEL: Record<StatusApproval, string> = {
     menunggu:  'Menunggu',

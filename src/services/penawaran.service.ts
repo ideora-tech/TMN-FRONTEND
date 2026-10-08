@@ -74,8 +74,7 @@ export interface PenawaranItem {
     jumlah_hari: number | null
     subtotal: number
     keterangan: string | null
-    unit_aset?: number | null
-    unit_vendor?: number | null
+    jumlah_unit?: number | null
 }
 
 export interface PenawaranItemPayload {
@@ -85,8 +84,7 @@ export interface PenawaranItemPayload {
     estimasi_ritase?: number
     jumlah_hari?: number | null
     keterangan?: string | null
-    unit_aset?: number | null
-    unit_vendor?: number | null
+    jumlah_unit?: number | null
 }
 
 export const penawaranService = {

@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import type { PengajuanKeuanganInfo } from './arusKas.service'
 
-export type StatusPermintaan = 'diajukan' | 'menunggu_approval' | 'disetujui' | 'ditolak' | 'diproses' | 'dibeli' | 'diterima' | 'selesai' | 'dibatalkan'
+export type StatusPermintaan = 'diajukan' | 'menunggu_approval' | 'disetujui' | 'ditolak' | 'diproses' | 'dipesan' | 'dibeli' | 'diterima_sebagian' | 'diterima' | 'selesai' | 'dibatalkan'
 export type TipePermintaan = 'umum' | 'sparepart' | 'aset'
 export type JenisItem = 'barang' | 'jasa' | 'sparepart' | 'aset'
 export type TahapBukti = 'pengajuan' | 'pembelian' | 'penerimaan'
@@ -93,6 +93,10 @@ export interface PermintaanPembelian {
     tanggal_dibutuhkan: string | null
     tanggal_pembelian: string | null
     nomor_po: string | null
+    tanggal_po?: string | null
+    sisa_ditutup_pada?: string | null
+    alasan_tutup_sisa?: string | null
+    penerimaan?: PenerimaanPermintaan[]
     tanggal_diterima: string | null
     keterangan_penerimaan: string | null
     tanggal_pembayaran: string | null
@@ -107,10 +111,12 @@ export interface PermintaanPembelian {
     alasan_batal: string | null
     diproses_pada: string | null
     dibeli_pada: string | null
+    dibeli_oleh?: string | null
     diterima_pada: string | null
     items: PermintaanItem[]
     bukti: PermintaanBukti[]
     pengajuan_keuangan?: PengajuanKeuanganInfo | null
+    pembayaran_ditolak?: boolean
     pembelian_sparepart?: PembelianSparepartTertaut | null
     termin?: Termin[]
     termin_lunas?: boolean
@@ -204,6 +210,33 @@ export type PermintaanPayload = {
     items: ItemPayload[]
 }
 
+export interface PenerimaanPermintaan {
+    id_penerimaan: string
+    tanggal_diterima: string
+    keterangan: string | null
+    diterima_oleh: string | null
+    dibuat_pada: string | null
+    items: { id_item: string; nama_item: string; satuan: string; qty: number }[]
+}
+
+export type PesanPayload = {
+    id_supplier: string
+    tanggal_po: string
+    items: { id_item: string; harga_aktual: number; id_barang?: string | null }[]
+    diskon?: number
+    ppn_persen?: number
+    ongkir?: number
+}
+
+export type RealisasiSparepartPayload = {
+    tanggal_pembelian: string
+    id_supplier?: string | null
+    items: { id_item: string; harga_aktual: number }[]
+    diskon?: number
+    ppn_persen?: number
+    ongkir?: number
+}
+
 export type DibeliPayload = {
     id_supplier: string
     tanggal_pembelian: string
@@ -214,7 +247,7 @@ export type DibeliPayload = {
     termin?: TerminPayload[]
 }
 
-type ListMeta = { page: number; total: number; totalPages: number; limit: number; ringkasan: Partial<Record<StatusPermintaan, number>> }
+type ListMeta = { page: number; total: number; totalPages: number; limit: number; ringkasan: Partial<Record<StatusPermintaan, number>>; pembayaran_ditolak?: number; lihat_semua?: boolean }
 
 const isiItem = (form: FormData, items: ItemPayload[]) => {
     items.forEach((item, i) => {
@@ -235,7 +268,7 @@ const isiItem = (form: FormData, items: ItemPayload[]) => {
 }
 
 export const permintaanPembelianService = {
-    async list(params?: { page?: number; limit?: number; search?: string; status?: string; tipe?: TipePermintaan | string; id_departemen?: string; dari?: string; sampai?: string; milik_saya?: '1' }) {
+    async list(params?: { page?: number; limit?: number; search?: string; status?: string; tipe?: TipePermintaan | string; id_departemen?: string; dari?: string; sampai?: string; milik_saya?: '1'; pembayaran_ditolak?: '1' }) {
         const { data } = await axios.get(API_ENDPOINTS.PERMINTAAN_PEMBELIAN, { params })
         return data as { data: PermintaanPembelian[]; meta: ListMeta }
     },
@@ -269,6 +302,10 @@ export const permintaanPembelianService = {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PROSES(id))
         return data.data as PermintaanPembelian
     },
+    async pesan(id: string, payload: PesanPayload) {
+        const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PESAN(id), payload)
+        return data.data as PermintaanPembelian
+    },
     async dibeli(id: string, payload: DibeliPayload) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_DIBELI(id), payload)
         return data.data as PermintaanPembelian
@@ -277,8 +314,16 @@ export const permintaanPembelianService = {
         const res = await axios.get(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PO_PDF(id), { responseType: 'blob' })
         return res.data as Blob
     },
-    async terima(id: string, payload: { tanggal_diterima: string; keterangan?: string; items: { id_item: string; qty_diterima: number }[] }) {
+    async terima(id: string, payload: { tanggal_diterima: string; keterangan?: string; items: { id_item: string; qty_diterima: number; qty_sebelumnya?: number }[] }) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_TERIMA(id), payload)
+        return data.data as PermintaanPembelian
+    },
+    async tutupSisa(id: string, payload: { alasan: string; diskon?: number; ongkir?: number; jumlah_diterima?: number }) {
+        const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_TUTUP_SISA(id), payload)
+        return data.data as PermintaanPembelian
+    },
+    async ajukanUlangPembayaran(id: string, payload: { catatan: string; id_termin?: string; versi_pengajuan?: string; items?: { id_item: string; harga_aktual: number }[]; diskon?: number; ppn_persen?: number; ongkir?: number }) {
+        const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_AJUKAN_ULANG_PEMBAYARAN(id), payload)
         return data.data as PermintaanPembelian
     },
     async batal(id: string, alasan: string) {
@@ -300,7 +345,7 @@ export const permintaanPembelianService = {
         const { data } = await axios.get(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PENGAJUAN(id))
         return data.data as PengajuanKeuanganInfo | null
     },
-    async realisasiSparepart(id: string, payload: { tanggal_pembelian: string; id_supplier?: string | null; items: { id_item: string; harga_aktual: number }[] }) {
+    async realisasiSparepart(id: string, payload: RealisasiSparepartPayload) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_REALISASI_SPAREPART(id), payload)
         return data.data as PermintaanPembelian
     },

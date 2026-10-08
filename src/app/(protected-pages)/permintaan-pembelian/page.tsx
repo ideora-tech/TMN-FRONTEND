@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import axios from 'axios'
 import { Button, Card, Input, Spinner, Tag, Tooltip, Switcher, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
@@ -14,8 +13,10 @@ import {
     PiHourglassMediumDuotone,
     PiThumbsUpDuotone,
     PiGearDuotone,
+    PiFileTextDuotone,
     PiShoppingCartDuotone,
     PiPackageDuotone,
+    PiTruckDuotone,
     PiCheckCircleDuotone,
     PiXCircleDuotone,
     PiArchiveDuotone,
@@ -26,17 +27,15 @@ import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { permintaanPembelianService, type PermintaanPembelian, type StatusPermintaan } from '@/services/permintaanPembelian.service'
-import { pembelianSparepartService } from '@/services/pembelianSparepart.service'
 import { STATUS_LABEL, STATUS_TAG, STATUS_URUT, TIPE_LABEL, TIPE_TAG } from './status'
 import LaporanPengadaanTab from './LaporanPengadaanTab'
-import DaftarPembelianTab from '../pembelian-sparepart/DaftarPembelianTab'
 
 type Option = { value: string; label: string }
 const STATUS_OPTIONS: Option[] = [{ value: '', label: 'Semua Status' }, ...STATUS_URUT.map(s => ({ value: s, label: STATUS_LABEL[s] }))]
 const TIPE_OPTIONS: Option[] = [{ value: '', label: 'Semua Tipe' }, { value: 'umum', label: TIPE_LABEL.umum }, { value: 'sparepart', label: TIPE_LABEL.sparepart }, { value: 'aset', label: TIPE_LABEL.aset }]
 const TIPE_VALUES = ['umum', 'sparepart', 'aset']
 
-const TAB_VALUES = ['permintaan', 'langsung', 'laporan'] as const
+const TAB_VALUES = ['permintaan', 'laporan'] as const
 type TabValue = (typeof TAB_VALUES)[number]
 const PERAN_LAPORAN = ['superadmin', 'admin', 'manager', 'pengadaan', 'keuangan']
 
@@ -44,7 +43,9 @@ const KARTU_STATUS: { key: StatusPermintaan; icon: ReactNode; bg: string; text: 
     { key: 'menunggu_approval', icon: <PiHourglassMediumDuotone className="text-3xl text-amber-500" />, bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-600 dark:text-amber-400',     ring: 'ring-amber-400' },
     { key: 'disetujui',         icon: <PiThumbsUpDuotone className="text-3xl text-indigo-500" />,       bg: 'bg-indigo-50 dark:bg-indigo-500/10',   text: 'text-indigo-600 dark:text-indigo-400',   ring: 'ring-indigo-400' },
     { key: 'diproses',          icon: <PiGearDuotone className="text-3xl text-blue-500" />,             bg: 'bg-blue-50 dark:bg-blue-500/10',       text: 'text-blue-600 dark:text-blue-400',       ring: 'ring-blue-400' },
+    { key: 'dipesan',           icon: <PiFileTextDuotone className="text-3xl text-cyan-500" />,         bg: 'bg-cyan-50 dark:bg-cyan-500/10',       text: 'text-cyan-600 dark:text-cyan-400',       ring: 'ring-cyan-400' },
     { key: 'dibeli',            icon: <PiShoppingCartDuotone className="text-3xl text-violet-500" />,   bg: 'bg-violet-50 dark:bg-violet-500/10',   text: 'text-violet-600 dark:text-violet-400',   ring: 'ring-violet-400' },
+    { key: 'diterima_sebagian', icon: <PiTruckDuotone className="text-3xl text-orange-500" />,          bg: 'bg-orange-50 dark:bg-orange-500/10',   text: 'text-orange-600 dark:text-orange-400',   ring: 'ring-orange-400' },
     { key: 'diterima',          icon: <PiPackageDuotone className="text-3xl text-teal-500" />,          bg: 'bg-teal-50 dark:bg-teal-500/10',       text: 'text-teal-600 dark:text-teal-400',       ring: 'ring-teal-400' },
     { key: 'selesai',           icon: <PiCheckCircleDuotone className="text-3xl text-emerald-500" />,   bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-400' },
     { key: 'ditolak',           icon: <PiXCircleDuotone className="text-3xl text-red-500" />,           bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-600 dark:text-red-400',         ring: 'ring-red-400' },
@@ -61,22 +62,12 @@ export default function PermintaanPembelianPage() {
     const tabParam = searchParams.get('tab')
     const tabAwal: TabValue = TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'permintaan'
     const [activeTab, setActiveTab] = useState<TabValue>(tabAwal)
-    const [langsungTersedia, setLangsungTersedia] = useState<boolean | null>(null)
-    const [jumlahLangsung, setJumlahLangsung] = useState<number | null>(null)
-
-    useEffect(() => {
-        pembelianSparepartService.list({ page: 1, limit: 1, sumber: 'langsung' })
-            .then(res => { setLangsungTersedia(true); setJumlahLangsung(res.meta.total) })
-            .catch(err => setLangsungTersedia(!(axios.isAxiosError(err) && err.response?.status === 403)))
-    }, [])
 
     useEffect(() => {
         if (TAB_VALUES.includes(tabParam as TabValue)) setActiveTab(tabParam as TabValue)
     }, [tabParam])
 
-    const tabTampil: TabValue = (activeTab === 'langsung' && langsungTersedia === false) || (activeTab === 'laporan' && !bolehLaporan)
-        ? 'permintaan'
-        : activeTab
+    const tabTampil: TabValue = activeTab === 'laporan' && !bolehLaporan ? 'permintaan' : activeTab
 
     const gantiTab = (val: string) => {
         setActiveTab(val as TabValue)
@@ -97,6 +88,9 @@ export default function PermintaanPembelianPage() {
     const [statusFilter, setStatusFilter] = useState(statusAwal)
     const [tipeFilter, setTipeFilter] = useState(tipeAwal)
     const [milikSaya, setMilikSaya] = useState(false)
+    const [hanyaDitolak, setHanyaDitolak] = useState(false)
+    const [jumlahDitolak, setJumlahDitolak] = useState(0)
+    const [lihatSemua, setLihatSemua] = useState(true)
     const [dari, setDari] = useState<Date | null>(null)
     const [sampai, setSampai] = useState<Date | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
@@ -116,17 +110,20 @@ export default function PermintaanPembelianPage() {
                 page: currentPage, limit: pageSize, search: search || undefined, status: statusFilter || undefined,
                 tipe: tipeFilter || undefined,
                 milik_saya: milikSaya ? '1' : undefined,
+                pembayaran_ditolak: hanyaDitolak ? '1' : undefined,
                 dari: dari ? dayjs(dari).format('YYYY-MM-DD') : undefined, sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
             })
             setList(res.data)
             setTotal(res.meta.total)
             setRingkasan(res.meta.ringkasan ?? {})
+            setJumlahDitolak(res.meta.pembayaran_ditolak ?? 0)
+            setLihatSemua(res.meta.lihat_semua ?? true)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter, tipeFilter, milikSaya, dari, sampai])
+    }, [currentPage, pageSize, search, statusFilter, tipeFilter, milikSaya, hanyaDitolak, dari, sampai])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -147,7 +144,12 @@ export default function PermintaanPembelianPage() {
         { header: 'Dibutuhkan', accessorKey: 'tanggal_dibutuhkan', size: 120, cell: ({ row }) => row.original.tanggal_dibutuhkan ? dayjs(row.original.tanggal_dibutuhkan).format('DD MMM YYYY') : <span className="text-gray-400">—</span> },
         { header: 'Estimasi', accessorKey: 'total_estimasi', size: 140, cell: ({ row }) => <span className="tabular-nums">{formatRupiah(row.original.total_estimasi)}</span> },
         { header: 'Aktual', accessorKey: 'total_aktual', size: 140, cell: ({ row }) => row.original.total_aktual !== null ? <span className="tabular-nums font-semibold">{formatRupiah(row.original.total_aktual)}</span> : <span className="text-gray-400">—</span> },
-        { header: 'Status', accessorKey: 'status', size: 160, cell: ({ row }) => <Tag className={`text-xs font-semibold ${STATUS_TAG[row.original.status]}`}>{STATUS_LABEL[row.original.status]}</Tag> },
+        { header: 'Status', accessorKey: 'status', size: 160, cell: ({ row }) => (
+            <div className="flex flex-col items-start gap-1">
+                <Tag className={`text-xs font-semibold ${STATUS_TAG[row.original.status]}`}>{STATUS_LABEL[row.original.status]}</Tag>
+                {row.original.pembayaran_ditolak && <Tag className="text-[10px] font-semibold px-1.5 py-0 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Pembayaran ditolak</Tag>}
+            </div>
+        ) },
         { header: '', id: 'aksi', size: 60, cell: ({ row }) => (
             <Tooltip title="Detail"><span className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300" onClick={() => bukaDetail(row.original.id_permintaan)}><HiOutlineEye className="text-lg" /></span></Tooltip>
         ) },
@@ -170,13 +172,12 @@ export default function PermintaanPembelianPage() {
             <Tabs value={tabTampil} onChange={gantiTab}>
                 <Tabs.TabList>
                     <Tabs.TabNav value="permintaan">Permintaan</Tabs.TabNav>
-                    {langsungTersedia && <Tabs.TabNav value="langsung">{jumlahLangsung !== null ? `Pembelian Langsung (${formatNum(jumlahLangsung)})` : 'Pembelian Langsung'}</Tabs.TabNav>}
                     {bolehLaporan && <Tabs.TabNav value="laporan">Laporan</Tabs.TabNav>}
                 </Tabs.TabList>
                 <div>
                     <Tabs.TabContent value="permintaan">
                         <div className="flex flex-col gap-4 mt-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-10 gap-4">
                                 {KARTU_STATUS.map(k => {
                                     const aktif = statusFilter === k.key
                                     return (
@@ -196,6 +197,17 @@ export default function PermintaanPembelianPage() {
                                 })}
                             </div>
 
+                            {(jumlahDitolak > 0 || hanyaDitolak) && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-500/30 dark:bg-red-500/10">
+                                    <p className="flex-1 min-w-48 text-sm text-red-700 dark:text-red-300">
+                                        <span className="font-semibold">{formatNum(jumlahDitolak)} PR</span> pembayarannya ditolak dan menunggu diajukan ulang.
+                                    </p>
+                                    <Button size="sm" variant={hanyaDitolak ? 'solid' : 'default'} onClick={() => { setHanyaDitolak(v => !v); setCurrentPage(1) }}>
+                                        {hanyaDitolak ? 'Tampilkan semua' : 'Tampilkan'}
+                                    </Button>
+                                </div>
+                            )}
+
                             <Card bodyClass="p-0">
                                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                                     <Input className="flex-1 min-w-60" placeholder="Cari nomor / judul... (tekan Enter)"
@@ -209,7 +221,9 @@ export default function PermintaanPembelianPage() {
                                     </div>
                                     <div className="w-full sm:w-40 shrink-0"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Dari tanggal" value={dari} onChange={d => { setDari(d); setCurrentPage(1) }} /></div>
                                     <div className="w-full sm:w-40 shrink-0"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Sampai tanggal" value={sampai} onChange={d => { setSampai(d); setCurrentPage(1) }} /></div>
-                                    <div className="flex items-center gap-2"><Switcher checked={milikSaya} onChange={v => { setMilikSaya(v); setCurrentPage(1) }} /><span className="text-sm">Milik saya</span></div>
+                                    {lihatSemua
+                                        ? <div className="flex items-center gap-2"><Switcher checked={milikSaya} onChange={v => { setMilikSaya(v); setCurrentPage(1) }} /><span className="text-sm">Milik saya</span></div>
+                                        : <span className="text-xs text-gray-400">Menampilkan permintaan yang Anda ajukan atau perlu Anda setujui</span>}
                                 </div>
                                 <DataTable columns={columns} data={list as unknown[]} loading={loading} noData={!loading && list.length === 0}
                                     pagingData={{ total, pageIndex: currentPage, pageSize }} onPaginationChange={setCurrentPage}
@@ -217,11 +231,6 @@ export default function PermintaanPembelianPage() {
                             </Card>
                         </div>
                     </Tabs.TabContent>
-                    {langsungTersedia && (
-                        <Tabs.TabContent value="langsung">
-                            <div className="mt-4"><DaftarPembelianTab sumber="langsung" /></div>
-                        </Tabs.TabContent>
-                    )}
                     {bolehLaporan && (
                         <Tabs.TabContent value="laporan">
                             <div className="mt-4"><LaporanPengadaanTab onBukaPr={bukaDetail} /></div>

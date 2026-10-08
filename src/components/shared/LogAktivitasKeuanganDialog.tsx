@@ -5,7 +5,7 @@ import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
 import {
     HiOutlinePaperAirplane, HiOutlineSearch, HiOutlineClock,
-    HiOutlineCheck, HiOutlineX, HiOutlineCash, HiOutlinePaperClip,
+    HiOutlineCheck, HiOutlineX, HiOutlineCash, HiOutlinePaperClip, HiOutlineRefresh,
 } from 'react-icons/hi'
 import { formatRupiah } from '@/utils/formatNumber'
 import type { PengajuanKeuanganInfo } from '@/services/arusKas.service'
@@ -18,6 +18,7 @@ export const PENGAJUAN_LABEL: Record<string, string> = {
     disetujui:         'Disetujui',
     disetujui_final:   'Approval Lengkap — Pengajuan Disetujui',
     ditolak_final:     'Pengajuan Ditolak',
+    diajukan_ulang:    'Diajukan Ulang',
     disetujui_transfer: 'Disetujui — Persetujuan Transfer',
     ditolak_transfer:  'Ditolak — Persetujuan Transfer',
     siap_transfer:     'Siap Transfer',
@@ -42,6 +43,7 @@ const IKON: Record<string, { icon: ReactNode; className: string }> = {
     disetujui:     { icon: <HiOutlineCheck />,         className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
     disetujui_final: { icon: <HiOutlineCheck />,       className: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' },
     ditolak_final:   { icon: <HiOutlineX />,           className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' },
+    diajukan_ulang:  { icon: <HiOutlineRefresh />,     className: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300' },
     disetujui_transfer: { icon: <HiOutlineCheck />,    className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },
     ditolak_transfer:   { icon: <HiOutlineX />,        className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' },
     siap_transfer: { icon: <HiOutlineCheck />,         className: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },

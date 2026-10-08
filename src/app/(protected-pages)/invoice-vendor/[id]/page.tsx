@@ -1,6 +1,6 @@
 'use client'
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
-import { use, useEffect, useState, useCallback } from 'react'
+import { Fragment, use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, Button, Dialog, FormItem, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
@@ -9,9 +9,10 @@ import DatePicker from '@/components/ui/DatePicker'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
-import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
+import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL, KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
+import TeksLipat from '@/components/shared/TeksLipat'
 import dayjs from 'dayjs'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineBadgeCheck } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineBadgeCheck, HiOutlineBan } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
@@ -19,7 +20,7 @@ import { konsolidasiVendorService, KonsolidasiRekap } from '@/services/konsolida
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { invoiceVendorService, InvoiceVendor, PembayaranVendor } from '@/services/invoice-vendor.service'
+import { invoiceVendorService, InvoiceVendor, PembayaranVendor, RingkasanKontrakVendor } from '@/services/invoice-vendor.service'
 import { arusKasService, PengajuanKeuanganInfo } from '@/services/arusKas.service'
 import LogAktivitasKeuanganDialog from '@/components/shared/LogAktivitasKeuanganDialog'
 import { STATUS_LABEL as STATUS_PENGAJUAN_LABEL, STATUS_TAG as STATUS_PENGAJUAN_TAG } from '../../arus-kas/pengajuanMeta'
@@ -185,6 +186,23 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         label: `${k.nomor_kontrak ?? 'Tanpa nomor'} · ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
     }))
 
+    const [ringkasanKontrakEdit, setRingkasanKontrakEdit] = useState<RingkasanKontrakVendor | null>(null)
+    useEffect(() => {
+        setRingkasanKontrakEdit(null)
+        if (!editing || !form.id_kontrak_vendor) return
+        let batal = false
+        invoiceVendorService.ringkasanKontrak(form.id_kontrak_vendor, id)
+            .then(r => { if (!batal) setRingkasanKontrakEdit(r) })
+            .catch(() => {})
+        return () => { batal = true }
+    }, [editing, form.id_kontrak_vendor, id])
+    const sisaKontrakEdit = ringkasanKontrakEdit?.sisa ?? null
+    const dppNaikAtauKontrakGanti = form.id_kontrak_vendor !== (data?.id_kontrak_vendor ?? '')
+        || (Number(form.dpp) || 0) > (data?.dpp ?? 0)
+    const pesanMelebihiKontrakEdit = sisaKontrakEdit !== null && dppNaikAtauKontrakGanti && (Number(form.dpp) || 0) > sisaKontrakEdit
+        ? `DPP melebihi sisa nilai kontrak (${formatRupiah(sisaKontrakEdit)})`
+        : ''
+
     const tipePembayaranOptions = tipePembayaranList
         .filter(t => t.aktif)
         .map(t => ({ value: t.kode_tipe, label: t.nama_tipe }))
@@ -207,6 +225,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
         if (!form.nomor_invoice.trim()) e.nomor_invoice = 'Nomor invoice wajib diisi'
         if (!form.tanggal_invoice) e.tanggal_invoice = 'Tanggal invoice wajib diisi'
         if (!form.dpp) e.dpp = 'DPP wajib diisi'
+        else if (pesanMelebihiKontrakEdit) e.dpp = pesanMelebihiKontrakEdit
         setFormErrors(e)
         return Object.keys(e).length === 0
     }
@@ -252,6 +271,9 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
     const [ajukanOpen, setAjukanOpen] = useState(false)
     const [verifikasiLangsungOpen, setVerifikasiLangsungOpen] = useState(false)
     const [memverifikasi, setMemverifikasi] = useState(false)
+    const [batalOpen, setBatalOpen] = useState(false)
+    const [alasanBatal, setAlasanBatal] = useState('')
+    const [membatalkan, setMembatalkan] = useState(false)
 
     const handleExportPdf = async () => {
         setDownloadingPdf(true)
@@ -393,13 +415,26 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                         : (STATUS_TAG[data.status] ?? 'bg-gray-100 text-gray-600')}
                     tahapAktif={data.status === 'diverifikasi' && data.status_pembayaran === 'sebagian' ? 3 : undefined}
                     tahapGagal={data.status === 'ditolak' ? 1 : undefined}
+                    gagal={data.status === 'dibatalkan' ? 'Invoice ini telah dibatalkan dan tidak bisa diproses lebih lanjut.' : undefined}
                     selesai={data.status === 'diverifikasi' && data.status_pembayaran === 'lunas'}
-                    catatan={data.status === 'ditolak' && data.catatan_verifikasi
-                        ? [{ warna: 'merah', judul: 'Invoice ditolak approver — perlu revisi', isi: `“${data.catatan_verifikasi}”` }]
-                        : []}
+                    catatan={data.status === 'dibatalkan'
+                        ? [{
+                            warna: 'merah',
+                            judul: `Dibatalkan${data.dibatalkan_oleh_nama ? ` oleh ${data.dibatalkan_oleh_nama}` : ''}${data.dibatalkan_pada ? ` · ${dayjs(data.dibatalkan_pada).format('DD MMM YYYY HH:mm')}` : ''}`,
+                            isi: data.alasan_batal ? `“${data.alasan_batal}”` : undefined,
+                        }]
+                        : data.status === 'ditolak' && data.catatan_verifikasi
+                            ? [{ warna: 'merah', judul: 'Invoice ditolak approver — perlu revisi', isi: `“${data.catatan_verifikasi}”` }]
+                            : []}
                     langkah={langkahAlur}
-                    aksi={(
+                    aksi={data.status === 'dibatalkan' ? undefined : (
                         <>
+                            {data.bisa_dibatalkan && (
+                                <Button size="sm" variant="plain" className={KELAS_TOMBOL_BATAL} icon={<HiOutlineBan />}
+                                    onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>
+                                    Batalkan Invoice
+                                </Button>
+                            )}
                             {data.status === 'ditolak' && (
                                 <Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={mulaiEdit}>
                                     Perbaiki Invoice
@@ -433,9 +468,13 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 </div>
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
-                                <Tag className={BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
-                                    {BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran}
-                                </Tag>
+                                {data.status === 'dibatalkan' ? (
+                                    <Tag className={STATUS_TAG.dibatalkan}>{STATUS_LABEL.dibatalkan}</Tag>
+                                ) : (
+                                    <Tag className={BAYAR_TAG[data.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
+                                        {BAYAR_LABEL[data.status_pembayaran] ?? data.status_pembayaran}
+                                    </Tag>
+                                )}
                                 <Tooltip title="Cetak PDF">
                                     <span
                                         className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingPdf ? 'opacity-50 pointer-events-none' : ''}`}
@@ -461,7 +500,19 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                         : <span className="text-gray-400">—</span>,
                                 },
                                 { label: 'Kontrak',         value: data.kontrak?.nomor_kontrak ?? <span className="text-gray-400">—</span> },
-                                { label: 'Nilai Kontrak',   value: data.kontrak ? formatRupiah(data.kontrak.nilai_kontrak) : <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'Nilai Kontrak',
+                                    value: data.kontrak ? (
+                                        <>
+                                            {formatRupiah(data.kontrak.nilai_kontrak)}
+                                            {data.kontrak.sisa != null && (
+                                                <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Sudah ditagih {formatRupiah(data.kontrak.total_ditagih ?? 0)} · sisa {formatRupiah(data.kontrak.sisa)}
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : <span className="text-gray-400">—</span>,
+                                },
                                 { label: 'Tanggal Invoice', value: dayjs(data.tanggal_invoice).format('DD MMM YYYY') },
                                 {
                                     label: 'Jatuh Tempo',
@@ -578,10 +629,15 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     onChange={date => setForm(p => ({ ...p, periode_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
                             */}
-                            <FormItem label="DPP" asterisk invalid={!!formErrors.dpp} errorMessage={formErrors.dpp}>
-                                <Input prefix="Rp" placeholder="0" invalid={!!formErrors.dpp}
+                            <FormItem label="DPP" asterisk invalid={!!formErrors.dpp || !!pesanMelebihiKontrakEdit} errorMessage={pesanMelebihiKontrakEdit || formErrors.dpp}>
+                                <Input prefix="Rp" placeholder="0" invalid={!!formErrors.dpp || !!pesanMelebihiKontrakEdit}
                                     value={form.dpp ? formatNum(Number(form.dpp)) : ''}
                                     onChange={e => setForm(p => ({ ...p, dpp: e.target.value.replace(/\D/g, '') }))} />
+                                {sisaKontrakEdit !== null && !pesanMelebihiKontrakEdit && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                                        Sisa nilai kontrak di luar invoice ini: <span className="font-semibold tabular-nums">{formatRupiah(sisaKontrakEdit)}</span>
+                                    </p>
+                                )}
                             </FormItem>
                             <FormItem label="PPN" extra={<span className="text-xs text-gray-400">Isi persentase, nominal dihitung otomatis dari DPP</span>}>
                                 <div className="flex items-center gap-2">
@@ -771,39 +827,53 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {pengajuanBerjalan.map(p => (
-                                    <tr key={p.id_pengajuan} className="bg-gray-50/60 dark:bg-gray-800/40">
-                                        <td className="py-3 pr-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
-                                            {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}
-                                        </td>
-                                        <td className="py-3 pr-4 text-right tabular-nums font-semibold text-gray-800 dark:text-gray-200">
-                                            {formatRupiah(p.nominal)}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            <Tag className={`${STATUS_PENGAJUAN_TAG[p.status as keyof typeof STATUS_PENGAJUAN_TAG] ?? 'bg-gray-100 text-gray-600'} font-semibold`}>
-                                                {STATUS_PENGAJUAN_LABEL[p.status as keyof typeof STATUS_PENGAJUAN_LABEL] ?? p.status}
-                                            </Tag>
-                                            {p.status === 'ditolak' && p.alasan_ditolak && (
-                                                <p className="text-xs text-red-500 mt-1">{p.alasan_ditolak}</p>
+                                {pengajuanBerjalan.map(p => {
+                                    const alasan = p.status === 'ditolak' ? (p.alasan_ditolak ?? '').trim() : ''
+                                    const adaAlasan = alasan !== '' && !['tolak', 'ditolak'].includes(alasan.toLowerCase())
+                                    return (
+                                        <Fragment key={p.id_pengajuan}>
+                                            <tr className={`bg-gray-50/60 dark:bg-gray-800/40 ${adaAlasan ? 'border-b-0' : ''}`}>
+                                                <td className="py-3 pr-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
+                                                    {dayjs(p.tanggal_pengajuan).format('DD MMM YYYY')}
+                                                </td>
+                                                <td className="py-3 pr-4 text-right tabular-nums font-semibold text-gray-800 dark:text-gray-200">
+                                                    {formatRupiah(p.nominal)}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    <Tag className={`${STATUS_PENGAJUAN_TAG[p.status as keyof typeof STATUS_PENGAJUAN_TAG] ?? 'bg-gray-100 text-gray-600'} font-semibold`}>
+                                                        {STATUS_PENGAJUAN_LABEL[p.status as keyof typeof STATUS_PENGAJUAN_LABEL] ?? p.status}
+                                                    </Tag>
+                                                </td>
+                                                <td className="py-3 pr-4"><span className="text-gray-400">—</span></td>
+                                                <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{p.nomor_pengajuan}</td>
+                                                <td className="py-3 pr-4"><span className="text-gray-400 text-xs">—</span></td>
+                                                <td className="py-3 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Tooltip title="Log Aktivitas">
+                                                            <span
+                                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
+                                                                onClick={() => bukaLogPengajuan(p.id_pengajuan)}
+                                                            >
+                                                                <HiOutlineClipboardList className="text-lg" />
+                                                            </span>
+                                                        </Tooltip>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {adaAlasan && (
+                                                <tr className="bg-gray-50/60 dark:bg-gray-800/40">
+                                                    <td colSpan={7} className="pb-3">
+                                                        <TeksLipat
+                                                            teks={alasan}
+                                                            awalan={<span className="font-semibold">Alasan ditolak:</span>}
+                                                            className="w-0 min-w-full text-xs text-red-500 dark:text-red-400"
+                                                        />
+                                                    </td>
+                                                </tr>
                                             )}
-                                        </td>
-                                        <td className="py-3 pr-4"><span className="text-gray-400">—</span></td>
-                                        <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{p.nomor_pengajuan}</td>
-                                        <td className="py-3 pr-4"><span className="text-gray-400 text-xs">—</span></td>
-                                        <td className="py-3 text-right whitespace-nowrap">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Tooltip title="Log Aktivitas">
-                                                    <span
-                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-500/20 dark:text-purple-300 dark:hover:bg-purple-500/30 transition-colors"
-                                                        onClick={() => bukaLogPengajuan(p.id_pengajuan)}
-                                                    >
-                                                        <HiOutlineClipboardList className="text-lg" />
-                                                    </span>
-                                                </Tooltip>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                        </Fragment>
+                                    )
+                                })}
                                 {pembayaran.map(p => (
                                     <tr key={p.id_pembayaran_vendor}>
                                         <td className="py-3 pr-4 whitespace-nowrap text-gray-800 dark:text-gray-200">
@@ -844,14 +914,16 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                                         <HiOutlineDownload className="text-lg" />
                                                     </span>
                                                 </Tooltip>
-                                                <Tooltip title="Hapus">
-                                                    <span
-                                                        className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                        onClick={() => setDeleteBayarTarget(p)}
-                                                    >
-                                                        <HiOutlineTrash className="text-lg" />
-                                                    </span>
-                                                </Tooltip>
+                                                {p.bisa_dihapus && (
+                                                    <Tooltip title="Hapus">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => setDeleteBayarTarget(p)}
+                                                        >
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -922,6 +994,36 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                 }}
             >
                 <p className="text-sm">Approval invoice vendor sedang nonaktif, jadi <span className="font-semibold">{data.nomor_invoice}</span> akan langsung berstatus Diverifikasi tanpa melalui approver. Lanjutkan?</p>
+            </ConfirmDialog>
+
+            <ConfirmDialog
+                isOpen={batalOpen}
+                type="danger"
+                title="Batalkan Invoice"
+                confirmText="Ya, Batalkan"
+                cancelText="Kembali"
+                confirmButtonProps={{ loading: membatalkan, disabled: alasanBatal.trim().length < 3, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
+                onClose={() => setBatalOpen(false)}
+                onCancel={() => setBatalOpen(false)}
+                onConfirm={async () => {
+                    setMembatalkan(true)
+                    try {
+                        await invoiceVendorService.batalkan(id, alasanBatal.trim())
+                        await fetchDetail()
+                        toast.push(<Notification type="success" title="Invoice dibatalkan" />)
+                        setBatalOpen(false)
+                    } catch (err) {
+                        toast.push(<Notification type="danger" title={parseApiError(err)} />)
+                    } finally {
+                        setMembatalkan(false)
+                    }
+                }}
+            >
+                <p className="text-sm mb-3">
+                    Invoice <span className="font-semibold">{data.nomor_invoice}</span> akan dibatalkan. Invoice tetap tersimpan sebagai riwayat, trip yang terkait bisa ditagih lagi, dan nomor invoicenya bisa dipakai ulang.
+                </p>
+                <p className="text-sm font-semibold mb-1">Alasan pembatalan <span className="text-red-500">*</span></p>
+                <Input textArea rows={3} maxLength={500} placeholder="Tuliskan alasan pembatalan..." value={alasanBatal} onChange={e => setAlasanBatal(e.target.value)} />
             </ConfirmDialog>
 
             <LogAktivitasKeuanganDialog

@@ -191,7 +191,7 @@ export default function PembelianForm({ mode, initial }: Props) {
                         {mode === 'edit' ? `Edit Pengajuan ${initial?.nomor_pengajuan ?? ''}` : 'Pengajuan Pembelian Baru'}
                     </h3>
                     <p className="text-gray-500 text-sm mt-0.5">
-                        {mode === 'edit' ? 'Ubah pengajuan pembelian sparepart yang masih diajukan' : 'Ajukan pembelian sparepart untuk disetujui manager dan finance'}
+                        {mode === 'edit' ? 'Ubah pengajuan pembelian sparepart yang masih diajukan' : 'Ajukan pembelian sparepart untuk disetujui approver'}
                     </p>
                 </div>
             </div>

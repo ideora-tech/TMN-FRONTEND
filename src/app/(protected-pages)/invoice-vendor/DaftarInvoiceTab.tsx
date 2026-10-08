@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
@@ -24,6 +25,7 @@ const STATUS_OPTIONS: Option[] = [
     { value: 'menunggu_approval', label: 'Menunggu Approval' },
     { value: 'diverifikasi',     label: 'Diverifikasi' },
     { value: 'ditolak',          label: 'Ditolak' },
+    { value: 'dibatalkan',       label: 'Dibatalkan' },
 ]
 
 const STATUS_PEMBAYARAN_OPTIONS: Option[] = [
@@ -38,6 +40,7 @@ export const STATUS_TAG: Record<string, string> = {
     menunggu_approval: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
     diverifikasi:      'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
     ditolak:           'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-100',
+    dibatalkan:        'bg-gray-200 text-gray-600 dark:bg-gray-600/40 dark:text-gray-300',
 }
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -45,6 +48,7 @@ export const STATUS_LABEL: Record<string, string> = {
     menunggu_approval: 'Menunggu Approval',
     diverifikasi:      'Diverifikasi',
     ditolak:           'Ditolak',
+    dibatalkan:        'Dibatalkan',
 }
 
 export const BAYAR_TAG: Record<string, string> = {
@@ -128,7 +132,10 @@ export default function DaftarInvoiceTab() {
         {
             header: 'Nomor', accessorKey: 'nomor_invoice', size: 180,
             cell: ({ row }) => (
-                <span className="font-mono font-semibold">{row.original.nomor_invoice}</span>
+                <Link href={ROUTES.INVOICE_VENDOR_DETAIL(row.original.id_invoice_vendor)}
+                    className="font-mono font-semibold text-blue-500 hover:underline">
+                    {row.original.nomor_invoice}
+                </Link>
             ),
         },
         {
@@ -178,7 +185,9 @@ export default function DaftarInvoiceTab() {
         },
         {
             header: 'Pembayaran', accessorKey: 'status_pembayaran', size: 120,
-            cell: ({ row }) => (
+            cell: ({ row }) => row.original.status === 'dibatalkan' ? (
+                <span className="text-gray-400">—</span>
+            ) : (
                 <Tag className={BAYAR_TAG[row.original.status_pembayaran] ?? 'bg-gray-100 text-gray-600'}>
                     {BAYAR_LABEL[row.original.status_pembayaran] ?? row.original.status_pembayaran}
                 </Tag>

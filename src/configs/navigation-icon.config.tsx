@@ -8,6 +8,7 @@ import {
     PiMapPinDuotone,
     PiClipboardTextDuotone,
     PiReceiptDuotone,
+    PiCoinsDuotone,
     PiRepeatDuotone,
     PiHandshakeDuotone,
     PiGearDuotone,
@@ -75,6 +76,7 @@ const navigationIcon: NavigationIcons = {
     fileText:      <PiFileTextDuotone />,
     wallet:        <PiWalletDuotone />,
     handCoins:     <PiHandCoinsDuotone />,
+    coins:         <PiCoinsDuotone />,
 }
 
 export default navigationIcon

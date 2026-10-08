@@ -78,6 +78,7 @@ export const ROUTES = {
     FAKTUR:        '/faktur',
     FAKTUR_BARU:   '/faktur/baru',
     FAKTUR_DETAIL: (id: string) => `/faktur/${id}`,
+    PIUTANG:       '/piutang',
 
 
     ARUS_KAS: '/arus-kas',
@@ -148,6 +149,10 @@ export const ROUTES = {
     PAYROLL:            '/payroll',
     PAYROLL_DETAIL:     (id: string) => `/payroll/${id}`,
     PAYROLL_PENGATURAN: '/payroll/pengaturan',
+    KASBON:        '/kasbon',
+    KASBON_BARU:   '/kasbon/baru',
+    KASBON_DETAIL: (id: string) => `/kasbon/${id}`,
+    KASBON_EDIT:   (id: string) => `/kasbon/${id}/edit`,
 
     PENUGASAN:        '/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,

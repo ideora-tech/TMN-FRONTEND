@@ -139,7 +139,7 @@ export default function PapanUnitTab({ onGoToInterval }: { onGoToInterval?: () =
                                         <tr key={r.id_armada}>
                                             <td className="py-2.5 px-3">{nomorBaris}</td>
                                             <td className="py-2.5 px-3">
-                                                <p className="font-semibold text-gray-800 dark:text-gray-100">{r.nopol}</p>
+                                                <a href={ROUTES.ARMADA_DETAIL(r.id_armada)} target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{r.nopol}</a>
                                                 <p className="text-xs text-gray-400">
                                                     {[r.merk, r.nama_jenis_kendaraan].filter(Boolean).join(' · ') || '—'}
                                                 </p>

@@ -111,13 +111,13 @@ export default function PenggunaBaruPage() {
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                     </FormItem>
                     {form.kode_peran !== 'SUPIR' && form.kode_peran !== 'SUPIR_VENDOR' && (
-                        <FormItem label="Tautkan ke Karyawan (opsional)"
-                            extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
+                        <FormItem label="Tautkan ke Karyawan (opsional)">
                             <Select isClearable isSearchable
                                 placeholder="Pilih karyawan..."
                                 options={karyawanOptions}
                                 value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
                                 onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? '' }))} />
+                            <p className="text-xs text-gray-400 mt-1.5">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</p>
                         </FormItem>
                     )}
                     {(form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR') && (

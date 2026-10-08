@@ -58,7 +58,7 @@ const barisKosong = (tipe: TipePermintaan): ItemRow => {
 
 const TIPE_HINT: Record<TipePermintaan, string> = {
     umum:      'Barang/jasa kebutuhan umum; spare part armada diajukan lewat tipe Spare Part',
-    sparepart: 'Semua item dipilih dari master Spare Part; setelah diproses, Pengadaan merealisasikan lewat Pembelian Sparepart',
+    sparepart: 'Semua item dipilih dari master Spare Part; di atas batas mandiri, Pengadaan menerbitkan PO lalu mencatat realisasinya',
     aset:      'Pengadaan unit armada baru; pembayaran bertahap (termin) dan tiap unit didaftarkan ke master Armada saat diterima',
 }
 

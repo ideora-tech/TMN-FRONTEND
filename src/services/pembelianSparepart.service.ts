@@ -46,6 +46,10 @@ export interface PembelianSparepart {
     disetujui_finance_pada: string | null
     total_estimasi: number
     total_aktual: number | null
+    diskon?: number
+    ppn_persen?: number
+    ppn?: number
+    ongkir?: number
     selisih: number | null
     wajib_pengadaan?: boolean
     tanggal_pengajuan: string

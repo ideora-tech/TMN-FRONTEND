@@ -10,7 +10,7 @@ import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
-import { uangJalanService, UangJalan } from '@/services/uangJalan.service'
+import { uangJalanService, OpsiProyek, UangJalan } from '@/services/uangJalan.service'
 import type { StatusPengajuan } from '@/services/arusKas.service'
 import { STATUS_LABEL, STATUS_TAG } from '../arus-kas/pengajuanMeta'
 import { useLogPengajuan } from '../arus-kas/useLogPengajuan'
@@ -37,6 +37,8 @@ export default function UangJalanPage() {
     const [searchInput, setSearchInput] = useState('')
     const [search, setSearch]           = useState('')
     const [statusFilter, setStatusFilter] = useState<'' | StatusPengajuan>('')
+    const [proyekFilter, setProyekFilter] = useState('')
+    const [proyekOptions, setProyekOptions] = useState<OpsiProyek[]>([])
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
@@ -47,7 +49,7 @@ export default function UangJalanPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await uangJalanService.list(currentPage, pageSize, { search, status: statusFilter })
+            const res = await uangJalanService.list(currentPage, pageSize, { search, status: statusFilter, id_proyek: proyekFilter })
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -55,9 +57,15 @@ export default function UangJalanPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter])
+    }, [currentPage, pageSize, search, statusFilter, proyekFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    useEffect(() => {
+        uangJalanService.opsiProyek()
+            .then(setProyekOptions)
+            .catch(() => {})
+    }, [])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
@@ -100,6 +108,16 @@ export default function UangJalanPage() {
         { header: 'No. Polisi', accessorKey: 'nopol', size: 120,
             cell: ({ row }: CellContext<UangJalan, unknown>) => <span className="whitespace-nowrap">{row.original.nopol}</span> },
         { header: 'Rute', accessorKey: 'rute', size: 190 },
+        { header: 'Proyek', accessorKey: 'nama_proyek', size: 180,
+            cell: ({ row }: CellContext<UangJalan, unknown>) => row.original.nama_proyek
+                ? (
+                    <div className="flex flex-col">
+                        <span className="font-semibold">{row.original.nama_proyek}</span>
+                        <span className="text-xs text-gray-400 font-mono">{row.original.kode_proyek}</span>
+                    </div>
+                )
+                : <span className="text-gray-400">—</span>,
+        },
         { header: 'UJ/Trip', accessorKey: 'uang_jalan_per_trip', size: 150,
             cell: ({ row }: CellContext<UangJalan, unknown>) => (
                 <div className="flex flex-col">
@@ -188,6 +206,16 @@ export default function UangJalanPage() {
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={opt => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }} />
+                    </div>
+                    <div className="w-56 shrink-0">
+                        <Select<{ value: string; label: string }>
+                            isSearchable isClearable
+                            placeholder="Semua proyek"
+                            options={proyekOptions.map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))}
+                            value={proyekOptions
+                                .map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))
+                                .find(o => o.value === proyekFilter) ?? null}
+                            onChange={opt => { setProyekFilter((opt as { value: string } | null)?.value ?? ''); setCurrentPage(1) }} />
                     </div>
                 </div>
                 <DataTable columns={columns} data={list as unknown[]} loading={loading}

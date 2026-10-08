@@ -135,6 +135,13 @@ export default function PembelianDetailPage() {
 
     if (!data) return null
 
+    const adaBiayaTambahan = data.total_aktual !== null && ((data.diskon ?? 0) > 0 || (data.ppn ?? 0) > 0 || (data.ongkir ?? 0) > 0)
+    const biayaTambahan = adaBiayaTambahan ? [
+        { label: 'Subtotal', nilai: formatRupiah(data.items.reduce((s, i) => s + i.qty * (i.harga_aktual ?? 0), 0)) },
+        { label: 'Diskon', nilai: (data.diskon ?? 0) > 0 ? `- ${formatRupiah(data.diskon ?? 0)}` : formatRupiah(0) },
+        { label: (data.ppn_persen ?? 0) > 0 ? `PPN (${data.ppn_persen}%)` : 'PPN', nilai: formatRupiah(data.ppn ?? 0) },
+        { label: 'Ongkos Kirim', nilai: formatRupiah(data.ongkir ?? 0) },
+    ] : []
     const idPrAsal = data.id_permintaan_pembelian ?? ''
     const dariPr = idPrAsal !== ''
     const bolehKelola = punyaPeran('dispatcher', 'admin', 'superadmin')
@@ -145,7 +152,7 @@ export default function PembelianDetailPage() {
     const langkahAktif = dariPr && data.status === 'disetujui_finance'
         ? {
             judul: 'Disetujui lewat PR, siap direalisasi',
-            keterangan: `Catat realisasi (supplier, harga aktual, nota) dari PR ${data.nomor_permintaan ?? ''} — PR otomatis ditandai diterima dan pengajuan pembayaran dibuat setelah realisasi.`,
+            keterangan: `Terbitkan PO lalu catat realisasi (harga aktual, nota) dari PR ${data.nomor_permintaan ?? ''} — PR otomatis ditandai diterima dan pengajuan pembayaran dibuat setelah realisasi. Pembelian mandiri oleh pengaju tidak memerlukan PO.`,
         }
         : null
     const bukaLogApproval = () => {
@@ -242,12 +249,6 @@ export default function PembelianDetailPage() {
                 }}
                 aksi={(
                     <>
-                        {dariPr && data.status === 'disetujui_finance' && (
-                            <Button size="sm" variant="solid" icon={<HiOutlineExternalLink />}
-                                onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_DETAIL(idPrAsal))}>
-                                Buka PR {data.nomor_permintaan ?? ''}
-                            </Button>
-                        )}
                         {!dariPr && data.status === 'disetujui_finance' && bolehRealisasi && (
                             <Button size="sm" variant="solid" icon={<HiOutlineShoppingCart />} onClick={bukaRealisasi}>
                                 Catat Realisasi
@@ -373,6 +374,13 @@ export default function PembelianDetailPage() {
                             ))}
                         </tbody>
                         <tfoot>
+                            {biayaTambahan.map(b => (
+                                <tr key={b.label} className="text-gray-500 dark:text-gray-400">
+                                    <td className="px-4 py-1.5" colSpan={3}>{b.label}</td>
+                                    <td className="px-4 py-1.5 text-right tabular-nums">{b.nilai}</td>
+                                    <td />
+                                </tr>
+                            ))}
                             <tr className="font-bold">
                                 <td className="px-4 py-3" colSpan={2}>Total</td>
                                 <td className="px-4 py-3 text-right tabular-nums">{formatRupiah(data.total_estimasi)}</td>

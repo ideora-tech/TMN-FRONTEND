@@ -211,8 +211,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
                             {form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? (
-                                <FormItem label="Karyawan (via Profil Supir)"
-                                    extra={<span className="text-xs text-gray-400">Mengikuti profil supir — dikelola dari halaman Supir → Edit → Tautkan ke Karyawan</span>}>
+                                <FormItem label="Karyawan (via Profil Supir)">
                                     <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
                                         {supirTertaut
                                             ? (namaKaryawanSupir
@@ -220,20 +219,20 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                                 : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
                                             : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
                                     </div>
+                                    <p className="text-xs text-gray-400 mt-1.5">Mengikuti profil supir — dikelola dari halaman Supir → Edit → Tautkan ke Karyawan</p>
                                 </FormItem>
                             ) : (
-                                <FormItem label="Tautkan ke Karyawan (opsional)"
-                                    extra={<span className="text-xs text-gray-400">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</span>}>
+                                <FormItem label="Tautkan ke Karyawan (opsional)">
                                     <Select isClearable isSearchable
                                         placeholder="Pilih karyawan..."
                                         options={karyawanOptions}
                                         value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
                                         onChange={opt => setForm(p => ({ ...p, id_karyawan: opt?.value ?? null }))} />
+                                    <p className="text-xs text-gray-400 mt-1.5">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</p>
                                 </FormItem>
                             )}
                             {form.kode_peran === 'SUPIR' && (
-                                <FormItem label="Dipakai oleh Supir"
-                                    extra={<span className="text-xs text-gray-400">Tautan akun login mobile dikelola dari halaman Supir → Edit → Akun Login Mobile</span>}>
+                                <FormItem label="Dipakai oleh Supir">
                                     <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
                                         {supirTertaut
                                             ? <span className="font-semibold text-primary cursor-pointer hover:underline"
@@ -242,6 +241,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                               </span>
                                             : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
                                     </div>
+                                    <p className="text-xs text-gray-400 mt-1.5">Tautan akun login mobile dikelola dari halaman Supir → Edit → Akun Login Mobile</p>
                                 </FormItem>
                             )}
                         </div>

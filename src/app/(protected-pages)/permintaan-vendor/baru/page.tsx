@@ -24,6 +24,22 @@ const MEKANISME_OPTIONS = [
 type UnitRow = { id_jenis_kendaraan: string; jumlah_unit: string }
 const emptyUnitRow = (): UnitRow => ({ id_jenis_kendaraan: '', jumlah_unit: '1' })
 
+type KondisiUnit = 'terisi' | 'tanpa_kebutuhan' | 'habis'
+const INFO_UNIT: Record<KondisiUnit, { teks: string; kelas: string }> = {
+    terisi: {
+        teks: 'Unit diisi otomatis dari Jumlah Unit di item penawaran yang belum diminta ke vendor — sesuaikan dengan jumlah yang memang diambil dari vendor.',
+        kelas: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+    },
+    tanpa_kebutuhan: {
+        teks: 'Item penawaran ini belum punya Jumlah Unit — isi unit yang diminta secara manual.',
+        kelas: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+    },
+    habis: {
+        teks: 'Semua Jumlah Unit di item penawaran sudah diminta ke vendor — isi unit secara manual hanya bila memang perlu tambahan.',
+        kelas: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    },
+}
+
 export default function PermintaanVendorBaruPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -31,6 +47,7 @@ export default function PermintaanVendorBaruPage() {
     const idPenawaran = searchParams.get('id_penawaran') ?? ''
     const [penawaranAsal, setPenawaranAsal] = useState<Penawaran | null>(null)
     const [statusPenawaran, setStatusPenawaran] = useState<'tanpa' | 'memuat' | 'siap' | 'gagal'>(idPenawaran ? 'memuat' : 'tanpa')
+    const [kondisiUnit, setKondisiUnit] = useState<KondisiUnit>('terisi')
     const [form, setForm] = useState({
         id_proyek: '',
         mekanisme: 'unit_only', periode_dari: '', periode_sampai: '', catatan: '', harga_penawaran: '',
@@ -61,8 +78,8 @@ export default function PermintaanVendorBaruPage() {
                 setForm(f => ({ ...f, id_proyek: p.id_proyek ?? '' }))
                 const sisa = new Map<string, number>()
                 for (const it of p.items ?? []) {
-                    if (!it.unit_vendor) continue
-                    sisa.set(it.id_jenis_kendaraan, (sisa.get(it.id_jenis_kendaraan) ?? 0) + it.unit_vendor)
+                    if (!it.jumlah_unit) continue
+                    sisa.set(it.id_jenis_kendaraan, (sisa.get(it.id_jenis_kendaraan) ?? 0) + it.jumlah_unit)
                 }
                 for (const pv of sudahDiminta.filter(x => !STATUS_TIDAK_DIHITUNG.includes(x.status))) {
                     for (const u of itemUnitDiminta(pv)) {
@@ -75,6 +92,7 @@ export default function PermintaanVendorBaruPage() {
                 if (baris.length > 0) {
                     setUnitRows(baris.map(([idJenis, jumlah]) => ({ id_jenis_kendaraan: idJenis, jumlah_unit: String(jumlah) })))
                 }
+                setKondisiUnit(baris.length > 0 ? 'terisi' : sisa.size > 0 ? 'habis' : 'tanpa_kebutuhan')
                 setStatusPenawaran('siap')
             })
             .catch(err => {
@@ -146,9 +164,9 @@ export default function PermintaanVendorBaruPage() {
             </div>
             <Card>
                 {penawaranAsal && (
-                    <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-sm px-3 py-2 mb-4">
+                    <div className={`rounded-lg text-sm px-3 py-2 mb-4 ${INFO_UNIT[kondisiUnit].kelas}`}>
                         Dari penawaran <span className="font-semibold">{penawaranAsal.nomor_penawaran}</span> — {penawaranAsal.judul}.
-                        {' '}Unit diisi otomatis dari sisa kolom Unit Vendor di item penawaran yang belum diminta.
+                        {' '}{INFO_UNIT[kondisiUnit].teks}
                     </div>
                 )}
                 {statusPenawaran === 'gagal' && (

@@ -1,7 +1,7 @@
 export const STATUS_LABEL: Record<string, string> = {
     diajukan:          'Diajukan',
     disetujui_manager: 'Disetujui Manager',
-    disetujui_finance: 'Disetujui Finance',
+    disetujui_finance: 'Disetujui',
     ditolak:           'Ditolak',
     dibeli:            'Dibeli',
     lunas:             'Lunas',

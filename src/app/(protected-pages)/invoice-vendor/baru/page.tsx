@@ -11,11 +11,10 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { invoiceVendorService, TripSiapTagihVendor } from '@/services/invoice-vendor.service'
+import { invoiceVendorService, RingkasanKontrakVendor, TripSiapTagihVendor } from '@/services/invoice-vendor.service'
 import { Vendor, KontrakVendor } from '@/services/vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { tipePembayaranService, TipePembayaran } from '@/services/tipe-pembayaran.service'
-import { projectService, Project } from '@/services/project.service'
 
 const MEKANISME_LABEL: Record<string, string> = {
     unit_only: 'Unit Only', unit_driver: 'Unit + Driver', full: 'All In',
@@ -40,8 +39,11 @@ export default function InvoiceVendorBaruPage() {
     const [tipePembayaranOptions, setTipePembayaranOptions] = useState<{ value: string; label: string }[]>([])
 
     const [mode, setMode] = useState<'trip' | 'manual'>('trip')
-    const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
     const [filterProyek, setFilterProyek] = useState('')
+    const [filterDari, setFilterDari]     = useState(() => dayjs().startOf('month').format('YYYY-MM-DD'))
+    const [filterSampai, setFilterSampai] = useState(() => dayjs().endOf('month').format('YYYY-MM-DD'))
+    const filterProyekRef = useRef('')
+    const kontrakTripRef  = useRef('')
     const [tripList, setTripList]       = useState<TripSiapTagihVendor[]>([])
     const [tripChecked, setTripChecked] = useState<Record<string, boolean>>({})
     const [loadingTrip, setLoadingTrip] = useState(false)
@@ -57,12 +59,9 @@ export default function InvoiceVendorBaruPage() {
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 999 } })
             .then(r => setVendorOptions((r.data.data as Vendor[]).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))))
-            .catch(() => {})
+            .catch(err => toast.push(<Notification type="danger" title={`Daftar vendor gagal dimuat: ${parseApiError(err)}`} />))
         tipePembayaranService.opsiAktif()
             .then(res => setTipePembayaranOptions(res.map((t: TipePembayaran) => ({ value: t.kode_tipe ?? '', label: t.nama_tipe }))))
-            .catch(() => {})
-        projectService.list(1, 999)
-            .then(res => setProyekOptions((res.data as Project[]).map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))))
             .catch(() => {})
     }, [])
 
@@ -70,7 +69,10 @@ export default function InvoiceVendorBaruPage() {
         if (!form.id_vendor) { setKontrakList([]); return }
         axios.get(API_ENDPOINTS.KONTRAK_VENDOR, { params: { id_vendor: form.id_vendor, limit: 999 } })
             .then(r => setKontrakList(r.data.data as KontrakVendor[]))
-            .catch(() => setKontrakList([]))
+            .catch(err => {
+                setKontrakList([])
+                toast.push(<Notification type="danger" title={`Daftar kontrak gagal dimuat: ${parseApiError(err)}`} />)
+            })
     }, [form.id_vendor])
 
     useEffect(() => {
@@ -86,24 +88,84 @@ export default function InvoiceVendorBaruPage() {
     }))
     const selectedKontrak = kontrakList.find(k => k.id_kontrak_vendor === form.id_kontrak_vendor) ?? null
 
+    const [ringkasanKontrak, setRingkasanKontrak] = useState<RingkasanKontrakVendor | null>(null)
     useEffect(() => {
+        setRingkasanKontrak(null)
+        if (!form.id_kontrak_vendor) return
+        let batal = false
+        invoiceVendorService.ringkasanKontrak(form.id_kontrak_vendor)
+            .then(r => { if (!batal) setRingkasanKontrak(r) })
+            .catch(() => {})
+        return () => { batal = true }
+    }, [form.id_kontrak_vendor])
+    const sisaKontrak = ringkasanKontrak?.sisa ?? null
+    const pesanMelebihiKontrak = sisaKontrak !== null && (Number(form.dpp) || 0) > sisaKontrak
+        ? `DPP melebihi sisa nilai kontrak (${formatRupiah(sisaKontrak)})`
+        : ''
+
+    useEffect(() => {
+        const kontrakBerganti = kontrakTripRef.current !== form.id_kontrak_vendor
+        kontrakTripRef.current = form.id_kontrak_vendor
+        if (kontrakBerganti) {
+            filterProyekRef.current = ''
+            setFilterProyek('')
+        }
         if (mode !== 'trip' || !form.id_kontrak_vendor) {
             setTripList([])
             setTripChecked({})
             return
         }
+        let batal = false
         setLoadingTrip(true)
-        invoiceVendorService.tripSiapTagih(form.id_kontrak_vendor, form.periode_dari || undefined, form.periode_sampai || undefined, filterProyek || undefined)
+        invoiceVendorService.tripSiapTagih(form.id_kontrak_vendor, filterDari || undefined, filterSampai || undefined)
             .then(rows => {
+                if (batal) return
+                const proyekTetap = rows.some(r => r.id_proyek === filterProyekRef.current) ? filterProyekRef.current : ''
+                filterProyekRef.current = proyekTetap
+                setFilterProyek(proyekTetap)
                 setTripList(rows)
-                setTripChecked(Object.fromEntries(rows.map(r => [r.id_trip, true])))
+                setTripChecked(Object.fromEntries(rows.map(r => [r.id_trip, !proyekTetap || r.id_proyek === proyekTetap])))
             })
-            .catch(() => { setTripList([]); setTripChecked({}) })
-            .finally(() => setLoadingTrip(false))
-    }, [mode, form.id_kontrak_vendor, form.periode_dari, form.periode_sampai, filterProyek])
+            .catch(() => { if (!batal) { setTripList([]); setTripChecked({}) } })
+            .finally(() => { if (!batal) setLoadingTrip(false) })
+        return () => { batal = true }
+    }, [mode, form.id_kontrak_vendor, filterDari, filterSampai])
+
+    const labelProyekTrip = (t: TripSiapTagihVendor) => `${t.kode_proyek ? `${t.kode_proyek} — ` : ''}${t.nama_proyek}`
+
+    const proyekTripOptions = useMemo(() => {
+        const peta = new Map<string, { label: string; jumlah: number }>()
+        tripList.forEach(t => {
+            const ada = peta.get(t.id_proyek)
+            if (ada) ada.jumlah += 1
+            else peta.set(t.id_proyek, { label: labelProyekTrip(t), jumlah: 1 })
+        })
+        return [...peta.entries()].map(([value, v]) => ({ value, label: `${v.label} (${v.jumlah} trip)` }))
+    }, [tripList])
+
+    const tripTampil = useMemo(
+        () => (filterProyek ? tripList.filter(t => t.id_proyek === filterProyek) : tripList),
+        [tripList, filterProyek],
+    )
+
+    const pilihFilterProyek = (idProyek: string) => {
+        filterProyekRef.current = idProyek
+        setFilterProyek(idProyek)
+        setTripChecked(Object.fromEntries(tripList.map(t => [t.id_trip, !idProyek || t.id_proyek === idProyek])))
+    }
 
     const tripIdsChecked = useMemo(() => tripList.filter(t => tripChecked[t.id_trip]).map(t => t.id_trip), [tripList, tripChecked])
-    const semuaTripTercentang = tripList.length > 0 && tripIdsChecked.length === tripList.length
+    const semuaTripTercentang = tripTampil.length > 0 && tripTampil.every(t => tripChecked[t.id_trip])
+
+    const ringkasanProyekTercentang = useMemo(() => {
+        const peta = new Map<string, { kode: string; jumlah: number }>()
+        tripList.filter(t => tripChecked[t.id_trip]).forEach(t => {
+            const ada = peta.get(t.id_proyek)
+            if (ada) ada.jumlah += 1
+            else peta.set(t.id_proyek, { kode: t.kode_proyek ?? t.nama_proyek, jumlah: 1 })
+        })
+        return [...peta.values()]
+    }, [tripList, tripChecked])
 
     useEffect(() => {
         if (mode !== 'trip' || dppManual.current) return
@@ -163,6 +225,7 @@ export default function InvoiceVendorBaruPage() {
         if (!form.nomor_invoice.trim()) e.nomor_invoice = 'Nomor invoice wajib diisi'
         if (!form.tanggal_invoice) e.tanggal_invoice = 'Tanggal invoice wajib diisi'
         if (!form.dpp) e.dpp = 'DPP wajib diisi'
+        else if (pesanMelebihiKontrak) e.dpp = pesanMelebihiKontrak
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -253,13 +316,26 @@ export default function InvoiceVendorBaruPage() {
                             <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
                                 <div>
                                     <p className="text-sm font-semibold">Trip Siap Ditagih</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Trip selesai & belum masuk invoice lain</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Trip selesai dari unit kontrak ini yang belum masuk invoice lain</p>
                                 </div>
-                                <div className="w-56">
-                                    <Select isSearchable isClearable placeholder="Filter proyek (opsional)..."
-                                        options={proyekOptions}
-                                        value={proyekOptions.find(o => o.value === filterProyek) ?? null}
-                                        onChange={opt => setFilterProyek(opt?.value ?? '')} />
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <DatePicker inputFormat="DD/MM/YYYY" className="w-40" placeholder="Dari tanggal"
+                                        disabled={!form.id_kontrak_vendor}
+                                        value={filterDari ? dayjs(filterDari).toDate() : null}
+                                        onChange={date => setFilterDari(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                                    <span className="text-gray-400 text-sm">s/d</span>
+                                    <DatePicker inputFormat="DD/MM/YYYY" className="w-40" placeholder="Sampai tanggal"
+                                        disabled={!form.id_kontrak_vendor}
+                                        value={filterSampai ? dayjs(filterSampai).toDate() : null}
+                                        onChange={date => setFilterSampai(date ? dayjs(date).format('YYYY-MM-DD') : '')} />
+                                    {proyekTripOptions.length > 1 && (
+                                        <div className="w-full sm:w-96">
+                                            <Select isSearchable isClearable placeholder={`Semua proyek (${proyekTripOptions.length})`}
+                                                options={proyekTripOptions}
+                                                value={proyekTripOptions.find(o => o.value === filterProyek) ?? null}
+                                                onChange={opt => pilihFilterProyek(opt?.value ?? '')} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             {!form.id_kontrak_vendor ? (
@@ -267,35 +343,47 @@ export default function InvoiceVendorBaruPage() {
                             ) : loadingTrip ? (
                                 <div className="flex justify-center py-6"><Spinner size={28} /></div>
                             ) : tripList.length === 0 ? (
-                                <p className="text-sm text-gray-400 py-4 text-center">Tidak ada trip selesai yang siap ditagih untuk kontrak ini.</p>
+                                <p className="text-sm text-gray-400 py-4 text-center">
+                                    {filterDari || filterSampai
+                                        ? 'Tidak ada trip selesai yang siap ditagih pada rentang tanggal ini.'
+                                        : 'Tidak ada trip selesai yang siap ditagih untuk kontrak ini.'}
+                                </p>
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto">
+                                    {proyekTripOptions.length > 1 && !filterProyek && (
+                                        <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                                            Trip kontrak ini berasal dari {proyekTripOptions.length} proyek dan semuanya tercentang. Saring per proyek, atau hapus centang trip yang tidak ada di tagihan vendor.
+                                        </p>
+                                    )}
+                                    <div className="overflow-auto max-h-[420px] rounded-lg border border-gray-100 dark:border-gray-700">
                                         <table className="min-w-full text-sm">
-                                            <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                            <thead className="bg-blue-50 dark:bg-gray-700 sticky top-0 z-10">
                                                 <tr>
                                                     <th className="py-2 px-3 w-10">
                                                         <Checkbox checked={semuaTripTercentang}
-                                                            onChange={checked => setTripChecked(Object.fromEntries(tripList.map(t => [t.id_trip, checked])))} />
+                                                            onChange={checked => setTripChecked(p => ({ ...p, ...Object.fromEntries(tripTampil.map(t => [t.id_trip, checked])) }))} />
                                                     </th>
-                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Tanggal</th>
-                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Nopol</th>
-                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Driver</th>
-                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Proyek</th>
-                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Rute</th>
+                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">Tanggal</th>
+                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">Nopol</th>
+                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">Driver</th>
+                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">Proyek</th>
+                                                    <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wide">Rute</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                                {tripList.map(t => (
+                                                {tripTampil.map(t => (
                                                     <tr key={t.id_trip}>
                                                         <td className="py-2 px-3">
                                                             <Checkbox checked={!!tripChecked[t.id_trip]}
                                                                 onChange={checked => setTripChecked(p => ({ ...p, [t.id_trip]: checked }))} />
                                                         </td>
-                                                        <td className="py-2 px-3 whitespace-nowrap">{dayjs(t.tanggal).format('DD/MM/YYYY')}</td>
-                                                        <td className="py-2 px-3 font-mono">{t.nopol ?? '—'}</td>
+                                                        <td className="py-2 px-3 whitespace-nowrap tabular-nums">{dayjs(t.tanggal).format('DD/MM/YYYY')}</td>
+                                                        <td className="py-2 px-3 font-mono whitespace-nowrap">{t.nopol ?? '—'}</td>
                                                         <td className="py-2 px-3">{t.driver_nama ?? '—'}</td>
-                                                        <td className="py-2 px-3">{t.nama_proyek}</td>
+                                                        <td className="py-2 px-3">
+                                                            {t.kode_proyek && <p className="font-mono text-xs text-gray-500 dark:text-gray-400">{t.kode_proyek}</p>}
+                                                            <p>{t.nama_proyek}</p>
+                                                        </td>
                                                         <td className="py-2 px-3">{t.rute ?? '—'}</td>
                                                     </tr>
                                                 ))}
@@ -303,7 +391,12 @@ export default function InvoiceVendorBaruPage() {
                                         </table>
                                     </div>
                                     <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                        <span className="text-xs text-gray-400">{tripIdsChecked.length} dari {tripList.length} trip dipilih</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            {tripIdsChecked.length} dari {tripList.length} trip dipilih
+                                            {ringkasanProyekTercentang.length > 1 && (
+                                                <> · {ringkasanProyekTercentang.map(r => `${r.kode}: ${r.jumlah}`).join(' · ')}</>
+                                            )}
+                                        </span>
                                         {selectedKontrak?.satuan === 'per trip' && !!selectedKontrak?.rate && (
                                             <span className="text-xs text-gray-500">
                                                 {tripIdsChecked.length} trip × {formatRupiah(selectedKontrak.rate)} = <span className="font-semibold text-gray-700 dark:text-gray-300">{formatRupiah(tripIdsChecked.length * selectedKontrak.rate)}</span>
@@ -381,6 +474,12 @@ export default function InvoiceVendorBaruPage() {
                             </FormItem>
                             <FormItem label="Nilai Kontrak">
                                 <Input disabled prefix="Rp" value={selectedKontrak.nilai_kontrak ? formatNum(selectedKontrak.nilai_kontrak) : '0'} />
+                                {ringkasanKontrak && ringkasanKontrak.sisa !== null && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                                        Sudah ditagih <span className="font-semibold tabular-nums">{formatRupiah(ringkasanKontrak.total_ditagih)}</span>
+                                        {' · '}Sisa <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatRupiah(ringkasanKontrak.sisa)}</span>
+                                    </p>
+                                )}
                             </FormItem>
                         </>
                     )}
@@ -414,11 +513,11 @@ export default function InvoiceVendorBaruPage() {
                             onChange={date => setForm(p => ({ ...p, periode_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
                     */}
-                    <FormItem label="DPP" asterisk invalid={!!errors.dpp} errorMessage={errors.dpp}
+                    <FormItem label="DPP" asterisk invalid={!!errors.dpp || !!pesanMelebihiKontrak} errorMessage={pesanMelebihiKontrak || errors.dpp}
                         extra={mode === 'trip' && selectedKontrak?.satuan === 'per trip' && tripIdsChecked.length > 0
                             ? <span className="text-xs text-gray-400">Otomatis: {tripIdsChecked.length} trip × rate kontrak — bisa diubah manual</span>
                             : undefined}>
-                        <Input prefix="Rp" placeholder="0" invalid={!!errors.dpp}
+                        <Input prefix="Rp" placeholder="0" invalid={!!errors.dpp || !!pesanMelebihiKontrak}
                             value={form.dpp ? formatNum(Number(form.dpp)) : ''}
                             onChange={e => {
                                 dppManual.current = true

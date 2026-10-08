@@ -17,6 +17,7 @@ export interface ApprovalConfigApprover {
     id_jabatan: string | null
     id_pengguna: string | null
     nama: string | null
+    pemegang?: { nama: string; punya_akun: boolean }[]
 }
 
 export interface ApprovalPengajuanSaya {

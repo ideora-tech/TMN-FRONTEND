@@ -103,6 +103,13 @@ export default function PengeluaranTab() {
                                 </Tag>
                             </a>
                         )}
+                        {p.id_kasbon && (
+                            <a href={ROUTES.KASBON_DETAIL(p.id_kasbon)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300 cursor-pointer hover:opacity-80">
+                                    Dari Kasbon <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
                         {p.periode_dari && (
                             <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
                                 Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}

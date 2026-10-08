@@ -21,6 +21,8 @@ export interface ParameterTagihanTrip {
     bisa_diatur: boolean
     harga_deal: number | null
     harga_perkiraan: boolean
+    jumlah_titik_drop: number
+    add_drop_manual: boolean
     tarif: Record<KodeParameterTagihan, number | null>
     nilai: {
         jumlah_overnight: number

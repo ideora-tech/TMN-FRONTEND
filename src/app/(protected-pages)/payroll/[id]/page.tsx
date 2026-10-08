@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Tag, Tooltip, Dialog, FormItem, Input, toast, Notification, Spinner, Upload } from '@/components/ui'
+import { Alert, Card, Button, Tag, Tooltip, Dialog, FormItem, Input, toast, Notification, Spinner, Upload } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
@@ -48,6 +48,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
     const [savingEdit, setSavingEdit] = useState(false)
 
     const [konfirmasiFinal, setKonfirmasiFinal] = useState(false)
+    const [pesanGagal, setPesanGagal] = useState<string | null>(null)
     const [konfirmasiGenerate, setKonfirmasiGenerate] = useState(false)
     const [importing, setImporting] = useState(false)
     const [importResult, setImportResult] = useState<ImportResultPayroll | null>(null)
@@ -97,14 +98,15 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const jalankan = async (aksi: () => Promise<unknown>, pesanSukses: string) => {
+    const jalankan = async (aksi: () => Promise<unknown>, pesanSukses: string, galatMenetap = false) => {
         setProsesAksi(true)
         try {
             await aksi()
             toast.push(<Notification type="success" title={pesanSukses} />)
             fetchData()
         } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            if (galatMenetap) setPesanGagal(parseApiError(err))
+            else toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setProsesAksi(false)
         }
@@ -161,7 +163,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
         try {
             const result = await payrollService.importExcel(id, file)
             setImportResult(result)
-            if (result.berhasil > 0 && result.gagal.length === 0) {
+            if (result.berhasil > 0 && result.gagal.length === 0 && (result.selisih_kasbon ?? []).length === 0) {
                 toast.push(<Notification type="success" title={`${result.berhasil} slip berhasil diimport`} />)
             }
         } catch (err) {
@@ -200,6 +202,9 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
     if (!periode) return <div className="p-6 text-red-500">Periode tidak ditemukan.</div>
 
     const draft = periode.status === 'draft'
+
+    const kasbonMelebihiSisa = (s: PayrollSlip) => Number(s.kasbon) > 0 && Number(s.kasbon) > (s.sisa_kasbon ?? 0) + 0.004
+    const slipMelebihiSisa = draft ? slips.filter(kasbonMelebihiSisa) : []
 
     const slipsTersaring = slips.filter(s =>
         !cari
@@ -291,9 +296,32 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 row.original.uang_makan_mingguan > 0 ? <span className="text-red-500">{formatRupiah(row.original.uang_makan_mingguan)}</span> : strip,
         },
         {
-            header: 'Kasbon', accessorKey: 'kasbon', size: 100,
-            cell: ({ row }: CellContext<PayrollSlip, unknown>) =>
-                row.original.kasbon > 0 ? <span className="text-red-500">{formatRupiah(row.original.kasbon)}</span> : strip,
+            header: 'Kasbon', accessorKey: 'kasbon', size: 120,
+            cell: ({ row }: CellContext<PayrollSlip, unknown>) => {
+                const s = row.original
+                const rencana = s.rencana_kasbon
+                const melebihi = draft && kasbonMelebihiSisa(s)
+                const beda = draft && !melebihi && rencana != null && Math.abs(Number(s.kasbon) - rencana) >= 1
+                const dibatasiGaji = beda && rencana != null && Number(s.kasbon) < rencana && Number(s.gaji_bersih) < 1
+                return (
+                    <div>
+                        {s.kasbon > 0 ? <p className="text-red-500">{formatRupiah(s.kasbon)}</p> : strip}
+                        {melebihi && (
+                            <Tooltip title="Finalisasi akan ditolak — catat kasbonnya sebagai Kasbon Lama di menu Kasbon atau koreksi slip ini">
+                                <p className="text-xs font-semibold text-red-500 whitespace-nowrap">melebihi sisa {formatRupiah(s.sisa_kasbon ?? 0)}</p>
+                            </Tooltip>
+                        )}
+                        {beda && dibatasiGaji && (
+                            <p className="text-xs text-gray-400 whitespace-nowrap">dibatasi gaji bersih</p>
+                        )}
+                        {beda && !dibatasiGaji && (
+                            <Tooltip title="Berbeda dari cicilan terjadwal di menu Kasbon — koreksi slip bila perlu">
+                                <p className="text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">terjadwal {formatRupiah(rencana)}</p>
+                            </Tooltip>
+                        )}
+                    </div>
+                )
+            },
         },
         {
             header: 'UJ Terpakai', accessorKey: 'uang_jalan_terpakai', size: 100,
@@ -409,6 +437,14 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 </div>
             )}
 
+            {slipMelebihiSisa.length > 0 && (
+                <Alert type="warning" showIcon>
+                    {slipMelebihiSisa.length} slip memotong kasbon melebihi sisa kasbon di menu Kasbon
+                    ({slipMelebihiSisa.slice(0, 5).map(s => s.nama_karyawan).join(', ')}{slipMelebihiSisa.length > 5 ? `, dan ${slipMelebihiSisa.length - 5} lainnya` : ''}).
+                    Finalisasi akan ditolak sampai kasbonnya dicatat sebagai Kasbon Lama atau potongan di slipnya dikoreksi.
+                </Alert>
+            )}
+
             <Card bodyClass="p-0">
                 {loading ? (
                     <div className="flex justify-center py-12"><Spinner size={36} /></div>
@@ -473,7 +509,12 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                             <Input type="number" min={0} value={editForm.uang_makan_mingguan}
                                 onChange={e => setEditForm(p => ({ ...p, uang_makan_mingguan: e.target.value }))} />
                         </FormItem>
-                        <FormItem label="Kasbon (Rp)">
+                        <FormItem label="Kasbon (Rp)"
+                            extra={<span className="text-xs text-gray-400">
+                                {(editTarget?.sisa_kasbon ?? 0) > 0
+                                    ? `Sisa ${formatRupiah(editTarget?.sisa_kasbon)} · terjadwal ${formatRupiah(editTarget?.rencana_kasbon ?? 0)}`
+                                    : 'Tidak ada kasbon berjalan'}
+                            </span>}>
                             <Input type="number" min={0} value={editForm.kasbon}
                                 onChange={e => setEditForm(p => ({ ...p, kasbon: e.target.value }))} />
                         </FormItem>
@@ -490,7 +531,7 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                                 onChange={e => setEditForm(p => ({ ...p, potongan_lain: e.target.value }))} />
                         </FormItem>
                         <FormItem label="Keterangan Potongan">
-                            <Input placeholder="Kasbon, cicilan..." value={editForm.keterangan_potongan}
+                            <Input placeholder="Cicilan seragam, denda..." value={editForm.keterangan_potongan}
                                 onChange={e => setEditForm(p => ({ ...p, keterangan_potongan: e.target.value }))} />
                         </FormItem>
                         <FormItem label="PPh21 (Rp)" extra={<span className="text-xs text-gray-400">Boleh dikoreksi manual bila perlu</span>}>
@@ -550,6 +591,37 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                         </table>
                     </div>
                 )}
+                {importResult && (importResult.selisih_kasbon ?? []).length > 0 && (
+                    <div className="mt-4">
+                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                            Kolom KASBON di Excel tidak dipakai — potongan kasbon memakai cicilan dari menu Kasbon atau koreksi manual di slip.
+                            Baris berikut angkanya berbeda: bila karyawan belum punya kasbon di menu Kasbon, catat sebagai Kasbon Lama lalu import ulang;
+                            bila sudah ada, sesuaikan lewat Ubah Cicilan atau Koreksi slip.
+                        </p>
+                        <div className="overflow-x-auto mt-2 max-h-60 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10 sticky top-0">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Baris</th>
+                                        <th className="py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Nama</th>
+                                        <th className="py-2.5 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Excel</th>
+                                        <th className="py-2.5 px-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Dipakai Sistem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {(importResult.selisih_kasbon ?? []).map((s, idx) => (
+                                        <tr key={idx}>
+                                            <td className="py-2.5 px-3 text-gray-600 dark:text-gray-400">{s.baris}</td>
+                                            <td className="py-2.5 px-3 text-xs text-gray-800 dark:text-gray-200">{s.nama || '-'}</td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums text-gray-500">{formatRupiah(s.excel)}</td>
+                                            <td className="py-2.5 px-3 text-right tabular-nums font-semibold">{formatRupiah(s.sistem)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
                 <div className="flex justify-end mt-6">
                     <Button variant="solid" onClick={handleCloseImportResult}>Tutup</Button>
                 </div>
@@ -563,10 +635,18 @@ export default function PayrollDetailPage({ params }: { params: Promise<{ id: st
                 cancelText="Batal"
                 onClose={() => setKonfirmasiFinal(false)}
                 onCancel={() => setKonfirmasiFinal(false)}
-                onConfirm={() => { setKonfirmasiFinal(false); jalankan(() => payrollService.finalisasi(id), 'Periode difinalisasi') }}
+                onConfirm={() => { setKonfirmasiFinal(false); jalankan(() => payrollService.finalisasi(id), 'Periode difinalisasi', true) }}
             >
                 <p>Finalisasi periode {periode.nama}? Setelah final, slip terkunci dan tidak bisa digenerate ulang atau dikoreksi (kecuali finalisasi dibatalkan).</p>
             </ConfirmDialog>
+
+            <Dialog isOpen={!!pesanGagal} width={520} onRequestClose={() => setPesanGagal(null)} onClose={() => setPesanGagal(null)}>
+                <h5 className="font-bold mb-3">Finalisasi Belum Bisa Dilakukan</h5>
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">{pesanGagal}</p>
+                <div className="flex justify-end mt-6">
+                    <Button variant="solid" onClick={() => setPesanGagal(null)}>Tutup</Button>
+                </div>
+            </Dialog>
         </div>
     )
 }

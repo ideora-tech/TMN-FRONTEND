@@ -32,6 +32,13 @@ export interface PengajuanPembayaranInvoiceVendor {
     alasan_ditolak: string | null
 }
 
+export interface RingkasanKontrakVendor {
+    id_kontrak_vendor: string
+    nilai_kontrak: number
+    total_ditagih: number
+    sisa: number | null
+}
+
 export interface PembayaranVendor {
     id_pembayaran_vendor: string
     tanggal_bayar: string
@@ -41,6 +48,7 @@ export interface PembayaranVendor {
     no_referensi: string | null
     url_bukti: string | null
     catatan: string | null
+    bisa_dihapus?: boolean
 }
 
 export interface InvoiceVendor {
@@ -64,7 +72,12 @@ export interface InvoiceVendor {
     pph: number
     total: number
     keterangan: string | null
-    status: 'draft' | 'menunggu_approval' | 'diverifikasi' | 'ditolak'
+    status: 'draft' | 'menunggu_approval' | 'diverifikasi' | 'ditolak' | 'dibatalkan'
+    alasan_batal?: string | null
+    dibatalkan_pada?: string | null
+    dibatalkan_oleh_nama?: string | null
+    dibuat_oleh_nama?: string | null
+    bisa_dibatalkan?: boolean
     status_pembayaran: 'belum' | 'sebagian' | 'lunas'
     catatan_verifikasi: string | null
     approval_aktif?: boolean | null
@@ -73,7 +86,7 @@ export interface InvoiceVendor {
     dibuat_pada?: string
     diubah_pada?: string
     vendor?: { id_vendor: string; nama_vendor: string }
-    kontrak?: { id_kontrak_vendor: string; nomor_kontrak: string | null; nilai_kontrak: number } | null
+    kontrak?: { id_kontrak_vendor: string; nomor_kontrak: string | null; nilai_kontrak: number; total_ditagih?: number; sisa?: number | null } | null
     total_dibayar?: number
     sisa?: number
     pembayaran?: PembayaranVendor[]
@@ -175,6 +188,10 @@ export const invoiceVendorService = {
         const { data } = await axios.post(API_ENDPOINTS.INVOICE_VENDOR_AJUKAN_APPROVAL(id))
         return data.data as InvoiceVendor
     },
+    async batalkan(id: string, alasan: string) {
+        const { data } = await axios.post(API_ENDPOINTS.INVOICE_VENDOR_BATALKAN(id), { alasan })
+        return data.data as InvoiceVendor
+    },
     async monitoring() {
         const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_MONITORING)
         return data.data as MonitoringInvoiceVendor
@@ -189,6 +206,12 @@ export const invoiceVendorService = {
             },
         })
         return data.data as TripSiapTagihVendor[]
+    },
+    async ringkasanKontrak(idKontrakVendor: string, kecualiIdInvoice?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.INVOICE_VENDOR_RINGKASAN_KONTRAK(idKontrakVendor), {
+            params: { kecuali: kecualiIdInvoice || undefined },
+        })
+        return data.data as RingkasanKontrakVendor
     },
     async ajukanPembayaran(idInvoice: string, payload: { nominal: number; catatan?: string | null }) {
         const { data } = await axios.post(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN_AJUKAN(idInvoice), payload)

@@ -51,7 +51,7 @@ export default function PermintaanVendorPenawaranCard({ penawaran }: { penawaran
 
     if (tanpaAkses) return null
 
-    const kebutuhanVendor = (penawaran.items ?? []).reduce((total, it) => total + (it.unit_vendor ?? 0), 0)
+    const kebutuhanUnit = (penawaran.items ?? []).reduce((total, it) => total + (it.jumlah_unit ?? 0), 0)
     const sudahDiminta = daftar
         .filter(p => !STATUS_TIDAK_DIHITUNG.includes(p.status))
         .reduce((total, p) => total + p.jumlah_unit, 0)
@@ -69,8 +69,8 @@ export default function PermintaanVendorPenawaranCard({ penawaran }: { penawaran
                 )}
             </div>
             <p className="text-xs text-gray-400 mb-3">
-                Kebutuhan unit vendor dari item penawaran: <span className="font-semibold text-gray-600 dark:text-gray-300">{kebutuhanVendor} unit</span>
-                {' · '}Sudah diminta: <span className="font-semibold text-gray-600 dark:text-gray-300">{sudahDiminta} unit</span>
+                Kebutuhan unit dari item penawaran: <span className="font-semibold text-gray-600 dark:text-gray-300">{kebutuhanUnit} unit</span>
+                {' · '}Sudah diminta ke vendor: <span className="font-semibold text-gray-600 dark:text-gray-300">{sudahDiminta} unit</span>
             </p>
             {loading ? (
                 <div className="flex justify-center py-4"><Spinner size={24} /></div>

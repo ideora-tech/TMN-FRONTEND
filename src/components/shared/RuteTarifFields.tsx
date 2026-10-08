@@ -50,6 +50,7 @@ type Props = {
     jenisOptions: Option[]
     onRuteCreated?: (rute: Rute) => void
     hargaTerkunci?: boolean
+    modeEdit?: boolean
 }
 
 const JENIS_SEMUA: Option = { value: '', label: 'Semua jenis' }
@@ -69,8 +70,9 @@ function totalUangJalan(state: Pick<RuteTarifState, 'estimasi_tol' | 'estimasi_b
     return (Number(state.estimasi_tol) || 0) + (Number(state.estimasi_bbm) || 0) + (Number(state.estimasi_biaya_lain) || 0)
 }
 
-export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, onRuteCreated, hargaTerkunci }: Props) {
+export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, onRuteCreated, hargaTerkunci, modeEdit }: Props) {
     const [showRuteBaru, setShowRuteBaru] = useState(false)
+    const ruteHargaTerkunci = !!hargaTerkunci || !!modeEdit
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
     const adaDetailRute = !!ruteTerpilih && (
         (!!ruteTerpilih.asal && !!ruteTerpilih.tujuan)
@@ -87,23 +89,25 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                 <FormItem label="Rute" asterisk>
                     <div className="flex items-center gap-2">
                         <div className="flex-1">
-                            <Select<Option> placeholder="Pilih rute..." options={ruteOptions} isDisabled={hargaTerkunci}
+                            <Select<Option> placeholder="Pilih rute..." options={ruteOptions} isDisabled={ruteHargaTerkunci}
                                 value={ruteOptions.find(o => o.value === value.id_rute) ?? null}
                                 onChange={opt => setField({ id_rute: opt?.value ?? '' })} />
                         </div>
-                        {!hargaTerkunci && (
+                        {!ruteHargaTerkunci && (
                             <Button type="button" size="sm" variant="default" icon={<HiPlusCircle />}
                                 onClick={() => setShowRuteBaru(true)}>
                                 Rute Baru
                             </Button>
                         )}
                     </div>
-                    {hargaTerkunci && (
-                        <p className="text-xs text-amber-500 mt-1">Rute terkunci — ubah lewat penawaran revisi</p>
+                    {ruteHargaTerkunci && (
+                        <p className="text-xs text-amber-500 mt-1">
+                            {hargaTerkunci ? 'Rute terkunci — ubah lewat penawaran revisi' : 'Rute tidak dapat diubah dari sini'}
+                        </p>
                     )}
                 </FormItem>
                 <FormItem label="Jenis Kendaraan">
-                    <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua} isDisabled={hargaTerkunci}
+                    <Select<Option> placeholder="Semua jenis" options={jenisOptionsSemua} isDisabled={ruteHargaTerkunci}
                         value={jenisOptionsSemua.find(o => o.value === value.id_jenis_kendaraan) ?? JENIS_SEMUA}
                         onChange={opt => setField({ id_jenis_kendaraan: opt?.value ?? '' })} />
                 </FormItem>
@@ -136,11 +140,13 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                 <FormItem label="Harga Penawaran">
-                    <Input prefix="Rp" placeholder="0" disabled={hargaTerkunci}
+                    <Input prefix="Rp" placeholder="0" disabled={ruteHargaTerkunci}
                         value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
                         onChange={e => setField({ harga_penawaran: angka(e.target.value) })} />
-                    {hargaTerkunci && (
-                        <p className="text-xs text-amber-500 mt-1">Harga terkunci — ubah lewat penawaran revisi</p>
+                    {ruteHargaTerkunci && (
+                        <p className="text-xs text-amber-500 mt-1">
+                            {hargaTerkunci ? 'Harga terkunci — ubah lewat penawaran revisi' : 'Harga penawaran diatur lewat penawaran, bukan dari sini'}
+                        </p>
                     )}
                 </FormItem>
                 <FormItem label="Estimasi Ritase">

@@ -1,24 +1,32 @@
 ﻿'use client'
 import { use, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
 import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import PanelAlurStatus, { KELAS_TOMBOL_BATAL, KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
-import { HiPlusCircle, HiOutlinePlus, HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineClipboardList, HiOutlineCheckCircle, HiOutlineBan, HiOutlinePaperAirplane } from 'react-icons/hi'
+import UploadBerkas from '@/components/shared/UploadBerkas'
+import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
+import useAksesMenu from '@/utils/hooks/useAksesMenu'
+import { HiPlusCircle, HiOutlinePlus, HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineClipboardList, HiOutlineCash, HiOutlineBan, HiOutlinePaperAirplane, HiOutlinePaperClip, HiOutlineCheckCircle, HiOutlineClock } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { fakturService, Faktur, FakturPajak } from '@/services/faktur.service'
+import { fakturService, Faktur, FakturPajak, PembayaranFaktur } from '@/services/faktur.service'
 
 type EditItemRow = { deskripsi: string; qty: string; harga_satuan: string }
 type EditPajakRow = { nama: string; persen: string }
+type FormBayar = { tanggal: string; nominal: string; potongan: string; keterangan_potongan: string; no_referensi: string; catatan: string }
 const MAKS_PAJAK = 10
+const MAKS_UKURAN_BUKTI = 5 * 1024 * 1024
+const BATAS_POTONGAN_PERSEN = 10
+const LABEL_KECIL = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide'
 
 const STATUS_CLASS: Record<string, string> = {
     draft:             'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
@@ -53,16 +61,19 @@ const LANGKAH_INVOICE: Record<string, { judul: string; keterangan: string }> = {
     draft_ditolak:        { judul: 'Perbaiki lalu ajukan ulang',          keterangan: 'Revisi data invoice sesuai catatan reviewer, lalu ajukan approval kembali.' },
     draft_tanpa_approval: { judul: 'Siap dikirim ke klien?',              keterangan: 'Approval internal sedang nonaktif — invoice bisa langsung ditandai terkirim.' },
     menunggu_approval:    { judul: 'Menunggu keputusan reviewer internal', keterangan: 'Belum bisa dikirim ke klien. Mengubah data akan menarik pengajuan dan mengembalikan invoice ke Draft.' },
-    terkirim:             { judul: 'Invoice sudah dikirim ke klien',       keterangan: 'Tandai lunas setelah pembayaran dari klien diterima.' },
+    terkirim:             { judul: 'Invoice sudah dikirim ke klien',       keterangan: 'Catat setiap pembayaran yang masuk — invoice lunas otomatis saat tagihannya habis.' },
     lunas:                { judul: 'Pembayaran sudah diterima',            keterangan: 'Invoice ini selesai dan tidak memerlukan aksi lanjutan.' },
     batal:                { judul: 'Invoice dibatalkan',                   keterangan: 'Tidak ada aksi lanjutan untuk invoice ini.' },
 }
 
 const RIWAYAT_LABEL: Record<string, string> = {
     draft: 'Dibuat', diedit: 'Diedit', menunggu_approval: 'Menunggu Approval', terkirim: 'Terkirim', lunas: 'Lunas', batal: 'Dibatalkan',
+    pembayaran: 'Pembayaran Diterima', pembayaran_dihapus: 'Pembayaran Dihapus',
 }
 
 const RIWAYAT_TAG: Record<string, string> = {
+    pembayaran:         'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300',
+    pembayaran_dihapus: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300',
     draft:              'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
     diedit:             'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
     menunggu_approval:  'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400',
@@ -91,13 +102,15 @@ function formatDurasi(awal?: string | null, akhir?: string | null): string | nul
     return jam > 0 ? `${jam} jam ${menit} menit` : `${menit} menit`
 }
 
-const RIWAYAT_BORDER: Record<string, string> = {
-    draft:              'border-l-gray-400',
-    diedit:             'border-l-amber-400',
-    menunggu_approval:  'border-l-violet-400',
-    terkirim:           'border-l-blue-400',
-    lunas:              'border-l-emerald-400',
-    batal:              'border-l-red-400',
+const RIWAYAT_IKON: Record<string, ReactNode> = {
+    pembayaran:         <HiOutlineCash />,
+    pembayaran_dihapus: <HiOutlineTrash />,
+    draft:              <HiOutlinePlus />,
+    diedit:             <HiOutlinePencilAlt />,
+    menunggu_approval:  <HiOutlineClock />,
+    terkirim:           <HiOutlinePaperAirplane />,
+    lunas:              <HiOutlineCheckCircle />,
+    batal:              <HiOutlineBan />,
 }
 
 export default function FakturDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -213,6 +226,62 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [tandaiTerkirimOpen, setTandaiTerkirimOpen] = useState(false)
     const [menandaiTerkirim, setMenandaiTerkirim] = useState(false)
 
+    const { klik } = usePratinjauBerkas()
+    const bolehKelolaPiutang = useAksesMenu()('/piutang')
+    const [nominalDisentuh, setNominalDisentuh] = useState(false)
+    const [alasanHapusBayar, setAlasanHapusBayar] = useState('')
+    const [bayarOpen, setBayarOpen] = useState(false)
+    const [bayar, setBayar] = useState<FormBayar>({ tanggal: dayjs().format('YYYY-MM-DD'), nominal: '', potongan: '', keterangan_potongan: '', no_referensi: '', catatan: '' })
+    const [buktiBayar, setBuktiBayar] = useState<File | null>(null)
+    const [menyimpanBayar, setMenyimpanBayar] = useState(false)
+    const [hapusBayar, setHapusBayar] = useState<PembayaranFaktur | null>(null)
+
+    const bukaBayar = () => {
+        if (!faktur) return
+        const sisa = faktur.sisa ?? faktur.total
+        setBayar({ tanggal: dayjs().format('YYYY-MM-DD'), nominal: sisa >= 1 ? String(Math.round(sisa)) : '', potongan: '', keterangan_potongan: '', no_referensi: '', catatan: '' })
+        setNominalDisentuh(false)
+        setBuktiBayar(null)
+        setBayarOpen(true)
+    }
+
+    const simpanBayar = async () => {
+        if (menyimpanBayar) return
+        setMenyimpanBayar(true)
+        try {
+            const updated = await fakturService.catatPembayaran(id, {
+                tanggal_bayar: bayar.tanggal,
+                nominal: Number(bayar.nominal) || 0,
+                potongan: Number(bayar.potongan) || 0,
+                keterangan_potongan: bayar.keterangan_potongan.trim(),
+                no_referensi: bayar.no_referensi.trim(),
+                catatan: bayar.catatan.trim(),
+            }, buktiBayar)
+            setFaktur(updated)
+            setBayarOpen(false)
+            toast.push(<Notification type="success" title={updated.status === 'lunas' ? 'Pembayaran dicatat — invoice lunas' : 'Pembayaran dicatat'} />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyimpanBayar(false)
+        }
+    }
+
+    const konfirmasiHapusBayar = async () => {
+        if (!hapusBayar) return
+        setMenyimpanBayar(true)
+        try {
+            setFaktur(await fakturService.hapusPembayaran(id, hapusBayar.id_pembayaran_faktur, alasanHapusBayar.trim()))
+            toast.push(<Notification type="success" title="Pembayaran dihapus" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyimpanBayar(false)
+            setHapusBayar(null)
+            setAlasanHapusBayar('')
+        }
+    }
+
     const handleExportPdf = async () => {
         setDownloadingExport(true)
         try {
@@ -243,13 +312,27 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
 
     const ditolak = faktur.status === 'draft' && !!faktur.alasan_ditolak_internal
     const tanpaApproval = faktur.approval_aktif === false
-    const bisaBatal = (NEXT_STATUS[faktur.status] ?? []).includes('batal')
+    const daftarBayar = faktur.pembayaran ?? []
+    const terbayar = faktur.terbayar ?? 0
+    const sisaTagihan = faktur.sisa ?? Math.max(faktur.total - terbayar, 0)
+    const persenBayar = faktur.total > 0 ? Math.min(100, Math.round(terbayar / faktur.total * 100)) : 0
+    const dibayarSebagian = faktur.status === 'terkirim' && terbayar > 0
+    const nominalBayar = Number(bayar.nominal) || 0
+    const potonganBayar = Number(bayar.potongan) || 0
+    const masukBayar = nominalBayar + potonganBayar
+    const bayarMelebihi = masukBayar > Math.ceil(sisaTagihan)
+    const batasPotongan = Math.max(faktur.total * BATAS_POTONGAN_PERSEN / 100 - (faktur.potongan_bayar ?? 0), 0)
+    const potonganMelebihi = potonganBayar > batasPotongan
+    const bayarValid = !!bayar.tanggal && masukBayar > 0 && !bayarMelebihi && !potonganMelebihi && (potonganBayar === 0 || bayar.keterangan_potongan.trim() !== '')
+    const tanpaSisa = faktur.status === 'terkirim' && sisaTagihan < 1
+    const bisaBatal = (NEXT_STATUS[faktur.status] ?? []).includes('batal') && terbayar === 0
     const langkah = LANGKAH_INVOICE[
         faktur.status === 'draft' ? (tanpaApproval ? 'draft_tanpa_approval' : ditolak ? 'draft_ditolak' : 'draft') : faktur.status
     ]
     const kelasIkonAlur = ditolak
         ? 'bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300'
         : (STATUS_CLASS[faktur.status] ?? 'bg-gray-100 text-gray-600')
+    const riwayatLog = [...(faktur.riwayat_status ?? [])].reverse()
 
     return (
         <div className="flex flex-col gap-4">
@@ -272,15 +355,22 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
             <PanelAlurStatus
                 judul="Alur Invoice"
                 alat={(
-                    <Tooltip title="Log Approval">
-                        <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogApprovalOpen(true)}>
-                            <HiOutlineClipboardList className="text-lg" />
-                        </span>
-                    </Tooltip>
+                    <div className="flex items-center gap-2">
+                        <Tooltip title="Log Invoice">
+                            <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogOpen(true)}>
+                                <HiOutlineClock className="text-lg" />
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Log Approval">
+                            <span className={KELAS_IKON_LOG_APPROVAL} onClick={() => setLogApprovalOpen(true)}>
+                                <HiOutlineClipboardList className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    </div>
                 )}
                 tahap={TAHAP_INVOICE}
                 status={faktur.status}
-                statusLabel={ditolak ? 'Draft — Ditolak' : (STATUS_LABEL[faktur.status] ?? faktur.status)}
+                statusLabel={ditolak ? 'Draft — Ditolak' : dibayarSebagian ? 'Terkirim — Dibayar Sebagian' : (STATUS_LABEL[faktur.status] ?? faktur.status)}
                 kelasIkon={kelasIkonAlur}
                 tahapGagal={ditolak ? 1 : undefined}
                 selesai={faktur.status === 'lunas'}
@@ -303,7 +393,12 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                                 {ditolak ? 'Ajukan Ulang' : 'Ajukan Approval'}
                             </Button>
                         ))}
-                        {faktur.status === 'terkirim' && (
+                        {faktur.status === 'terkirim' && bolehKelolaPiutang && !tanpaSisa && (
+                            <Button size="sm" variant="solid" icon={<HiOutlineCash />} onClick={bukaBayar}>
+                                Catat Pembayaran
+                            </Button>
+                        )}
+                        {tanpaSisa && (
                             <Button size="sm" variant="solid" icon={<HiOutlineCheckCircle />} onClick={() => setPendingStatus('lunas')}>
                                 Tandai Lunas
                             </Button>
@@ -445,6 +540,174 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                     <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
+
+            {['terkirim', 'lunas'].includes(faktur.status) && (
+                <Card>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <p className={LABEL_KECIL}>Pembayaran Klien{daftarBayar.length > 0 ? ` (${daftarBayar.length})` : ''}</p>
+                        {faktur.tanggal_lunas && <p className="text-xs text-gray-400">Lunas {dayjs(faktur.tanggal_lunas).format('DD MMM YYYY')}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <p className={`${LABEL_KECIL} mb-1`}>Total Tagihan</p>
+                            <p className="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{formatRupiah(faktur.total)}</p>
+                        </div>
+                        <div>
+                            <p className={`${LABEL_KECIL} mb-1`}>Sudah Dibayar</p>
+                            <p className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatRupiah(terbayar)}</p>
+                            {(faktur.potongan_bayar ?? 0) > 0 && (
+                                <p className="text-xs text-gray-400">termasuk potongan {formatRupiah(faktur.potongan_bayar ?? 0)}</p>
+                            )}
+                        </div>
+                        <div>
+                            <p className={`${LABEL_KECIL} mb-1`}>Sisa Tagihan</p>
+                            <p className={`text-sm font-semibold tabular-nums ${sisaTagihan > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'}`}>{formatRupiah(sisaTagihan)}</p>
+                        </div>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${persenBayar}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">{persenBayar}% terbayar</p>
+
+                    {daftarBayar.length === 0 ? (
+                        <p className="text-sm text-gray-400 mt-4">Belum ada pembayaran yang dicatat.</p>
+                    ) : (
+                        <div className="flex flex-col mt-4">
+                            {daftarBayar.map((p, idx) => {
+                                const terakhir = idx === daftarBayar.length - 1
+                                return (
+                                    <div key={p.id_pembayaran_faktur} className="flex gap-3">
+                                        <div className="w-20 shrink-0 text-right text-xs text-gray-400 pt-1">{dayjs(p.tanggal_bayar).format('DD MMM YYYY')}</div>
+                                        <div className="flex flex-col items-center">
+                                            <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm shrink-0 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                <HiOutlineCash />
+                                            </span>
+                                            {!terakhir && <span className="flex-1 w-px bg-gray-200 dark:bg-gray-600 my-1" />}
+                                        </div>
+                                        <div className={`flex-1 min-w-0 pt-0.5 ${terakhir ? '' : 'pb-3'}`}>
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                <span className="text-sm font-semibold tabular-nums text-gray-800 dark:text-gray-100">{formatRupiah(p.nominal)}</span>
+                                                {p.potongan > 0 && (
+                                                    <span className="text-xs text-amber-600 dark:text-amber-400 [overflow-wrap:anywhere]">
+                                                        + potongan {formatRupiah(p.potongan)}{p.keterangan_potongan ? ` (${p.keterangan_potongan})` : ''}
+                                                    </span>
+                                                )}
+                                                {p.no_referensi && <span className="text-xs text-gray-400 font-mono [overflow-wrap:anywhere]">{p.no_referensi}</span>}
+                                                <span className="ml-auto flex items-center gap-2">
+                                                    {p.dicatat_oleh && <span className="text-xs text-gray-400">oleh {p.dicatat_oleh}</span>}
+                                                    {p.url_bukti && (
+                                                        <Tooltip title="Lihat bukti">
+                                                            <a href={p.url_bukti} onClick={klik(p.url_bukti, 'Bukti pembayaran', `bukti-${faktur.nomor_faktur}`)} target="_blank" rel="noreferrer"
+                                                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 transition-colors">
+                                                                <HiOutlinePaperClip className="text-sm" />
+                                                            </a>
+                                                        </Tooltip>
+                                                    )}
+                                                    {bolehKelolaPiutang && (
+                                                        <Tooltip title="Hapus pembayaran">
+                                                            <span className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors"
+                                                                onClick={() => { setAlasanHapusBayar(''); setHapusBayar(p) }}>
+                                                                <HiOutlineTrash className="text-sm" />
+                                                            </span>
+                                                        </Tooltip>
+                                                    )}
+                                                </span>
+                                            </div>
+                                            {p.catatan && <p className="text-xs text-gray-400 mt-0.5 [overflow-wrap:anywhere]">{p.catatan}</p>}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </Card>
+            )}
+
+            <ConfirmDialog
+                isOpen={!!hapusBayar}
+                type="danger"
+                title="Hapus Pembayaran"
+                confirmText="Ya, Hapus"
+                cancelText="Batal"
+                confirmButtonProps={{ loading: menyimpanBayar, disabled: alasanHapusBayar.trim().length < 3 }}
+                onClose={() => setHapusBayar(null)}
+                onCancel={() => setHapusBayar(null)}
+                onConfirm={konfirmasiHapusBayar}
+            >
+                <p className="text-sm mb-3">
+                    Hapus pembayaran {hapusBayar ? formatRupiah(hapusBayar.nominal + hapusBayar.potongan) : ''} tanggal {hapusBayar ? dayjs(hapusBayar.tanggal_bayar).format('DD MMM YYYY') : ''}?
+                    {faktur.status === 'lunas' ? ' Invoice akan kembali berstatus Terkirim.' : ''}
+                </p>
+                <Input textArea rows={2} maxLength={150} placeholder="Alasan penghapusan (wajib), mis. salah input nominal"
+                    value={alasanHapusBayar} onChange={e => setAlasanHapusBayar(e.target.value)} />
+            </ConfirmDialog>
+
+            <Dialog isOpen={bayarOpen} onRequestClose={() => setBayarOpen(false)} onClose={() => setBayarOpen(false)} width={560}>
+                <h5 className="text-base font-semibold mb-1">Catat Pembayaran</h5>
+                <p className="text-xs text-gray-500 mb-4">Sisa tagihan {formatRupiah(sisaTagihan)}. Kalau klien membayar bertahap, catat sebesar yang diterima; sisanya tetap tercatat sebagai piutang.</p>
+                <form onSubmit={e => { e.preventDefault(); if (bayarValid) simpanBayar() }}>
+                    <div className="max-h-[60vh] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                            <FormItem label="Tanggal Diterima" asterisk>
+                                <DatePicker inputFormat="DD/MM/YYYY" maxDate={new Date()}
+                                    value={bayar.tanggal ? dayjs(bayar.tanggal).toDate() : null}
+                                    onChange={date => setBayar(p => ({ ...p, tanggal: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                            </FormItem>
+                            <FormItem label="Nominal Diterima" asterisk>
+                                <Input prefix="Rp" placeholder="0" invalid={bayarMelebihi}
+                                    value={bayar.nominal ? formatNum(Number(bayar.nominal)) : ''}
+                                    onChange={e => { setNominalDisentuh(true); setBayar(p => ({ ...p, nominal: e.target.value.replace(/\D/g, '') })) }} />
+                            </FormItem>
+                            <FormItem label="Potongan oleh Klien" extra={<span className="text-xs text-gray-400">Mis. PPh 23 atau biaya transfer — mengurangi sisa tagihan, bukan uang masuk.</span>}>
+                                <Input prefix="Rp" placeholder="0" invalid={potonganMelebihi}
+                                    value={bayar.potongan ? formatNum(Number(bayar.potongan)) : ''}
+                                    onChange={e => {
+                                        const potongan = e.target.value.replace(/\D/g, '')
+                                        setBayar(p => ({
+                                            ...p,
+                                            potongan,
+                                            nominal: nominalDisentuh ? p.nominal : String(Math.max(Math.round(sisaTagihan) - (Number(potongan) || 0), 0) || ''),
+                                        }))
+                                    }} />
+                            </FormItem>
+                            <FormItem label="Keterangan Potongan" asterisk={potonganBayar > 0}>
+                                <Input placeholder="Mis. PPh 23 2%" maxLength={150} disabled={potonganBayar === 0}
+                                    value={bayar.keterangan_potongan}
+                                    onChange={e => setBayar(p => ({ ...p, keterangan_potongan: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="No. Referensi">
+                                <Input placeholder="No. transfer / giro" maxLength={100}
+                                    value={bayar.no_referensi}
+                                    onChange={e => setBayar(p => ({ ...p, no_referensi: e.target.value }))} />
+                            </FormItem>
+                            <FormItem label="Bukti (opsional)">
+                                <UploadBerkas file={buktiBayar} label="Pilih file"
+                                    onChange={f => {
+                                        if (f && f.size > MAKS_UKURAN_BUKTI) {
+                                            toast.push(<Notification type="danger" title="Ukuran file maksimal 5 MB" />)
+                                            return
+                                        }
+                                        setBuktiBayar(f)
+                                    }} />
+                            </FormItem>
+                        </div>
+                        <FormItem label="Catatan">
+                            <Input textArea rows={2} maxLength={500} placeholder="Mis. termin 1 dari 3" value={bayar.catatan}
+                                onChange={e => setBayar(p => ({ ...p, catatan: e.target.value }))} />
+                        </FormItem>
+                        {bayarMelebihi && <p className="text-xs text-red-500 dark:text-red-400 -mt-2 mb-2">Nominal ditambah potongan melebihi sisa tagihan.</p>}
+                        {potonganMelebihi && <p className="text-xs text-red-500 dark:text-red-400 -mt-2 mb-2">Potongan melebihi {BATAS_POTONGAN_PERSEN}% nilai invoice (maksimal {formatRupiah(batasPotongan)}) — selisih sebesar itu perlu koreksi invoice.</p>}
+                        <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Sisa setelah pembayaran ini</span>
+                            <span className="font-bold text-lg tabular-nums">{formatRupiah(Math.max(sisaTagihan - masukBayar, 0))}</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setBayarOpen(false)}>Kembali</Button>
+                        <Button type="submit" variant="solid" loading={menyimpanBayar} disabled={!bayarValid}>Simpan</Button>
+                    </div>
+                </form>
+            </Dialog>
 
             {faktur.items && faktur.items.length > 0 && (
                 <Card>
@@ -671,25 +934,50 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 </form>
             </Dialog>
 
-            <Dialog isOpen={logOpen} onRequestClose={() => setLogOpen(false)} onClose={() => setLogOpen(false)} width={480}>
-                <h5 className="text-base font-semibold mb-4">Log Invoice</h5>
-                <div className="max-h-[60vh] overflow-y-auto pr-1 flex flex-col gap-2">
-                    {(faktur.riwayat_status ?? []).map((r, i) => (
-                        <div key={i}
-                            className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${RIWAYAT_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
-                            <div className="flex justify-between items-start">
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${RIWAYAT_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'}`}>
-                                    {RIWAYAT_LABEL[r.status] ?? r.status}
-                                </span>
-                                <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
-                            </div>
-                            {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
-                            {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
-                        </div>
-                    ))}
+            <Dialog isOpen={logOpen} width={520} closable={false} onRequestClose={() => setLogOpen(false)} onClose={() => setLogOpen(false)}>
+                <div className="flex items-center justify-between gap-3 mb-1">
+                    <h5 className="font-bold">Log Invoice</h5>
+                    <Tag className={`${kelasIkonAlur} border-0 font-semibold`}>
+                        {ditolak ? 'Draft — Ditolak' : dibayarSebagian ? 'Terkirim — Dibayar Sebagian' : (STATUS_LABEL[faktur.status] ?? faktur.status)}
+                    </Tag>
                 </div>
-                <div className="flex justify-end mt-4">
-                    <Button variant="default" onClick={() => setLogOpen(false)}>Tutup</Button>
+                <p className="text-xs text-gray-400 font-mono mb-3">{faktur.nomor_faktur} — {formatRupiah(faktur.total)}</p>
+                {riwayatLog.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-6 text-center">Belum ada riwayat untuk invoice ini.</p>
+                ) : (
+                    <div className="max-h-[60vh] overflow-y-auto pr-1 mt-2">
+                        {riwayatLog.map((r, i) => (
+                            <div key={i} className="flex gap-3">
+                                <div className="w-16 shrink-0 text-right text-xs text-gray-400 leading-tight pt-1">
+                                    {r.waktu ? (
+                                        <>
+                                            {dayjs(r.waktu).format('DD MMM YYYY')}
+                                            <br />
+                                            {dayjs(r.waktu).format('HH:mm')}
+                                        </>
+                                    ) : '—'}
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 ${RIWAYAT_TAG[r.status] ?? 'bg-gray-100 text-gray-500 dark:bg-gray-500/20 dark:text-gray-300'}`}>
+                                        {RIWAYAT_IKON[r.status] ?? <HiOutlineClock />}
+                                    </span>
+                                    {i < riwayatLog.length - 1 && <span className="flex-1 w-px bg-gray-200 dark:bg-gray-600 my-1" />}
+                                </div>
+                                <div className="flex-1 min-w-0 pb-6">
+                                    <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">{RIWAYAT_LABEL[r.status] ?? r.status}</p>
+                                    {r.oleh && <p className="text-xs text-gray-400 uppercase tracking-wide mt-0.5">{r.oleh}</p>}
+                                    {r.keterangan && (
+                                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
+                                            {r.keterangan}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="flex justify-center mt-4">
+                    <Button variant="default" onClick={() => setLogOpen(false)}>Kembali</Button>
                 </div>
             </Dialog>
 

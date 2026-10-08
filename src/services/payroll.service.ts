@@ -54,6 +54,10 @@ export interface PayrollSlip {
     total_potongan: number
     gaji_bersih: number
     catatan: string | null
+    sisa_kasbon?: number
+    rencana_kasbon?: number | null
+    kasbon_manual?: number
+    sisa_kasbon_setelah_potong?: number | null
 }
 
 export interface ImportGagalPayroll {
@@ -62,9 +66,17 @@ export interface ImportGagalPayroll {
     alasan: string
 }
 
+export interface ImportSelisihKasbonPayroll {
+    baris: number
+    nama: string
+    excel: number
+    sistem: number
+}
+
 export interface ImportResultPayroll {
     berhasil: number
     gagal: ImportGagalPayroll[]
+    selisih_kasbon?: ImportSelisihKasbonPayroll[]
 }
 
 export interface RingkasanPayroll {

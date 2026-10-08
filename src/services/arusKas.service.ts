@@ -6,11 +6,12 @@ import type { PayrollPeriode, RingkasanPayroll } from './payroll.service'
 import type { InvoiceVendor } from './invoice-vendor.service'
 import type { PermintaanPembelian } from './permintaanPembelian.service'
 import type { UangJalan } from './uangJalan.service'
+import type { Kasbon } from './kasbon.service'
 
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
 export type KeputusanApproval = 'setuju' | 'tolak'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'lainnya'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'kasbon' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -37,6 +38,8 @@ export interface PengajuanKeuanganInfo {
     nomor_pengajuan: string
     kategori?: string
     status: string
+    alasan_ditolak?: string | null
+    versi?: string
     nominal: number
     tanggal_pengajuan?: string | null
     tanggal_transfer?: string | null
@@ -70,6 +73,7 @@ export interface PengajuanPengeluaran {
     id_periode: string | null
     id_invoice_vendor?: string | null
     id_uang_jalan?: string | null
+    id_kasbon?: string | null
     id_supir: string | null
     id_proyek: string | null
     periode_dari: string | null
@@ -230,6 +234,7 @@ export type RincianSumberPengajuan =
     | { tipe: 'payroll'; data: RincianPayroll }
     | { tipe: 'uang_jalan'; data: RincianUangJalan }
     | { tipe: 'uang_jalan_manual'; data: UangJalan }
+    | { tipe: 'kasbon'; data: Kasbon }
     | { tipe: 'invoice_vendor'; data: InvoiceVendor }
     | { tipe: 'permintaan_pembelian'; data: PermintaanPembelian }
 

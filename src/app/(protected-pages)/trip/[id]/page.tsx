@@ -1,12 +1,13 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
+import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Checkbox, Dialog, Input, Tag, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import PanelAlurStatus, { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
 import LaporanPerjalananPanel from '@/components/shared/LaporanPerjalananPanel'
 import { ParameterTagihanCard } from '@/components/shared/ParameterTagihanTrip'
-import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash, HiOutlineBan, HiOutlinePlay, HiOutlineCheckCircle } from 'react-icons/hi'
+import { HiPlusCircle, HiArrowLeft, HiOutlineMap, HiOutlineTrash, HiOutlineBan, HiOutlinePlay, HiOutlineCheckCircle, HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlinePaperAirplane, HiOutlineClipboardCheck, HiOutlineCash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -69,20 +70,55 @@ const PENGAJUAN_TAG: Record<string, string> = {
     ditransfer:        'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
 }
 
-const PENGAJUAN_BORDER: Record<string, string> = {
-    diajukan:          'border-l-yellow-400',
-    dicek:             'border-l-blue-400',
-    menunggu_approval: 'border-l-amber-400',
-    disetujui:         'border-l-indigo-400',
-    ditolak:           'border-l-red-400',
-    ditransfer:        'border-l-emerald-400',
+const KELAS_IKON_NETRAL = 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'
+
+const IKON_STATUS: Record<string, ReactNode> = {
+    belum_mulai: <HiOutlineClock />,
+    berjalan:    <HiOutlinePlay />,
+    selesai:     <HiOutlineCheck />,
+    dibatalkan:  <HiOutlineBan />,
 }
 
-const RIWAYAT_BORDER: Record<string, string> = {
-    belum_mulai: 'border-l-blue-400',
-    berjalan:    'border-l-emerald-400',
-    selesai:     'border-l-purple-400',
-    dibatalkan:  'border-l-red-400',
+const IKON_PENGAJUAN: Record<string, ReactNode> = {
+    diajukan:          <HiOutlinePaperAirplane />,
+    dicek:             <HiOutlineClipboardCheck />,
+    menunggu_approval: <HiOutlineClock />,
+    disetujui:         <HiOutlineCheck />,
+    ditolak:           <HiOutlineX />,
+    ditransfer:        <HiOutlineCash />,
+}
+
+function BarisRiwayat({ waktu, ikon, kelasIkon, judul, terakhir, children }: {
+    waktu: string | null
+    ikon: ReactNode
+    kelasIkon: string
+    judul: string
+    terakhir: boolean
+    children?: ReactNode
+}) {
+    return (
+        <div className="flex gap-3">
+            <div className="w-16 shrink-0 text-right text-xs text-gray-500 dark:text-gray-400 leading-tight pt-1 tabular-nums">
+                {waktu ? (
+                    <>
+                        {dayjs(waktu).format('DD MMM YYYY')}
+                        <br />
+                        {dayjs(waktu).format('HH:mm')}
+                    </>
+                ) : '—'}
+            </div>
+            <div className="flex flex-col items-center">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 ${kelasIkon}`}>
+                    {ikon}
+                </span>
+                {!terakhir && <span className="flex-1 w-px bg-gray-200 dark:bg-gray-600 my-1" />}
+            </div>
+            <div className={`flex-1 min-w-0 ${terakhir ? '' : 'pb-6'}`}>
+                <p className="font-semibold text-sm text-gray-800 dark:text-gray-100 pt-1">{judul}</p>
+                {children}
+            </div>
+        </div>
+    )
 }
 
 const PERAN_LABEL: Record<string, string> = {
@@ -232,6 +268,25 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
     if (!trip)   return <div className="p-6 text-red-500">Trip tidak ditemukan.</div>
+
+    const totalRealisasi = rekap?.total_keseluruhan ?? 0
+    const rekapKosong = !rekapLoading && (!rekap || (rekap.total_keseluruhan === 0 && rekap.estimasi_biaya == null))
+    const pembanding = [
+        ...(rekap?.estimasi_biaya != null ? [{
+            label: 'Estimasi Uang Jalan',
+            nilai: rekap.estimasi_biaya,
+            selisih: rekap.selisih ?? 0,
+            teksPositif: 'Hemat',
+            teksNegatif: 'Melebihi estimasi',
+        }] : []),
+        ...(trip.uang_jalan_alokasi != null ? [{
+            label: 'Uang Jalan Diberikan',
+            nilai: trip.uang_jalan_alokasi,
+            selisih: trip.uang_jalan_alokasi - totalRealisasi,
+            teksPositif: 'Sisa dikembalikan supir',
+            teksNegatif: 'Kurang, diganti perusahaan',
+        }] : []),
+    ]
 
     return (
         <div className="flex flex-col gap-4">
@@ -438,198 +493,158 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 */}
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card id="laporan-perjalanan-card">
-                <LaporanPerjalananPanel idTrip={id} onSaved={fetchRekap} />
-            </Card>
-
-                <ParameterTagihanCard idTrip={id} statusTrip={trip.status} />
-
-                <Card>
-                    <div className="flex justify-between items-center mb-4">
-                        <h5>Riwayat Status</h5>
-                        <span className="text-xs text-gray-400">Auto-refresh 30 detik</span>
-                    </div>
-                    {statuses.length === 0 ? (
-                        <div className="text-gray-400 text-sm">Belum ada riwayat status.</div>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            {statuses.map(s => (
-                                <div key={s.id_status}
-                                    className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${RIWAYAT_BORDER[s.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
-                                    <div className="flex justify-between items-start">
-                                        <Tag className={`${STATUS_TAG[s.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0`}>
-                                            {STATUS_LABEL[s.status] ?? s.status}
-                                        </Tag>
-                                        <span className="text-xs text-gray-400">{dayjs(s.dibuat_pada).format('DD/MM/YYYY HH:mm')}</span>
-                                    </div>
-                                    {s.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">{s.keterangan}</div>}
-                                    {s.dibuat_oleh_nama && (
-                                        <div className="text-xs text-gray-400 mt-1">
-                                            Oleh: {s.dibuat_oleh_nama}
-                                            {s.dibuat_oleh_peran && ` (${PERAN_LABEL[s.dibuat_oleh_peran] ?? s.dibuat_oleh_peran})`}
-                                        </div>
-                                    )}
-                                    {s.latitude && s.longitude && <div className="text-xs text-gray-400 mt-1">Koordinat: {s.latitude}, {s.longitude}</div>}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </Card>
-
-                {trip?.pengajuan_uang_jalan && (
-                    <Card>
-                        <div className="flex justify-between items-center mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-4 min-w-0">
+                    <Card className="flex-1">
+                        <div className="flex justify-between items-start gap-3 mb-4">
                             <div>
-                                <h5>Status Uang Jalan (Keuangan)</h5>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {trip.pengajuan_uang_jalan.nomor_pengajuan} — {formatRupiah(trip.pengajuan_uang_jalan.nominal)}
-                                </p>
-                                {trip.pengajuan_uang_jalan.periode && (
-                                    <p className="text-xs text-gray-400 mt-0.5">
-                                        {formatRupiah(trip.pengajuan_uang_jalan.periode.tarif_per_hari)}/hari × {trip.pengajuan_uang_jalan.periode.jumlah_hari} hari ({dayjs(trip.pengajuan_uang_jalan.periode.dari).format('DD/MM')}–{dayjs(trip.pengajuan_uang_jalan.periode.sampai).format('DD/MM')})
-                                    </p>
-                                )}
+                                <h5>Rekap Biaya</h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Biaya dari laporan perjalanan, dibandingkan dengan uang jalan trip ini</p>
                             </div>
-                            <Tag className={`${PENGAJUAN_TAG[trip.pengajuan_uang_jalan.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0 font-semibold`}>
-                                {PENGAJUAN_LABEL[trip.pengajuan_uang_jalan.status] ?? trip.pengajuan_uang_jalan.status}
-                            </Tag>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            {trip.pengajuan_uang_jalan.riwayat.map((r, i) => (
-                                <div key={i}
-                                    className={`rounded-lg border border-gray-200 dark:border-gray-600 border-l-4 ${PENGAJUAN_BORDER[r.status] ?? 'border-l-gray-300'} bg-gray-50 p-3 dark:bg-gray-800`}>
-                                    <div className="flex justify-between items-start">
-                                        <Tag className={`${PENGAJUAN_TAG[r.status] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100'} border-0`}>
-                                            {PENGAJUAN_LABEL[r.status] ?? r.status}
-                                        </Tag>
-                                        <span className="text-xs text-gray-400">{r.waktu ? dayjs(r.waktu).format('DD/MM/YYYY HH:mm') : '—'}</span>
-                                    </div>
-                                    {r.oleh && <div className="text-xs text-gray-400 mt-2">Oleh: {r.oleh}</div>}
-                                    {r.keterangan && <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">{r.keterangan}</div>}
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-                )}
-
-            <Card>
-                <div className="flex justify-between items-center mb-4">
-                    <h5>Rekap Biaya</h5>
-                    {rekapLoading && <span className="text-xs text-gray-400">Memuat...</span>}
-                </div>
-
-                {!rekapLoading && (!rekap || (rekap.total_keseluruhan === 0 && rekap.estimasi_biaya == null)) ? (
-                    <div className="text-gray-400 text-sm">Belum ada data biaya untuk trip ini.</div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-5">
-                            {[
-                                { label: 'Total BBM',         value: rekap?.total_bbm ?? 0 },
-                                { label: 'Total Uang Jalan',  value: rekap?.total_uang_jalan ?? 0 },
-                                { label: 'Total Uang Tol',    value: rekap?.total_uang_tol ?? 0 },
-                                { label: 'Total Biaya Lain',  value: rekap?.total_biaya_lain ?? 0 },
-                                { label: 'Total Keseluruhan', value: rekap?.total_keseluruhan ?? 0, highlight: true },
-                            ].map(({ label, value, highlight }) => (
-                                <div
-                                    key={label}
-                                    className={`rounded-lg p-3 ${highlight
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                                        : 'bg-gray-50 dark:bg-gray-800'
-                                    }`}
-                                >
-                                    <div className={`text-xs mb-1 ${highlight ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500'}`}>
-                                        {label}
-                                    </div>
-                                    <div className={`font-semibold text-sm ${highlight ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                                        {formatRupiah(value)}
-                                    </div>
-                                </div>
-                            ))}
+                            {rekapLoading && <span className="text-xs text-gray-500 dark:text-gray-400">Memuat...</span>}
                         </div>
 
-                        {rekap && rekap.estimasi_biaya != null && (
-                            <div className="grid grid-cols-1 gap-3 mb-4 sm:grid-cols-2">
-                                <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                                    <div className="text-xs mb-1 text-gray-500">Uang Jalan</div>
-                                    <div className="font-semibold text-sm">{formatRupiah(rekap.estimasi_biaya)}</div>
+                        {rekapKosong && (
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada data biaya untuk trip ini.</p>
+                        )}
+
+                        {pembanding.length > 0 && (
+                            <div className={`grid grid-cols-1 gap-3 ${rekapKosong ? 'mt-4' : ''} ${pembanding.length === 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+                                <div className="rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">Total Realisasi</p>
+                                    <p className="font-semibold text-base text-blue-700 dark:text-blue-300 mt-1 tabular-nums">{formatRupiah(totalRealisasi)}</p>
+                                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Semua biaya di laporan</p>
                                 </div>
-                                <div className={`rounded-lg p-3 border ${
-                                    (rekap.selisih ?? 0) >= 0
-                                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                                }`}>
-                                    <div className={`text-xs mb-1 ${(rekap.selisih ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        Selisih
-                                    </div>
-                                    <div className={`font-semibold text-sm ${(rekap.selisih ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        {formatRupiah(Math.abs(rekap.selisih ?? 0))} {(rekap.selisih ?? 0) >= 0 ? '(hemat)' : '(melebihi estimasi)'}
-                                    </div>
-                                </div>
+                                {pembanding.map(b => {
+                                    const positif = b.selisih >= 0
+                                    return (
+                                        <div key={b.label} className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{b.label}</p>
+                                            <p className="font-semibold text-base text-gray-800 dark:text-gray-100 mt-1 tabular-nums">{formatRupiah(b.nilai)}</p>
+                                            <p className={`text-xs font-medium mt-1 ${positif ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {positif ? b.teksPositif : b.teksNegatif} {formatRupiah(Math.abs(b.selisih))}
+                                            </p>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         )}
 
-                        {rekap && rekap.items.length > 0 && (
-                            <div className="overflow-x-auto">
+                        {!rekapKosong && (
+                            <div className={pembanding.length > 0 ? 'mt-5' : ''}>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Rincian Biaya</p>
                                 <table className="w-full text-sm">
-                                    <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                                            <th className="text-left py-2 pr-4 text-gray-500 font-medium">Nama Biaya</th>
-                                            <th className="text-right py-2 text-gray-500 font-medium">Nominal</th>
-                                        </tr>
-                                    </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {rekap.items.map(item => (
+                                        {[
+                                            { label: 'BBM',        nilai: rekap?.total_bbm ?? 0 },
+                                            { label: 'Uang Jalan', nilai: rekap?.total_uang_jalan ?? 0 },
+                                            { label: 'Uang Tol',   nilai: rekap?.total_uang_tol ?? 0 },
+                                            { label: 'Biaya Lain', nilai: rekap?.total_biaya_lain ?? 0 },
+                                        ].map(baris => (
+                                            <tr key={baris.label}>
+                                                <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{baris.label}</td>
+                                                <td className="py-2 text-right text-gray-800 dark:text-gray-100 tabular-nums whitespace-nowrap">{formatRupiah(baris.nilai)}</td>
+                                            </tr>
+                                        ))}
+                                        {rekap?.items.map(item => (
                                             <tr key={item.id_biaya_lain}>
-                                                <td className="py-2 pr-4">{item.nama_biaya}</td>
-                                                <td className="py-2 text-right">{formatRupiah(item.nominal)}</td>
+                                                <td className="py-1.5 pr-4 pl-4 text-xs text-gray-500 dark:text-gray-400">{item.nama_biaya}</td>
+                                                <td className="py-1.5 text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">{formatRupiah(item.nominal)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
-                                        <tr className="border-t border-gray-100 dark:border-gray-700">
-                                            <td className="pt-2 pr-4 text-gray-500 font-medium">Total</td>
-                                            <td className="pt-2 text-right font-bold text-blue-700 dark:text-blue-300">
-                                                {formatRupiah(rekap.total_keseluruhan)}
-                                            </td>
+                                        <tr className="border-t border-gray-200 dark:border-gray-600">
+                                            <td className="pt-2.5 pr-4 font-semibold text-gray-800 dark:text-gray-100">Total Realisasi</td>
+                                            <td className="pt-2.5 text-right font-bold text-blue-700 dark:text-blue-300 tabular-nums whitespace-nowrap">{formatRupiah(totalRealisasi)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
                         )}
-                    </>
-                )}
-
-                {trip.uang_jalan_alokasi != null && (
-                    <div className="grid grid-cols-1 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 sm:grid-cols-2">
-                        <div className="rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                            <div className="text-xs mb-1 text-gray-500">Uang Jalan (Alokasi)</div>
-                            <div className="font-semibold text-sm">{formatRupiah(trip.uang_jalan_alokasi)}</div>
-                        </div>
-                        {(() => {
-                            const selisihAlokasi = trip.uang_jalan_alokasi - (rekap?.total_keseluruhan ?? 0)
-                            const positif = selisihAlokasi >= 0
-                            return (
-                                <div className={`rounded-lg p-3 border ${positif
-                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
-                                    <div className={`text-xs mb-1 ${positif ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        Selisih vs Realisasi
-                                    </div>
-                                    <div className={`font-semibold text-sm ${positif ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        {formatRupiah(Math.abs(selisihAlokasi))} {positif ? '(sisa — dikembalikan supir)' : '(kurang — diganti perusahaan)'}
-                                    </div>
-                                </div>
-                            )
-                        })()}
-                    </div>
-                )}
-
-                <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
+                    </Card>
                 </div>
+
+                <div className="flex flex-col gap-4 min-w-0">
+                    <Card className={trip.pengajuan_uang_jalan ? undefined : 'flex-1'}>
+                        <div className="flex justify-between items-start gap-3 mb-4">
+                            <div>
+                                <h5>Riwayat Status</h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Jejak perubahan status trip: kapan dan oleh siapa</p>
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Diperbarui otomatis</span>
+                        </div>
+                        {statuses.length === 0 ? (
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada riwayat status.</p>
+                        ) : (
+                            <div>
+                                {statuses.map((s, i) => (
+                                    <BarisRiwayat key={s.id_status}
+                                        waktu={s.dibuat_pada}
+                                        ikon={IKON_STATUS[s.status] ?? <HiOutlineClock />}
+                                        kelasIkon={STATUS_TAG[s.status] ?? KELAS_IKON_NETRAL}
+                                        judul={STATUS_LABEL[s.status] ?? s.status}
+                                        terakhir={i === statuses.length - 1}>
+                                        {s.keterangan && <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{s.keterangan}</p>}
+                                        {s.dibuat_oleh_nama && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Oleh {s.dibuat_oleh_nama}
+                                                {s.dibuat_oleh_peran && ` (${PERAN_LABEL[s.dibuat_oleh_peran] ?? s.dibuat_oleh_peran})`}
+                                            </p>
+                                        )}
+                                        {s.latitude && s.longitude && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">Koordinat: {s.latitude}, {s.longitude}</p>
+                                        )}
+                                    </BarisRiwayat>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+
+                    {trip.pengajuan_uang_jalan && (
+                        <Card className="flex-1">
+                            <div className="flex justify-between items-start gap-3 mb-4">
+                                <div className="min-w-0">
+                                    <h5>Status Uang Jalan (Keuangan)</h5>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 tabular-nums">
+                                        {trip.pengajuan_uang_jalan.nomor_pengajuan} · {formatRupiah(trip.pengajuan_uang_jalan.nominal)}
+                                    </p>
+                                    {trip.pengajuan_uang_jalan.periode && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 tabular-nums">
+                                            {formatRupiah(trip.pengajuan_uang_jalan.periode.tarif_per_hari)}/hari × {trip.pengajuan_uang_jalan.periode.jumlah_hari} hari ({dayjs(trip.pengajuan_uang_jalan.periode.dari).format('DD/MM')}–{dayjs(trip.pengajuan_uang_jalan.periode.sampai).format('DD/MM')})
+                                        </p>
+                                    )}
+                                </div>
+                                <Tag className={`${PENGAJUAN_TAG[trip.pengajuan_uang_jalan.status] ?? KELAS_IKON_NETRAL} border-0 font-semibold whitespace-nowrap`}>
+                                    {PENGAJUAN_LABEL[trip.pengajuan_uang_jalan.status] ?? trip.pengajuan_uang_jalan.status}
+                                </Tag>
+                            </div>
+                            <div>
+                                {trip.pengajuan_uang_jalan.riwayat.map((r, i, semua) => (
+                                    <BarisRiwayat key={i}
+                                        waktu={r.waktu}
+                                        ikon={IKON_PENGAJUAN[r.status] ?? <HiOutlineClock />}
+                                        kelasIkon={PENGAJUAN_TAG[r.status] ?? KELAS_IKON_NETRAL}
+                                        judul={PENGAJUAN_LABEL[r.status] ?? r.status}
+                                        terakhir={i === semua.length - 1}>
+                                        {r.keterangan && <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{r.keterangan}</p>}
+                                        {r.oleh && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Oleh {r.oleh}</p>}
+                                    </BarisRiwayat>
+                                ))}
+                            </div>
+                        </Card>
+                    )}
+                </div>
+            </div>
+
+            <ParameterTagihanCard idTrip={id} statusTrip={trip.status} />
+
+            <Card id="laporan-perjalanan-card">
+                <LaporanPerjalananPanel idTrip={id} onSaved={fetchRekap} />
             </Card>
 
+            <div className="flex justify-end">
+                <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
             </div>
 
             <Dialog isOpen={titikDropDialogOpen} onRequestClose={closeTitikDropDialog} onClose={closeTitikDropDialog} width={520}>

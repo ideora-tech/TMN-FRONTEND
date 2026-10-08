@@ -24,6 +24,56 @@ export interface FakturTrip {
     status: string
 }
 
+export interface PembayaranFaktur {
+    id_pembayaran_faktur: string
+    tanggal_bayar: string
+    nominal: number
+    potongan: number
+    keterangan_potongan: string | null
+    no_referensi: string | null
+    url_bukti: string | null
+    catatan: string | null
+    dicatat_oleh: string | null
+    dibuat_pada: string | null
+}
+
+export type KelompokUmurPiutang = 'belum_jatuh_tempo' | 'hari_1_30' | 'hari_31_60' | 'di_atas_60'
+
+export interface OutstandingFakturBaris {
+    id_faktur: string
+    nomor_faktur: string
+    id_klien: string | null
+    nama_klien: string | null
+    nama_proyek: string | null
+    tanggal_faktur: string | null
+    jatuh_tempo: string | null
+    hari_terlambat: number
+    kelompok: KelompokUmurPiutang
+    total: number
+    terbayar: number
+    sisa: number
+}
+
+type JumlahNominal = { jumlah: number; nominal: number }
+
+export interface OutstandingFaktur {
+    ringkasan: {
+        jumlah_invoice: number
+        total_tagihan: number
+        total_terbayar: number
+        total_outstanding: number
+        lewat_jatuh_tempo: JumlahNominal
+        jatuh_tempo_7_hari: JumlahNominal
+        diterima_bulan_ini: number
+        aging: Record<KelompokUmurPiutang, JumlahNominal>
+    }
+    per_klien: { id_klien: string | null; nama_klien: string; jumlah: number; outstanding: number; terlambat: number }[]
+    data: OutstandingFakturBaris[]
+    meta: { page: number; limit: number; total: number; totalPages: number }
+}
+
+export type FilterOutstandingFaktur = { id_klien?: string; kelompok?: string; search?: string }
+
 export interface Faktur {
     id_faktur: string
     nomor_faktur: string
@@ -36,6 +86,12 @@ export interface Faktur {
     approval_aktif?: boolean | null
     tanggal_faktur?: string
     jatuh_tempo?: string
+    tanggal_lunas?: string | null
+    diterima?: number | null
+    potongan_bayar?: number | null
+    terbayar?: number | null
+    sisa?: number | null
+    pembayaran?: PembayaranFaktur[] | null
     id_proyek?: string | null
     id_klien?: string | null
     id_penawaran?: string | null
@@ -100,5 +156,29 @@ export const fakturService = {
     async ajukanApproval(id: string) {
         const { data } = await axios.post(API_ENDPOINTS.FAKTUR_AJUKAN_APPROVAL(id))
         return data.data as Faktur
+    },
+    async catatPembayaran(id: string, payload: { tanggal_bayar: string; nominal: number; potongan?: number; keterangan_potongan?: string; no_referensi?: string; catatan?: string }, bukti?: File | null) {
+        const form = new FormData()
+        form.append('tanggal_bayar', payload.tanggal_bayar)
+        form.append('nominal', String(payload.nominal))
+        if (payload.potongan) form.append('potongan', String(payload.potongan))
+        if (payload.keterangan_potongan) form.append('keterangan_potongan', payload.keterangan_potongan)
+        if (payload.no_referensi) form.append('no_referensi', payload.no_referensi)
+        if (payload.catatan) form.append('catatan', payload.catatan)
+        if (bukti) form.append('bukti', bukti)
+        const { data } = await axios.post(API_ENDPOINTS.FAKTUR_PEMBAYARAN(id), form)
+        return data.data as Faktur
+    },
+    async hapusPembayaran(id: string, idPembayaran: string, alasan: string) {
+        const { data } = await axios.delete(API_ENDPOINTS.FAKTUR_PEMBAYARAN_HAPUS(id, idPembayaran), { data: { alasan } })
+        return data.data as Faktur
+    },
+    async outstanding(params?: FilterOutstandingFaktur & { page?: number; limit?: number }) {
+        const { data } = await axios.get(API_ENDPOINTS.FAKTUR_OUTSTANDING, { params })
+        return data.data as OutstandingFaktur
+    },
+    async unduhOutstanding(params?: FilterOutstandingFaktur) {
+        const { data } = await axios.get(API_ENDPOINTS.FAKTUR_OUTSTANDING_EXPORT, { params, responseType: 'blob' })
+        return data as Blob
     },
 }

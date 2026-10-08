@@ -98,9 +98,10 @@ type Props = {
     onSaved?: () => void
     /** Langsung buka form (tanpa klik "Isi Laporan"/"Edit" dulu) — dipakai saat panel ini ditampilkan di dalam dialog yang sudah dibuka khusus untuk isi laporan. */
     autoOpenForm?: boolean
+    onBatalIsi?: () => void
 }
 
-export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }: Props) {
+export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm, onBatalIsi }: Props) {
     const { klik } = usePratinjauBerkas()
     const searchParams = useSearchParams()
     const [trip, setTrip] = useState<Trip | null>(null)
@@ -693,7 +694,12 @@ export default function LaporanPerjalananPanel({ idTrip, onSaved, autoOpenForm }
                     */}
 
                     <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                        <Button size="sm" variant="plain" onClick={() => { setShowLaporanForm(false); setLaporanFotoLabel({}) }}>
+                        <Button size="sm" variant="plain"
+                            onClick={() => {
+                                setShowLaporanForm(false)
+                                setLaporanFotoLabel({})
+                                if (!laporan) onBatalIsi?.()
+                            }}>
                             Kembali
                         </Button>
                         <Button type="submit" size="sm" variant="solid" loading={savingLaporan}>

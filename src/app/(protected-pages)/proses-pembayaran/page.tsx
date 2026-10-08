@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import dayjs from 'dayjs'
 import { Card, Button, Dialog, FormItem, Input, Spinner, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
@@ -18,6 +19,7 @@ type Option = { value: string; label: string }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 type TabValue = 'menunggu' | 'verifikasi' | 'siap' | 'ditolak' | 'ditransfer'
+const TAB_VALUES: TabValue[] = ['menunggu', 'verifikasi', 'siap', 'ditolak', 'ditransfer']
 
 type PengajuanForm = {
     kategori: KategoriPengajuan | ''
@@ -36,7 +38,12 @@ const emptyForm = (): PengajuanForm => ({
 })
 
 export default function ProsesPembayaranPage() {
-    const [activeTab, setActiveTab] = useState<TabValue>('menunggu')
+    const tabParam = useSearchParams().get('tab')
+    const [activeTab, setActiveTab] = useState<TabValue>(TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'menunggu')
+
+    useEffect(() => {
+        if (TAB_VALUES.includes(tabParam as TabValue)) setActiveTab(tabParam as TabValue)
+    }, [tabParam])
     const [list, setList]           = useState<PengajuanPengeluaran[]>([])
     const [loading, setLoading]     = useState(false)
     const [kategoriFilter, setKategoriFilter] = useState('')

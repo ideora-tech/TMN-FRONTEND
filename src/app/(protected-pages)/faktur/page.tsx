@@ -140,9 +140,14 @@ export default function FakturPage() {
         {
             header: 'Status', accessorKey: 'status', size: 130,
             cell: ({ row }: CellContext<Faktur, unknown>) => (
-                <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
-                    {STATUS_LABEL[row.original.status] ?? row.original.status}
-                </Tag>
+                <div className="flex flex-col items-start gap-1">
+                    <Tag className={STATUS_TAG[row.original.status] ?? 'bg-gray-100 text-gray-600'}>
+                        {STATUS_LABEL[row.original.status] ?? row.original.status}
+                    </Tag>
+                    {row.original.status === 'terkirim' && (row.original.terbayar ?? 0) > 0 && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">sisa {formatRupiah(row.original.sisa ?? 0)}</span>
+                    )}
+                </div>
             ),
         },
         {

@@ -90,9 +90,10 @@ export default function ProjectPage() {
         {
             header: 'Kode Proyek', accessorKey: 'kode_proyek', size: 150,
             cell: ({ row }: CellContext<Project, unknown>) => (
-                <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
+                <Link href={ROUTES.PROYEK_DETAIL(row.original.id_proyek)}
+                    className="font-mono text-sm font-semibold text-blue-500 hover:underline">
                     {row.original.kode_proyek}
-                </span>
+                </Link>
             ),
         },
         {

@@ -1,13 +1,10 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Checkbox, Dialog, FormItem, Spinner, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import Select from '@/components/ui/Select'
+import { Button, Card, Checkbox, Dialog, Input, Spinner, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import { HiPlusCircle, HiOutlineTrash } from 'react-icons/hi'
+import { HiPlusCircle, HiOutlineTrash, HiOutlineSearch, HiOutlineX } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { proyekUnitService, type OpsiUnitProyek, type UnitProyek, type UnitProyekPayload } from '@/services/proyekUnit.service'
-
-type Opsi = { value: string; label: string }
 
 const SUMBER_TAG: Record<string, { label: string; tag: string }> = {
     internal: { label: 'Aset Milik', tag: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300' },
@@ -22,13 +19,6 @@ const kunciUnit = (u: OpsiUnitProyek) => `${u.sumber}:${u.sumber === 'vendor' ? 
 
 const ringkasUnit = (u: OpsiUnitProyek) => [u.nama_jenis, u.merk].filter(Boolean).join(' · ')
 
-const labelOpsi = (u: OpsiUnitProyek) => [
-    u.nopol ?? '—',
-    ringkasUnit(u),
-    u.sumber === 'vendor' ? (u.nama_vendor ?? 'Vendor') : null,
-    u.nama_supir ? `Supir: ${u.nama_supir}` : 'Belum ada pemegang',
-].filter(Boolean).join(' — ')
-
 const kePayload = (u: OpsiUnitProyek): UnitProyekPayload => (u.sumber === 'vendor'
     ? { sumber: 'vendor', id_armada_vendor: u.id_armada_vendor ?? undefined }
     : { sumber: 'internal', id_armada: u.id_armada ?? undefined })
@@ -41,6 +31,8 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
     const [memuatOpsi, setMemuatOpsi] = useState(false)
     const [galatOpsi, setGalatOpsi]   = useState(false)
     const [terpilih, setTerpilih]     = useState<string[]>([])
+    const [cariInput, setCariInput]   = useState('')
+    const [cari, setCari]             = useState('')
     const [menyimpan, setMenyimpan]   = useState(false)
     const [hapusTarget, setHapusTarget] = useState<UnitProyek | null>(null)
     const [menghapus, setMenghapus]   = useState(false)
@@ -63,6 +55,8 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
 
     const bukaDialog = () => {
         setTerpilih([])
+        setCariInput('')
+        setCari('')
         setOpsi([])
         setGalatOpsi(false)
         setDialogOpen(true)
@@ -76,15 +70,42 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
             .finally(() => setMemuatOpsi(false))
     }
 
-    const opsiSelect = useMemo<Opsi[]>(() => opsi.map(u => ({ value: kunciUnit(u), label: labelOpsi(u) })), [opsi])
+    const opsiTampil = useMemo(() => {
+        const kata = cari.toLowerCase()
+        if (!kata) return opsi
+        return opsi.filter(u => [u.nopol, u.nama_jenis, u.merk, u.nama_vendor, u.nama_supir]
+            .some(v => v?.toLowerCase().includes(kata)))
+    }, [opsi, cari])
 
-    const keteranganOpsi = galatOpsi
+    const terpilihSet = useMemo(() => new Set(terpilih), [terpilih])
+    const penuh = terpilih.length >= MAKS_UNIT
+    const adaTampilTerpilih = opsiTampil.some(u => terpilihSet.has(kunciUnit(u)))
+    const semuaTampilTerpilih = adaTampilTerpilih && (penuh || opsiTampil.every(u => terpilihSet.has(kunciUnit(u))))
+
+    const togglePilih = (kunci: string) => setTerpilih(prev => {
+        if (prev.includes(kunci)) return prev.filter(k => k !== kunci)
+        return prev.length >= MAKS_UNIT ? prev : [...prev, kunci]
+    })
+
+    const toggleSemuaTampil = (checked: boolean) => setTerpilih(prev => {
+        const kunciTampil = opsiTampil.map(kunciUnit)
+        if (!checked) {
+            const dibuang = new Set(kunciTampil)
+            return prev.filter(k => !dibuang.has(k))
+        }
+        const hasil = [...prev]
+        for (const kunci of kunciTampil) {
+            if (hasil.length >= MAKS_UNIT) break
+            if (!hasil.includes(kunci)) hasil.push(kunci)
+        }
+        return hasil
+    })
+
+    const keteranganKosong = galatOpsi
         ? 'Gagal memuat daftar unit — tutup lalu buka lagi untuk mencoba ulang'
         : opsi.length === 0
             ? (daftar.length > 0 ? 'Semua unit yang tersedia sudah ada di proyek ini' : 'Belum ada unit aktif yang bisa dipilih')
-            : terpilih.length >= MAKS_UNIT
-                ? `Maksimal ${MAKS_UNIT} unit sekali tambah`
-                : null
+            : null
 
     const simpan = async () => {
         const pilihan = opsi.filter(u => terpilih.includes(kunciUnit(u)))
@@ -156,7 +177,7 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
                             <tr className="border-b border-gray-100 dark:border-gray-700">
                                 <th className="py-2.5 pl-3 pr-2 w-10">
                                     <Checkbox checked={semuaTercentang}
-                                        onChange={checked => setDicentang(Object.fromEntries(daftar.map(u => [u.id_proyek_unit, checked])))} />
+                                        onChange={() => setDicentang(Object.fromEntries(daftar.map(u => [u.id_proyek_unit, !semuaTercentang])))} />
                                 </th>
                                 <th className={`${TH} w-12`}>No</th>
                                 <th className={TH}>Unit</th>
@@ -181,7 +202,7 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
                                     <tr key={u.id_proyek_unit}>
                                         <td className="py-3 pl-3 pr-2">
                                             <Checkbox checked={!!dicentang[u.id_proyek_unit]}
-                                                onChange={checked => setDicentang(prev => ({ ...prev, [u.id_proyek_unit]: checked }))} />
+                                                onChange={() => setDicentang(prev => ({ ...prev, [u.id_proyek_unit]: !prev[u.id_proyek_unit] }))} />
                                         </td>
                                         <td className="py-3 pr-4 text-gray-500">{i + 1}</td>
                                         <td className="py-3 pr-4">
@@ -215,28 +236,89 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
                 </div>
             )}
 
-            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={640}>
+            <Dialog isOpen={dialogOpen} onRequestClose={() => setDialogOpen(false)} onClose={() => setDialogOpen(false)} width={800}>
                 <h5 className="text-base font-semibold mb-1">Tambah Unit Proyek</h5>
                 <p className="text-xs text-gray-400 mb-4">
-                    Pilih unit yang dipakai di proyek ini. Supir mengikuti pemegang unit. Tidak membuat penugasan maupun pengajuan uang jalan — penugasan harian dibuat di halaman Penugasan.
+                    Centang unit yang dipakai di proyek ini. Supir mengikuti pemegang unit. Tidak membuat penugasan maupun pengajuan uang jalan — penugasan harian dibuat di halaman Penugasan.
                 </p>
                 {memuatOpsi ? (
                     <div className="flex justify-center py-6"><Spinner /></div>
+                ) : keteranganKosong ? (
+                    <p className="text-sm text-gray-400 py-6 text-center">{keteranganKosong}</p>
                 ) : (
-                    <FormItem label="Unit" asterisk
-                        extra={keteranganOpsi ? <span className="text-xs text-gray-400">{keteranganOpsi}</span> : undefined}>
-                        <Select<Opsi, true> isMulti isClearable isSearchable placeholder="Pilih unit (bisa lebih dari satu)..."
-                            options={opsiSelect}
-                            isOptionDisabled={() => terpilih.length >= MAKS_UNIT}
-                            value={opsiSelect.filter(o => terpilih.includes(o.value))}
-                            onChange={opts => setTerpilih(opts ? opts.map(o => o.value) : [])} />
-                    </FormItem>
+                    <>
+                        <Input
+                            placeholder="Cari nopol, jenis, vendor, atau supir... (tekan Enter)"
+                            suffix={cariInput
+                                ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariInput(''); setCari('') }} />
+                                : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => setCari(cariInput.trim())} />}
+                            value={cariInput}
+                            onChange={e => setCariInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setCari(cariInput.trim()) } }}
+                        />
+                        <div className="max-h-[50vh] overflow-y-auto mt-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-gray-700 sticky top-0 z-10">
+                                    <tr>
+                                        <th className="py-2.5 pl-3 pr-2 w-10">
+                                            <Checkbox checked={semuaTampilTerpilih} disabled={opsiTampil.length === 0 || (penuh && !adaTampilTerpilih)}
+                                                onChange={() => toggleSemuaTampil(!semuaTampilTerpilih)} />
+                                        </th>
+                                        <th className={TH}>Unit</th>
+                                        <th className={TH}>Kepemilikan</th>
+                                        <th className={TH}>Supir</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {opsiTampil.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="py-6 text-center text-gray-400">Tidak ada unit yang cocok dengan pencarian</td>
+                                        </tr>
+                                    ) : opsiTampil.map(u => {
+                                        const kunci = kunciUnit(u)
+                                        const dipilih = terpilihSet.has(kunci)
+                                        const nonaktif = !dipilih && penuh
+                                        const sumber = SUMBER_TAG[u.sumber] ?? SUMBER_TAG.internal
+                                        const detail = ringkasUnit(u)
+                                        return (
+                                            <tr key={kunci}
+                                                className={`${nonaktif ? 'opacity-50' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40'} ${dipilih ? 'bg-blue-50/60 dark:bg-blue-500/10' : ''}`}
+                                                onClick={() => { if (!nonaktif) togglePilih(kunci) }}>
+                                                <td className="py-3 pl-3 pr-2" onClick={e => e.stopPropagation()}>
+                                                    <Checkbox checked={dipilih} disabled={nonaktif} onChange={() => togglePilih(kunci)} />
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    <p className="font-medium text-gray-800 dark:text-gray-200">{u.nopol ?? '—'}</p>
+                                                    {detail && <p className="text-xs text-gray-400">{detail}</p>}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    <Tag className={`text-xs font-semibold ${sumber.tag}`}>{sumber.label}</Tag>
+                                                    {u.sumber === 'vendor' && u.nama_vendor && <p className="text-xs text-gray-400 mt-1">{u.nama_vendor}</p>}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    {u.nama_supir
+                                                        ? <span className="text-gray-700 dark:text-gray-300">{u.nama_supir}</span>
+                                                        : <span className="text-xs text-gray-400">Belum ada pemegang</span>}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
-                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Kembali</Button>
-                    <Button type="button" variant="solid" loading={menyimpan} disabled={terpilih.length === 0} onClick={simpan}>
-                        Simpan
-                    </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-semibold">{terpilih.length}</span>{opsi.length > MAKS_UNIT ? ` dari ${opsi.length}` : ''} unit dipilih
+                        {penuh && <span className="text-amber-600 dark:text-amber-400"> — maksimal {MAKS_UNIT} unit sekali tambah</span>}
+                    </p>
+                    <div className="flex gap-2">
+                        <Button type="button" variant="plain" onClick={() => setDialogOpen(false)}>Kembali</Button>
+                        <Button type="button" variant="solid" loading={menyimpan} disabled={terpilih.length === 0} onClick={simpan}>
+                            Simpan
+                        </Button>
+                    </div>
                 </div>
             </Dialog>
 

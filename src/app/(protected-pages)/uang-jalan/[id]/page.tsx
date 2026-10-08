@@ -120,12 +120,32 @@ export default function UangJalanDetailPage() {
                         <p className={LABEL_CLASS}>Rute</p>
                         <p className={VALUE_CLASS}>{data.rute}</p>
                     </div>
+                    <div>
+                        <p className={LABEL_CLASS}>Proyek</p>
+                        {data.id_proyek ? (
+                            <p className={VALUE_CLASS}>{data.kode_proyek} — {data.nama_proyek}</p>
+                        ) : (
+                            <p className="text-sm text-gray-400 mt-0.5">—</p>
+                        )}
+                    </div>
                 </div>
             </Card>
 
             <Card>
                 <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Nominal</p>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    <div>
+                        <p className={LABEL_CLASS}>Estimasi Tol per Trip</p>
+                        <p className={VALUE_CLASS}>{formatRupiah(data.tol_per_trip)}</p>
+                    </div>
+                    <div>
+                        <p className={LABEL_CLASS}>Estimasi BBM per Trip</p>
+                        <p className={VALUE_CLASS}>{formatRupiah(data.bbm_per_trip)}</p>
+                    </div>
+                    <div>
+                        <p className={LABEL_CLASS}>Estimasi Biaya Lain per Trip</p>
+                        <p className={VALUE_CLASS}>{formatRupiah(data.biaya_lain_per_trip)}</p>
+                    </div>
                     <div>
                         <p className={LABEL_CLASS}>UJ per Trip</p>
                         <p className={VALUE_CLASS}>{formatRupiah(data.uang_jalan_per_trip)}</p>

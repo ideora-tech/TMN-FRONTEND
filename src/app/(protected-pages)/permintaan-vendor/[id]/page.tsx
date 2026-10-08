@@ -304,8 +304,8 @@ export default function PermintaanVendorDetailPage({ params }: { params: Promise
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
-                    <h3 className="font-bold">{data.nomor_permintaan}</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Permintaan vendor — {MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme}</p>
+                    <h3 className="font-bold">Permintaan Vendor</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">{data.nomor_permintaan} — {MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme}</p>
                 </div>
             </div>
             {!editing && (
