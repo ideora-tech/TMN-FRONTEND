@@ -57,6 +57,7 @@ type BarisAntrian = {
     id: string
     nomor: string
     keterangan: string
+    urgent?: boolean
     subketerangan: string | null
     pengaju: string | null
     tanggal: string | null
@@ -70,6 +71,7 @@ const dariPR = (p: AntrianPR): BarisAntrian => ({
     id: p.id_permintaan,
     nomor: p.nomor_permintaan,
     keterangan: p.judul,
+    urgent: p.prioritas === 'urgent',
     subketerangan: `Estimasi ${formatRupiah(p.total_estimasi)}${p.tipe === 'sparepart' ? ' · Spare Part' : ''}`,
     pengaju: p.username_pengaju,
     tanggal: p.tanggal_permintaan,
@@ -113,7 +115,7 @@ export default function PengadaanPage() {
             if (filterKartu.jenis === 'pr') {
                 const res = await permintaanPembelianService.list({ page: 1, limit: 100, status: filterKartu.status })
                 setDataFilter(res.data.map(p => dariPR({
-                    id_permintaan: p.id_permintaan, nomor_permintaan: p.nomor_permintaan, judul: p.judul, status: p.status,
+                    id_permintaan: p.id_permintaan, nomor_permintaan: p.nomor_permintaan, judul: p.judul, prioritas: p.prioritas, status: p.status,
                     tipe: p.tipe ?? 'umum', tanggal_permintaan: p.tanggal_permintaan, username_pengaju: p.username_pengaju ?? null, total_estimasi: p.total_estimasi,
                 })))
             } else {
@@ -155,14 +157,14 @@ export default function PengadaanPage() {
     const antrian: BarisAntrian[] = [
         ...(data?.pr.menunggu ?? []).map(dariPR),
         ...(data?.permintaan_vendor.menunggu ?? []).map(dariPV),
-    ].sort((a, b) => dayjs(a.tanggal ?? 0).valueOf() - dayjs(b.tanggal ?? 0).valueOf())
+    ].sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent) || dayjs(a.tanggal ?? 0).valueOf() - dayjs(b.tanggal ?? 0).valueOf())
     const barisTampil = filterKartu ? dataFilter : antrian
     const antrianHalaman = barisTampil.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     const judulTabel = !filterKartu
         ? 'Menunggu Diproses'
         : `${filterKartu.jenis === 'pr' ? 'PR' : 'Permintaan Vendor'} · ${(filterKartu.jenis === 'pr' ? STATUS_LABEL_PR[filterKartu.status as StatusPermintaan] : STATUS_LABEL_PV[filterKartu.status as PermintaanVendorStatus]) ?? filterKartu.status}`
     const keteranganTabel = !filterKartu
-        ? 'PR (Disetujui, Diproses, PO Terbit) dan Permintaan Vendor (Disetujui, Diproses), urut dari yang paling lama'
+        ? 'PR (Disetujui, Diproses, PO Terbit) dan Permintaan Vendor (Disetujui, Diproses) — yang urgent dulu, lalu urut dari yang paling lama'
         : 'Hasil filter dari kartu yang dipilih. Klik kartu yang sama lagi untuk kembali ke antrian.'
 
     const bukaBaris = (b: BarisAntrian) => {
@@ -179,7 +181,10 @@ export default function PengadaanPage() {
         { header: 'Nomor', accessorKey: 'nomor', size: 170, cell: ({ row }) => <span className="font-mono font-semibold text-xs">{row.original.nomor}</span> },
         { header: 'Keterangan', accessorKey: 'keterangan', cell: ({ row }) => (
             <div>
-                <p className="font-semibold text-sm">{row.original.keterangan}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-sm">{row.original.keterangan}</p>
+                    {row.original.urgent && <Tag className="text-[10px] font-semibold px-1.5 py-0 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Urgent</Tag>}
+                </div>
                 {row.original.subketerangan && <p className="text-xs text-gray-400 mt-0.5">{row.original.subketerangan}</p>}
             </div>
         ) },

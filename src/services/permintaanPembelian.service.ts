@@ -72,12 +72,23 @@ export interface PermintaanBukti {
     nama_asli: string
 }
 
+export type PrioritasPermintaan = 'normal' | 'urgent'
+export type SyaratPembayaran = 'setelah_terima' | 'di_muka'
+
 export interface PermintaanPembelian {
     id_permintaan: string
     nomor_permintaan: string
     tipe: TipePermintaan
     judul: string
     id_judul_permintaan?: string | null
+    nama_kategori?: string | null
+    prioritas?: PrioritasPermintaan
+    metode_pembelian?: string | null
+    nama_toko?: string | null
+    nama_penalang?: string | null
+    syarat_pembayaran?: SyaratPembayaran
+    kelebihan_bayar?: number | null
+    batas_beli_tunai?: number | null
     alasan: string
     status: StatusPermintaan
     id_pengaju: string
@@ -202,6 +213,7 @@ export type PermintaanPayload = {
     id_judul_permintaan?: string | null
     tipe?: TipePermintaan
     judul?: string
+    prioritas?: PrioritasPermintaan
     alasan: string
     id_departemen?: string | null
     id_perawatan?: string | null
@@ -219,9 +231,21 @@ export interface PenerimaanPermintaan {
     items: { id_item: string; nama_item: string; satuan: string; qty: number }[]
 }
 
+export type BeliTunaiPayload = {
+    tanggal_pembelian: string
+    id_supplier?: string | null
+    nama_toko?: string | null
+    nama_penalang: string
+    items: { id_item: string; qty_dibeli: number; harga_aktual: number; id_barang?: string | null }[]
+    diskon?: number
+    ppn_persen?: number
+    ongkir?: number
+}
+
 export type PesanPayload = {
     id_supplier: string
     tanggal_po: string
+    syarat_pembayaran?: SyaratPembayaran
     items: { id_item: string; harga_aktual: number; id_barang?: string | null }[]
     diskon?: number
     ppn_persen?: number
@@ -247,7 +271,7 @@ export type DibeliPayload = {
     termin?: TerminPayload[]
 }
 
-type ListMeta = { page: number; total: number; totalPages: number; limit: number; ringkasan: Partial<Record<StatusPermintaan, number>>; pembayaran_ditolak?: number; lihat_semua?: boolean }
+type ListMeta = { page: number; total: number; totalPages: number; limit: number; ringkasan: Partial<Record<StatusPermintaan, number>>; pembayaran_ditolak?: number; dibayar_menunggu_barang?: number; lihat_semua?: boolean }
 
 const isiItem = (form: FormData, items: ItemPayload[]) => {
     items.forEach((item, i) => {
@@ -268,7 +292,7 @@ const isiItem = (form: FormData, items: ItemPayload[]) => {
 }
 
 export const permintaanPembelianService = {
-    async list(params?: { page?: number; limit?: number; search?: string; status?: string; tipe?: TipePermintaan | string; id_departemen?: string; dari?: string; sampai?: string; milik_saya?: '1'; pembayaran_ditolak?: '1' }) {
+    async list(params?: { page?: number; limit?: number; search?: string; status?: string; tipe?: TipePermintaan | string; id_departemen?: string; prioritas?: string; dari?: string; sampai?: string; milik_saya?: '1'; pembayaran_ditolak?: '1'; menunggu_barang?: '1' }) {
         const { data } = await axios.get(API_ENDPOINTS.PERMINTAAN_PEMBELIAN, { params })
         return data as { data: PermintaanPembelian[]; meta: ListMeta }
     },
@@ -281,6 +305,7 @@ export const permintaanPembelianService = {
         if (payload.id_judul_permintaan) form.append('id_judul_permintaan', payload.id_judul_permintaan)
         if (payload.tipe) form.append('tipe', payload.tipe)
         if (payload.judul) form.append('judul', payload.judul)
+        if (payload.prioritas) form.append('prioritas', payload.prioritas)
         form.append('alasan', payload.alasan)
         if (payload.id_departemen) form.append('id_departemen', payload.id_departemen)
         if (payload.id_perawatan) form.append('id_perawatan', payload.id_perawatan)
@@ -300,6 +325,26 @@ export const permintaanPembelianService = {
     },
     async proses(id: string) {
         const { data } = await axios.patch(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_PROSES(id))
+        return data.data as PermintaanPembelian
+    },
+    async beliTunai(id: string, payload: BeliTunaiPayload, bukti: File[]) {
+        const form = new FormData()
+        form.append('_method', 'PATCH')
+        form.append('tanggal_pembelian', payload.tanggal_pembelian)
+        if (payload.id_supplier) form.append('id_supplier', payload.id_supplier)
+        if (payload.nama_toko) form.append('nama_toko', payload.nama_toko)
+        form.append('nama_penalang', payload.nama_penalang)
+        payload.items.forEach((item, i) => {
+            form.append(`items[${i}][id_item]`, item.id_item)
+            form.append(`items[${i}][qty_dibeli]`, String(item.qty_dibeli))
+            form.append(`items[${i}][harga_aktual]`, String(item.harga_aktual))
+            if (item.id_barang) form.append(`items[${i}][id_barang]`, item.id_barang)
+        })
+        if (payload.diskon) form.append('diskon', String(payload.diskon))
+        if (payload.ppn_persen) form.append('ppn_persen', String(payload.ppn_persen))
+        if (payload.ongkir) form.append('ongkir', String(payload.ongkir))
+        bukti.forEach(f => form.append('bukti[]', f))
+        const { data } = await axios.post(API_ENDPOINTS.PERMINTAAN_PEMBELIAN_BELI_TUNAI(id), form)
         return data.data as PermintaanPembelian
     },
     async pesan(id: string, payload: PesanPayload) {

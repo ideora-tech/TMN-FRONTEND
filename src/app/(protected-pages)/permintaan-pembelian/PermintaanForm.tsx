@@ -10,7 +10,8 @@ import axios from 'axios'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import type { PermintaanPembelian, PermintaanPayload, ItemPayload, JenisItem, TipePermintaan } from '@/services/permintaanPembelian.service'
+import type { PermintaanPembelian, PermintaanPayload, ItemPayload, JenisItem, TipePermintaan, PrioritasPermintaan } from '@/services/permintaanPembelian.service'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 import { departemenService } from '@/services/departemen.service'
 import { barangService, type Barang } from '@/services/barang.service'
 import { sparepartService, type Sparepart } from '@/services/sparepart.service'
@@ -35,6 +36,7 @@ type ItemRow = {
     qty: string
     satuan: string
     harga_estimasi: string
+    keterangan: string
 }
 
 type Props = {
@@ -48,7 +50,7 @@ type Props = {
 
 const TAHUN_INI = String(new Date().getFullYear())
 
-const EMPTY_ROW: ItemRow = { jenis: 'barang', id_barang: '', id_sparepart: '', id_jenis_kendaraan: '', merk: '', model: '', tahun: '', manual: false, nama_item: '', spesifikasi: '', qty: '1', satuan: '', harga_estimasi: '' }
+const EMPTY_ROW: ItemRow = { jenis: 'barang', id_barang: '', id_sparepart: '', id_jenis_kendaraan: '', merk: '', model: '', tahun: '', manual: false, nama_item: '', spesifikasi: '', qty: '1', satuan: '', harga_estimasi: '', keterangan: '' }
 
 const barisKosong = (tipe: TipePermintaan): ItemRow => {
     if (tipe === 'sparepart') return { ...EMPTY_ROW, jenis: 'sparepart' }
@@ -68,14 +70,19 @@ const ITEM_HINT: Record<TipePermintaan, string> = {
     aset:      'Pilih jenis kendaraan lalu isi merk, model, tahun; qty adalah jumlah unit dengan harga estimasi per unit',
 }
 
+const LABEL_ITEM = 'text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'
+
 const JENIS_OPTIONS: Option[] = (['barang', 'jasa'] as JenisItem[]).map(j => ({ value: j, label: JENIS_LABEL[j] }))
 
 export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idPerawatanAwal, onSubmit }: Props) {
     const router = useRouter()
+    const { session } = useCurrentSession()
     const [tipe, setTipe] = useState<TipePermintaan>(awal?.tipe ?? tipeAwal ?? 'umum')
-    const [idJudul, setIdJudul] = useState(awal?.id_judul_permintaan ?? '')
-    const [judulList, setJudulList] = useState<JudulPermintaan[]>([])
-    const [judulLoading, setJudulLoading] = useState(true)
+    const [judul, setJudul] = useState(awal?.judul ?? '')
+    const [prioritas, setPrioritas] = useState<PrioritasPermintaan>(awal?.prioritas ?? 'normal')
+    const [idKategori, setIdKategori] = useState(awal?.id_judul_permintaan ?? '')
+    const [kategoriList, setKategoriList] = useState<JudulPermintaan[]>([])
+    const [kategoriLoading, setKategoriLoading] = useState(true)
     const [alasan, setAlasan] = useState(awal?.alasan ?? '')
     const [idDepartemen, setIdDepartemen] = useState(awal?.id_departemen ?? '')
     const [idArmada, setIdArmada] = useState(idArmadaAwal ?? '')
@@ -98,6 +105,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                   qty: String(i.qty),
                   satuan: i.satuan,
                   harga_estimasi: String(i.harga_estimasi),
+                  keterangan: i.keterangan ?? '',
               }))
             : [barisKosong(awal?.tipe ?? tipeAwal ?? 'umum')],
     )
@@ -113,15 +121,15 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
 
     useEffect(() => {
         judulPermintaanService.opsiAktif()
-            .then(setJudulList)
+            .then(setKategoriList)
             .catch(() => {})
-            .finally(() => setJudulLoading(false))
+            .finally(() => setKategoriLoading(false))
     }, [])
 
     useEffect(() => {
         departemenService.list(1, 999, undefined, '1')
             .then(r => setDepartemenOptions(r.data.map(d => ({ value: d.id_departemen, label: d.nama_departemen }))))
-            .catch(() => {})
+            .catch(() => toast.push(<Notification type="danger" title="Daftar departemen gagal dimuat — muat ulang halaman untuk mencoba lagi" />))
         barangService.list({ limit: 999 })
             .then(r => setBarangList(r.data))
             .catch(() => {})
@@ -179,32 +187,33 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
         setErrors(p => ({ ...p, [`item_${index}`]: '' }))
     }
 
-    const judulTersedia = (!awal && tipeAwal && tipeAwal !== 'umum')
-        ? judulList.filter(j => j.tipe === tipeAwal)
-        : judulList
-    const judulOptions: Option[] = judulTersedia.map(j => ({ value: j.id_judul_permintaan, label: j.nama_judul }))
-    const judulTerpilih = judulList.find(j => j.id_judul_permintaan === idJudul)
-        ?? (awal && !idJudul ? judulList.find(j => j.nama_judul.toLowerCase() === awal.judul.toLowerCase()) : undefined)
-    const judulLama = !judulTerpilih && awal && !judulLoading ? awal.judul : null
+    const kategoriTersedia = (!awal && tipeAwal && tipeAwal !== 'umum')
+        ? kategoriList.filter(k => k.tipe === tipeAwal)
+        : kategoriList
+    const kategoriOptions: Option[] = kategoriTersedia.map(k => ({ value: k.id_judul_permintaan, label: k.nama_judul }))
+    const kategoriTerpilih = kategoriList.find(k => k.id_judul_permintaan === idKategori)
+        ?? (awal && !idKategori ? kategoriList.find(k => k.tipe === awal.tipe && k.nama_judul.toLowerCase() === awal.judul.toLowerCase()) : undefined)
+    const kategoriLama = !kategoriTerpilih && awal && !kategoriLoading ? (awal.nama_kategori ?? null) : null
+    const namaPemohon = awal ? (awal.username_pengaju ?? '—') : (session?.user?.name ?? session?.user?.userName ?? '—')
 
     useEffect(() => {
-        if (judulLoading || idJudul) return
+        if (kategoriLoading || idKategori) return
         if (awal) {
-            const cocok = judulList.find(j => j.nama_judul.toLowerCase() === awal.judul.toLowerCase())
-            if (cocok) setIdJudul(cocok.id_judul_permintaan)
+            const cocok = kategoriList.find(k => k.tipe === awal.tipe && k.nama_judul.toLowerCase() === awal.judul.toLowerCase())
+            if (cocok) setIdKategori(cocok.id_judul_permintaan)
             return
         }
         if (tipeAwal && tipeAwal !== 'umum') {
-            const kandidat = judulList.filter(j => j.tipe === tipeAwal)
-            if (kandidat.length === 1) pilihJudul(kandidat[0].id_judul_permintaan)
+            const kandidat = kategoriList.filter(k => k.tipe === tipeAwal)
+            if (kandidat.length === 1) pilihKategori(kandidat[0].id_judul_permintaan)
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [judulLoading, judulList])
+    }, [kategoriLoading, kategoriList])
 
-    const pilihJudul = (id: string) => {
-        setIdJudul(id)
-        setErrors(p => ({ ...p, judul: '' }))
-        const master = judulList.find(j => j.id_judul_permintaan === id)
+    const pilihKategori = (id: string) => {
+        setIdKategori(id)
+        setErrors(p => ({ ...p, kategori: '' }))
+        const master = kategoriList.find(k => k.id_judul_permintaan === id)
         if (master && master.tipe !== tipe) gantiTipe(master.tipe)
     }
 
@@ -254,8 +263,11 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!judulTerpilih && !judulLama) e.judul = 'Judul permintaan wajib dipilih'
-        if (!alasan.trim()) e.alasan = 'Alasan / kebutuhan wajib diisi'
+        if (!judul.trim()) e.judul = 'Judul permintaan wajib diisi'
+        else if (judul.trim().length > 150) e.judul = 'Judul permintaan maksimal 150 karakter'
+        if (!kategoriTerpilih && !awal) e.kategori = 'Kategori wajib dipilih'
+        if (!idDepartemen && departemenOptions.length > 0) e.id_departemen = 'Departemen wajib dipilih'
+        if (!alasan.trim()) e.alasan = 'Alasan kebutuhan wajib diisi'
         if (!tanggalPermintaan) e.tanggal_permintaan = 'Tanggal permintaan wajib diisi'
         if (tanggalDibutuhkan && tanggalPermintaan && dayjs(tanggalDibutuhkan).isBefore(dayjs(tanggalPermintaan), 'day')) {
             e.tanggal_dibutuhkan = 'Tanggal dibutuhkan tidak boleh sebelum tanggal permintaan'
@@ -286,8 +298,11 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
             toast.push(<Notification type="danger" title="Periksa kembali data yang belum lengkap" />)
             return
         }
+        const idKategoriKirim = kategoriTerpilih?.id_judul_permintaan ?? idKategori
         const payload: PermintaanPayload = {
-            ...(judulTerpilih ? { id_judul_permintaan: judulTerpilih.id_judul_permintaan } : { tipe, judul: judulLama ?? '' }),
+            ...(idKategoriKirim ? { id_judul_permintaan: idKategoriKirim } : { tipe }),
+            judul: judul.trim(),
+            prioritas,
             alasan: alasan.trim(),
             id_departemen: idDepartemen || null,
             ...(tipe === 'sparepart' ? { id_perawatan: idPerawatan || null } : {}),
@@ -304,6 +319,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                         qty: Number(row.qty),
                         satuan: master?.satuan ?? row.satuan.trim(),
                         harga_estimasi: Number(row.harga_estimasi) || 0,
+                        keterangan: row.keterangan.trim() || null,
                     }
                 }
                 if (row.jenis === 'aset') {
@@ -320,6 +336,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                         qty: Number(row.qty),
                         satuan: 'unit',
                         harga_estimasi: Number(row.harga_estimasi) || 0,
+                        keterangan: row.keterangan.trim() || null,
                     }
                 }
                 return {
@@ -330,6 +347,7 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                     qty: Number(row.qty),
                     satuan: row.satuan.trim(),
                     harga_estimasi: Number(row.harga_estimasi) || 0,
+                    keterangan: row.keterangan.trim() || null,
                 }
             }),
         }
@@ -348,45 +366,63 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
     return (
         <Card>
             <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Judul Permintaan" asterisk invalid={!!errors.judul} errorMessage={errors.judul} className="sm:col-span-2"
-                        extra={judulTerpilih || judulLama ? (
-                            <Tag className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border-0">Tipe: {judulTerpilih?.nama_tipe ?? TIPE_LABEL[tipe]}</Tag>
-                        ) : undefined}>
-                        <Select<Option> isSearchable isClearable={false} isLoading={judulLoading}
-                            placeholder={judulLoading ? 'Memuat judul...' : 'Pilih judul permintaan...'}
-                            noOptionsMessage={() => 'Belum ada judul permintaan — minta admin menambahkannya di Data Master'}
-                            options={judulOptions}
-                            value={judulTerpilih
-                                ? { value: judulTerpilih.id_judul_permintaan, label: judulTerpilih.nama_judul }
-                                : judulLama ? { value: '', label: `${judulLama} (judul lama)` } : null}
-                            onChange={opt => opt && pilihJudul(opt.value)} />
-                        {(judulTerpilih || judulLama) && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{TIPE_HINT[tipe]}</p>
-                        )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
+                    <FormItem label="Tanggal Permintaan" asterisk invalid={!!errors.tanggal_permintaan} errorMessage={errors.tanggal_permintaan}>
+                        <DatePicker inputFormat="DD/MM/YYYY"
+                            value={tanggalPermintaan ? dayjs(tanggalPermintaan).toDate() : null}
+                            onChange={date => { setTanggalPermintaan(date ? dayjs(date).format('YYYY-MM-DD') : ''); setErrors(p => ({ ...p, tanggal_permintaan: '', tanggal_dibutuhkan: '' })) }} />
                     </FormItem>
-                    <FormItem label="Alasan / Kebutuhan" asterisk invalid={!!errors.alasan} errorMessage={errors.alasan} className="sm:col-span-2">
+                    <FormItem label="Pemohon">
+                        <Input value={namaPemohon} readOnly disabled />
+                    </FormItem>
+                    <FormItem label="Departemen" asterisk={departemenOptions.length > 0} invalid={!!errors.id_departemen} errorMessage={errors.id_departemen}>
+                        <Select<Option> isSearchable placeholder="Pilih departemen pemohon..."
+                            noOptionsMessage={() => 'Belum ada departemen aktif — minta admin menambahkannya di Data Master'}
+                            options={departemenOptions}
+                            value={departemenOptions.find(o => o.value === idDepartemen) ?? null}
+                            onChange={opt => { setIdDepartemen(opt?.value ?? ''); setErrors(p => ({ ...p, id_departemen: '' })) }} />
+                    </FormItem>
+                    <FormItem label="Judul Permintaan" asterisk invalid={!!errors.judul} errorMessage={errors.judul} className="sm:col-span-2 lg:col-span-3">
+                        <Input placeholder="Contoh: Pengadaan ATK untuk kebutuhan Finance" maxLength={150} invalid={!!errors.judul}
+                            value={judul} onChange={e => { setJudul(e.target.value); setErrors(p => ({ ...p, judul: '' })) }} />
+                    </FormItem>
+                    <FormItem label="Prioritas">
+                        <div className="flex items-center gap-2 h-11">
+                            <Button type="button" size="sm" variant={prioritas === 'normal' ? 'solid' : 'default'} onClick={() => setPrioritas('normal')}>
+                                Normal
+                            </Button>
+                            <Button type="button" size="sm" variant={prioritas === 'urgent' ? 'solid' : 'default'}
+                                customColorClass={() => (prioritas === 'urgent' ? 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' : '')}
+                                onClick={() => setPrioritas('urgent')}>
+                                Urgent
+                            </Button>
+                        </div>
+                    </FormItem>
+                    <FormItem label="Tanggal Dibutuhkan" invalid={!!errors.tanggal_dibutuhkan} errorMessage={errors.tanggal_dibutuhkan}>
+                        <DatePicker inputFormat="DD/MM/YYYY" placeholder="Opsional"
+                            value={tanggalDibutuhkan ? dayjs(tanggalDibutuhkan).toDate() : null}
+                            onChange={date => { setTanggalDibutuhkan(date ? dayjs(date).format('YYYY-MM-DD') : ''); setErrors(p => ({ ...p, tanggal_dibutuhkan: '' })) }} />
+                    </FormItem>
+                    <FormItem label="Alasan Kebutuhan" asterisk invalid={!!errors.alasan} errorMessage={errors.alasan} className="sm:col-span-2 lg:col-span-3">
                         <Input textArea rows={3} placeholder="Jelaskan kebutuhan dan tujuan pembelian"
                             value={alasan} onChange={e => { setAlasan(e.target.value); setErrors(p => ({ ...p, alasan: '' })) }} />
                     </FormItem>
-                    <FormItem label="Departemen (opsional)">
-                        <Select<Option> isSearchable isClearable placeholder="Pilih departemen pemohon..."
-                            options={departemenOptions}
-                            value={departemenOptions.find(o => o.value === idDepartemen) ?? null}
-                            onChange={opt => setIdDepartemen(opt?.value ?? '')} />
+                    <FormItem label="Kategori" asterisk={!awal} invalid={!!errors.kategori} errorMessage={errors.kategori} className="sm:col-span-2 lg:col-span-3"
+                        extra={kategoriTerpilih || kategoriLama ? (
+                            <Tag className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border-0">Tipe: {kategoriTerpilih?.nama_tipe ?? TIPE_LABEL[tipe]}</Tag>
+                        ) : undefined}>
+                        <Select<Option> isSearchable isClearable={false} isLoading={kategoriLoading}
+                            placeholder={kategoriLoading ? 'Memuat kategori...' : 'Pilih kategori sesuai jenis kebutuhan...'}
+                            noOptionsMessage={() => 'Belum ada kategori — minta admin menambahkannya di Data Master'}
+                            options={kategoriOptions}
+                            value={kategoriTerpilih
+                                ? { value: kategoriTerpilih.id_judul_permintaan, label: kategoriTerpilih.nama_judul }
+                                : kategoriLama ? { value: '', label: `${kategoriLama} (tidak aktif)` } : null}
+                            onChange={opt => opt && opt.value && pilihKategori(opt.value)} />
+                        {(kategoriTerpilih || awal) && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{TIPE_HINT[tipe]}</p>
+                        )}
                     </FormItem>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                        <FormItem label="Tanggal Permintaan" asterisk invalid={!!errors.tanggal_permintaan} errorMessage={errors.tanggal_permintaan}>
-                            <DatePicker inputFormat="DD/MM/YYYY"
-                                value={tanggalPermintaan ? dayjs(tanggalPermintaan).toDate() : null}
-                                onChange={date => { setTanggalPermintaan(date ? dayjs(date).format('YYYY-MM-DD') : ''); setErrors(p => ({ ...p, tanggal_permintaan: '', tanggal_dibutuhkan: '' })) }} />
-                        </FormItem>
-                        <FormItem label="Tanggal Dibutuhkan" invalid={!!errors.tanggal_dibutuhkan} errorMessage={errors.tanggal_dibutuhkan}>
-                            <DatePicker inputFormat="DD/MM/YYYY" placeholder="Opsional"
-                                value={tanggalDibutuhkan ? dayjs(tanggalDibutuhkan).toDate() : null}
-                                onChange={date => { setTanggalDibutuhkan(date ? dayjs(date).format('YYYY-MM-DD') : ''); setErrors(p => ({ ...p, tanggal_dibutuhkan: '' })) }} />
-                        </FormItem>
-                    </div>
                 </div>
 
                 <div className="mt-4">
@@ -424,13 +460,14 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                             {itemErrors.map((msg, i) => <p key={i} className="text-red-500 text-sm">{msg}</p>)}
                         </div>
                     )}
+                    {tipe === 'aset' ? (
                     <div className="flex flex-col gap-3">
                         {items.map((row, index) => {
                             const invalid = !!errors[`item_${index}`]
                             return (
                                 <div key={index}
                                     className={`rounded-lg border p-3 ${invalid ? 'border-red-300 dark:border-red-500/60' : 'border-gray-200 dark:border-gray-700'}`}>
-                                    {row.jenis === 'aset' ? (
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Unit {index + 1}</p>
                                     <div className="grid grid-cols-12 gap-2 items-start">
                                         <div className="col-span-12 sm:col-span-4">
                                             <Select<Option> isSearchable isClearable placeholder="Pilih jenis kendaraan..."
@@ -477,103 +514,102 @@ export default function PermintaanForm({ mode, awal, tipeAwal, idArmadaAwal, idP
                                                 <HiOutlineTrash />
                                             </button>
                                         </div>
-                                    </div>
-                                    ) : row.jenis === 'sparepart' ? (
-                                    <div className="grid grid-cols-12 gap-2 items-start">
-                                        <div className="col-span-12 sm:col-span-7">
-                                            <Select<Option> isSearchable isClearable placeholder="Pilih spare part dari master..."
-                                                options={sparepartOptions}
-                                                value={sparepartOptions.find(o => o.value === row.id_sparepart) ?? null}
-                                                onChange={opt => pilihSparepart(index, opt?.value ?? '')} />
-                                        </div>
-                                        <div className="col-span-12 sm:col-span-5">
-                                            <Input placeholder="Spesifikasi (opsional): merek, tipe, catatan"
-                                                value={row.spesifikasi}
-                                                onChange={e => setRow(index, { spesifikasi: e.target.value })} />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <Input placeholder="Qty" value={row.qty}
-                                                onChange={e => setRow(index, { qty: e.target.value.replace(/\D/g, '') })} />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <Input placeholder="Satuan" value={row.satuan} readOnly disabled />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-3">
-                                            <Input prefix="Rp" placeholder="0"
-                                                value={row.harga_estimasi ? formatNum(Number(row.harga_estimasi)) : ''}
-                                                onChange={e => setRow(index, { harga_estimasi: e.target.value.replace(/\D/g, '') })} />
-                                        </div>
-                                        <div className="col-span-9 sm:col-span-4 flex items-center justify-end h-11 text-sm font-semibold tabular-nums">
-                                            {formatRupiah(subtotal(row))}
-                                        </div>
-                                        <div className="col-span-3 sm:col-span-1 flex items-center justify-end h-11">
-                                            <button type="button" onClick={() => hapusRow(index)}
-                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors disabled:opacity-40"
-                                                disabled={items.length <= 1}>
-                                                <HiOutlineTrash />
-                                            </button>
+                                        <div className="col-span-12">
+                                            <Input placeholder="Catatan (opsional)" maxLength={255} value={row.keterangan}
+                                                onChange={e => setRow(index, { keterangan: e.target.value })} />
                                         </div>
                                     </div>
-                                    ) : (
-                                    <div className="grid grid-cols-12 gap-2 items-start">
-                                        <div className="col-span-12 sm:col-span-2">
+                                </div>
+                            )
+                        })}
+                    </div>
+                    ) : (
+                    <div className="flex flex-col gap-3">
+                        {items.map((row, index) => (
+                            <div key={index}
+                                className={`rounded-lg border p-3 ${errors[`item_${index}`] ? 'border-red-300 dark:border-red-500/60' : 'border-gray-200 dark:border-gray-700'}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Item {index + 1}</p>
+                                    <button type="button" onClick={() => hapusRow(index)}
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors disabled:opacity-40"
+                                        disabled={items.length <= 1}>
+                                        <HiOutlineTrash />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-12 gap-x-3 gap-y-2 items-start">
+                                    {tipe === 'umum' && (
+                                        <div className="col-span-12 sm:col-span-4 xl:col-span-2">
+                                            <p className={LABEL_ITEM}>Jenis</p>
                                             <Select<Option> placeholder="Jenis"
                                                 options={JENIS_OPTIONS}
                                                 value={JENIS_OPTIONS.find(o => o.value === row.jenis) ?? null}
                                                 onChange={opt => gantiJenis(index, (opt?.value as JenisItem) ?? 'barang')} />
                                         </div>
-                                        <div className="col-span-12 sm:col-span-5">
-                                            {row.jenis === 'barang' && !row.manual ? (
-                                                <Select<Option> isSearchable isClearable placeholder="Pilih barang dari master..."
-                                                    options={barangOptions}
-                                                    value={barangOptions.find(o => o.value === row.id_barang) ?? null}
-                                                    onChange={opt => pilihBarang(index, opt?.value ?? '')} />
-                                            ) : (
-                                                <Input placeholder={row.jenis === 'jasa' ? 'Nama jasa, contoh: Servis AC ruang meeting' : 'Nama barang (belum ada di master)'}
-                                                    value={row.nama_item}
-                                                    onChange={e => setRow(index, { nama_item: e.target.value })} />
-                                            )}
-                                            {row.jenis === 'barang' && (
-                                                <button type="button" onClick={() => toggleManual(index)}
-                                                    className="mt-1 text-xs text-primary hover:underline">
-                                                    {row.manual ? 'Pilih dari Master Barang' : 'Barang belum ada di master? Ketik manual'}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="col-span-12 sm:col-span-5">
-                                            <Input placeholder="Spesifikasi (opsional): merek, ukuran, warna, dll"
-                                                value={row.spesifikasi}
-                                                onChange={e => setRow(index, { spesifikasi: e.target.value })} />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <Input placeholder="Qty" value={row.qty}
-                                                onChange={e => setRow(index, { qty: e.target.value.replace(/\D/g, '') })} />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <Input placeholder="Satuan" value={row.satuan}
-                                                onChange={e => setRow(index, { satuan: e.target.value })} />
-                                        </div>
-                                        <div className="col-span-4 sm:col-span-3">
-                                            <Input prefix="Rp" placeholder="0"
-                                                value={row.harga_estimasi ? formatNum(Number(row.harga_estimasi)) : ''}
-                                                onChange={e => setRow(index, { harga_estimasi: e.target.value.replace(/\D/g, '') })} />
-                                        </div>
-                                        <div className="col-span-9 sm:col-span-4 flex items-center justify-end h-11 text-sm font-semibold tabular-nums">
-                                            {formatRupiah(subtotal(row))}
-                                        </div>
-                                        <div className="col-span-3 sm:col-span-1 flex items-center justify-end h-11">
-                                            <button type="button" onClick={() => hapusRow(index)}
-                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 transition-colors disabled:opacity-40"
-                                                disabled={items.length <= 1}>
-                                                <HiOutlineTrash />
-                                            </button>
-                                        </div>
-                                    </div>
                                     )}
+                                    <div className={tipe === 'umum' ? 'col-span-12 sm:col-span-8 xl:col-span-5' : 'col-span-12 xl:col-span-7'}>
+                                        <p className={LABEL_ITEM}>Item Permintaan</p>
+                                        {row.jenis === 'sparepart' ? (
+                                            <Select<Option> isSearchable isClearable placeholder="Pilih spare part dari master..."
+                                                options={sparepartOptions}
+                                                value={sparepartOptions.find(o => o.value === row.id_sparepart) ?? null}
+                                                onChange={opt => pilihSparepart(index, opt?.value ?? '')} />
+                                        ) : row.jenis === 'barang' && !row.manual ? (
+                                            <Select<Option> isSearchable isClearable placeholder="Pilih barang dari master..."
+                                                options={barangOptions}
+                                                value={barangOptions.find(o => o.value === row.id_barang) ?? null}
+                                                onChange={opt => pilihBarang(index, opt?.value ?? '')} />
+                                        ) : (
+                                            <Input placeholder={row.jenis === 'jasa' ? 'Nama jasa, contoh: Servis AC ruang meeting' : 'Nama barang (belum ada di master)'}
+                                                value={row.nama_item}
+                                                onChange={e => setRow(index, { nama_item: e.target.value })} />
+                                        )}
+                                        {row.jenis === 'barang' && (
+                                            <button type="button" onClick={() => toggleManual(index)}
+                                                className="mt-1 text-xs text-primary hover:underline">
+                                                {row.manual ? 'Pilih dari Master Barang' : 'Barang belum ada di master? Ketik manual'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="col-span-12 xl:col-span-5">
+                                        <p className={LABEL_ITEM}>Spesifikasi</p>
+                                        <Input placeholder={row.jenis === 'sparepart' ? 'Opsional: merek, tipe' : 'Opsional: merek, ukuran, warna'}
+                                            value={row.spesifikasi}
+                                            onChange={e => setRow(index, { spesifikasi: e.target.value })} />
+                                    </div>
+                                    <div className="col-span-6 sm:col-span-3 xl:col-span-2">
+                                        <p className={LABEL_ITEM}>Satuan (UOM)</p>
+                                        {row.jenis === 'sparepart' ? (
+                                            <Input placeholder="Satuan" value={row.satuan} readOnly disabled />
+                                        ) : (
+                                            <Input placeholder="Contoh: pack" value={row.satuan}
+                                                onChange={e => setRow(index, { satuan: e.target.value })} />
+                                        )}
+                                    </div>
+                                    <div className="col-span-6 sm:col-span-3 xl:col-span-2">
+                                        <p className={LABEL_ITEM}>Qty</p>
+                                        <Input placeholder="Qty" value={row.qty}
+                                            onChange={e => setRow(index, { qty: e.target.value.replace(/\D/g, '') })} />
+                                    </div>
+                                    <div className="col-span-6 sm:col-span-3 xl:col-span-3">
+                                        <p className={LABEL_ITEM}>Estimasi Harga Satuan</p>
+                                        <Input prefix="Rp" placeholder="0"
+                                            value={row.harga_estimasi ? formatNum(Number(row.harga_estimasi)) : ''}
+                                            onChange={e => setRow(index, { harga_estimasi: e.target.value.replace(/\D/g, '') })} />
+                                    </div>
+                                    <div className="col-span-6 sm:col-span-3 xl:col-span-2">
+                                        <p className={LABEL_ITEM}>Estimasi Total</p>
+                                        <div className="flex items-center h-11 font-semibold tabular-nums whitespace-nowrap">{formatRupiah(subtotal(row))}</div>
+                                    </div>
+                                    <div className="col-span-12 xl:col-span-3">
+                                        <p className={LABEL_ITEM}>Catatan</p>
+                                        <Input placeholder="Opsional" maxLength={255} value={row.keterangan}
+                                            onChange={e => setRow(index, { keterangan: e.target.value })} />
+                                    </div>
                                 </div>
-                            )
-                        })}
+                            </div>
+                        ))}
                     </div>
+                    )}
                     <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3">
                         <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Estimasi</span>
                         <span className="font-bold text-lg tabular-nums">{formatRupiah(totalEstimasi)}</span>

@@ -9,6 +9,7 @@ import LogAktivitasKeuanganDialog, { PENGAJUAN_LABEL, PENGAJUAN_TAG } from '@/co
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import LampiranPreview from '@/components/shared/LampiranPreview'
 import TeksLipat from '@/components/shared/TeksLipat'
+import { KELAS_TOMBOL_BATAL } from '@/components/shared/PanelAlurStatus'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiOutlinePaperClip, HiOutlineClipboardList, HiOutlineExternalLink, HiOutlinePlus, HiOutlineDocumentText, HiOutlineInboxIn, HiOutlineBan } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
@@ -16,7 +17,8 @@ import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import useCurrentSession from '@/utils/hooks/useCurrentSession'
-import { permintaanPembelianService, type PermintaanPembelian, type PermintaanBukti, type PermintaanItem, type TahapBukti, type Termin, type TerminPayload } from '@/services/permintaanPembelian.service'
+import { permintaanPembelianService, type PermintaanPembelian, type PermintaanBukti, type PermintaanItem, type TahapBukti, type Termin, type TerminPayload, type SyaratPembayaran } from '@/services/permintaanPembelian.service'
+import BeliTunaiDialog from './BeliTunaiDialog'
 import { barangService, type Barang } from '@/services/barang.service'
 import { supplierService } from '@/services/supplier.service'
 import { STATUS_LABEL, STATUS_TAG, JENIS_LABEL, TAHAP_LABEL, TIPE_LABEL, TIPE_TAG, bolehDiubah, adaKomponenBiaya, rincianBiaya } from './status'
@@ -44,7 +46,11 @@ const rapikanPersen = (nilai: string) => {
     const [bulat, ...pecahan] = nilai.replace(/,/g, '.').replace(/[^0-9.]/g, '').split('.')
     return pecahan.length > 0 ? `${bulat}.${pecahan.join('').slice(0, 2)}` : bulat
 }
-type FormDibeli = { id_supplier: string; tanggal: string; harga: Record<string, string>; barang: Record<string, string>; diskon: string; ppn_persen: string; ongkir: string }
+type FormDibeli = { id_supplier: string; tanggal: string; syarat: SyaratPembayaran; harga: Record<string, string>; barang: Record<string, string>; diskon: string; ppn_persen: string; ongkir: string }
+const SYARAT_OPTIONS: { value: SyaratPembayaran; label: string }[] = [
+    { value: 'setelah_terima', label: 'Setelah barang diterima' },
+    { value: 'di_muka', label: 'Bayar di muka' },
+]
 type FormUlang = { idTermin: string | null; catatan: string; koreksi: boolean; harga: Record<string, string>; diskon: string; ppn_persen: string; ongkir: string }
 const FORM_ULANG_KOSONG: FormUlang = { idTermin: null, catatan: '', koreksi: false, harga: {}, diskon: '', ppn_persen: '', ongkir: '' }
 const LABEL = 'text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1'
@@ -75,7 +81,8 @@ export default function DetailPermintaan({ id }: { id: string }) {
     const [dibeliOpen, setDibeliOpen] = useState(false)
     const [supplierOptions, setSupplierOptions] = useState<Option[]>([])
     const [barangOptions, setBarangOptions] = useState<Option[]>([])
-    const [dibeli, setDibeli] = useState<FormDibeli>({ id_supplier: '', tanggal: dayjs().format('YYYY-MM-DD'), harga: {}, barang: {}, diskon: '', ppn_persen: '', ongkir: '' })
+    const [dibeli, setDibeli] = useState<FormDibeli>({ id_supplier: '', tanggal: dayjs().format('YYYY-MM-DD'), syarat: 'setelah_terima', harga: {}, barang: {}, diskon: '', ppn_persen: '', ongkir: '' })
+    const [tunaiOpen, setTunaiOpen] = useState(false)
     const [terminRows, setTerminRows] = useState<TerminRow[]>([])
     const [notaDibeli, setNotaDibeli] = useState<File[]>([])
     const [realisasiOpen, setRealisasiOpen] = useState(false)
@@ -134,6 +141,7 @@ export default function DetailPermintaan({ id }: { id: string }) {
         setDibeli({
             id_supplier: data.id_supplier ?? '',
             tanggal: mode === 'po' && data.tanggal_po ? dayjs(data.tanggal_po).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+            syarat: data.syarat_pembayaran ?? 'setelah_terima',
             harga, barang,
             diskon: adaPo && data.diskon > 0 ? String(data.diskon) : '',
             ppn_persen: adaPo && data.ppn_persen > 0 ? String(data.ppn_persen) : '',
@@ -181,11 +189,14 @@ export default function DetailPermintaan({ id }: { id: string }) {
         const revisi = !!data.nomor_po
         jalankan(() => permintaanPembelianService.pesan(data.id_permintaan, {
             id_supplier: dibeli.id_supplier, tanggal_po: dibeli.tanggal,
+            ...(data.tipe === 'umum' ? { syarat_pembayaran: dibeli.syarat } : {}),
             items: data.items.map(i => ({ id_item: i.id_item, harga_aktual: Number(dibeli.harga[i.id_item]) || 0, id_barang: i.jenis === 'barang' ? (dibeli.barang[i.id_item] || null) : null })),
             diskon: Number(dibeli.diskon) || 0,
             ppn_persen: Number(dibeli.ppn_persen) || 0,
             ongkir: Number(dibeli.ongkir) || 0,
-        }), revisi ? 'PO diperbarui' : 'PO diterbitkan', () => setDibeliOpen(false))
+        }), data.tipe === 'umum' && dibeli.syarat === 'di_muka'
+            ? (revisi ? 'PO diperbarui — bila supplier atau nilainya berubah, pembayaran di muka diajukan ulang dari awal' : 'PO diterbitkan, pengajuan pembayaran di muka dikirim ke Keuangan')
+            : (revisi ? 'PO diperbarui' : 'PO diterbitkan'), () => setDibeliOpen(false))
     }
 
     const submitDibeli = () => {
@@ -264,7 +275,8 @@ export default function DetailPermintaan({ id }: { id: string }) {
         const pesan = data.items.reduce((s, i) => s + i.qty * (i.harga_aktual ?? 0), 0)
         const diterima = data.items.reduce((s, i) => s + (i.qty_diterima ?? 0) * (i.harga_aktual ?? 0), 0)
         const diskon = pesan > 0 ? Math.round(data.diskon * diterima / pesan) : 0
-        setTutup({ alasan: '', diskon: diskon > 0 ? String(diskon) : '', ongkir: data.ongkir > 0 ? String(data.ongkir) : '' })
+        const adaDiterima = data.items.some(i => (i.qty_diterima ?? 0) > 0)
+        setTutup({ alasan: '', diskon: adaDiterima && diskon > 0 ? String(diskon) : '', ongkir: adaDiterima && data.ongkir > 0 ? String(data.ongkir) : '' })
         setTutupOpen(true)
     }
 
@@ -277,7 +289,9 @@ export default function DetailPermintaan({ id }: { id: string }) {
             jumlah_diterima: data.items.reduce((s, i) => s + (i.qty_diterima ?? 0), 0),
         }), data.pengajuan_keuangan?.status === 'ditolak'
             ? 'Sisa ditutup — pengajuan pembayarannya berstatus ditolak, ajukan ulang pembayarannya'
-            : 'Sisa ditutup, pembayaran disesuaikan', () => setTutupOpen(false))
+            : dibayarMenungguBarang
+                ? 'Sisa ditutup, PR selesai — periksa kelebihan bayarnya'
+                : 'Sisa ditutup, pembayaran disesuaikan', () => setTutupOpen(false))
     }
 
     const bukaAjukanUlang = (termin?: Termin) => {
@@ -361,9 +375,18 @@ export default function DetailPermintaan({ id }: { id: string }) {
     const bolehBatal = !!data && (pengadaan ? ['menunggu_approval', 'disetujui', 'diproses', 'dipesan'].includes(data.status) : pengaju && ['menunggu_approval', 'disetujui'].includes(data.status))
     const pelakuMandiri = !!data && pengaju && data.boleh_realisasi_mandiri
     const bolehPesan = !!data && pengadaan && ['diproses', 'dipesan'].includes(data.status)
-    const bolehDibeli = !!data && pengadaan && data.status === 'dipesan' && !sparepart
+    const bolehDibeli = !!data && pengadaan && data.status === 'dipesan' && !sparepart && data.syarat_pembayaran !== 'di_muka'
+    const bolehTunaiMandiri = !!data && data.tipe === 'umum' && data.batas_beli_tunai !== null && data.batas_beli_tunai !== undefined
+        && data.total_estimasi <= data.batas_beli_tunai
+    const bolehBeliTunai = !!data && data.tipe === 'umum'
+        && ((pengadaan && data.status === 'diproses') || (pengaju && data.status === 'disetujui' && bolehTunaiMandiri))
+    const diMuka = data?.syarat_pembayaran === 'di_muka'
+    const dibayarMenungguBarang = !!data && !!data.tanggal_pembayaran && ['dibeli', 'diterima_sebagian'].includes(data.status)
     const bolehTerima = !!data && ['dibeli', 'diterima_sebagian'].includes(data.status) && (pengaju || pengadaan) && !sparepart && !aset
-    const bolehTutupSisa = !!data && pengadaan && data.status === 'diterima_sebagian' && !sparepart && !aset
+    const bolehTutupSisa = !!data && pengadaan && !sparepart && !aset
+        && (data.status === 'diterima_sebagian' || (data.status === 'dibeli' && dibayarMenungguBarang))
+    const terbayarDiMuka = dibayarMenungguBarang ? (data?.pengajuan_keuangan?.nominal ?? data?.total_aktual ?? 0) : 0
+    const tanpaPenerimaan = (data?.items ?? []).every(i => (i.qty_diterima ?? 0) === 0)
     const sisaItem = (i: PermintaanItem) => Math.max(i.qty - (i.qty_diterima ?? 0), 0)
     const totalTerima = (data?.items ?? []).reduce((s, i) => s + (Number(terima.qty[i.id_item]) || 0), 0)
     const terimaMelebihi = (data?.items ?? []).some(i => (Number(terima.qty[i.id_item]) || 0) > sisaItem(i))
@@ -372,6 +395,7 @@ export default function DetailPermintaan({ id }: { id: string }) {
     const diskonTutup = Number(tutup.diskon) || 0
     const ppnTutup = Math.round((nilaiDiterima - diskonTutup) * (data?.ppn_persen ?? 0) / 100)
     const totalTutup = nilaiDiterima - diskonTutup + ppnTutup + (Number(tutup.ongkir) || 0)
+    const tutupMelebihiTerbayar = dibayarMenungguBarang && totalTutup > terbayarDiMuka
     const diskonTutupMelebihi = Math.round(diskonTutup * 100) > Math.round(nilaiDiterima * 100)
     const bolehDaftarUnit = !!data && aset && data.status === 'dibeli'
     const bolehRealisasiSparepart = !!data && sparepart && (
@@ -441,7 +465,10 @@ export default function DetailPermintaan({ id }: { id: string }) {
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-bold truncate">{data?.judul ?? 'Detail Permintaan'}</h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="font-bold truncate" title={data?.judul}>{data?.judul ?? 'Detail Permintaan'}</h3>
+                        {data?.prioritas === 'urgent' && <Tag className="shrink-0 text-xs font-semibold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Urgent</Tag>}
+                    </div>
                     <p className="text-gray-500 text-sm mt-0.5 font-mono">{data?.nomor_permintaan ?? '—'}</p>
                 </div>
                 {loading && data && <Spinner size={20} />}
@@ -485,11 +512,12 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                 {bolehEdit && (
                                     <>
                                         <Tooltip title="Hapus"><Button size="sm" variant="default" icon={<HiOutlineTrash />} customColorClass={() => 'text-red-500 hover:border-red-300 hover:ring-red-300'} onClick={() => setHapusOpen(true)} /></Tooltip>
-                                        <Tooltip title="Edit"><Button size="sm" variant="default" icon={<HiOutlinePencilAlt />} onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_EDIT(data.id_permintaan))} /></Tooltip>
+                                        <Tooltip title="Edit"><Button size="sm" variant="solid" icon={<HiOutlinePencilAlt />} onClick={() => router.push(ROUTES.PERMINTAAN_PEMBELIAN_EDIT(data.id_permintaan))} /></Tooltip>
                                     </>
                                 )}
-                                {bolehBatal && <Button size="sm" variant="default" onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>Batalkan</Button>}
+                                {bolehBatal && <Button size="sm" variant="plain" icon={<HiOutlineBan />} className={KELAS_TOMBOL_BATAL} onClick={() => { setAlasanBatal(''); setBatalOpen(true) }}>Batalkan</Button>}
                                 {pengadaan && data.status === 'disetujui' && <Button size="sm" variant="solid" onClick={() => setProsesOpen(true)}>Mulai Proses</Button>}
+                                {bolehBeliTunai && <Button size="sm" variant="default" onClick={() => setTunaiOpen(true)}>Beli Tunai</Button>}
                                 {bolehPesan && (
                                     <Button size="sm" variant={data.status === 'dipesan' ? 'default' : 'solid'} onClick={() => bukaDibeli('po')}>
                                         {data.status === 'dipesan' ? 'Revisi PO' : 'Terbitkan PO'}
@@ -501,6 +529,12 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                 {bolehTerima && <Button size="sm" variant="solid" onClick={bukaTerima}>{data.status === 'diterima_sebagian' ? 'Catat Penerimaan Berikutnya' : 'Konfirmasi Penerimaan'}</Button>}
                             </div>
 
+                            {data.tipe === 'umum' && data.status === 'disetujui' && bolehTunaiMandiri && (
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                    Nilainya di bawah batas pembelian tunai ({formatRupiah(data.batas_beli_tunai ?? 0)}) — pemohon boleh membeli sendiri lalu mencatatnya lewat tombol Beli Tunai, atau menunggu diproses tim Pengadaan.
+                                </div>
+                            )}
+
                             {sparepart && data.batas_mandiri !== null && ['disetujui', 'diproses'].includes(data.status) && (
                                 <div className={`rounded-xl border px-4 py-3 text-sm ${data.boleh_realisasi_mandiri ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'}`}>
                                     {data.boleh_realisasi_mandiri
@@ -509,15 +543,42 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                 </div>
                             )}
 
-                            {data.status === 'diterima_sebagian' && (
+                            {data.status === 'diterima_sebagian' && !dibayarMenungguBarang && (
                                 <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300">
-                                    Baru diterima sebagian. Pembayaran belum bisa ditransfer sampai penerimaan lengkap atau sisanya ditutup.
+                                    {diMuka
+                                        ? 'Baru diterima sebagian. PO ini bayar di muka — Keuangan bisa mentransfer tanpa menunggu sisanya.'
+                                        : 'Baru diterima sebagian. Pembayaran belum bisa ditransfer sampai penerimaan lengkap atau sisanya ditutup.'}
                                 </div>
                             )}
                             {data.sisa_ditutup_pada && (
                                 <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                                    Sisa pesanan ditutup pada {dayjs(data.sisa_ditutup_pada).format('DD MMM YYYY')} — pembayaran mengikuti jumlah yang diterima.
+                                    Sisa pesanan ditutup pada {dayjs(data.sisa_ditutup_pada).format('DD MMM YYYY')} — {data.kelebihan_bayar !== null && data.kelebihan_bayar !== undefined
+                                        ? 'pembayarannya sudah ditransfer di muka, jadi nilainya tidak ikut berubah.'
+                                        : data.metode_pembelian === 'tunai'
+                                            ? 'nilai pembelian mengikuti jumlah yang benar-benar dibeli.'
+                                            : 'pembayaran mengikuti jumlah yang diterima.'}
                                     {data.alasan_tutup_sisa ? ` Alasan: ${data.alasan_tutup_sisa}` : ''}
+                                </div>
+                            )}
+
+                            {diMuka && data.status === 'dipesan' && !pengajuanDitolak && (
+                                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+                                    <span className="font-semibold">PO bayar di muka.</span>{' '}
+                                    {data.pengajuan_keuangan
+                                        ? <>Pengajuan pembayaran <span className="font-mono">{data.pengajuan_keuangan.nomor_pengajuan}</span> sudah dikirim ke Keuangan ({PENGAJUAN_LABEL[data.pengajuan_keuangan.status] ?? data.pengajuan_keuangan.status}). PR otomatis menjadi Dibeli setelah ditransfer.</>
+                                        : <>Pengajuan pembayarannya belum ada — simpan ulang lewat Revisi PO untuk mengirimnya ke Keuangan.</>}
+                                </div>
+                            )}
+
+                            {dibayarMenungguBarang && (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                                    <span className="font-semibold">Sudah dibayar di muka</span> pada {dayjs(data.tanggal_pembayaran).format('DD MMM YYYY')}, tetapi barang/jasanya belum diterima lengkap. Konfirmasi penerimaan begitu barang datang.
+                                </div>
+                            )}
+
+                            {(data.kelebihan_bayar ?? 0) > 0 && (
+                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                                    <span className="font-semibold">Kelebihan bayar {formatRupiah(data.kelebihan_bayar ?? 0)}.</span> Sisa pesanan ditutup setelah dibayar di muka — minta pengembalian dana dari supplier.
                                 </div>
                             )}
 
@@ -529,7 +590,11 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                             {data.pengajuan_keuangan?.nomor_pengajuan ? <span className="font-mono font-normal"> · {data.pengajuan_keuangan.nomor_pengajuan}</span> : null}
                                         </p>
                                         {data.pengajuan_keuangan?.alasan_ditolak && <TeksLipat teks={data.pengajuan_keuangan.alasan_ditolak} className="mt-0.5" />}
-                                        <p className="text-xs mt-1 opacity-80">Perbaiki nota atau rincian biayanya, lalu ajukan ulang supaya diproses Keuangan lagi.</p>
+                                        <p className="text-xs mt-1 opacity-80">
+                                            {data.status === 'dipesan'
+                                                ? 'Perbaiki PO lewat tombol Revisi PO — pembayaran di muka otomatis diajukan ulang saat PO disimpan.'
+                                                : 'Perbaiki nota atau rincian biayanya, lalu ajukan ulang supaya diproses Keuangan lagi.'}
+                                        </p>
                                     </div>
                                     {bolehAjukanUlang && <Button size="sm" variant="solid" onClick={() => bukaAjukanUlang()}>Ajukan Ulang Pembayaran</Button>}
                                 </div>
@@ -558,9 +623,13 @@ export default function DetailPermintaan({ id }: { id: string }) {
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
                                 <div><p className={LABEL}>Pemohon</p><p className={VALUE}>{data.username_pengaju ?? '—'}</p></div>
                                 <div><p className={LABEL}>Departemen</p><p className={VALUE}>{data.nama_departemen ?? '—'}</p></div>
+                                <div><p className={LABEL}>Kategori</p><p className={VALUE}>{data.nama_kategori ?? '—'}</p></div>
+                                <div><p className={LABEL}>Prioritas</p><p className={`${VALUE} ${data.prioritas === 'urgent' ? 'text-red-600 dark:text-red-400' : ''}`}>{data.prioritas === 'urgent' ? 'Urgent' : 'Normal'}</p></div>
                                 <div><p className={LABEL}>Tanggal Permintaan</p><p className={VALUE}>{dayjs(data.tanggal_permintaan).format('DD MMM YYYY')}</p></div>
                                 <div><p className={LABEL}>Dibutuhkan</p><p className={VALUE}>{data.tanggal_dibutuhkan ? dayjs(data.tanggal_dibutuhkan).format('DD MMM YYYY') : '—'}</p></div>
-                                <div><p className={LABEL}>Supplier</p><p className={VALUE}>{data.nama_supplier ?? '—'}</p></div>
+                                <div><p className={LABEL}>{data.metode_pembelian === 'tunai' ? 'Dibeli di' : 'Supplier'}</p><p className={VALUE}>{data.nama_supplier ?? data.nama_toko ?? '—'}</p></div>
+                                {data.metode_pembelian === 'tunai' && <div><p className={LABEL}>Beli Tunai, Ditalangi</p><p className={VALUE}>{data.nama_penalang ?? '—'}</p></div>}
+                                {diMuka && <div><p className={LABEL}>Syarat Pembayaran</p><p className={VALUE}>Bayar di muka</p></div>}
                                 <div><p className={LABEL}>Tanggal Pembelian</p><p className={VALUE}>{data.tanggal_pembelian ? dayjs(data.tanggal_pembelian).format('DD MMM YYYY') : '—'}</p></div>
                                 {data.nomor_po && <div><p className={LABEL}>No. PO</p><p className={`${VALUE} font-mono`}>{data.nomor_po}</p></div>}
                                 {data.nomor_po && <div><p className={LABEL}>Tanggal PO</p><p className={VALUE}>{data.tanggal_po ? dayjs(data.tanggal_po).format('DD MMM YYYY') : '—'}</p></div>}
@@ -602,7 +671,7 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {data.items.map(i => aset ? (
                                             <tr key={i.id_item}>
-                                                <td className="py-2 px-3"><p className="font-medium">{namaUnit(i)}</p><p className="text-xs text-gray-400">{i.nama_jenis_kendaraan ?? '—'}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
+                                                <td className="py-2 px-3"><p className="font-medium">{namaUnit(i)}</p><p className="text-xs text-gray-400">{i.nama_jenis_kendaraan ?? '—'}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p>{i.keterangan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 [overflow-wrap:anywhere]">Catatan: {i.keterangan}</p>}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
@@ -624,7 +693,7 @@ export default function DetailPermintaan({ id }: { id: string }) {
                                         ) : (
                                             <tr key={i.id_item}>
                                                 <td className="py-2 px-3"><Tag className={`text-[10px] font-semibold ${JENIS_TAG[i.jenis] ?? JENIS_TAG.jasa}`}>{JENIS_LABEL[i.jenis]}</Tag></td>
-                                                <td className="py-2 px-3"><p className="font-medium">{i.nama_item}</p><p className="text-xs text-gray-400">{i.kode_sparepart ?? i.kode_barang ?? (i.jenis === 'barang' ? 'belum ditautkan ke master' : '')}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p></td>
+                                                <td className="py-2 px-3"><p className="font-medium">{i.nama_item}</p><p className="text-xs text-gray-400">{i.kode_sparepart ?? i.kode_barang ?? (i.jenis === 'barang' ? 'belum ditautkan ke master' : '')}{i.spesifikasi ? ` · ${i.spesifikasi}` : ''}</p>{i.keterangan && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 [overflow-wrap:anywhere]">Catatan: {i.keterangan}</p>}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{formatNum(i.qty)} {i.satuan}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{formatRupiah(i.harga_estimasi)}</td>
                                                 <td className="py-2 px-3 text-right whitespace-nowrap">{i.harga_aktual !== null ? formatRupiah(i.harga_aktual) : '—'}</td>
@@ -844,6 +913,18 @@ export default function DetailPermintaan({ id }: { id: string }) {
                 <FormItem label={modePo ? 'Supplier' : 'Supplier (sesuai PO)'} asterisk><Select<Option> isSearchable isDisabled={!modePo} options={supplierOptions} value={supplierOptions.find(o => o.value === dibeli.id_supplier) ?? null} onChange={opt => setDibeli(p => ({ ...p, id_supplier: (opt as Option | null)?.value ?? '' }))} /></FormItem>
                 <FormItem label={modePo ? 'Tanggal PO' : 'Tanggal Pembelian'} asterisk><DatePicker inputFormat="DD/MM/YYYY" value={dayjs(dibeli.tanggal).toDate()} onChange={d => setDibeli(p => ({ ...p, tanggal: d ? dayjs(d).format('YYYY-MM-DD') : '' }))} /></FormItem>
             </div>
+            {modePo && data?.tipe === 'umum' && (
+                <FormItem label="Syarat Pembayaran">
+                    <Select<{ value: SyaratPembayaran; label: string }> isSearchable={false} options={SYARAT_OPTIONS}
+                        value={SYARAT_OPTIONS.find(o => o.value === dibeli.syarat) ?? SYARAT_OPTIONS[0]}
+                        onChange={opt => setDibeli(p => ({ ...p, syarat: opt?.value ?? 'setelah_terima' }))} />
+                    <p className="text-xs text-gray-400 mt-1">
+                        {dibeli.syarat === 'di_muka'
+                            ? 'Pengajuan pembayaran langsung dikirim ke Keuangan saat PO disimpan, tanpa menunggu barang datang. PR otomatis menjadi Dibeli setelah ditransfer. Pakai untuk toko online atau supplier yang minta dibayar dulu.'
+                            : 'Pengajuan pembayaran dibuat saat Tandai Dibeli, dan Keuangan baru bisa mentransfer setelah barang/jasa dikonfirmasi diterima.'}
+                    </p>
+                </FormItem>
+            )}
             {!modePo && (
             <FormItem label="Nota Supplier" asterisk={jumlahNotaTersimpan === 0} extra={jumlahNotaTersimpan > 0 ? <span className="text-xs text-gray-400">{jumlahNotaTersimpan} file sudah tersimpan</span> : undefined}>
                 <Upload accept=".jpg,.jpeg,.png,.webp,.pdf" multiple showList={false} fileList={notaDibeli}
@@ -962,6 +1043,16 @@ export default function DetailPermintaan({ id }: { id: string }) {
             </div>
         </Dialog>
 
+        {data && (
+            <BeliTunaiDialog
+                isOpen={tunaiOpen}
+                data={data}
+                namaPenalangAwal={session?.user?.name ?? ''}
+                onClose={() => setTunaiOpen(false)}
+                onSelesai={hasil => setData(hasil)}
+            />
+        )}
+
         <Dialog isOpen={realisasiOpen} onRequestClose={() => setRealisasiOpen(false)} onClose={() => setRealisasiOpen(false)} width={640}>
             <h5 className="font-bold mb-1">Catat Realisasi</h5>
             <p className="text-xs text-gray-400 mb-4">
@@ -1074,7 +1165,7 @@ export default function DetailPermintaan({ id }: { id: string }) {
                 ))}
             </div>
             {terimaMelebihi && <p className="text-xs text-red-500 dark:text-red-400 mt-2">Jumlah yang diisi melebihi sisa yang belum diterima.</p>}
-            {!terimaMelebihi && totalTerima > 0 && !terimaLengkap && <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Belum lengkap — setelah disimpan PR berstatus Diterima Sebagian dan pembayaran masih ditahan.</p>}
+            {!terimaMelebihi && totalTerima > 0 && !terimaLengkap && <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">{diMuka ? 'Belum lengkap — setelah disimpan PR berstatus Diterima Sebagian. PO ini bayar di muka, jadi pembayarannya tidak menunggu sisanya.' : 'Belum lengkap — setelah disimpan PR berstatus Diterima Sebagian dan pembayaran masih ditahan.'}</p>}
             <FormItem label="Keterangan" className="mt-3"><Input textArea rows={2} maxLength={500} value={terima.keterangan} onChange={e => setTerima(p => ({ ...p, keterangan: e.target.value }))} /></FormItem>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Button type="button" variant="plain" onClick={() => setTerimaOpen(false)}>Kembali</Button>
@@ -1084,7 +1175,11 @@ export default function DetailPermintaan({ id }: { id: string }) {
 
         <Dialog isOpen={tutupOpen} onRequestClose={() => setTutupOpen(false)} onClose={() => setTutupOpen(false)} width={560}>
             <h5 className="font-bold mb-1">Tutup Sisa Pesanan</h5>
-            <p className="text-xs text-gray-400 mb-4">Dipakai bila sisa barang tidak jadi dikirim supplier. PR menjadi Diterima dan pembayaran disesuaikan dengan jumlah yang benar-benar diterima. Tidak bisa dibatalkan.</p>
+            <p className="text-xs text-gray-400 mb-4">
+                {dibayarMenungguBarang
+                    ? 'Dipakai bila sisa barang tidak jadi dikirim supplier. PR ini sudah dibayar di muka, jadi langsung Selesai dan selisihnya dicatat sebagai kelebihan bayar untuk diminta kembali ke supplier. Tidak bisa dibatalkan.'
+                    : 'Dipakai bila sisa barang tidak jadi dikirim supplier. PR menjadi Diterima dan pembayaran disesuaikan dengan jumlah yang benar-benar diterima. Tidak bisa dibatalkan.'}
+            </p>
             <div className="flex flex-col gap-2 max-h-[30vh] overflow-y-auto pr-1">
                 {data?.items.filter(i => sisaItem(i) > 0).map(i => (
                     <div key={i.id_item} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2 text-sm">
@@ -1098,29 +1193,35 @@ export default function DetailPermintaan({ id }: { id: string }) {
                     <p className="h-12 flex items-center text-sm font-semibold tabular-nums">{formatRupiah(nilaiDiterima)}</p>
                 </FormItem>
                 <FormItem label="Diskon" className="mb-0">
-                    <Input prefix="Rp" placeholder="0" invalid={diskonTutupMelebihi} value={tutup.diskon ? formatNum(Number(tutup.diskon)) : ''}
+                    <Input prefix="Rp" placeholder="0" invalid={diskonTutupMelebihi} disabled={tanpaPenerimaan} value={tutup.diskon ? formatNum(Number(tutup.diskon)) : ''}
                         onChange={e => setTutup(p => ({ ...p, diskon: e.target.value.replace(/\D/g, '') }))} />
                 </FormItem>
                 <FormItem label={data && data.ppn_persen > 0 ? `PPN (${data.ppn_persen}%)` : 'PPN'} className="mb-0">
                     <p className="h-12 flex items-center text-sm tabular-nums">{formatRupiah(ppnTutup)}</p>
                 </FormItem>
                 <FormItem label="Ongkos Kirim" className="mb-0">
-                    <Input prefix="Rp" placeholder="0" value={tutup.ongkir ? formatNum(Number(tutup.ongkir)) : ''}
+                    <Input prefix="Rp" placeholder="0" disabled={tanpaPenerimaan} value={tutup.ongkir ? formatNum(Number(tutup.ongkir)) : ''}
                         onChange={e => setTutup(p => ({ ...p, ongkir: e.target.value.replace(/\D/g, '') }))} />
                 </FormItem>
             </div>
             {diskonTutupMelebihi && <p className="text-xs text-red-500 dark:text-red-400 mt-1">Diskon tidak boleh melebihi nilai barang yang diterima.</p>}
             <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-800 px-4 py-3 mt-3">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Pembayaran menjadi</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{dibayarMenungguBarang ? 'Nilai pembelian menjadi' : 'Pembayaran menjadi'}</span>
                 <span className="font-bold text-lg tabular-nums">{formatRupiah(totalTutup)}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Sebelumnya {formatRupiah(data?.total_aktual ?? 0)}.</p>
+            {dibayarMenungguBarang ? (
+                tutupMelebihiTerbayar
+                    ? <p className="text-xs text-red-500 dark:text-red-400 mt-1">Melebihi yang sudah dibayar ({formatRupiah(terbayarDiMuka)}) — periksa diskon dan ongkos kirim.</p>
+                    : <p className="text-xs text-gray-400 mt-1">Sudah dibayar {formatRupiah(terbayarDiMuka)} · kelebihan bayar <span className="font-semibold text-red-600 dark:text-red-400">{formatRupiah(terbayarDiMuka - totalTutup)}</span> perlu diminta kembali ke supplier.</p>
+            ) : (
+                <p className="text-xs text-gray-400 mt-1">Sebelumnya {formatRupiah(data?.total_aktual ?? 0)}.</p>
+            )}
             <FormItem label="Alasan" asterisk className="mt-3">
                 <Input textArea rows={2} maxLength={500} placeholder="Mis. stok supplier habis, sisa tidak dikirim" value={tutup.alasan} onChange={e => setTutup(p => ({ ...p, alasan: e.target.value }))} />
             </FormItem>
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <Button type="button" variant="plain" onClick={() => setTutupOpen(false)}>Kembali</Button>
-                <Button type="button" variant="solid" loading={submitting} disabled={tutup.alasan.trim().length < 3 || diskonTutupMelebihi || totalTutup <= 0} onClick={submitTutupSisa}>Tutup Sisa</Button>
+                <Button type="button" variant="solid" loading={submitting} disabled={tutup.alasan.trim().length < 3 || diskonTutupMelebihi || (dibayarMenungguBarang ? tutupMelebihiTerbayar : totalTutup <= 0)} onClick={submitTutupSisa}>Tutup Sisa</Button>
             </div>
         </Dialog>
 

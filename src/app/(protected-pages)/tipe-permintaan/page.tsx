@@ -93,7 +93,7 @@ export default function TipePermintaanPage() {
                 </Tag>
             ),
         },
-        { header: 'Judul', id: 'jumlah_judul', size: 90,
+        { header: 'Kategori', id: 'jumlah_judul', size: 90,
             cell: ({ row }: CellContext<TipePermintaan, unknown>) => row.original.jumlah_judul ?? 0 },
         { header: 'Status', accessorKey: 'aktif', size: 110,
             cell: ({ row }: CellContext<TipePermintaan, unknown>) => (
@@ -129,7 +129,7 @@ export default function TipePermintaanPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 className="font-bold">Tipe Permintaan</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Data master tipe untuk judul permintaan — jenis form menentukan isian dan alur permintaan pembelian</p>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master tipe untuk kategori permintaan — jenis form menentukan isian dan alur permintaan pembelian</p>
                 </div>
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                     onClick={() => router.push(ROUTES.TIPE_PERMINTAAN_BARU)}>

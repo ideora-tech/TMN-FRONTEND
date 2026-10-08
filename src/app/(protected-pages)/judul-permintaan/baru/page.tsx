@@ -31,8 +31,8 @@ export default function JudulPermintaanBaruPage() {
 
     const validate = () => {
         const e: Record<string, string> = {}
-        if (!form.nama_judul.trim()) e.nama_judul = 'Judul permintaan wajib diisi'
-        else if (form.nama_judul.trim().length > 150) e.nama_judul = 'Judul permintaan maksimal 150 karakter'
+        if (!form.nama_judul.trim()) e.nama_judul = 'Kategori permintaan wajib diisi'
+        else if (form.nama_judul.trim().length > 150) e.nama_judul = 'Kategori permintaan maksimal 150 karakter'
         if (!form.id_tipe_permintaan) e.id_tipe_permintaan = 'Tipe wajib dipilih'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -51,7 +51,7 @@ export default function JudulPermintaanBaruPage() {
                 id_tipe_permintaan: form.id_tipe_permintaan,
                 aktif: form.aktif,
             })
-            toast.push(<Notification type="success" title="Judul permintaan berhasil ditambahkan" />)
+            toast.push(<Notification type="success" title="Kategori permintaan berhasil ditambahkan" />)
             router.push(ROUTES.JUDUL_PERMINTAAN)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -68,14 +68,14 @@ export default function JudulPermintaanBaruPage() {
                     <HiArrowLeft className="text-xl" />
                 </button>
                 <div>
-                    <h3 className="font-bold">Tambah Judul Permintaan</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Daftarkan judul permintaan baru</p>
+                    <h3 className="font-bold">Tambah Kategori Permintaan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Daftarkan kategori permintaan baru</p>
                 </div>
             </div>
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Judul Permintaan" asterisk invalid={!!errors.nama_judul} errorMessage={errors.nama_judul}>
+                    <FormItem label="Kategori Permintaan" asterisk invalid={!!errors.nama_judul} errorMessage={errors.nama_judul}>
                         <Input placeholder="Mis. Pembelian Ban Truk" maxLength={150} value={form.nama_judul} invalid={!!errors.nama_judul}
                             onChange={e => setForm(p => ({ ...p, nama_judul: e.target.value }))} />
                     </FormItem>

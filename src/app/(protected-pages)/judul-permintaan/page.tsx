@@ -59,7 +59,7 @@ export default function JudulPermintaanPage() {
         setSubmitting(true)
         try {
             await judulPermintaanService.delete(deleteTarget.id_judul_permintaan)
-            toast.push(<Notification type="success" title="Judul permintaan berhasil dihapus" />)
+            toast.push(<Notification type="success" title="Kategori permintaan berhasil dihapus" />)
             setDeleteTarget(null)
             fetchData()
         } catch (err) {
@@ -73,7 +73,7 @@ export default function JudulPermintaanPage() {
     const columns: ColumnDef<JudulPermintaan>[] = [
         { header: 'No', id: 'no', size: 60,
             cell: ({ row }: CellContext<JudulPermintaan, unknown>) => (currentPage - 1) * pageSize + row.index + 1 },
-        { header: 'Judul Permintaan', accessorKey: 'nama_judul', size: 320,
+        { header: 'Kategori Permintaan', accessorKey: 'nama_judul', size: 320,
             cell: ({ row }: CellContext<JudulPermintaan, unknown>) => {
                 const initials = row.original.nama_judul.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
                 return (
@@ -126,17 +126,17 @@ export default function JudulPermintaanPage() {
         <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h3 className="font-bold">Judul Permintaan</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Data master judul untuk permintaan pembelian</p>
+                    <h3 className="font-bold">Kategori Permintaan</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Data master kategori untuk permintaan pembelian</p>
                 </div>
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                     onClick={() => router.push(ROUTES.JUDUL_PERMINTAAN_BARU)}>
-                    Tambah Judul
+                    Tambah Kategori
                 </Button>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <Input className="flex-1 min-w-60" placeholder="Cari judul permintaan... (tekan Enter)"
+                    <Input className="flex-1 min-w-60" placeholder="Cari kategori permintaan... (tekan Enter)"
                         suffix={searchInput
                             ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
                             : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchSubmit} />}
@@ -157,11 +157,11 @@ export default function JudulPermintaanPage() {
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />
             </Card>
 
-            <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Judul Permintaan?"
+            <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Kategori Permintaan?"
                 confirmText="Ya, Hapus" cancelText="Batal"
                 confirmButtonProps={{ loading: submitting, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
                 onClose={() => setDeleteTarget(null)} onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete}>
-                <p className="text-sm">Judul permintaan <span className="font-semibold">&ldquo;{deleteTarget?.nama_judul}&rdquo;</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
+                <p className="text-sm">Kategori permintaan <span className="font-semibold">&ldquo;{deleteTarget?.nama_judul}&rdquo;</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
         </div>
     )

@@ -105,7 +105,7 @@ export default function TipePermintaanDetailPage({ params }: { params: Promise<{
                             {([
                                 { label: 'Nama Tipe', value: data.nama_tipe },
                                 { label: 'Jenis Form', value: jenisFormLabel },
-                                { label: 'Judul Memakai Tipe Ini', value: String(data.jumlah_judul ?? 0) },
+                                { label: 'Kategori Memakai Tipe Ini', value: String(data.jumlah_judul ?? 0) },
                                 { label: 'Keterangan Form', value: JENIS_FORM_HINT[data.jenis_form] ?? '-' },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
@@ -138,7 +138,7 @@ export default function TipePermintaanDetailPage({ params }: { params: Promise<{
                                     onChange={opt => setForm(p => ({ ...p, jenis_form: opt?.value as JenisFormPermintaan | undefined }))} />
                                 {jenisFormBerubah && (
                                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                        {data.jumlah_judul} judul permintaan memakai tipe ini — jenis form-nya ikut berubah untuk permintaan pembelian berikutnya (PR yang sudah dibuat tidak berubah).
+                                        {data.jumlah_judul} kategori permintaan memakai tipe ini — jenis form-nya ikut berubah untuk permintaan pembelian berikutnya (PR yang sudah dibuat tidak berubah).
                                     </p>
                                 )}
                             </FormItem>

@@ -1,12 +1,13 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import type { StatusPermintaan, TipePermintaan } from './permintaanPembelian.service'
+import type { PrioritasPermintaan, StatusPermintaan, TipePermintaan } from './permintaanPembelian.service'
 import type { PermintaanVendorMekanisme, PermintaanVendorStatus } from './permintaan-vendor.service'
 
 export interface AntrianPR {
     id_permintaan: string
     nomor_permintaan: string
     judul: string
+    prioritas?: PrioritasPermintaan
     status: StatusPermintaan
     tipe: TipePermintaan
     tanggal_permintaan: string

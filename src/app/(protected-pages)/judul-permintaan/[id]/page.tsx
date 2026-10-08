@@ -41,8 +41,8 @@ export default function JudulPermintaanDetailPage({ params }: { params: Promise<
 
     const validate = () => {
         const e: Partial<Record<keyof JudulPermintaan, string>> = {}
-        if (!form.nama_judul?.trim()) e.nama_judul = 'Judul permintaan wajib diisi'
-        else if (form.nama_judul.trim().length > 150) e.nama_judul = 'Judul permintaan maksimal 150 karakter'
+        if (!form.nama_judul?.trim()) e.nama_judul = 'Kategori permintaan wajib diisi'
+        else if (form.nama_judul.trim().length > 150) e.nama_judul = 'Kategori permintaan maksimal 150 karakter'
         if (!form.id_tipe_permintaan) e.id_tipe_permintaan = 'Tipe wajib dipilih'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -62,7 +62,7 @@ export default function JudulPermintaanDetailPage({ params }: { params: Promise<
                 aktif:              form.aktif,
             })
             setData(updated); setForm(updated); setEditing(false); setErrors({})
-            toast.push(<Notification type="success" title="Judul permintaan berhasil diperbarui" />)
+            toast.push(<Notification type="success" title="Kategori permintaan berhasil diperbarui" />)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -71,7 +71,7 @@ export default function JudulPermintaanDetailPage({ params }: { params: Promise<
     }
 
     if (loading) return <div className="p-6 text-gray-500">Memuat...</div>
-    if (!data) return <div className="p-6 text-red-500">Judul permintaan tidak ditemukan.</div>
+    if (!data) return <div className="p-6 text-red-500">Kategori permintaan tidak ditemukan.</div>
 
     const initial = data.nama_judul?.charAt(0).toUpperCase() ?? 'J'
     const tipeLabel = data.nama_tipe ?? TIPE_JUDUL_LABEL[data.tipe] ?? data.tipe
@@ -113,7 +113,7 @@ export default function JudulPermintaanDetailPage({ params }: { params: Promise<
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
-                                { label: 'Judul Permintaan', value: data.nama_judul },
+                                { label: 'Kategori Permintaan', value: data.nama_judul },
                                 { label: 'Tipe', value: tipeLabel },
                                 { label: 'Jenis Form', value: TIPE_JUDUL_LABEL[data.tipe] ?? data.tipe },
                             ]).map(({ label, value }) => (
@@ -131,14 +131,14 @@ export default function JudulPermintaanDetailPage({ params }: { params: Promise<
                                 {form.nama_judul?.charAt(0).toUpperCase() ?? initial}
                             </div>
                             <div>
-                                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">Edit Judul Permintaan</p>
-                                <p className="text-sm text-gray-500 mt-0.5">Perbarui informasi judul permintaan di bawah ini</p>
+                                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">Edit Kategori Permintaan</p>
+                                <p className="text-sm text-gray-500 mt-0.5">Perbarui informasi kategori permintaan di bawah ini</p>
                             </div>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Judul Permintaan" asterisk invalid={!!errors.nama_judul} errorMessage={errors.nama_judul}>
+                            <FormItem label="Kategori Permintaan" asterisk invalid={!!errors.nama_judul} errorMessage={errors.nama_judul}>
                                 <Input maxLength={150} value={form.nama_judul ?? ''} invalid={!!errors.nama_judul} onChange={e => setForm(p => ({ ...p, nama_judul: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Tipe" asterisk invalid={!!errors.id_tipe_permintaan} errorMessage={errors.id_tipe_permintaan}>

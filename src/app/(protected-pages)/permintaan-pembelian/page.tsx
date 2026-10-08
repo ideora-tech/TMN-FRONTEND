@@ -34,6 +34,7 @@ type Option = { value: string; label: string }
 const STATUS_OPTIONS: Option[] = [{ value: '', label: 'Semua Status' }, ...STATUS_URUT.map(s => ({ value: s, label: STATUS_LABEL[s] }))]
 const TIPE_OPTIONS: Option[] = [{ value: '', label: 'Semua Tipe' }, { value: 'umum', label: TIPE_LABEL.umum }, { value: 'sparepart', label: TIPE_LABEL.sparepart }, { value: 'aset', label: TIPE_LABEL.aset }]
 const TIPE_VALUES = ['umum', 'sparepart', 'aset']
+const PRIORITAS_OPTIONS: Option[] = [{ value: '', label: 'Semua Prioritas' }, { value: 'normal', label: 'Normal' }, { value: 'urgent', label: 'Urgent' }]
 
 const TAB_VALUES = ['permintaan', 'laporan'] as const
 type TabValue = (typeof TAB_VALUES)[number]
@@ -87,9 +88,12 @@ export default function PermintaanPembelianPage() {
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState(statusAwal)
     const [tipeFilter, setTipeFilter] = useState(tipeAwal)
+    const [prioritasFilter, setPrioritasFilter] = useState('')
     const [milikSaya, setMilikSaya] = useState(false)
     const [hanyaDitolak, setHanyaDitolak] = useState(false)
     const [jumlahDitolak, setJumlahDitolak] = useState(0)
+    const [hanyaMenungguBarang, setHanyaMenungguBarang] = useState(false)
+    const [jumlahMenungguBarang, setJumlahMenungguBarang] = useState(0)
     const [lihatSemua, setLihatSemua] = useState(true)
     const [dari, setDari] = useState<Date | null>(null)
     const [sampai, setSampai] = useState<Date | null>(null)
@@ -109,21 +113,24 @@ export default function PermintaanPembelianPage() {
             const res = await permintaanPembelianService.list({
                 page: currentPage, limit: pageSize, search: search || undefined, status: statusFilter || undefined,
                 tipe: tipeFilter || undefined,
+                prioritas: prioritasFilter || undefined,
                 milik_saya: milikSaya ? '1' : undefined,
                 pembayaran_ditolak: hanyaDitolak ? '1' : undefined,
+                menunggu_barang: hanyaMenungguBarang ? '1' : undefined,
                 dari: dari ? dayjs(dari).format('YYYY-MM-DD') : undefined, sampai: sampai ? dayjs(sampai).format('YYYY-MM-DD') : undefined,
             })
             setList(res.data)
             setTotal(res.meta.total)
             setRingkasan(res.meta.ringkasan ?? {})
             setJumlahDitolak(res.meta.pembayaran_ditolak ?? 0)
+            setJumlahMenungguBarang(res.meta.dibayar_menunggu_barang ?? 0)
             setLihatSemua(res.meta.lihat_semua ?? true)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter, tipeFilter, milikSaya, hanyaDitolak, dari, sampai])
+    }, [currentPage, pageSize, search, statusFilter, tipeFilter, prioritasFilter, milikSaya, hanyaDitolak, hanyaMenungguBarang, dari, sampai])
 
     useEffect(() => { fetchData() }, [fetchData])
 
@@ -135,9 +142,13 @@ export default function PermintaanPembelianPage() {
             <div>
                 <div className="flex items-center gap-2">
                     <p className="font-semibold">{row.original.judul}</p>
+                    {row.original.prioritas === 'urgent' && <Tag className="text-[10px] font-semibold px-1.5 py-0 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">Urgent</Tag>}
                     {row.original.tipe !== 'umum' && <Tag className={`text-[10px] font-semibold px-1.5 py-0 ${TIPE_TAG[row.original.tipe] ?? TIPE_TAG.umum}`}>{TIPE_LABEL[row.original.tipe] ?? row.original.tipe}</Tag>}
                 </div>
-                <p className="text-xs text-gray-400">{row.original.username_pengaju ?? '—'}{row.original.nama_departemen ? ` · ${row.original.nama_departemen}` : ''}</p>
+                <p className="text-xs text-gray-400">
+                    {row.original.username_pengaju ?? '—'}{row.original.nama_departemen ? ` · ${row.original.nama_departemen}` : ''}
+                    {row.original.nama_kategori && row.original.nama_kategori !== row.original.judul ? ` · ${row.original.nama_kategori}` : ''}
+                </p>
             </div>
         ) },
         { header: 'Tanggal', accessorKey: 'tanggal_permintaan', size: 120, cell: ({ row }) => dayjs(row.original.tanggal_permintaan).format('DD MMM YYYY') },
@@ -202,8 +213,19 @@ export default function PermintaanPembelianPage() {
                                     <p className="flex-1 min-w-48 text-sm text-red-700 dark:text-red-300">
                                         <span className="font-semibold">{formatNum(jumlahDitolak)} PR</span> pembayarannya ditolak dan menunggu diajukan ulang.
                                     </p>
-                                    <Button size="sm" variant={hanyaDitolak ? 'solid' : 'default'} onClick={() => { setHanyaDitolak(v => !v); setCurrentPage(1) }}>
+                                    <Button size="sm" variant={hanyaDitolak ? 'solid' : 'default'} onClick={() => { setHanyaDitolak(v => !v); setHanyaMenungguBarang(false); setCurrentPage(1) }}>
                                         {hanyaDitolak ? 'Tampilkan semua' : 'Tampilkan'}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {(jumlahMenungguBarang > 0 || hanyaMenungguBarang) && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+                                    <p className="flex-1 min-w-48 text-sm text-amber-700 dark:text-amber-300">
+                                        <span className="font-semibold">{formatNum(jumlahMenungguBarang)} PR</span> sudah dibayar di muka tetapi barangnya belum diterima lengkap.
+                                    </p>
+                                    <Button size="sm" variant={hanyaMenungguBarang ? 'solid' : 'default'} onClick={() => { setHanyaMenungguBarang(v => !v); setHanyaDitolak(false); setCurrentPage(1) }}>
+                                        {hanyaMenungguBarang ? 'Tampilkan semua' : 'Tampilkan'}
                                     </Button>
                                 </div>
                             )}
@@ -218,6 +240,9 @@ export default function PermintaanPembelianPage() {
                                     </div>
                                     <div className="w-full sm:w-40 shrink-0">
                                         <Select<Option> isSearchable={false} options={TIPE_OPTIONS} value={TIPE_OPTIONS.find(o => o.value === tipeFilter) ?? TIPE_OPTIONS[0]} onChange={opt => { setTipeFilter((opt as Option).value); setCurrentPage(1) }} />
+                                    </div>
+                                    <div className="w-full sm:w-44 shrink-0">
+                                        <Select<Option> isSearchable={false} options={PRIORITAS_OPTIONS} value={PRIORITAS_OPTIONS.find(o => o.value === prioritasFilter) ?? PRIORITAS_OPTIONS[0]} onChange={opt => { setPrioritasFilter((opt as Option).value); setCurrentPage(1) }} />
                                     </div>
                                     <div className="w-full sm:w-40 shrink-0"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Dari tanggal" value={dari} onChange={d => { setDari(d); setCurrentPage(1) }} /></div>
                                     <div className="w-full sm:w-40 shrink-0"><DatePicker inputFormat="DD/MM/YYYY" placeholder="Sampai tanggal" value={sampai} onChange={d => { setSampai(d); setCurrentPage(1) }} /></div>

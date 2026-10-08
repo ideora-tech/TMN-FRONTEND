@@ -127,6 +127,7 @@ export const API_ENDPOINTS = {
     PERMINTAAN_PEMBELIAN_DETAIL:       (id: string) => `/api/proxy/permintaan-pembelian/${id}`,
     PERMINTAAN_PEMBELIAN_PROSES:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/proses`,
     PERMINTAAN_PEMBELIAN_PESAN:        (id: string) => `/api/proxy/permintaan-pembelian/${id}/pesan`,
+    PERMINTAAN_PEMBELIAN_BELI_TUNAI:   (id: string) => `/api/proxy/permintaan-pembelian/${id}/beli-tunai`,
     PERMINTAAN_PEMBELIAN_DIBELI:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/dibeli`,
     PERMINTAAN_PEMBELIAN_TERIMA:       (id: string) => `/api/proxy/permintaan-pembelian/${id}/terima`,
     PERMINTAAN_PEMBELIAN_TUTUP_SISA:   (id: string) => `/api/proxy/permintaan-pembelian/${id}/tutup-sisa`,
