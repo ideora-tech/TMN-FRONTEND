@@ -1,21 +1,39 @@
 'use client'
-import { Fragment, use, useEffect, useState, useCallback, useMemo } from 'react'
+import { Fragment, use, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Tag, Spinner, Dialog, FormItem, Switcher, Tooltip, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlineSave, HiOutlineRefresh, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt } from 'react-icons/hi'
+import { HiArrowLeft, HiCheckCircle, HiOutlineExclamationCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt } from 'react-icons/hi'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { peranService, Peran } from '@/services/peran.service'
-import { izinPeranService, IzinPeran } from '@/services/izinPeran.service'
+import { izinPeranService } from '@/services/izinPeran.service'
 import { menuService, MenuItem } from '@/services/menu.service'
 
 const AKSI = ['lihat', 'tambah', 'ubah', 'hapus'] as const
+
+const LABEL_AKSI: Record<string, string> = { lihat: 'Lihat', tambah: 'Tambah', ubah: 'Ubah', hapus: 'Hapus' }
 
 function permKey(idMenu: string, aksi: string) {
     return `${idMenu}::${aksi}`
 }
 
-type GrupMenu = { root: MenuItem; items: MenuItem[] }
+async function muatPetaIzin(kodePeran: string, kunci: string[]) {
+    const izin = await izinPeranService.listByPeran(kodePeran)
+    const map: Record<string, boolean> = {}
+    kunci.forEach(k => { map[k] = false })
+    izin.forEach(i => {
+        const key = permKey(i.id_menu, i.aksi)
+        if (key in map) map[key] = i.diizinkan
+    })
+    return map
+}
+
+type GrupMenu = { root: MenuItem; label: string; items: MenuItem[] }
+
+type StatusSimpan = 'diam' | 'menyimpan' | 'tersimpan' | 'gagal'
+
+type CentangMassal = { aksi: string | null; nyala: boolean; idMenu: string[] }
 
 export default function PeranDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -28,11 +46,15 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
     const [menyimpanUbah, setMenyimpanUbah] = useState(false)
     const [grup, setGrup]       = useState<GrupMenu[]>([])
     const [perms, setPerms]     = useState<Record<string, boolean>>({})
-    const [permsAwal, setPermsAwal] = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(true)
-    const [saving, setSaving]   = useState(false)
+    const [statusSimpan, setStatusSimpan] = useState<StatusSimpan>('diam')
+    const [massal, setMassal]   = useState<CentangMassal | null>(null)
+    const [massalOpen, setMassalOpen] = useState(false)
     const [cariMenuInput, setCariMenuInput] = useState('')
     const [cariMenu, setCariMenu] = useState('')
+    const permsRef     = useRef<Record<string, boolean>>({})
+    const tersimpanRef = useRef<Record<string, boolean>>({})
+    const menyinkron   = useRef(false)
 
     const loadData = useCallback(async () => {
         setLoading(true)
@@ -46,34 +68,29 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
             // Izin dipakai middleware per PATH menu — jadi baris matriks adalah
             // menu ber-path (menu anak + root berpath seperti Dashboard),
             // dikelompokkan di bawah nama grupnya. Grup tanpa path hanya jadi header.
-            const aktif = menuRes.data.filter((m: MenuItem) => m.aktif)
-            const roots = aktif
-                .filter((m: MenuItem) => !m.id_menu_induk)
-                .sort((a: MenuItem, b: MenuItem) => a.urutan - b.urutan)
-            const grupList: GrupMenu[] = roots
-                .map((root: MenuItem) => ({
-                    root,
-                    items: [
-                        ...(root.path ? [root] : []),
-                        ...aktif
-                            .filter((m: MenuItem) => m.id_menu_induk === root.id_menu && m.path)
-                            .sort((a: MenuItem, b: MenuItem) => a.urutan - b.urutan),
-                    ],
-                }))
-                .filter(g => g.items.length > 0)
+            const aktif: MenuItem[] = menuRes.data.filter((m: MenuItem) => m.aktif)
+            const anakDari = (idInduk: string | null) => aktif
+                .filter(m => (m.id_menu_induk ?? null) === idInduk)
+                .sort((a, b) => a.urutan - b.urutan)
+            const grupList: GrupMenu[] = []
+            const telusuri = (node: MenuItem, jejak: string[]) => {
+                const anak = anakDari(node.id_menu)
+                const items = [
+                    ...(node.path && jejak.length === 0 ? [node] : []),
+                    ...anak.filter(m => m.path),
+                ]
+                const jejakBaru = [...jejak, node.nama_menu]
+                if (items.length > 0) grupList.push({ root: node, label: jejakBaru.join(' › '), items })
+                anak.forEach(m => telusuri(m, jejakBaru))
+            }
+            anakDari(null).forEach(root => telusuri(root, []))
             setGrup(grupList)
 
-            const izin: IzinPeran[] = await izinPeranService.listByPeran(p.kode_peran)
-            const map: Record<string, boolean> = {}
-            grupList.forEach(g => g.items.forEach(m => {
-                AKSI.forEach(a => { map[permKey(m.id_menu, a)] = false })
-            }))
-            izin.forEach(i => {
-                const key = permKey(i.id_menu, i.aksi)
-                if (key in map) map[key] = i.diizinkan
-            })
+            const kunci = grupList.flatMap(g => g.items.flatMap(m => AKSI.map(a => permKey(m.id_menu, a))))
+            const map = await muatPetaIzin(p.kode_peran, kunci)
+            permsRef.current = map
+            tersimpanRef.current = { ...map }
             setPerms(map)
-            setPermsAwal({ ...map })
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -83,14 +100,66 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
 
     useEffect(() => { loadData() }, [loadData])
 
+    useEffect(() => {
+        const tahan = (e: BeforeUnloadEvent) => { if (menyinkron.current) e.preventDefault() }
+        window.addEventListener('beforeunload', tahan)
+        return () => window.removeEventListener('beforeunload', tahan)
+    }, [])
+
+    const selisih = () => {
+        const target = permsRef.current
+        return Object.keys(target).filter(k => target[k] !== (tersimpanRef.current[k] ?? false))
+    }
+
+    const sinkron = async () => {
+        if (menyinkron.current || !peran) return
+        menyinkron.current = true
+        setStatusSimpan('menyimpan')
+        try {
+            let berubah = selisih()
+            while (berubah.length > 0) {
+                const target = permsRef.current
+                await izinPeranService.bulkUpsert(peran.kode_peran, berubah.map(k => {
+                    const [id_menu, aksi] = k.split('::')
+                    return { id_menu, aksi, diizinkan: target[k] }
+                }))
+                const tersimpan = { ...tersimpanRef.current }
+                berubah.forEach(k => { tersimpan[k] = target[k] })
+                tersimpanRef.current = tersimpan
+                berubah = selisih()
+            }
+            setStatusSimpan('tersimpan')
+        } catch (err) {
+            toast.push(
+                <Notification type="danger" title="Perubahan izin gagal disimpan">
+                    {parseApiError(err)} — centang dikembalikan ke data yang tersimpan.
+                </Notification>
+            )
+            tersimpanRef.current = await muatPetaIzin(peran.kode_peran, Object.keys(tersimpanRef.current))
+                .catch(() => tersimpanRef.current)
+            permsRef.current = { ...tersimpanRef.current }
+            setPerms(permsRef.current)
+            setStatusSimpan('gagal')
+        } finally {
+            menyinkron.current = false
+        }
+    }
+
+    const terapkan = (ubah: (sekarang: Record<string, boolean>) => Record<string, boolean>) => {
+        const next = ubah(permsRef.current)
+        permsRef.current = next
+        setPerms(next)
+        sinkron()
+    }
+
     const toggle = (idMenu: string, aksi: string) => {
         const key = permKey(idMenu, aksi)
-        setPerms(prev => ({ ...prev, [key]: !prev[key] }))
+        terapkan(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
     const toggleAll = (idMenu: string) => {
-        const allOn = AKSI.every(a => perms[permKey(idMenu, a)])
-        setPerms(prev => {
+        terapkan(prev => {
+            const allOn = AKSI.every(a => prev[permKey(idMenu, a)])
             const next = { ...prev }
             AKSI.forEach(a => { next[permKey(idMenu, a)] = !allOn })
             return next
@@ -106,7 +175,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
         const q = cariMenu.trim().toLowerCase()
         if (!q) return grup
         return grup
-            .map(g => g.root.nama_menu.toLowerCase().includes(q)
+            .map(g => g.label.toLowerCase().includes(q)
                 ? g
                 : {
                     ...g,
@@ -122,51 +191,26 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
 
     const toggleKolom = (aksi: string) => {
         const allOn = semuaItem.every(m => perms[permKey(m.id_menu, aksi)])
-        setPerms(prev => {
-            const next = { ...prev }
-            semuaItem.forEach(m => { next[permKey(m.id_menu, aksi)] = !allOn })
-            return next
-        })
+        setMassal({ aksi, nyala: !allOn, idMenu: semuaItem.map(m => m.id_menu) })
+        setMassalOpen(true)
     }
 
     const toggleMatrix = () => {
         const allOn = semuaItem.every(m => AKSI.every(a => perms[permKey(m.id_menu, a)]))
-        setPerms(prev => {
-            const next = { ...prev }
-            semuaItem.forEach(m => AKSI.forEach(a => { next[permKey(m.id_menu, a)] = !allOn }))
-            return next
-        })
+        setMassal({ aksi: null, nyala: !allOn, idMenu: semuaItem.map(m => m.id_menu) })
+        setMassalOpen(true)
     }
 
-    const handleSave = async () => {
-        if (!peran) return
-        setSaving(true)
-        try {
-            // Kirim HANYA sel yang berubah — menyimpan seluruh matriks akan
-            // menulis baris revoke per-perusahaan utk semua sel kosong dan
-            // mengalahkan baseline global (mis. izin mobile supir).
-            const permissions = grup.flatMap(g => g.items).flatMap(m =>
-                AKSI.map(a => permKey(m.id_menu, a))
-                    .filter(key => (perms[key] ?? false) !== (permsAwal[key] ?? false))
-                    .map(key => ({
-                        id_menu:    m.id_menu,
-                        aksi:       key.split('::')[1],
-                        diizinkan:  perms[key] ?? false,
-                    }))
-            )
-            if (permissions.length === 0) {
-                toast.push(<Notification type="info" title="Tidak ada perubahan untuk disimpan" />)
-                setSaving(false)
-                return
-            }
-            await izinPeranService.bulkUpsert(peran.kode_peran, permissions)
-            setPermsAwal({ ...perms })
-            toast.push(<Notification type="success" title="Izin akses berhasil disimpan" />)
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
-            setSaving(false)
-        }
+    const terapkanMassal = () => {
+        if (!massal) return
+        const { aksi, nyala, idMenu } = massal
+        setMassalOpen(false)
+        const daftarAksi: readonly string[] = aksi ? [aksi] : AKSI
+        terapkan(prev => {
+            const next = { ...prev }
+            idMenu.forEach(idItem => daftarAksi.forEach(a => { next[permKey(idItem, a)] = nyala }))
+            return next
+        })
     }
 
     const bukaUbah = () => {
@@ -254,19 +298,11 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
 
             {/* Permission Matrix */}
             <Card>
-                <form onSubmit={e => { e.preventDefault(); handleSave() }}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h5 className="font-semibold">Izin Akses</h5>
-                            <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu</p>
-                            <p className="text-gray-400 text-xs mt-0.5">Centang &quot;Lihat&quot; juga menentukan menu yang tampil di sidebar peran ini.</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="plain" icon={<HiOutlineRefresh />} onClick={loadData}>Reset</Button>
-                            <Button type="submit" size="sm" variant="solid" icon={<HiOutlineSave />} loading={saving}>
-                                Simpan
-                            </Button>
-                        </div>
+                <div>
+                    <div className="mb-4">
+                        <h5 className="font-semibold">Izin Akses</h5>
+                        <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu — setiap perubahan langsung tersimpan, tanpa tombol Simpan.</p>
+                        <p className="text-gray-400 text-xs mt-0.5">Centang &quot;Lihat&quot; juga menentukan menu yang tampil di sidebar peran ini.</p>
                     </div>
 
                     <div className="mb-4">
@@ -294,7 +330,22 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                             <table className="w-full text-sm">
                                 <thead className="bg-blue-50 dark:bg-blue-500/10">
                                     <tr>
-                                        <th className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48 border-b border-gray-200 dark:border-gray-700">Menu</th>
+                                        <th className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-48 border-b border-gray-200 dark:border-gray-700">
+                                            <div className="flex items-center gap-3">
+                                                <span>Menu</span>
+                                                <span aria-live="polite" className="flex items-center gap-1 normal-case tracking-normal font-normal whitespace-nowrap">
+                                                    {statusSimpan === 'menyimpan' && (
+                                                        <><Spinner size="14px" /><span className="text-gray-500 dark:text-gray-300">Menyimpan…</span></>
+                                                    )}
+                                                    {statusSimpan === 'tersimpan' && (
+                                                        <><HiCheckCircle className="text-base text-emerald-600 dark:text-emerald-400" /><span className="text-emerald-700 dark:text-emerald-400">Tersimpan</span></>
+                                                    )}
+                                                    {statusSimpan === 'gagal' && (
+                                                        <><HiOutlineExclamationCircle className="text-base text-red-500" /><span className="text-red-600 dark:text-red-400">Gagal disimpan</span></>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </th>
                                         <th className="sticky top-24 z-10 bg-blue-50 dark:bg-gray-800 py-2.5 px-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide w-20 border-b border-gray-200 dark:border-gray-700">
                                             <div className="flex flex-col items-center gap-1.5">
                                                 <span>Semua</span>
@@ -343,7 +394,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                                                 {adaAnak && (
                                                     <tr className="bg-gray-50/70 dark:bg-gray-800/40">
                                                         <td colSpan={2 + AKSI.length} className="py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                                            {g.root.nama_menu}
+                                                            {g.label}
                                                         </td>
                                                     </tr>
                                                 )}
@@ -385,11 +436,22 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                             </table>
                         </div>
                     )}
-                </form>
+                </div>
                 <div className="flex justify-end mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="default" icon={<HiArrowLeft />} onClick={() => router.back()}>Kembali</Button>
                 </div>
             </Card>
+            <ConfirmDialog isOpen={massalOpen} type={massal?.nyala ? 'info' : 'danger'}
+                title={massal?.nyala
+                    ? `Izinkan ${massal.aksi ? LABEL_AKSI[massal.aksi] : 'semua aksi'} untuk ${massal.idMenu.length} menu?`
+                    : `Cabut ${massal?.aksi ? LABEL_AKSI[massal.aksi] : 'semua aksi'} dari ${massal?.idMenu.length ?? 0} menu?`}
+                confirmText={massal?.nyala ? 'Ya, Izinkan' : 'Ya, Cabut'} cancelText="Batal"
+                onClose={() => setMassalOpen(false)} onCancel={() => setMassalOpen(false)} onConfirm={terapkanMassal}>
+                <p className="text-sm">
+                    Perubahan langsung tersimpan untuk peran <span className="font-semibold">{peran.nama_peran}</span>
+                    {cariMenu ? ' dan hanya berlaku pada menu hasil pencarian yang sedang tampil.' : ' dan berlaku pada seluruh menu di daftar.'}
+                </p>
+            </ConfirmDialog>
             <Dialog isOpen={ubahOpen} onClose={() => setUbahOpen(false)} onRequestClose={() => setUbahOpen(false)}>
                 <h5 className="mb-4">Ubah Peran</h5>
                 <form onSubmit={e => { e.preventDefault(); simpanUbah() }}>

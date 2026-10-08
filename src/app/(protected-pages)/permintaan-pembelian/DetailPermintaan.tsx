@@ -816,16 +816,16 @@ export default function DetailPermintaan({ id }: { id: string }) {
 
                     {data.bukti.length > 0 && (
                         <Card>
-                            <div className="flex flex-col gap-5">
+                            <div className="flex flex-wrap gap-x-8 gap-y-5">
                                 {(['pengajuan', 'pembelian', 'penerimaan'] as TahapBukti[]).map(tahap => {
                                     const daftar = data.bukti.filter(b => b.tahap === tahap)
                                     if (daftar.length === 0) return null
                                     return (
-                                        <div key={tahap}>
+                                        <div key={tahap} className="w-full sm:w-auto min-w-0 max-w-full">
                                             <p className={`${LABEL} mb-2`}>{TAHAP_LABEL[tahap]} ({daftar.length})</p>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                                            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
                                                 {daftar.map(b => (
-                                                    <div key={b.id_bukti} className="relative">
+                                                    <div key={b.id_bukti} className="relative min-w-0 sm:w-40">
                                                         <a href={b.url_file} onClick={klik(b.url_file, b.nama_asli, b.nama_asli.replace(/\.[^.]+$/, ''))}
                                                             target="_blank" rel="noopener noreferrer" title={`Buka ${b.nama_asli}`}>
                                                             {buktiGambar(b) ? (
