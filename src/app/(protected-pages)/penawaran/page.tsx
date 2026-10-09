@@ -102,7 +102,9 @@ export default function PenawaranPage() {
                             {row.nomor_penawaran.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm leading-tight">{row.nomor_penawaran}</p>
+                            <Link href={ROUTES.PENAWARAN_DETAIL(row.id_penawaran)} className="block text-sm font-semibold leading-tight text-blue-500 hover:underline">
+                                {row.nomor_penawaran}
+                            </Link>
                             <p className="text-xs text-gray-400 mt-0.5 max-w-[200px] truncate">{row.judul}</p>
                         </div>
                     </div>
