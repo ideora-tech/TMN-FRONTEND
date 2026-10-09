@@ -93,6 +93,13 @@ export const cutiService = {
         const { data } = await axios.post(API_ENDPOINTS.PENGAJUAN_CUTI_BATALKAN(id))
         return data.data as PengajuanCuti
     },
+    async opsiPemohon() {
+        const { data } = await axios.get(API_ENDPOINTS.PENGAJUAN_CUTI_OPSI_PEMOHON)
+        return data.data as {
+            karyawan: { id_karyawan: string; nik: string; nama_karyawan: string }[]
+            supir: { id_supir: string; nama: string }[]
+        }
+    },
     async cutiAktif(tanggal?: string) {
         const { data } = await axios.get(API_ENDPOINTS.PENGAJUAN_CUTI_AKTIF, { params: { tanggal } })
         return data.data as CutiAktif[]

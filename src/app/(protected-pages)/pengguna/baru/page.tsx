@@ -9,21 +9,28 @@ import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { penggunaService } from '@/services/pengguna.service'
+import { penggunaService, OpsiTautanSupir } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
+import TautanSupirField, { NilaiTautanSupir, PERAN_SUPIR, PERAN_SUPIR_VENDOR, peranSupir } from '../TautanSupirField'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
 
 export default function PenggunaBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({ username: '', email: '', kata_sandi: '', kode_peran: '', aktif: true, id_karyawan: '' })
+    const [tautan, setTautan] = useState<NilaiTautanSupir>({ id_supir: '', id_supir_vendor: '' })
+    const [opsiSupir, setOpsiSupir] = useState<OpsiTautanSupir | null>(null)
+    const [opsiSupirGagal, setOpsiSupirGagal] = useState(false)
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
     const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
+        penggunaService.opsiSupir()
+            .then(setOpsiSupir)
+            .catch(() => setOpsiSupirGagal(true))
         axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } })
             .then(r => setPeranOptions((r.data.data as Peran[]).map(p => ({ value: p.kode_peran, label: p.nama_peran }))))
             .catch(() => {})
@@ -53,13 +60,15 @@ export default function PenggunaBaruPage() {
         try {
             await penggunaService.create({
                 id_perusahaan: null,
-                id_karyawan: form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? null : (form.id_karyawan || null),
+                id_karyawan: peranSupir(form.kode_peran) ? null : (form.id_karyawan || null),
                 username: form.username,
                 email: form.email,
                 kata_sandi: form.kata_sandi,
                 kode_peran: form.kode_peran || null,
                 aktif: form.aktif,
                 harus_ganti_password: false,
+                id_supir: form.kode_peran === PERAN_SUPIR && tautan.id_supir ? tautan.id_supir : undefined,
+                id_supir_vendor: form.kode_peran === PERAN_SUPIR_VENDOR && tautan.id_supir_vendor ? tautan.id_supir_vendor : undefined,
             })
 
             toast.push(<Notification type="success" title="Pengguna berhasil ditambahkan" />)
@@ -103,14 +112,14 @@ export default function PenggunaBaruPage() {
                         <Select isClearable isSearchable placeholder="Pilih peran..."
                             options={peranOptions}
                             value={peranOptions.find(o => o.value === form.kode_peran) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '', id_karyawan: opt?.value === 'SUPIR' || opt?.value === 'SUPIR_VENDOR' ? '' : p.id_karyawan }))} />
+                            onChange={opt => setForm(p => ({ ...p, kode_peran: opt?.value ?? '', id_karyawan: peranSupir(opt?.value) ? '' : p.id_karyawan }))} />
                     </FormItem>
                     <FormItem label="Status">
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                             onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                     </FormItem>
-                    {form.kode_peran !== 'SUPIR' && form.kode_peran !== 'SUPIR_VENDOR' && (
+                    {!peranSupir(form.kode_peran) && (
                         <FormItem label="Tautkan ke Karyawan (opsional)">
                             <Select isClearable isSearchable
                                 placeholder="Pilih karyawan..."
@@ -120,11 +129,8 @@ export default function PenggunaBaruPage() {
                             <p className="text-xs text-gray-400 mt-1.5">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</p>
                         </FormItem>
                     )}
-                    {(form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR') && (
-                        <div className="sm:col-span-2 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
-                            Setelah akun dibuat, tautkan ke supirnya dari halaman Supir → Edit → Akun Login Mobile. Tautan karyawan (untuk supir internal) juga dikelola dari halaman Supir — supir luar tidak perlu karyawan.
-                        </div>
-                    )}
+                    <TautanSupirField peran={form.kode_peran} opsi={opsiSupir} gagalMuat={opsiSupirGagal}
+                        nilai={tautan} onChange={setTautan} />
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>

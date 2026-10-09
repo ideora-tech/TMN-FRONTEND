@@ -49,14 +49,32 @@ export type KaryawanPayload = Partial<
     id_lokasi?: string | null
 }
 
+export type JenisPerubahanJabatan = 'awal' | 'promosi' | 'mutasi' | 'demosi' | 'penyesuaian'
+
 export interface RiwayatJabatan {
-    id_riwayat: string
-    id_jabatan_lama: string | null
-    id_jabatan_baru: string | null
-    jabatan_lama: string | null
-    jabatan_baru: string | null
-    dibuat_pada: string
+    id_riwayat: string | null
+    id_jabatan: string | null
+    nama_jabatan: string | null
+    nama_departemen: string | null
+    tanggal_mulai: string | null
+    tanggal_selesai: string | null
+    sedang_dijabat: boolean
+    jenis: JenisPerubahanJabatan | null
+    nomor_sk: string | null
+    keterangan: string | null
+    dicatat_oleh: string | null
+    dicatat_pada: string | null
 }
+
+export interface UbahJabatanPayload {
+    id_jabatan: string
+    tanggal_efektif: string
+    jenis?: JenisPerubahanJabatan
+    nomor_sk?: string | null
+    keterangan?: string | null
+}
+
+export type KoreksiRiwayatJabatanPayload = Omit<UbahJabatanPayload, 'id_jabatan'>
 
 export const karyawanService = {
     async list(page = 1, limit = 15, search?: string, status?: string) {
@@ -80,6 +98,14 @@ export const karyawanService = {
     },
     async riwayatJabatan(id: string) {
         const { data } = await axios.get(API_ENDPOINTS.KARYAWAN_RIWAYAT_JABATAN(id))
+        return data.data as RiwayatJabatan[]
+    },
+    async ubahJabatan(id: string, payload: UbahJabatanPayload) {
+        const { data } = await axios.patch(API_ENDPOINTS.KARYAWAN_JABATAN(id), payload)
+        return data.data as Karyawan
+    },
+    async koreksiRiwayatJabatan(id: string, idRiwayat: string, payload: KoreksiRiwayatJabatanPayload) {
+        const { data } = await axios.patch(API_ENDPOINTS.KARYAWAN_RIWAYAT_JABATAN_DETAIL(id, idRiwayat), payload)
         return data.data as RiwayatJabatan[]
     },
 }

@@ -9,8 +9,6 @@ import { HiOutlineSearch, HiOutlineX, HiOutlineCheckCircle, HiOutlineXCircle, Hi
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { cutiService, PengajuanCuti, JenisCuti, StatusPengajuanCuti } from '@/services/cuti.service'
-import { karyawanService } from '@/services/karyawan.service'
-import { supirService } from '@/services/supir.service'
 
 type Option = { value: string; label: string }
 
@@ -92,12 +90,10 @@ export default function PengajuanTab() {
             setJenisList(res.data)
             setJenisOptions(res.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_cuti, label: j.nama_jenis })))
         }).catch(() => {})
-        karyawanService.list(1, 500).then(res =>
-            setKaryawanOptions(res.data.filter(k => k.aktif).map(k => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
-        ).catch(() => {})
-        supirService.list(1, 500, undefined, 'aktif').then(res =>
-            setSupirOptions(res.data.map(s => ({ value: s.id_supir, label: s.nama })))
-        ).catch(() => {})
+        cutiService.opsiPemohon().then(opsi => {
+            setKaryawanOptions(opsi.karyawan.map(k => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` })))
+            setSupirOptions(opsi.supir.map(s => ({ value: s.id_supir, label: s.nama })))
+        }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [])
 
     useEffect(() => {

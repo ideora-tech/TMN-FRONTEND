@@ -258,6 +258,8 @@ export const API_ENDPOINTS = {
     KARYAWAN:        '/api/proxy/karyawan',
     KARYAWAN_DETAIL: (id: string) => `/api/proxy/karyawan/${id}`,
     KARYAWAN_RIWAYAT_JABATAN: (id: string) => `/api/proxy/karyawan/${id}/riwayat-jabatan`,
+    KARYAWAN_RIWAYAT_JABATAN_DETAIL: (id: string, idRiwayat: string) => `/api/proxy/karyawan/${id}/riwayat-jabatan/${idRiwayat}`,
+    KARYAWAN_JABATAN: (id: string) => `/api/proxy/karyawan/${id}/jabatan`,
     KARYAWAN_KONTRAK:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak`,
     KARYAWAN_KONTRAK_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/kontrak/${id}`,
     DOKUMEN_KARYAWAN:        '/api/proxy/dokumen-karyawan',
@@ -269,6 +271,7 @@ export const API_ENDPOINTS = {
     JENIS_CUTI_DETAIL:        (id: string) => `/api/proxy/jenis-cuti/${id}`,
     PENGAJUAN_CUTI:           '/api/proxy/pengajuan-cuti',
     PENGAJUAN_CUTI_AKTIF:     '/api/proxy/pengajuan-cuti/aktif',
+    PENGAJUAN_CUTI_OPSI_PEMOHON: '/api/proxy/pengajuan-cuti/opsi-pemohon',
     PENGAJUAN_CUTI_SETUJUI:   (id: string) => `/api/proxy/pengajuan-cuti/${id}/setujui`,
     PENGAJUAN_CUTI_TOLAK:     (id: string) => `/api/proxy/pengajuan-cuti/${id}/tolak`,
     PENGAJUAN_CUTI_BATALKAN:  (id: string) => `/api/proxy/pengajuan-cuti/${id}/batalkan`,
@@ -308,6 +311,7 @@ export const API_ENDPOINTS = {
     PENGGUNA:                  '/api/proxy/pengguna',
     PENGGUNA_DETAIL:           (id: string) => `/api/proxy/pengguna/${id}`,
     PENGGUNA_CHANGE_PASSWORD:  (id: string) => `/api/proxy/pengguna/${id}/change-password`,
+    PENGGUNA_OPSI_SUPIR:       '/api/proxy/pengguna/opsi-supir',
 
     // Peran
     PERAN:        '/api/proxy/peran',

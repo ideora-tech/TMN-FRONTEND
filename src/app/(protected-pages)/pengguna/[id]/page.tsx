@@ -10,12 +10,17 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { penggunaService, Pengguna } from '@/services/pengguna.service'
+import { penggunaService, Pengguna, OpsiTautanSupir } from '@/services/pengguna.service'
 import { Peran } from '@/services/peran.service'
-import { supirService, Supir } from '@/services/supir.service'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
+import TautanSupirField, { NilaiTautanSupir, PERAN_SUPIR, PERAN_SUPIR_VENDOR, peranSupir } from '../TautanSupirField'
 
 const AKTIF_OPTIONS = [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }]
+
+const tautanDari = (opsi: OpsiTautanSupir | null, idPengguna: string): NilaiTautanSupir => ({
+    id_supir: opsi?.supir.find(s => s.id_pengguna === idPengguna)?.id_supir ?? '',
+    id_supir_vendor: opsi?.supir_vendor.find(v => v.id_pengguna === idPengguna)?.id_supir_vendor ?? '',
+})
 
 export default function PenggunaDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -27,8 +32,9 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
     const [saving, setSaving]   = useState(false)
     const [peranOptions, setPeranOptions] = useState<{ value: string; label: string }[]>([])
 
-    // tautan supir (akun login mobile) — read-only di sini, dikelola dari halaman Supir
-    const [supirList, setSupirList]     = useState<Supir[]>([])
+    const [opsiSupir, setOpsiSupir]     = useState<OpsiTautanSupir | null>(null)
+    const [opsiSupirGagal, setOpsiSupirGagal] = useState(false)
+    const [tautan, setTautan]           = useState<NilaiTautanSupir>({ id_supir: '', id_supir_vendor: '' })
     const [karyawanList, setKaryawanList] = useState<Karyawan[]>([])
 
     const [pwOpen, setPwOpen]   = useState(false)
@@ -40,23 +46,31 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
         Promise.all([
             penggunaService.get(id),
             axios.get(API_ENDPOINTS.PERAN, { params: { limit: 999 } }),
-            supirService.list(1, 500).catch(() => null),
+            penggunaService.opsiSupir().catch(() => null),
             karyawanService.list(1, 500).catch(() => null),
         ]).then(([p, pRes, sRes, kRes]) => {
             setData(p); setForm(p)
             setPeranOptions((pRes.data.data as Peran[]).map(r => ({ value: r.kode_peran, label: r.nama_peran })))
             if (kRes) setKaryawanList(kRes.data)
-            if (sRes) setSupirList(sRes.data)
+            if (sRes) {
+                setOpsiSupir(sRes)
+                setTautan(tautanDari(sRes, id))
+            } else {
+                setOpsiSupirGagal(true)
+            }
         }).catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
           .finally(() => setLoading(false))
     }, [id])
 
-    const supirTertaut = supirList.find(s => s.id_pengguna === id) ?? null
-    const namaKaryawanSupir = supirTertaut?.id_karyawan
-        ? (karyawanList.find(k => k.id_karyawan === supirTertaut.id_karyawan)?.nama_karyawan ?? supirTertaut.id_karyawan)
-        : null
+    const supirTertaut = opsiSupir?.supir.find(s => s.id_pengguna === id) ?? null
+    const supirVendorTertaut = opsiSupir?.supir_vendor.find(v => v.id_pengguna === id) ?? null
+    const supirDipilih = opsiSupir?.supir.find(s => s.id_supir === tautan.id_supir) ?? null
 
     const karyawanOptions = karyawanList.map(k => ({ value: k.id_karyawan, label: `${k.nama_karyawan} — ${k.nik}` }))
+
+    const tautanAwal = tautanDari(opsiSupir, id)
+    const supirAkanDilepas = data?.kode_peran === PERAN_SUPIR && form.kode_peran !== PERAN_SUPIR ? supirTertaut?.nama ?? null : null
+    const supirVendorAkanDilepas = data?.kode_peran === PERAN_SUPIR_VENDOR && form.kode_peran !== PERAN_SUPIR_VENDOR ? supirVendorTertaut?.nama ?? null : null
 
     const handleSave = async () => {
         setSaving(true)
@@ -66,9 +80,19 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 email:       form.email,
                 kode_peran:  form.kode_peran ?? null,
                 aktif:       form.aktif,
-                id_karyawan: form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? null : (form.id_karyawan ?? null),
+                id_karyawan: peranSupir(form.kode_peran) ? null : (form.id_karyawan ?? null),
+                ...(opsiSupir && form.kode_peran === PERAN_SUPIR && tautan.id_supir !== tautanAwal.id_supir
+                    ? { id_supir: tautan.id_supir || null } : {}),
+                ...(opsiSupir && form.kode_peran === PERAN_SUPIR_VENDOR && tautan.id_supir_vendor !== tautanAwal.id_supir_vendor
+                    ? { id_supir_vendor: tautan.id_supir_vendor || null } : {}),
             })
             setData(updated)
+            setForm(updated)
+
+            const opsiBaru = await penggunaService.opsiSupir().catch(() => null)
+            setOpsiSupir(opsiBaru)
+            setOpsiSupirGagal(opsiBaru === null)
+            setTautan(tautanDari(opsiBaru, id))
 
             setEditing(false)
             toast.push(<Notification type="success" title="Pengguna berhasil diperbarui" />)
@@ -146,28 +170,35 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 { label: 'Email',         value: data.email },
                                 { label: 'Peran',         value: peranOptions.find(o => o.value === data.kode_peran)?.label ?? data.kode_peran ?? <span className="text-gray-400">—</span> },
                                 { label: 'Login Terakhir', value: data.login_terakhir ? dayjs(data.login_terakhir).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span> },
-                                ...(data.kode_peran === 'SUPIR' ? [{
-                                    label: 'Karyawan (via Profil Supir)',
-                                    value: supirTertaut
-                                        ? (namaKaryawanSupir
-                                            ? <span className="font-semibold">{namaKaryawanSupir}</span>
-                                            : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
-                                        : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>,
-                                }] : [{
-                                    label: 'Karyawan Tertaut',
-                                    value: data.id_karyawan
-                                        ? <span className="font-semibold">{karyawanOptions.find(o => o.value === data.id_karyawan)?.label ?? data.id_karyawan}</span>
-                                        : <span className="text-gray-400">Belum ditautkan</span>,
-                                }]),
-                                ...(data.kode_peran === 'SUPIR' ? [{
+                                ...(data.kode_peran === PERAN_SUPIR ? [{
                                     label: 'Dipakai oleh Supir',
                                     value: supirTertaut
                                         ? <span className="font-semibold text-primary cursor-pointer hover:underline"
                                             onClick={() => router.push(ROUTES.SUPIR_DETAIL(supirTertaut.id_supir))}>
                                             {supirTertaut.nama}
                                           </span>
-                                        : <span className="text-gray-400">Belum ada — tautkan dari halaman Supir</span>,
-                                }] : []),
+                                        : <span className="text-gray-400">{opsiSupirGagal ? 'Data supir gagal dimuat' : 'Belum ada — klik Edit untuk memilih supir'}</span>,
+                                }, {
+                                    label: 'Karyawan (via Profil Supir)',
+                                    value: supirTertaut
+                                        ? (supirTertaut.nama_karyawan
+                                            ? <span className="font-semibold">{supirTertaut.nama_karyawan}</span>
+                                            : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
+                                        : <span className="text-gray-400">{opsiSupirGagal ? 'Data supir gagal dimuat' : 'Belum ada supir yang memakai akun ini'}</span>,
+                                }] : data.kode_peran === PERAN_SUPIR_VENDOR ? [{
+                                    label: 'Dipakai oleh Supir Vendor',
+                                    value: supirVendorTertaut
+                                        ? <span className="font-semibold text-primary cursor-pointer hover:underline"
+                                            onClick={() => router.push(ROUTES.SUPIR_VENDOR_DETAIL(supirVendorTertaut.id_supir_vendor))}>
+                                            {supirVendorTertaut.nama} — {supirVendorTertaut.nama_vendor}
+                                          </span>
+                                        : <span className="text-gray-400">{opsiSupirGagal ? 'Data supir vendor gagal dimuat' : 'Belum ada — klik Edit untuk memilih supir vendor'}</span>,
+                                }] : [{
+                                    label: 'Karyawan Tertaut',
+                                    value: data.id_karyawan
+                                        ? <span className="font-semibold">{karyawanOptions.find(o => o.value === data.id_karyawan)?.label ?? data.id_karyawan}</span>
+                                        : <span className="text-gray-400">Belum ditautkan</span>,
+                                }]),
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -210,18 +241,26 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     value={AKTIF_OPTIONS.find(o => o.value === String(form.aktif)) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, aktif: opt?.value === 'true' }))} />
                             </FormItem>
-                            {form.kode_peran === 'SUPIR' || form.kode_peran === 'SUPIR_VENDOR' ? (
+                            <TautanSupirField peran={form.kode_peran} idPengguna={id} opsi={opsiSupir} gagalMuat={opsiSupirGagal}
+                                nilai={tautan} onChange={setTautan} />
+                            {form.kode_peran === PERAN_SUPIR && (
                                 <FormItem label="Karyawan (via Profil Supir)">
                                     <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
-                                        {supirTertaut
-                                            ? (namaKaryawanSupir
-                                                ? <span className="font-semibold">{namaKaryawanSupir}</span>
+                                        {supirDipilih
+                                            ? (supirDipilih.nama_karyawan
+                                                ? <span className="font-semibold">{supirDipilih.nama_karyawan}</span>
                                                 : <span className="text-gray-400">Supir luar — tidak tertaut karyawan</span>)
-                                            : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
+                                            : <span className="text-gray-400">{opsiSupirGagal ? 'Data supir gagal dimuat' : 'Belum ada supir yang dipilih'}</span>}
                                     </div>
                                     <p className="text-xs text-gray-400 mt-1.5">Mengikuti profil supir — dikelola dari halaman Supir → Edit → Tautkan ke Karyawan</p>
                                 </FormItem>
-                            ) : (
+                            )}
+                            {(supirAkanDilepas || supirVendorAkanDilepas) && (
+                                <div className="sm:col-span-2 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+                                    Peran diganti, jadi tautan akun ini ke {supirAkanDilepas ? 'supir' : 'supir vendor'} {supirAkanDilepas ?? supirVendorAkanDilepas} akan dilepas saat disimpan.
+                                </div>
+                            )}
+                            {!peranSupir(form.kode_peran) && (
                                 <FormItem label="Tautkan ke Karyawan (opsional)">
                                     <Select isClearable isSearchable
                                         placeholder="Pilih karyawan..."
@@ -231,22 +270,9 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                     <p className="text-xs text-gray-400 mt-1.5">Karyawan yang memakai akun ini — dipakai untuk login mobile staff (absensi & cuti) dan resolusi approver keuangan tipe jabatan</p>
                                 </FormItem>
                             )}
-                            {form.kode_peran === 'SUPIR' && (
-                                <FormItem label="Dipakai oleh Supir">
-                                    <div className="h-11 flex items-center px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 text-sm">
-                                        {supirTertaut
-                                            ? <span className="font-semibold text-primary cursor-pointer hover:underline"
-                                                onClick={() => router.push(ROUTES.SUPIR_DETAIL(supirTertaut.id_supir))}>
-                                                {supirTertaut.nama}
-                                              </span>
-                                            : <span className="text-gray-400">Belum ada supir yang memakai akun ini</span>}
-                                    </div>
-                                    <p className="text-xs text-gray-400 mt-1.5">Tautan akun login mobile dikelola dari halaman Supir → Edit → Akun Login Mobile</p>
-                                </FormItem>
-                            )}
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data) }}>Kembali</Button>
+                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setTautan(tautanDari(opsiSupir, id)) }}>Kembali</Button>
                             <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
                         </div>
                         </form>

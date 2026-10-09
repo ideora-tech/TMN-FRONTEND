@@ -13,13 +13,13 @@ import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
-import { karyawanService, Karyawan, RiwayatJabatan } from '@/services/karyawan.service'
+import { karyawanService, Karyawan } from '@/services/karyawan.service'
 import { karyawanExitService, JenisExit } from '@/services/karyawanExit.service'
 import { kasbonService } from '@/services/kasbon.service'
 import { kontrakKaryawanService, KontrakKaryawan, JenisKontrak } from '@/services/kontrakKaryawan.service'
 import { dokumenKaryawanService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
-import { Jabatan } from '@/services/jabatan.service'
 import { LokasiKantor } from '@/services/lokasi-kantor.service'
+import RiwayatJabatanSection from './RiwayatJabatanSection'
 
 const JENIS_EXIT_OPTIONS: { value: JenisExit; label: string }[] = [
     { value: 'resign',        label: 'Resign' },
@@ -81,7 +81,7 @@ function getExpiryInfo(berlakuSampai: string | null): { label: string; className
     return { label: `${days} hari lagi`, className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' }
 }
 
-type FormState = Partial<Karyawan> & { id_jabatan?: string; id_lokasi?: string }
+type FormState = Partial<Karyawan> & { id_lokasi?: string }
 
 type KontrakForm = {
     id_kontrak?: string
@@ -135,7 +135,6 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
     const [form, setForm]         = useState<FormState>({})
     const [errors, setErrors]     = useState<Partial<Record<keyof FormState, string>>>({})
     const [saving, setSaving]     = useState(false)
-    const [jabatanOptions, setJabatanOptions] = useState<{ value: string; label: string }[]>([])
     const [lokasiOptions, setLokasiOptions]   = useState<{ value: string; label: string }[]>([])
 
     const [kontrakList, setKontrakList]     = useState<KontrakKaryawan[]>([])
@@ -188,7 +187,6 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
 
     const isiForm = (k: Karyawan): FormState => ({
         ...k,
-        id_jabatan: k.jabatan?.id_jabatan ?? '',
         id_lokasi:  k.lokasi?.id_lokasi ?? '',
     })
 
@@ -204,14 +202,6 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             .catch(() => setDokumenList([]))
     }, [id])
 
-    const [riwayatJabatan, setRiwayatJabatan] = useState<RiwayatJabatan[]>([])
-
-    useEffect(() => {
-        karyawanService.riwayatJabatan(id)
-            .then(setRiwayatJabatan)
-            .catch(() => setRiwayatJabatan([]))
-    }, [id, karyawan?.jabatan?.id_jabatan])
-
     useEffect(() => {
         karyawanService.get(id)
             .then(k => { setKaryawan(k); setForm(isiForm(k)) })
@@ -219,9 +209,6 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             .finally(() => setLoading(false))
         muatKontrak()
         muatDokumen()
-        axios.get(API_ENDPOINTS.JABATAN, { params: { limit: 999 } })
-            .then(jRes => setJabatanOptions((jRes.data.data as Jabatan[]).map(j => ({ value: j.id_jabatan, label: j.nama_jabatan }))))
-            .catch(() => {})
         axios.get(API_ENDPOINTS.LOKASI_KANTOR, { params: { limit: 999 } })
             .then(lRes => setLokasiOptions((lRes.data.data as LokasiKantor[]).map(l => ({ value: l.id_lokasi, label: l.nama_lokasi }))))
             .catch(() => {})
@@ -277,7 +264,6 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                 tanggal_masuk:        form.tanggal_masuk || null,
                 status_kepegawaian:   form.status_kepegawaian ?? null,
                 gaji_pokok:           form.gaji_pokok,
-                id_jabatan:           form.id_jabatan || null,
                 id_lokasi:            form.id_lokasi || null,
                 aktif:                form.aktif,
             })
@@ -668,11 +654,9 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                                     value={STATUS_KEPEGAWAIAN_OPTIONS.find(o => o.value === form.status_kepegawaian) ?? null}
                                     onChange={opt => setForm(p => ({ ...p, status_kepegawaian: (opt?.value as Karyawan['status_kepegawaian']) ?? null }))} />
                             </FormItem>
-                            <FormItem label="Jabatan">
-                                <Select isClearable isSearchable placeholder="Pilih jabatan..."
-                                    options={jabatanOptions}
-                                    value={jabatanOptions.find(o => o.value === form.id_jabatan) ?? null}
-                                    onChange={opt => setForm(p => ({ ...p, id_jabatan: opt?.value ?? '' }))} />
+                            <FormItem label="Jabatan"
+                                extra={<span className="text-xs text-gray-400">Diubah lewat kartu Riwayat Jabatan di bawah supaya perubahannya tercatat</span>}>
+                                <Input value={karyawan.jabatan?.nama_jabatan ?? 'Belum ada jabatan'} disabled />
                             </FormItem>
                             <FormItem label="Lokasi Kerja">
                                 <Select isClearable isSearchable placeholder="Pilih lokasi..."
@@ -938,34 +922,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                 )}
             </Card>
 
-            {riwayatJabatan.length > 0 && (
-                <Card>
-                    <div className="mb-4">
-                        <h5 className="font-bold">Riwayat Jabatan</h5>
-                        <p className="text-gray-500 text-sm mt-0.5">Mutasi & promosi tercatat otomatis saat jabatan diubah</p>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Tanggal</th>
-                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Dari</th>
-                                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide">Menjadi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {riwayatJabatan.map(r => (
-                                    <tr key={r.id_riwayat}>
-                                        <td className="py-2.5 px-3 text-xs">{dayjs(r.dibuat_pada).format('DD MMM YYYY HH:mm')}</td>
-                                        <td className="py-2.5 px-3">{r.jabatan_lama ?? <span className="text-gray-400">Tanpa jabatan</span>}</td>
-                                        <td className="py-2.5 px-3 font-medium">{r.jabatan_baru ?? <span className="text-gray-400">Tanpa jabatan</span>}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            )}
+            <RiwayatJabatanSection karyawan={karyawan} onJabatanBerubah={setKaryawan} />
 
             {/* Dialog Tambah/Edit Dokumen */}
             <Dialog isOpen={dokumenOpen} width={800} onRequestClose={() => setDokumenOpen(false)} onClose={() => setDokumenOpen(false)}>
