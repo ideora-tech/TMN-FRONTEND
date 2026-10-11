@@ -347,6 +347,13 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </Tag>
                             </a>
                         )}
+                        {p.id_pengisian_kas_kecil && (
+                            <a href={ROUTES.KAS_KECIL_PENGISIAN_DETAIL(p.id_pengisian_kas_kecil)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 cursor-pointer hover:opacity-80">
+                                    Dari Kas Kecil <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
                         {p.periode_dari && (
                             <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
                                 Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}
@@ -419,7 +426,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_permintaan_pembelian && onEdit && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_pengisian_kas_kecil && !p.id_permintaan_pembelian && onEdit && (
                             <Tooltip title="Edit">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -428,7 +435,7 @@ export default function PengajuanBulkTable({ list, loading, bulkActions, showSta
                                 </span>
                             </Tooltip>
                         )}
-                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_permintaan_pembelian && onDelete && (
+                        {(p.status === 'menunggu_approval' || p.status === 'ditolak') && bolehKelola && !p.id_uang_jalan && !p.id_kasbon && !p.id_pengisian_kas_kecil && !p.id_permintaan_pembelian && onDelete && (
                             <Tooltip title="Hapus">
                                 <span
                                     className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"

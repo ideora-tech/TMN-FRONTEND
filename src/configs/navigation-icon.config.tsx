@@ -35,6 +35,10 @@ import {
     PiFileTextDuotone,
     PiWalletDuotone,
     PiHandCoinsDuotone,
+    PiPiggyBankDuotone,
+    PiChartBarDuotone,
+    PiPercentDuotone,
+    PiChartLineUpDuotone,
 } from 'react-icons/pi'
 import type { JSX } from 'react'
 
@@ -77,6 +81,10 @@ const navigationIcon: NavigationIcons = {
     wallet:        <PiWalletDuotone />,
     handCoins:     <PiHandCoinsDuotone />,
     coins:         <PiCoinsDuotone />,
+    piggyBank:     <PiPiggyBankDuotone />,
+    chartBar:      <PiChartBarDuotone />,
+    percent:       <PiPercentDuotone />,
+    chartLineUp:   <PiChartLineUpDuotone />,
 }
 
 export default navigationIcon

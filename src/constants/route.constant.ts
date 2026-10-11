@@ -205,4 +205,14 @@ export const ROUTES = {
     PARAMETER_BOK_DETAIL: (id: string) => `/parameter-bok/${id}`,
 
     FORMAT_KODE: '/format-kode',
+
+    KAS_KECIL:                   '/kas-kecil',
+    KAS_KECIL_PENGISIAN_BARU:    '/kas-kecil/pengisian/baru',
+    KAS_KECIL_PENGISIAN_DETAIL:  (id: string) => `/kas-kecil/pengisian/${id}`,
+    KAS_KECIL_PENGISIAN_EDIT:    (id: string) => `/kas-kecil/pengisian/${id}/edit`,
+    KAS_KECIL_PENGELUARAN_BARU:  '/kas-kecil/pengeluaran/baru',
+    KAS_KECIL_PENGELUARAN_EDIT:  (id: string) => `/kas-kecil/pengeluaran/${id}/edit`,
+    LAPORAN_PEMASUKAN:           '/laporan-pemasukan',
+    LAPORAN_PENGELUARAN:         '/laporan-pengeluaran',
+    REKAP_PAJAK:                 '/rekap-pajak',
 } as const

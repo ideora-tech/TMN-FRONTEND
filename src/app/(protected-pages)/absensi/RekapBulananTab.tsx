@@ -117,7 +117,9 @@ export default function RekapBulananTab() {
                         <p className="font-semibold text-amber-600">
                             {jam > 0 ? `${jam}j ` : ''}{sisa > 0 ? `${sisa}m` : ''}
                         </p>
-                        <p className="text-xs text-gray-500">{formatRupiah(row.original.lembur_rupiah)}</p>
+                        {row.original.lembur_rupiah !== null && (
+                            <p className="text-xs text-gray-500">{formatRupiah(row.original.lembur_rupiah)}</p>
+                        )}
                     </div>
                 )
             },

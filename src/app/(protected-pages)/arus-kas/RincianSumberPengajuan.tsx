@@ -13,6 +13,7 @@ import type { InvoiceVendor } from '@/services/invoice-vendor.service'
 import type { PermintaanPembelian } from '@/services/permintaanPembelian.service'
 import type { UangJalan } from '@/services/uangJalan.service'
 import type { Kasbon } from '@/services/kasbon.service'
+import type { PengisianKasKecil } from '@/services/kasKecil.service'
 import { labelBulan } from '../kasbon/kasbonMeta'
 import { STATUS_LABEL as STATUS_PEMBELIAN_LABEL, STATUS_TAG as STATUS_PEMBELIAN_TAG } from '../pembelian-sparepart/status'
 import { STATUS_LABEL as STATUS_PR_LABEL, STATUS_TAG as STATUS_PR_TAG, adaKomponenBiaya, rincianBiaya } from '../permintaan-pembelian/status'
@@ -35,6 +36,7 @@ const JUDUL: Record<RincianSumber['tipe'], string> = {
     uang_jalan:     'Rincian Uang Jalan',
     uang_jalan_manual: 'Rincian Uang Jalan',
     kasbon:         'Rincian Kasbon',
+    pengisian_kas_kecil: 'Rincian Pengisian Kas Kecil',
     invoice_vendor: 'Rincian Invoice Vendor',
     permintaan_pembelian: 'Rincian Permintaan Pembelian',
 }
@@ -536,6 +538,16 @@ function RincianUangJalanManualBlok({ data }: { data: UangJalan }) {
                     <p className={LABEL_CLASS}>Rute</p>
                     <p className={VALUE_CLASS}>{data.rute}</p>
                 </div>
+                <div className="sm:col-span-2">
+                    <p className={LABEL_CLASS}>Proyek</p>
+                    {data.id_proyek ? (
+                        <p className={VALUE_CLASS}>{data.kode_proyek} — {data.nama_proyek}</p>
+                    ) : (
+                        <p className={`${VALUE_CLASS} [overflow-wrap:anywhere]`}>
+                            Di luar proyek{data.alasan_tanpa_proyek ? ` — ${data.alasan_tanpa_proyek}` : ''}
+                        </p>
+                    )}
+                </div>
                 <div>
                     <p className={LABEL_CLASS}>UJ per Trip</p>
                     <p className={VALUE_CLASS}>{formatRupiah(data.uang_jalan_per_trip)} × {formatNum(data.jumlah_trip)} trip</p>
@@ -605,6 +617,41 @@ function RincianKasbonBlok({ data }: { data: Kasbon }) {
             <div className="mt-4">
                 <p className={LABEL_CLASS}>Keperluan</p>
                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{data.keperluan}</p>
+            </div>
+        </>
+    )
+}
+
+function RincianPengisianKasKecilBlok({ data }: { data: PengisianKasKecil }) {
+    const rekening = [data.nama_bank, data.nomor_rekening, data.atas_nama_rekening].filter(Boolean).join(' · ')
+
+    return (
+        <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <p className={LABEL_CLASS}>No. Pengisian</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor_pengisian}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Tanggal</p>
+                    <p className={VALUE_CLASS}>{dayjs(data.tanggal).format('DD MMM YYYY')}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nominal Pengisian</p>
+                    <p className={VALUE_CLASS}>{formatRupiah(data.nominal)}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Diajukan Oleh</p>
+                    <p className={VALUE_CLASS}>{data.dibuat_oleh_nama ?? '—'}</p>
+                </div>
+                <div className="sm:col-span-2">
+                    <p className={LABEL_CLASS}>Rekening Sumber</p>
+                    <p className={VALUE_CLASS}>{rekening || '—'}</p>
+                </div>
+            </div>
+            <div className="mt-4">
+                <p className={LABEL_CLASS}>Keterangan</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{data.keterangan}</p>
             </div>
         </>
     )
@@ -820,6 +867,7 @@ export default function RincianSumberPengajuan({ idPengajuan }: { idPengajuan: s
             {!loading && !error && rincian?.tipe === 'uang_jalan' && <RincianUangJalanBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'uang_jalan_manual' && <RincianUangJalanManualBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'kasbon' && <RincianKasbonBlok data={rincian.data} />}
+            {!loading && !error && rincian?.tipe === 'pengisian_kas_kecil' && <RincianPengisianKasKecilBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'invoice_vendor' && <RincianInvoiceVendorBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'permintaan_pembelian' && <RincianPermintaanPembelianBlok data={rincian.data} />}
         </div>

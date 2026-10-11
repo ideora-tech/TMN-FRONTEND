@@ -3,6 +3,29 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4019'
 
+const asalDariEnv = (): string | null => {
+    const nilai = process.env.NEXTAUTH_URL || process.env.AUTH_URL
+    if (!nilai) return null
+    try {
+        return new URL(nilai).origin
+    } catch {
+        return null
+    }
+}
+
+const asalPublik = (request: NextRequest): string | null => {
+    const dariEnv = asalDariEnv()
+    if (dariEnv) return dariEnv
+
+    const host = (request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? '').split(',')[0].trim()
+    if (!host) return null
+
+    const proto = (request.headers.get('x-forwarded-proto') ?? '').split(',')[0].trim()
+        || new URL(request.url).protocol.replace(':', '')
+
+    return `${proto}://${host}`
+}
+
 async function handler(
     request: NextRequest,
     { params }: { params: Promise<{ path: string[] }> },
@@ -16,6 +39,11 @@ async function handler(
 
     const headers: Record<string, string> = {
         Accept: 'application/json',
+    }
+
+    const asal = asalPublik(request)
+    if (asal) {
+        headers['X-Frontend-Url'] = asal
     }
 
     // Inject Sanctum token from session

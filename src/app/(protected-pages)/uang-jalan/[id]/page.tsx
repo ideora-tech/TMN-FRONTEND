@@ -120,12 +120,17 @@ export default function UangJalanDetailPage() {
                         <p className={LABEL_CLASS}>Rute</p>
                         <p className={VALUE_CLASS}>{data.rute}</p>
                     </div>
-                    <div>
+                    <div className="col-span-2 lg:col-span-4">
                         <p className={LABEL_CLASS}>Proyek</p>
                         {data.id_proyek ? (
                             <p className={VALUE_CLASS}>{data.kode_proyek} — {data.nama_proyek}</p>
                         ) : (
-                            <p className="text-sm text-gray-400 mt-0.5">—</p>
+                            <>
+                                <p className={VALUE_CLASS}>Di luar proyek</p>
+                                {data.alasan_tanpa_proyek && (
+                                    <p className="text-sm text-gray-500 mt-0.5 whitespace-pre-line [overflow-wrap:anywhere]">Alasan: {data.alasan_tanpa_proyek}</p>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

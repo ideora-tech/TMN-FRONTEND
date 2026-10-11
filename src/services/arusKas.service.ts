@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 import type { PerawatanArmadaWithArmada } from './perawatanArmada.service'
 import type { PembelianSparepart } from './pembelianSparepart.service'
 import type { PayrollPeriode, RingkasanPayroll } from './payroll.service'
@@ -7,11 +8,12 @@ import type { InvoiceVendor } from './invoice-vendor.service'
 import type { PermintaanPembelian } from './permintaanPembelian.service'
 import type { UangJalan } from './uangJalan.service'
 import type { Kasbon } from './kasbon.service'
+import type { PengisianKasKecil } from './kasKecil.service'
 
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
 export type KeputusanApproval = 'setuju' | 'tolak'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'kasbon' | 'lainnya'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'kasbon' | 'pengisian_kas_kecil' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -74,6 +76,7 @@ export interface PengajuanPengeluaran {
     id_invoice_vendor?: string | null
     id_uang_jalan?: string | null
     id_kasbon?: string | null
+    id_pengisian_kas_kecil?: string | null
     id_supir: string | null
     id_proyek: string | null
     periode_dari: string | null
@@ -235,6 +238,7 @@ export type RincianSumberPengajuan =
     | { tipe: 'uang_jalan'; data: RincianUangJalan }
     | { tipe: 'uang_jalan_manual'; data: UangJalan }
     | { tipe: 'kasbon'; data: Kasbon }
+    | { tipe: 'pengisian_kas_kecil'; data: PengisianKasKecil }
     | { tipe: 'invoice_vendor'; data: InvoiceVendor }
     | { tipe: 'permintaan_pembelian'; data: PermintaanPembelian }
 
@@ -252,23 +256,16 @@ export const arusKasService = {
     },
 
     async exportExcel(params?: { dari?: string; sampai?: string; arah?: ArahArusKas; sumber?: SumberArusKas }) {
-        const res = await axios.get(API_ENDPOINTS.ARUS_KAS_EXPORT_EXCEL, {
-            responseType: 'blob',
-            params: {
+        await unduhDariApi(
+            API_ENDPOINTS.ARUS_KAS_EXPORT_EXCEL,
+            {
                 dari: params?.dari || undefined,
                 sampai: params?.sampai || undefined,
                 arah: params?.arah || undefined,
                 sumber: params?.sumber || undefined,
             },
-        })
-        const href = URL.createObjectURL(res.data)
-        const link = document.createElement('a')
-        link.href = href
-        link.download = `arus-kas-${params?.dari || 'semua'}.xlsx`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(href)
+            `arus-kas-${params?.dari || 'semua'}.xlsx`,
+        )
     },
 
     async listPengajuan(status?: StatusPengajuan, opsi: { search?: string; kategori?: string } = {}) {

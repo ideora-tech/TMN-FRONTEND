@@ -33,7 +33,7 @@ export interface RekapAbsensiRow {
     alpha: number
     cuti: number
     lembur_menit: number
-    lembur_rupiah: number
+    lembur_rupiah: number | null
 }
 
 export interface PengaturanAbsensi {

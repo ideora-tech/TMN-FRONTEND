@@ -8,6 +8,7 @@ export const KODE_PENGAJUAN_PENGELUARAN = [
     'pembelian_aset',
     'pembayaran_pinjaman',
     'kasbon',
+    'pengisian_kas_kecil',
     'lainnya',
     'persetujuan_transfer',
 ] as const

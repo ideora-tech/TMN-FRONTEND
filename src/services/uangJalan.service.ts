@@ -19,6 +19,7 @@ export interface UangJalan {
     id_proyek: string | null
     kode_proyek: string | null
     nama_proyek: string | null
+    alasan_tanpa_proyek: string | null
     id_penugasan: string | null
     nama_vendor: string | null
     nopol: string
@@ -52,6 +53,7 @@ export type UangJalanPayload = {
     id_armada_vendor: string | null
     id_rute: string
     id_proyek: string | null
+    alasan_tanpa_proyek: string | null
     id_penugasan: string | null
     tol_per_trip: number
     bbm_per_trip: number
@@ -62,11 +64,39 @@ export type UangJalanPayload = {
     catatan: string | null
 }
 
+export const FILTER_DI_LUAR_PROYEK = 'tanpa'
+
 export type UangJalanFilter = {
     search?: string
     status?: string
     id_proyek?: string
 }
+
+export interface KelompokUangJalan {
+    kunci: string
+    tipe_driver: TipeDriver
+    kunci_driver: string
+    id_proyek: string | null
+    nama_driver: string
+    nama_vendor: string | null
+    kode_proyek: string | null
+    nama_proyek: string | null
+    jumlah: number
+    total_trip: number
+    total_nominal: number
+    tanggal_awal: string
+    tanggal_akhir: string
+    jumlah_nopol: number
+    nopol: string
+    jumlah_rute: number
+    rute: string
+    status: Partial<Record<StatusPengajuan, number>>
+    tunggal: UangJalan | null
+}
+
+export type KunciKelompokUangJalan = Pick<KelompokUangJalan, 'tipe_driver' | 'kunci_driver' | 'id_proyek'>
+
+type MetaHalaman = { page: number; total: number; totalPages: number; limit: number }
 
 export interface OpsiSupir {
     id_supir: string
@@ -155,8 +185,24 @@ export interface RateCardRincian {
 }
 
 export const uangJalanService = {
-    async list(page = 1, limit = 10, filter: UangJalanFilter = {}) {
+    async list(page = 1, limit = 10, filter: UangJalanFilter = {}, kelompok?: KunciKelompokUangJalan) {
         const { data } = await axios.get(API_ENDPOINTS.UANG_JALAN, {
+            params: {
+                page,
+                limit,
+                search: filter.search || undefined,
+                status: filter.status || undefined,
+                id_proyek: filter.id_proyek || undefined,
+                kelompok_tipe: kelompok?.tipe_driver,
+                kelompok_driver: kelompok?.kunci_driver,
+                kelompok_proyek: kelompok?.id_proyek ?? undefined,
+            },
+        })
+        return data as { data: UangJalan[]; meta: MetaHalaman }
+    },
+
+    async listKelompok(page = 1, limit = 10, filter: UangJalanFilter = {}) {
+        const { data } = await axios.get(API_ENDPOINTS.UANG_JALAN_KELOMPOK, {
             params: {
                 page,
                 limit,
@@ -165,7 +211,7 @@ export const uangJalanService = {
                 id_proyek: filter.id_proyek || undefined,
             },
         })
-        return data as { data: UangJalan[]; meta: { page: number; total: number; totalPages: number; limit: number } }
+        return data as { data: KelompokUangJalan[]; meta: MetaHalaman }
     },
 
     async get(id: string) {

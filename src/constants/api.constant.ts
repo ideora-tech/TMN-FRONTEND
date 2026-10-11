@@ -468,6 +468,7 @@ export const API_ENDPOINTS = {
 
     // Uang Jalan
     UANG_JALAN:         '/api/proxy/uang-jalan',
+    UANG_JALAN_KELOMPOK: '/api/proxy/uang-jalan/kelompok',
     UANG_JALAN_DETAIL:  (id: string) => `/api/proxy/uang-jalan/${id}`,
     UANG_JALAN_RIWAYAT: (id: string) => `/api/proxy/uang-jalan/${id}/riwayat`,
     UANG_JALAN_OPSI:        '/api/proxy/uang-jalan/opsi',
@@ -515,4 +516,28 @@ export const API_ENDPOINTS = {
     // Pengaturan Kode
     PENGATURAN_KODE:        '/api/proxy/pengaturan-kode',
     PENGATURAN_KODE_UPDATE: (entitas: string) => `/api/proxy/pengaturan-kode/${entitas}`,
+
+    // Kas Kecil
+    KAS_KECIL_RINGKASAN:         '/api/proxy/kas-kecil/ringkasan',
+    KAS_KECIL_BUKU:              '/api/proxy/kas-kecil/buku',
+    KAS_KECIL_BUKU_EXPORT:       '/api/proxy/kas-kecil/buku/export/excel',
+    KAS_KECIL_TRANSAKSI:         '/api/proxy/kas-kecil/transaksi',
+    KAS_KECIL_TRANSAKSI_DETAIL:  (id: string) => `/api/proxy/kas-kecil/transaksi/${id}`,
+    KAS_KECIL_SALDO_AWAL:        '/api/proxy/kas-kecil/saldo-awal',
+    KAS_KECIL_PENGISIAN:         '/api/proxy/kas-kecil/pengisian',
+    KAS_KECIL_PENGISIAN_DETAIL:  (id: string) => `/api/proxy/kas-kecil/pengisian/${id}`,
+    KAS_KECIL_PENGISIAN_RIWAYAT: (id: string) => `/api/proxy/kas-kecil/pengisian/${id}/riwayat`,
+
+    // Laporan Pemasukan
+    LAPORAN_PEMASUKAN:        '/api/proxy/laporan-pemasukan',
+    LAPORAN_PEMASUKAN_EXPORT: '/api/proxy/laporan-pemasukan/export/excel',
+
+    // Laporan Pengeluaran
+    LAPORAN_PENGELUARAN:        '/api/proxy/laporan-pengeluaran',
+    LAPORAN_PENGELUARAN_EXPORT: '/api/proxy/laporan-pengeluaran/export/excel',
+
+    // Rekap Pajak
+    REKAP_PAJAK:         '/api/proxy/rekap-pajak',
+    REKAP_PAJAK_RINCIAN: '/api/proxy/rekap-pajak/rincian',
+    REKAP_PAJAK_EXPORT:  '/api/proxy/rekap-pajak/export/excel',
 } as const

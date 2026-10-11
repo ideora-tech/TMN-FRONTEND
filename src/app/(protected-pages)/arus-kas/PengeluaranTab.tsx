@@ -110,6 +110,13 @@ export default function PengeluaranTab() {
                                 </Tag>
                             </a>
                         )}
+                        {p.id_pengisian_kas_kecil && (
+                            <a href={ROUTES.KAS_KECIL_PENGISIAN_DETAIL(p.id_pengisian_kas_kecil)} target="_blank" rel="noreferrer" className="w-fit">
+                                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 cursor-pointer hover:opacity-80">
+                                    Dari Kas Kecil <HiOutlineExternalLink className="text-xs" />
+                                </Tag>
+                            </a>
+                        )}
                         {p.periode_dari && (
                             <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
                                 Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}

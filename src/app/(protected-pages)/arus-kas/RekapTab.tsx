@@ -6,7 +6,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef } from '@/components/shared/DataTable'
-import { HiOutlineDocumentDownload, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineDownload, HiOutlineEye } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
@@ -89,6 +89,10 @@ const KATEGORI_TAG_META: Record<KategoriPengajuan, { label: string; tag: string 
     kasbon: {
         label: 'Kasbon',
         tag: 'bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-300',
+    },
+    pengisian_kas_kecil: {
+        label: 'Pengisian Kas Kecil',
+        tag: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
     },
     lainnya: {
         label: 'Lainnya',
@@ -211,7 +215,8 @@ export default function RekapTab() {
             cell: ({ row }) => {
                 const t = row.original
                 if (t.sumber === 'pengajuan_pengeluaran' && t.kategori) {
-                    const km = KATEGORI_TAG_META[t.kategori as KategoriPengajuan]
+                    const km = (KATEGORI_TAG_META as Partial<typeof KATEGORI_TAG_META>)[t.kategori as KategoriPengajuan]
+                        ?? { label: t.kategori.replace(/_/g, ' '), tag: KATEGORI_TAG_META.lainnya.tag }
                     return <Tag className={`text-xs font-semibold ${km.tag}`}>{km.label}</Tag>
                 }
                 if (t.sumber === 'pemasukan_manual' && t.kategori) {
@@ -303,12 +308,11 @@ export default function RekapTab() {
                         />
                     </div>
                     {loading && <Spinner size={20} />}
-                    <div className="flex-1" />
-                    <Tooltip title="Export Excel">
-                        <Button size="sm" variant="default" icon={<HiOutlineDocumentDownload />}
-                            disabled={!rekap || transaksi.length === 0}
-                            loading={exporting} onClick={handleExport} />
-                    </Tooltip>
+                    <Button size="sm" variant="solid" icon={<HiOutlineDownload />} className="ml-auto"
+                        disabled={!rekap || transaksi.length === 0}
+                        loading={exporting} onClick={handleExport}>
+                        Unduh Excel
+                    </Button>
                 </div>
 
                 {loading && !rekap ? (

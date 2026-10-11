@@ -49,6 +49,15 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             </a>
         )
     }
+    if (p.id_pengisian_kas_kecil) {
+        return (
+            <a href={ROUTES.KAS_KECIL_PENGISIAN_DETAIL(p.id_pengisian_kas_kecil)} target="_blank" rel="noreferrer" className="w-fit">
+                <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 cursor-pointer hover:opacity-80">
+                    Dari Kas Kecil <HiOutlineExternalLink className="text-xs" />
+                </Tag>
+            </a>
+        )
+    }
     if (p.id_trip) {
         return (
             <a href={ROUTES.TRIP_DETAIL(p.id_trip)} target="_blank" rel="noreferrer" className="w-fit">
@@ -245,7 +254,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.id_kasbon || p.periode_dari || p.id_supir) && (
+                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.id_kasbon || p.id_pengisian_kas_kecil || p.periode_dari || p.id_supir) && (
                         <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 

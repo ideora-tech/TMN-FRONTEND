@@ -29,6 +29,7 @@ const TIPE_OPTIONS: TipeOption[] = [
 ]
 
 type FieldKey =
+    | 'id_proyek' | 'alasan_tanpa_proyek'
     | 'tanggal' | 'id_supir' | 'id_armada' | 'id_vendor' | 'id_supir_vendor' | 'id_armada_vendor'
     | 'id_rute' | 'uang_jalan_per_trip' | 'jumlah_trip' | 'nomor_rekening' | 'nama_bank'
 
@@ -40,6 +41,9 @@ type Props = {
 }
 
 const MAKS_UJ_PER_TRIP = 100000000
+const MIN_ALASAN_LUAR_PROYEK = 5
+
+const OPSI_DI_LUAR_PROYEK: Option = { value: '__di_luar_proyek__', label: 'Di luar proyek' }
 
 const SECTION_CLASS = 'sm:col-span-2 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mt-2 mb-3'
 
@@ -51,6 +55,8 @@ export default function UangJalanForm({ mode, initial }: Props) {
     const router = useRouter()
 
     const [idProyek, setIdProyek] = useState(initial?.id_proyek ?? '')
+    const [luarProyek, setLuarProyek] = useState(!initial?.id_proyek && !!initial?.alasan_tanpa_proyek)
+    const [alasanLuarProyek, setAlasanLuarProyek] = useState(initial?.id_proyek ? '' : (initial?.alasan_tanpa_proyek ?? ''))
     const [tanggal, setTanggal] = useState(initial?.tanggal ?? dayjs().format('YYYY-MM-DD'))
     const [tipe, setTipe] = useState<TipeDriver>(initial?.tipe_driver ?? 'internal')
     const [idSupir, setIdSupir] = useState(initial?.id_supir ?? '')
@@ -162,7 +168,16 @@ export default function UangJalanForm({ mode, initial }: Props) {
             })
     }
 
-    const pilihProyek = (id: string) => {
+    const pilihProyek = (nilai: string) => {
+        const luar = nilai === OPSI_DI_LUAR_PROYEK.value
+        const id = luar ? '' : nilai
+        setLuarProyek(luar)
+        setErrors(prev => ({ ...prev, id_proyek: undefined, alasan_tanpa_proyek: undefined }))
+        if (id === idProyek) {
+            if (id && ruteProyek === null) muatDataProyek(id)
+            return
+        }
+
         setIdProyek(id)
         setIdRute('')
         hapusError('id_rute')
@@ -254,7 +269,13 @@ export default function UangJalanForm({ mode, initial }: Props) {
     const supirOptions: Option[] = (opsi?.supir ?? []).map(s => ({ value: s.id_supir, label: s.nama }))
     const armadaOptions: Option[] = (opsi?.armada ?? []).map(a => ({ value: a.id_armada, label: a.merk ? `${a.nopol} — ${a.merk}` : a.nopol }))
     const vendorOptions: Option[] = (opsi?.vendor ?? []).map(v => ({ value: v.id_vendor, label: v.nama_vendor }))
-    const proyekSelectOptions: Option[] = proyekOptions.map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))
+    const proyekSelectOptions: Option[] = [
+        OPSI_DI_LUAR_PROYEK,
+        ...proyekOptions.map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })),
+    ]
+    const proyekTerpilihOption = luarProyek
+        ? OPSI_DI_LUAR_PROYEK
+        : (proyekSelectOptions.find(o => o.value === idProyek) ?? null)
     const ruteOptions: Option[] = (idProyek ? (ruteProyek ?? []) : (opsi?.rute ?? [])).map(r => ({ value: r.id_rute, label: r.nama_rute }))
     const supirVendorOptions: Option[] = (opsiVendor?.supir_vendor ?? []).map(s => ({ value: s.id_supir_vendor, label: s.nama }))
     const armadaVendorOptions: Option[] = (opsiVendor?.armada_vendor ?? []).map(a => ({ value: a.id_armada_vendor, label: a.merk ? `${a.nopol} — ${a.merk}` : a.nopol }))
@@ -280,6 +301,12 @@ export default function UangJalanForm({ mode, initial }: Props) {
 
     const validasi = (): FormErrors => {
         const e: FormErrors = {}
+        if (!idProyek && !luarProyek) e.id_proyek = 'Pilih proyek, atau pilih "Di luar proyek"'
+        if (luarProyek) {
+            const alasan = alasanLuarProyek.trim()
+            if (!alasan) e.alasan_tanpa_proyek = 'Alasan di luar proyek wajib diisi'
+            else if (alasan.length < MIN_ALASAN_LUAR_PROYEK) e.alasan_tanpa_proyek = `Alasan minimal ${MIN_ALASAN_LUAR_PROYEK} karakter`
+        }
         if (!tanggal) e.tanggal = 'Tanggal wajib diisi'
         if (tipe === 'internal') {
             if (!idSupir) e.id_supir = 'Supir wajib dipilih'
@@ -318,6 +345,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
             id_armada_vendor: tipe === 'vendor' ? kosongkanNull(idArmadaVendor) : null,
             id_rute: idRute,
             id_proyek: kosongkanNull(idProyek),
+            alasan_tanpa_proyek: luarProyek ? alasanLuarProyek.trim() : null,
             id_penugasan: null,
             tol_per_trip: Number(tolPerTrip) || 0,
             bbm_per_trip: Number(bbmPerTrip) || 0,
@@ -373,15 +401,27 @@ export default function UangJalanForm({ mode, initial }: Props) {
                 )}
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                        <p className={SECTION_CLASS}>Proyek (opsional)</p>
+                        <p className={SECTION_CLASS}>Proyek</p>
                         <div className="sm:col-span-2">
-                            <FormItem label="Proyek" extra="Membatasi pilihan rute ke rute yang dikontrak proyek ini">
-                                <Select<Option> isSearchable isClearable placeholder="Pilih proyek bila terkait..."
+                            <FormItem label="Proyek" asterisk invalid={!!errors.id_proyek} errorMessage={errors.id_proyek}>
+                                <Select<Option> isSearchable isClearable placeholder="Pilih proyek, atau Di luar proyek..."
                                     options={proyekSelectOptions}
-                                    value={proyekSelectOptions.find(o => o.value === idProyek) ?? null}
+                                    value={proyekTerpilihOption}
                                     onChange={opt => pilihProyek((opt as Option | null)?.value ?? '')} />
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Rute dan tarif mengikuti proyek yang dipilih. Pilih &quot;Di luar proyek&quot; bila perjalanan ini bukan untuk proyek, misalnya unit ke bengkel.
+                                </p>
                             </FormItem>
                         </div>
+                        {luarProyek && (
+                            <div className="sm:col-span-2">
+                                <FormItem label="Alasan di Luar Proyek" asterisk invalid={!!errors.alasan_tanpa_proyek} errorMessage={errors.alasan_tanpa_proyek}>
+                                    <Input placeholder="Contoh: unit ke bengkel, pindah pool, order lepas" maxLength={255} value={alasanLuarProyek}
+                                        invalid={!!errors.alasan_tanpa_proyek}
+                                        onChange={e => { setAlasanLuarProyek(e.target.value); hapusError('alasan_tanpa_proyek') }} />
+                                </FormItem>
+                            </div>
+                        )}
 
                         <p className={SECTION_CLASS}>Driver &amp; Unit</p>
                         <FormItem label="Tanggal" asterisk invalid={!!errors.tanggal} errorMessage={errors.tanggal}>
