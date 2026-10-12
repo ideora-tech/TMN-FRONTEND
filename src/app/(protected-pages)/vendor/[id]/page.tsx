@@ -2,12 +2,12 @@
 import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, Upload, Pagination, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
 import { LampiranMasterPanel } from '@/components/shared/LampiranMaster'
-import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlinePaperClip, HiOutlineSearch } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
@@ -52,6 +52,22 @@ const JENIS_DOKUMEN_OPTIONS = [
     { value: 'Sertifikat ISO',      label: 'Sertifikat ISO' },
     { value: 'Lainnya',             label: 'Lainnya' },
 ]
+
+const MAKS_DOKUMEN_SEKALI = 20
+const UKURAN_HALAMAN_DOKUMEN = 10
+const MAKS_UKURAN_DOKUMEN = 5 * 1024 * 1024
+const EKSTENSI_DOKUMEN = ['pdf', 'jpg', 'jpeg', 'png']
+
+type BarisDokumen = { kunci: string; file: File; jenis_dokumen: string; nomor: string; berlaku_sampai: string; galat: string }
+
+const tebakJenisDokumen = (namaFile: string): string => {
+    const nama = namaFile.toLowerCase()
+    return JENIS_DOKUMEN_OPTIONS.find(o => {
+        if (o.value === 'Lainnya') return false
+        const kata = o.value.toLowerCase().split(' ')[0]
+        return new RegExp(`(^|[^a-z0-9])${kata}([^a-z0-9]|$)`).test(nama)
+    })?.value ?? ''
+}
 
 const MATA_UANG_OPTIONS = [
     { value: 'IDR', label: 'IDR' },
@@ -126,8 +142,11 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     const [dokumen, setDokumen]         = useState<DokumenVendor[]>([])
     const [docLoading, setDocLoading]   = useState(false)
     const [showDocForm, setShowDocForm] = useState(false)
-    const [docForm, setDocForm]         = useState({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' })
-    const [docFile, setDocFile]         = useState<File | null>(null)
+    const [docRows, setDocRows]         = useState<BarisDokumen[]>([])
+    const [resetPilihDok, setResetPilihDok] = useState(0)
+    const [cariDokInput, setCariDokInput] = useState('')
+    const [cariDok, setCariDok]         = useState('')
+    const [halamanDok, setHalamanDok]   = useState(1)
     const [addingDoc, setAddingDoc]     = useState(false)
     const [editDocTarget, setEditDocTarget] = useState<DokumenVendor | null>(null)
     const [editDocForm, setEditDocForm]     = useState({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' })
@@ -272,22 +291,75 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     }
 
     // --- handlers dokumen ---
+    const pilihFileDokumen = (files: File[]) => {
+        setResetPilihDok(n => n + 1)
+        const baru: BarisDokumen[] = []
+        files.forEach((f, i) => {
+            const ekstensi = (f.name.split('.').pop() ?? '').toLowerCase()
+            if (!EKSTENSI_DOKUMEN.includes(ekstensi)) {
+                toast.push(<Notification type="danger" title={`${f.name} bukan PDF, JPG, atau PNG`} />)
+                return
+            }
+            if (f.size > MAKS_UKURAN_DOKUMEN) {
+                toast.push(<Notification type="danger" title={`${f.name} melebihi 5 MB`} />)
+                return
+            }
+            baru.push({
+                kunci: `${Date.now()}-${i}-${f.name}`,
+                file: f,
+                jenis_dokumen: tebakJenisDokumen(f.name),
+                nomor: '',
+                berlaku_sampai: '',
+                galat: '',
+            })
+        })
+        const sisa = MAKS_DOKUMEN_SEKALI - docRows.length
+        if (baru.length > sisa) {
+            toast.push(<Notification type="danger" title={`Maksimal ${MAKS_DOKUMEN_SEKALI} dokumen sekali simpan`} />)
+        }
+        setDocRows([...docRows, ...baru.slice(0, Math.max(sisa, 0))])
+    }
+
+    const ubahBarisDokumen = (kunci: string, patch: Partial<BarisDokumen>) =>
+        setDocRows(prev => prev.map(r => (r.kunci === kunci ? { ...r, ...patch } : r)))
+
+    const tutupFormDokumen = () => { setShowDocForm(false); setDocRows([]) }
+
     const handleAddDokumen = async () => {
-        if (!docForm.jenis_dokumen || !docFile) return
+        if (addingDoc || docRows.length === 0) return
+        if (docRows.some(r => !r.jenis_dokumen)) {
+            setDocRows(prev => prev.map(r => ({ ...r, galat: r.jenis_dokumen ? '' : 'Pilih jenis dokumen' })))
+            toast.push(<Notification type="danger" title="Lengkapi jenis dokumen di setiap baris" />)
+            return
+        }
+
         setAddingDoc(true)
-        try {
-            await dokumenVendorService.create(id, {
-                jenis_dokumen:  docForm.jenis_dokumen,
-                nomor:          docForm.nomor || null,
-                berlaku_sampai: docForm.berlaku_sampai || null,
-            }, docFile)
-            toast.push(<Notification type="success" title="Dokumen berhasil ditambahkan" />)
-            setDocForm({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' })
-            setDocFile(null); setShowDocForm(false)
+        const gagal: BarisDokumen[] = []
+        let berhasil = 0
+        for (const baris of docRows) {
+            try {
+                await dokumenVendorService.create(id, {
+                    jenis_dokumen:  baris.jenis_dokumen,
+                    nomor:          baris.nomor.trim() || null,
+                    berlaku_sampai: baris.berlaku_sampai || null,
+                }, baris.file)
+                berhasil++
+            } catch (err) {
+                gagal.push({ ...baris, galat: parseApiError(err) })
+            }
+        }
+        setAddingDoc(false)
+        setDocRows(gagal)
+
+        if (berhasil > 0) {
+            toast.push(<Notification type="success" title={`${berhasil} dokumen berhasil ditambahkan`} />)
             fetchDokumen()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally { setAddingDoc(false) }
+        }
+        if (gagal.length > 0) {
+            toast.push(<Notification type="danger" title={`${gagal.length} dokumen gagal disimpan — periksa baris yang tersisa`} />)
+        } else {
+            setShowDocForm(false)
+        }
     }
 
     const handleEditDokumen = async () => {
@@ -382,6 +454,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
     const initial       = vendor.nama_vendor?.charAt(0).toUpperCase() ?? 'V'
     const sortedDokumen = sortDokumen(dokumen)
+    const kataDok = cariDok.toLowerCase()
+    const dokumenTersaring = kataDok
+        ? sortedDokumen.filter(d => d.jenis_dokumen.toLowerCase().includes(kataDok) || (d.nomor ?? '').toLowerCase().includes(kataDok))
+        : sortedDokumen
+    const halamanDokAktif = Math.min(halamanDok, Math.max(1, Math.ceil(dokumenTersaring.length / UKURAN_HALAMAN_DOKUMEN)))
+    const dokumenHalaman = dokumenTersaring.slice((halamanDokAktif - 1) * UKURAN_HALAMAN_DOKUMEN, halamanDokAktif * UKURAN_HALAMAN_DOKUMEN)
     const urgentCount   = sortedDokumen.filter(d => getExpiryInfo(d.berlaku_sampai).urgent).length
 
     return (
@@ -534,54 +612,107 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
             {/* Dokumen Vendor */}
             <Card>
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
                     <div>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Dokumen Vendor</p>
+                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            Dokumen Vendor{dokumen.length > 0 ? ` (${formatNum(dokumen.length)})` : ''}
+                        </p>
                         <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal habis masa berlaku terdekat</p>
                     </div>
-                    <Button size="sm" variant="solid" icon={<HiPlusCircle />} onClick={() => setShowDocForm(v => !v)}>
-                        Tambah Dokumen
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {dokumen.length > UKURAN_HALAMAN_DOKUMEN && (
+                            <Input
+                                size="sm"
+                                className="w-64"
+                                placeholder="Cari jenis atau nomor... (tekan Enter)"
+                                suffix={cariDokInput
+                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariDokInput(''); setCariDok(''); setHalamanDok(1) }} />
+                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariDok(cariDokInput.trim()); setHalamanDok(1) }} />}
+                                value={cariDokInput}
+                                onChange={e => setCariDokInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setCariDok(cariDokInput.trim()); setHalamanDok(1) } }}
+                            />
+                        )}
+                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled={addingDoc} onClick={() => setShowDocForm(v => !v)}>
+                            Tambah Dokumen
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Form tambah dokumen */}
                 {showDocForm && (
                     <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                            <FormItem label="Jenis Dokumen" asterisk>
-                                <Select isSearchable={false} placeholder="Pilih jenis..."
-                                    options={JENIS_DOKUMEN_OPTIONS}
-                                    value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === docForm.jenis_dokumen) ?? null}
-                                    onChange={opt => setDocForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '' }))} />
-                            </FormItem>
-                            <FormItem label="Nomor Dokumen">
-                                <Input placeholder="Contoh: 12/PKS/2026" value={docForm.nomor}
-                                    onChange={e => setDocForm(p => ({ ...p, nomor: e.target.value }))} />
-                            </FormItem>
-                            <FormItem label="Berlaku Sampai">
-                                <DatePicker
-                                    value={docForm.berlaku_sampai ? new Date(docForm.berlaku_sampai) : null}
-                                    onChange={date => setDocForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                            </FormItem>
-                            <FormItem label="File Dokumen" asterisk>
-                                <UploadBerkas
-                                    file={docFile}
-                                    accept=".pdf,.jpg,.jpeg,.png"
-                                    label="Pilih file"
-                                    hint="PDF/JPG/PNG"
-                                    onChange={setDocFile}
-                                />
-                            </FormItem>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-xs text-gray-400">
+                                Pilih beberapa file sekaligus — tiap file menjadi satu dokumen. PDF/JPG/PNG · maks. 5 MB per file · maks. {MAKS_DOKUMEN_SEKALI} dokumen sekali simpan.
+                            </p>
+                            <Upload key={resetPilihDok} multiple accept=".pdf,.jpg,.jpeg,.png" showList={false} fileList={[]} disabled={addingDoc}
+                                onChange={pilihFileDokumen}>
+                                <Button type="button" size="sm" variant="default" icon={<HiOutlinePaperClip />} disabled={addingDoc}>Pilih File</Button>
+                            </Upload>
                         </div>
+                        {docRows.length === 0 ? (
+                            <p className="text-gray-400 text-sm py-4 text-center">Belum ada file dipilih</p>
+                        ) : (
+                            <div className="overflow-x-auto mt-3">
+                                <table className="min-w-full text-sm">
+                                    <thead>
+                                        <tr className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                                            <th className="py-2 pr-3 w-8">No</th>
+                                            <th className="py-2 pr-3">File</th>
+                                            <th className="py-2 pr-3">Jenis Dokumen <span className="text-red-500">*</span></th>
+                                            <th className="py-2 pr-3">Nomor Dokumen</th>
+                                            <th className="py-2 pr-3">Berlaku Sampai</th>
+                                            <th className="py-2 w-10"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {docRows.map((r, i) => (
+                                            <tr key={r.kunci} className="border-t border-gray-100 dark:border-gray-700 align-top">
+                                                <td className="py-2 pr-3 pt-4 text-gray-400">{i + 1}</td>
+                                                <td className="py-2 pr-3 pt-3 min-w-40 max-w-56">
+                                                    <p className="text-sm text-gray-800 dark:text-gray-200 truncate" title={r.file.name}>{r.file.name}</p>
+                                                    <p className="text-xs text-gray-400">{(r.file.size / 1024 / 1024).toFixed(1)} MB</p>
+                                                    {r.galat && <p className="text-xs text-red-500 mt-0.5 [overflow-wrap:anywhere]">{r.galat}</p>}
+                                                </td>
+                                                <td className="py-2 pr-3 min-w-44">
+                                                    <Select size="sm" isSearchable={false} placeholder="Pilih jenis..." isDisabled={addingDoc}
+                                                        options={JENIS_DOKUMEN_OPTIONS}
+                                                        value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === r.jenis_dokumen) ?? null}
+                                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                                                        styles={{ menuPortal: base => ({ ...base, zIndex: 60 }) }}
+                                                        onChange={opt => ubahBarisDokumen(r.kunci, { jenis_dokumen: opt?.value ?? '', galat: '' })} />
+                                                </td>
+                                                <td className="py-2 pr-3 min-w-40">
+                                                    <Input size="sm" placeholder="Contoh: 12/PKS/2026" maxLength={100} disabled={addingDoc} value={r.nomor}
+                                                        onChange={e => ubahBarisDokumen(r.kunci, { nomor: e.target.value })} />
+                                                </td>
+                                                <td className="py-2 pr-3 min-w-40">
+                                                    <DatePicker size="sm" inputFormat="DD/MM/YYYY" disabled={addingDoc}
+                                                        value={r.berlaku_sampai ? dayjs(r.berlaku_sampai).toDate() : null}
+                                                        onChange={date => ubahBarisDokumen(r.kunci, { berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
+                                                </td>
+                                                <td className="py-2 pt-3">
+                                                    {!addingDoc && (
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => setDocRows(prev => prev.filter(b => b.kunci !== r.kunci))}>
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button size="sm" variant="plain" icon={<HiOutlineX />}
-                                onClick={() => { setShowDocForm(false); setDocFile(null); setDocForm({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' }) }}>
+                            <Button size="sm" variant="plain" icon={<HiOutlineX />} disabled={addingDoc} onClick={tutupFormDokumen}>
                                 Kembali
                             </Button>
-                            <Button size="sm" variant="solid" loading={addingDoc}
-                                disabled={!docForm.jenis_dokumen || !docFile}
-                                onClick={handleAddDokumen}>
-                                Simpan
+                            <Button size="sm" variant="solid" loading={addingDoc} disabled={docRows.length === 0} onClick={handleAddDokumen}>
+                                {docRows.length > 1 ? `Simpan ${docRows.length} Dokumen` : 'Simpan'}
                             </Button>
                         </div>
                         <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
@@ -592,6 +723,8 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     <div className="flex justify-center py-6"><Spinner /></div>
                 ) : sortedDokumen.length === 0 ? (
                     <p className="text-gray-400 text-sm py-6 text-center">Belum ada dokumen tercatat</p>
+                ) : dokumenTersaring.length === 0 ? (
+                    <p className="text-gray-400 text-sm py-6 text-center">Tidak ada dokumen yang cocok dengan pencarian</p>
                 ) : (
                     <div className="overflow-x-auto mt-4">
                         <table className="w-full text-sm">
@@ -606,7 +739,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {sortedDokumen.map(d => {
+                                {dokumenHalaman.map(d => {
                                     const expiry = getExpiryInfo(d.berlaku_sampai)
                                     return (
                                         <tr key={d.id_dokumen_vendor}>
@@ -658,6 +791,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                 })}
                             </tbody>
                         </table>
+                        {dokumenTersaring.length > UKURAN_HALAMAN_DOKUMEN && (
+                            <div className="flex justify-end pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
+                                <Pagination currentPage={halamanDokAktif} pageSize={UKURAN_HALAMAN_DOKUMEN}
+                                    total={dokumenTersaring.length} onChange={setHalamanDok} />
+                            </div>
+                        )}
                     </div>
                 )}
             </Card>

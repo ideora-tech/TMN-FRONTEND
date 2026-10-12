@@ -11,6 +11,9 @@ export interface DokumenVendor {
     dibuat_pada: string
 }
 
+const DOKUMEN_PER_PERMINTAAN = 100
+const MAKS_PERMINTAAN_DAFTAR = 20
+
 type DocPayload = {
     jenis_dokumen: string
     nomor?: string | null
@@ -29,8 +32,15 @@ function buildFormData(payload: DocPayload, file: File): FormData {
 
 export const dokumenVendorService = {
     async list(idVendor: string) {
-        const { data } = await axios.get(API_ENDPOINTS.VENDOR_DOKUMEN(idVendor))
-        return data.data as DokumenVendor[]
+        const semua: DokumenVendor[] = []
+        for (let halaman = 1; halaman <= MAKS_PERMINTAAN_DAFTAR; halaman++) {
+            const { data } = await axios.get(API_ENDPOINTS.VENDOR_DOKUMEN(idVendor), {
+                params: { page: halaman, limit: DOKUMEN_PER_PERMINTAAN },
+            })
+            semua.push(...(data.data as DokumenVendor[]))
+            if (halaman >= (data.meta?.totalPages ?? 1)) break
+        }
+        return semua
     },
 
     async create(idVendor: string, payload: DocPayload, file?: File | null) {
