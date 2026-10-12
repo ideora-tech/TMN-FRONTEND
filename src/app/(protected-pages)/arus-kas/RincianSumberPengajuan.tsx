@@ -6,7 +6,7 @@ import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { parseApiError } from '@/utils/error.util'
 import { arusKasService } from '@/services/arusKas.service'
-import type { RincianSumberPengajuan as RincianSumber, RincianPayroll, RincianUangJalan, StatusPenugasanUangJalan } from '@/services/arusKas.service'
+import type { RincianSumberPengajuan as RincianSumber, RincianPayroll, RincianUangJalan, StatusPenugasanUangJalan, PengeluaranSupir } from '@/services/arusKas.service'
 import type { PerawatanArmadaWithArmada, StatusPerawatan } from '@/services/perawatanArmada.service'
 import type { PembelianSparepart } from '@/services/pembelianSparepart.service'
 import type { InvoiceVendor } from '@/services/invoice-vendor.service'
@@ -37,6 +37,7 @@ const JUDUL: Record<RincianSumber['tipe'], string> = {
     uang_jalan_manual: 'Rincian Uang Jalan',
     kasbon:         'Rincian Kasbon',
     pengisian_kas_kecil: 'Rincian Pengisian Kas Kecil',
+    pengeluaran_supir: 'Rincian Pengeluaran Supir',
     invoice_vendor: 'Rincian Invoice Vendor',
     permintaan_pembelian: 'Rincian Permintaan Pembelian',
 }
@@ -657,6 +658,51 @@ function RincianPengisianKasKecilBlok({ data }: { data: PengisianKasKecil }) {
     )
 }
 
+function RincianPengeluaranSupirBlok({ data }: { data: PengeluaranSupir }) {
+    const rekening = [data.nama_bank, data.nomor_rekening, data.atas_nama_rekening].filter(Boolean).join(' · ')
+
+    return (
+        <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <p className={LABEL_CLASS}>No. Pengeluaran Supir</p>
+                    <p className={`${VALUE_CLASS} font-mono`}>{data.nomor}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Jenis</p>
+                    <p className={VALUE_CLASS}>{data.label_jenis}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Supir</p>
+                    <p className={VALUE_CLASS}>{data.nama_supir ?? '—'}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Unit</p>
+                    <p className={VALUE_CLASS}>{data.nopol}{data.unit_vendor ? ' (unit vendor)' : ''}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Tanggal Pengeluaran</p>
+                    <p className={VALUE_CLASS}>{dayjs(data.tanggal).format('DD MMM YYYY')}</p>
+                </div>
+                <div>
+                    <p className={LABEL_CLASS}>Nominal</p>
+                    <p className={VALUE_CLASS}>{formatRupiah(data.nominal)}</p>
+                </div>
+                <div className="sm:col-span-2">
+                    <p className={LABEL_CLASS}>Rekening Tujuan</p>
+                    <p className={VALUE_CLASS}>{rekening || 'Tunai (rekening tidak diisi)'}</p>
+                </div>
+                <div className="sm:col-span-2">
+                    <p className={LABEL_CLASS}>Lokasi / Catatan</p>
+                    <p className={`${VALUE_CLASS} whitespace-pre-line`}>{data.keterangan || '—'}</p>
+                </div>
+            </div>
+            <DaftarBukti judul="Foto Nota"
+                bukti={data.foto.map((url, i) => ({ id_bukti: url, url_file: url, nama_asli: `Foto nota ${i + 1}.jpg` }))} />
+        </>
+    )
+}
+
 function RincianPayrollBlok({ data }: { data: RincianPayroll }) {
     const { periode, ringkasan } = data
 
@@ -868,6 +914,7 @@ export default function RincianSumberPengajuan({ idPengajuan }: { idPengajuan: s
             {!loading && !error && rincian?.tipe === 'uang_jalan_manual' && <RincianUangJalanManualBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'kasbon' && <RincianKasbonBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'pengisian_kas_kecil' && <RincianPengisianKasKecilBlok data={rincian.data} />}
+            {!loading && !error && rincian?.tipe === 'pengeluaran_supir' && <RincianPengeluaranSupirBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'invoice_vendor' && <RincianInvoiceVendorBlok data={rincian.data} />}
             {!loading && !error && rincian?.tipe === 'permintaan_pembelian' && <RincianPermintaanPembelianBlok data={rincian.data} />}
         </div>

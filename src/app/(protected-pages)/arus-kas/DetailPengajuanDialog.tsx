@@ -58,6 +58,13 @@ function BadgeSumber({ p }: { p: PengajuanPengeluaran }) {
             </a>
         )
     }
+    if (p.id_pengeluaran_supir) {
+        return (
+            <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
+                Dari Aplikasi Supir
+            </Tag>
+        )
+    }
     if (p.id_trip) {
         return (
             <a href={ROUTES.TRIP_DETAIL(p.id_trip)} target="_blank" rel="noreferrer" className="w-fit">
@@ -254,7 +261,7 @@ export default function DetailPengajuanDialog({ pengajuan, onClose, onRefresh, r
                         </div>
                     )}
 
-                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.id_kasbon || p.id_pengisian_kas_kecil || p.periode_dari || p.id_supir) && (
+                    {(p.id_perawatan || p.id_pembelian || p.id_permintaan_pembelian || p.id_periode || p.id_invoice_vendor || p.id_uang_jalan || p.id_kasbon || p.id_pengisian_kas_kecil || p.id_pengeluaran_supir || p.periode_dari || p.id_supir) && (
                         <RincianSumberPengajuan idPengajuan={p.id_pengajuan} />
                     )}
 

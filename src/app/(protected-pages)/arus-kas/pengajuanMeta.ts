@@ -12,6 +12,8 @@ export const KATEGORI_LABEL: Record<KategoriPengajuan, string> = {
     pengadaan:  'Pengadaan',
     kasbon:     'Kasbon',
     pengisian_kas_kecil: 'Pengisian Kas Kecil',
+    tambal_ban: 'Tambal Ban',
+    cuci_mobil: 'Cuci Mobil',
     lainnya:    'Lainnya',
 }
 
@@ -34,6 +36,8 @@ export const PENERIMA_LABEL: Partial<Record<KategoriPengajuan, string>> = {
     pengadaan: 'Supplier',
     kasbon: 'Karyawan',
     pengisian_kas_kecil: 'Tujuan',
+    tambal_ban: 'Supir',
+    cuci_mobil: 'Supir',
 }
 
 export const STATUS_LABEL: Record<StatusPengajuan, string> = {

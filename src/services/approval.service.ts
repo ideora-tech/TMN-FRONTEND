@@ -61,7 +61,7 @@ export type MetaPersetujuan = {
     totalNominal: number
 }
 
-export type NilaiTipe = 'rupiah' | 'tanggal' | 'angka' | 'teks'
+export type NilaiTipe = 'rupiah' | 'tanggal' | 'angka' | 'teks' | 'tautan'
 
 export interface RincianInfo {
     label: string

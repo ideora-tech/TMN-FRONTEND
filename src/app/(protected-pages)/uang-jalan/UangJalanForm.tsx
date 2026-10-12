@@ -202,7 +202,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
         setIdArmada(id)
         hapusError('id_armada')
         const pemegang = id ? opsi?.supir.find(s => s.id_armada_default === id) : undefined
-        if (pemegang) pilihSupir(pemegang.id_supir)
+        if (pemegang) pilihSupir(pemegang.id_supir, false)
         muatRateCard(idProyek, idRute, id, '')
     }
 
@@ -231,11 +231,30 @@ export default function UangJalanForm({ mode, initial }: Props) {
         setErrors(prev => ({ ...prev, id_supir: undefined, id_armada: undefined, id_vendor: undefined, id_supir_vendor: undefined, id_armada_vendor: undefined }))
     }
 
-    const pilihSupir = (id: string) => {
+    const pilihSupir = (id: string, ikutkanUnit = true) => {
         setIdSupir(id)
         hapusError('id_supir')
         const dipilih = opsi?.supir.find(s => s.id_supir === id)
         isiRekening(dipilih?.nama_bank, dipilih?.nomor_rekening)
+
+        const idUnit = dipilih?.id_armada_default
+        if (ikutkanUnit && idUnit && idUnit !== idArmada && opsi?.armada.some(a => a.id_armada === idUnit)) {
+            setIdArmada(idUnit)
+            hapusError('id_armada')
+            muatRateCard(idProyek, idRute, idUnit, '')
+        }
+    }
+
+    const pilihSupirVendor = (id: string) => {
+        setIdSupirVendor(id)
+        hapusError('id_supir_vendor')
+
+        const idUnit = id ? opsiVendor?.armada_vendor.find(a => a.id_supir_vendor_default === id)?.id_armada_vendor : undefined
+        if (idUnit && idUnit !== idArmadaVendor) {
+            setIdArmadaVendor(idUnit)
+            hapusError('id_armada_vendor')
+            muatRateCard(idProyek, idRute, '', idUnit)
+        }
     }
 
     const pilihVendor = (id: string) => {
@@ -473,7 +492,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
                                         placeholder={!idVendor ? 'Pilih vendor dahulu...' : supirVendorOptions.length === 0 ? 'Vendor belum punya driver terdaftar' : 'Pilih driver...'}
                                         options={supirVendorOptions}
                                         value={supirVendorOptions.find(o => o.value === idSupirVendor) ?? null}
-                                        onChange={opt => { setIdSupirVendor((opt as Option | null)?.value ?? ''); hapusError('id_supir_vendor') }} />
+                                        onChange={opt => pilihSupirVendor((opt as Option | null)?.value ?? '')} />
                                     {driverVendorAdalahPemegang && <p className="text-xs text-gray-400 mt-1">{TEKS_PEMEGANG}</p>}
                                 </FormItem>
                             </>

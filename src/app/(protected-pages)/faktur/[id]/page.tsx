@@ -226,6 +226,31 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
     const [tandaiTerkirimOpen, setTandaiTerkirimOpen] = useState(false)
     const [menandaiTerkirim, setMenandaiTerkirim] = useState(false)
 
+    const [fakturPajakOpen, setFakturPajakOpen] = useState(false)
+    const [nomorFakturPajak, setNomorFakturPajak] = useState('')
+    const [menyimpanFakturPajak, setMenyimpanFakturPajak] = useState(false)
+
+    const bukaFakturPajak = () => {
+        if (!faktur) return
+        setNomorFakturPajak(faktur.nomor_faktur_pajak ?? '')
+        setFakturPajakOpen(true)
+    }
+
+    const simpanFakturPajak = async () => {
+        if (menyimpanFakturPajak) return
+        setMenyimpanFakturPajak(true)
+        try {
+            const updated = await fakturService.ubahNomorFakturPajak(id, nomorFakturPajak.trim() || null)
+            setFaktur(updated)
+            setFakturPajakOpen(false)
+            toast.push(<Notification type="success" title="No. faktur pajak berhasil disimpan" />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenyimpanFakturPajak(false)
+        }
+    }
+
     const { klik } = usePratinjauBerkas()
     const bolehKelolaPiutang = useAksesMenu()('/piutang')
     const [nominalDisentuh, setNominalDisentuh] = useState(false)
@@ -482,6 +507,24 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                         { label: 'Total',           value: <span className="font-semibold">{formatRupiah(faktur.total)}</span> },
                         { label: 'Tanggal Invoice', value: faktur.tanggal_faktur ?? <span className="text-gray-400">—</span> },
                         { label: 'Jatuh Tempo',    value: faktur.jatuh_tempo ?? <span className="text-gray-400">—</span> },
+                        {
+                            label: 'No. Faktur Pajak',
+                            value: (
+                                <span className="inline-flex items-center gap-2">
+                                    {faktur.nomor_faktur_pajak
+                                        ? <span className="font-mono [overflow-wrap:anywhere]">{faktur.nomor_faktur_pajak}</span>
+                                        : <span className="text-gray-400">— belum diisi</span>}
+                                    {faktur.status !== 'batal' && (
+                                        <Tooltip title={faktur.nomor_faktur_pajak ? 'Ubah No. Faktur Pajak' : 'Isi No. Faktur Pajak'}>
+                                            <span className="cursor-pointer inline-flex text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                                                onClick={bukaFakturPajak}>
+                                                <HiOutlinePencilAlt className="text-base" />
+                                            </span>
+                                        </Tooltip>
+                                    )}
+                                </span>
+                            ),
+                        },
                         { label: 'Klien',  value: faktur.nama_klien ?? <span className="text-gray-400">—</span> },
                         {
                             label: 'Proyek',
@@ -641,6 +684,22 @@ export default function FakturDetailPage({ params }: { params: Promise<{ id: str
                 <Input textArea rows={2} maxLength={150} placeholder="Alasan penghapusan (wajib), mis. salah input nominal"
                     value={alasanHapusBayar} onChange={e => setAlasanHapusBayar(e.target.value)} />
             </ConfirmDialog>
+
+            <Dialog isOpen={fakturPajakOpen} onRequestClose={() => setFakturPajakOpen(false)} onClose={() => setFakturPajakOpen(false)} width={460}>
+                <h5 className="text-base font-semibold mb-1">No. Faktur Pajak</h5>
+                <p className="text-xs text-gray-500 mb-4">Nomor faktur pajak untuk invoice {faktur.nomor_faktur}. Tampil di rekap piutang bulanan; kosongkan untuk menghapusnya.</p>
+                <form onSubmit={e => { e.preventDefault(); simpanFakturPajak() }}>
+                    <FormItem label="No. Faktur Pajak">
+                        <Input placeholder="Contoh: 050.026.003.03651896" maxLength={50}
+                            value={nomorFakturPajak}
+                            onChange={e => setNomorFakturPajak(e.target.value)} />
+                    </FormItem>
+                    <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <Button type="button" variant="plain" onClick={() => setFakturPajakOpen(false)}>Kembali</Button>
+                        <Button type="submit" variant="solid" loading={menyimpanFakturPajak}>Simpan</Button>
+                    </div>
+                </form>
+            </Dialog>
 
             <Dialog isOpen={bayarOpen} onRequestClose={() => setBayarOpen(false)} onClose={() => setBayarOpen(false)} width={560}>
                 <h5 className="text-base font-semibold mb-1">Catat Pembayaran</h5>

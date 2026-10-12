@@ -1,11 +1,13 @@
 ﻿'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
-import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineClipboardList } from 'react-icons/hi'
+import Tabs from '@/components/ui/Tabs'
+import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineClipboardList, HiOutlineDownload } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import DataTable from '@/components/shared/DataTable'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
+import DialogUnduhRekapBulanan from '@/components/shared/DialogUnduhRekapBulanan'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah } from '@/utils/formatNumber'
@@ -13,7 +15,12 @@ import { ROUTES } from '@/constants/route.constant'
 import { fakturService, Faktur } from '@/services/faktur.service'
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import useAksesMenu from '@/utils/hooks/useAksesMenu'
 import dayjs from 'dayjs'
+import OutstandingTab from './OutstandingTab'
+
+const TAB_VALUES = ['daftar', 'piutang'] as const
+type TabValue = (typeof TAB_VALUES)[number]
 
 type StatusOption = { value: string; label: string }
 
@@ -40,6 +47,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function FakturPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const tabParam = searchParams.get('tab')
+    const [activeTab, setActiveTab] = useState<TabValue>(TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'daftar')
+    const bolehPiutang = useAksesMenu()(ROUTES.PIUTANG)
+    const tabAktif: TabValue = bolehPiutang ? activeTab : 'daftar'
 
     const [list, setList]       = useState<Faktur[]>([])
     const [loading, setLoading] = useState(false)
@@ -66,10 +78,16 @@ export default function FakturPage() {
         }
     }, [currentPage, pageSize, search, statusFilter])
 
-    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => { if (tabAktif === 'daftar') fetchData() }, [fetchData, tabAktif])
+
+    useEffect(() => {
+        setActiveTab(TAB_VALUES.includes(tabParam as TabValue) ? (tabParam as TabValue) : 'daftar')
+    }, [tabParam])
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const [rekapOpen, setRekapOpen] = useState(false)
 
     const downloadFaktur = async (faktur: Faktur) => {
         const key = faktur.id_faktur
@@ -183,21 +201,7 @@ export default function FakturPage() {
         },
     ]
 
-    return (
-        <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h3 className="font-bold">Invoice</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">Kelola invoice dan penagihan klien</p>
-                </div>
-                <Button
-                    variant="solid" size="sm"
-                    icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.FAKTUR_BARU)}
-                >
-                    Buat Invoice
-                </Button>
-            </div>
+    const daftarInvoice = (
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
@@ -219,6 +223,9 @@ export default function FakturPage() {
                             onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
                         />
                     </div>
+                    <Button size="sm" variant="solid" icon={<HiOutlineDownload />} onClick={() => setRekapOpen(true)}>
+                        Rekap Excel
+                    </Button>
                 </div>
                 <DataTable
                     columns={columns}
@@ -230,6 +237,49 @@ export default function FakturPage() {
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
+    )
+
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 className="font-bold">Invoice</h3>
+                    <p className="text-gray-500 text-sm mt-0.5">Kelola invoice dan penagihan klien</p>
+                </div>
+                {tabAktif === 'daftar' && (
+                    <Button
+                        variant="solid" size="sm"
+                        icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.FAKTUR_BARU)}
+                    >
+                        Buat Invoice
+                    </Button>
+                )}
+            </div>
+
+            {bolehPiutang ? (
+                <Tabs value={activeTab} onChange={val => {
+                    setActiveTab(val as TabValue)
+                    router.replace(val === 'daftar' ? ROUTES.FAKTUR : `${ROUTES.FAKTUR}?tab=${val}`, { scroll: false })
+                }}>
+                    <Tabs.TabList>
+                        <Tabs.TabNav value="daftar">Daftar Invoice</Tabs.TabNav>
+                        <Tabs.TabNav value="piutang">Piutang</Tabs.TabNav>
+                    </Tabs.TabList>
+                    <div className="mt-4">
+                        <Tabs.TabContent value="daftar">{daftarInvoice}</Tabs.TabContent>
+                        <Tabs.TabContent value="piutang"><OutstandingTab /></Tabs.TabContent>
+                    </div>
+                </Tabs>
+            ) : daftarInvoice}
+
+            <DialogUnduhRekapBulanan
+                isOpen={rekapOpen}
+                judul="Rekap Piutang Bulanan"
+                keterangan="Excel berisi semua invoice berstatus Terkirim dan Lunas dengan tanggal invoice di bulan yang dipilih, lengkap dengan DPP, PPN, dan PPh. Filter daftar tidak berpengaruh."
+                onClose={() => setRekapOpen(false)}
+                onUnduh={fakturService.unduhRekapBulanan}
+            />
 
             <LogApprovalDialog
                 isOpen={logApprovalId !== null}

@@ -13,7 +13,7 @@ import type { PengisianKasKecil } from './kasKecil.service'
 export type StatusPengajuan = 'diajukan' | 'dicek' | 'menunggu_approval' | 'disetujui' | 'siap_transfer' | 'ditolak' | 'ditransfer'
 export type StatusApproval = 'menunggu' | 'disetujui' | 'ditolak'
 export type KeputusanApproval = 'setuju' | 'tolak'
-export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'kasbon' | 'pengisian_kas_kecil' | 'lainnya'
+export type KategoriPengajuan = 'uang_jalan' | 'legalitas' | 'perawatan' | 'sparepart' | 'penggajian' | 'pembelian_aset' | 'pembayaran_pinjaman' | 'pembayaran_vendor' | 'pengadaan' | 'kasbon' | 'pengisian_kas_kecil' | 'tambal_ban' | 'cuci_mobil' | 'lainnya'
 export type ArahArusKas = 'masuk' | 'keluar'
 export type SumberArusKas =
     | 'faktur'
@@ -77,6 +77,7 @@ export interface PengajuanPengeluaran {
     id_uang_jalan?: string | null
     id_kasbon?: string | null
     id_pengisian_kas_kecil?: string | null
+    id_pengeluaran_supir?: string | null
     id_supir: string | null
     id_proyek: string | null
     periode_dari: string | null
@@ -231,6 +232,24 @@ export interface RincianPayroll {
     ringkasan: RingkasanPayroll
 }
 
+export interface PengeluaranSupir {
+    id_pengeluaran_supir: string
+    nomor: string
+    jenis: string
+    label_jenis: string
+    tanggal: string
+    nominal: number
+    id_supir: string
+    nama_supir: string | null
+    nopol: string
+    unit_vendor: boolean
+    keterangan: string | null
+    nama_bank: string | null
+    nomor_rekening: string | null
+    atas_nama_rekening: string | null
+    foto: string[]
+}
+
 export type RincianSumberPengajuan =
     | { tipe: 'perawatan'; data: PerawatanArmadaWithArmada }
     | { tipe: 'pembelian'; data: PembelianSparepart }
@@ -239,6 +258,7 @@ export type RincianSumberPengajuan =
     | { tipe: 'uang_jalan_manual'; data: UangJalan }
     | { tipe: 'kasbon'; data: Kasbon }
     | { tipe: 'pengisian_kas_kecil'; data: PengisianKasKecil }
+    | { tipe: 'pengeluaran_supir'; data: PengeluaranSupir }
     | { tipe: 'invoice_vendor'; data: InvoiceVendor }
     | { tipe: 'permintaan_pembelian'; data: PermintaanPembelian }
 

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 
 export interface FakturItem {
     deskripsi: string
@@ -77,6 +78,7 @@ export type FilterOutstandingFaktur = { id_klien?: string; kelompok?: string; se
 export interface Faktur {
     id_faktur: string
     nomor_faktur: string
+    nomor_faktur_pajak?: string | null
     total: number
     pajak?: FakturPajak[]
     nama_pajak?: string | null
@@ -180,5 +182,12 @@ export const fakturService = {
     async unduhOutstanding(params?: FilterOutstandingFaktur) {
         const { data } = await axios.get(API_ENDPOINTS.FAKTUR_OUTSTANDING_EXPORT, { params, responseType: 'blob' })
         return data as Blob
+    },
+    async unduhRekapBulanan(bulan: string) {
+        await unduhDariApi(API_ENDPOINTS.FAKTUR_EXPORT_REKAP_BULANAN, { bulan }, `piutang-${bulan}.xlsx`)
+    },
+    async ubahNomorFakturPajak(id: string, nomor: string | null) {
+        const { data } = await axios.patch(API_ENDPOINTS.FAKTUR_NOMOR_FAKTUR_PAJAK(id), { nomor_faktur_pajak: nomor })
+        return data.data as Faktur
     },
 }

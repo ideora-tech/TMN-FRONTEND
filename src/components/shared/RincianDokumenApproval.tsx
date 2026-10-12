@@ -100,7 +100,14 @@ export default function RincianDokumenApproval({ rincian, loading }: { rincian: 
                     {info.map((item, idx) => (
                         <div key={`${idx}-${item.label}`}>
                             <p className={LABEL_CLASS}>{item.label}</p>
-                            <p className={VALUE_CLASS}>{formatNilai(item.value, item.tipe)}</p>
+                            {item.tipe === 'tautan' && typeof item.value === 'string' && /^https?:\/\//i.test(item.value) ? (
+                                <a href={item.value} target="_blank" rel="noopener noreferrer"
+                                    className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                                    Lihat berkas
+                                </a>
+                            ) : (
+                                <p className={VALUE_CLASS}>{formatNilai(item.value, item.tipe)}</p>
+                            )}
                         </div>
                     ))}
                 </div>

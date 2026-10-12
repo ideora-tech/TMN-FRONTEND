@@ -117,6 +117,11 @@ export default function PengeluaranTab() {
                                 </Tag>
                             </a>
                         )}
+                        {p.id_pengeluaran_supir && (
+                            <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
+                                Dari Aplikasi Supir
+                            </Tag>
+                        )}
                         {p.periode_dari && (
                             <Tag className="text-[10px] font-semibold inline-flex items-center gap-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300">
                                 Jadwal {dayjs(p.periode_dari).format('DD/MM')}–{dayjs(p.periode_sampai).format('DD/MM')}

@@ -94,6 +94,14 @@ const KATEGORI_TAG_META: Record<KategoriPengajuan, { label: string; tag: string 
         label: 'Pengisian Kas Kecil',
         tag: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
     },
+    tambal_ban: {
+        label: 'Tambal Ban',
+        tag: 'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
+    },
+    cuci_mobil: {
+        label: 'Cuci Mobil',
+        tag: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300',
+    },
     lainnya: {
         label: 'Lainnya',
         tag: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300',

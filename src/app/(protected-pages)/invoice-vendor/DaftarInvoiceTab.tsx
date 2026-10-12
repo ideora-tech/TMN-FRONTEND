@@ -2,11 +2,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye, HiOutlineDownload } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import DialogUnduhRekapBulanan from '@/components/shared/DialogUnduhRekapBulanan'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import dayjs from 'dayjs'
 import axios from 'axios'
@@ -78,6 +79,7 @@ export default function DaftarInvoiceTab() {
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
     const [deleteTarget, setDeleteTarget] = useState<InvoiceVendor | null>(null)
+    const [rekapOpen, setRekapOpen]       = useState(false)
 
     useEffect(() => {
         axios.get(API_ENDPOINTS.VENDOR, { params: { limit: 999 } })
@@ -259,6 +261,9 @@ export default function DaftarInvoiceTab() {
                             onChange={opt => { setVendorFilter(opt?.value ?? ''); setCurrentPage(1) }}
                         />
                     </div>
+                    <Button size="sm" variant="solid" className="ml-auto" icon={<HiOutlineDownload />} onClick={() => setRekapOpen(true)}>
+                        Rekap Excel
+                    </Button>
                 </div>
                 <DataTable
                     columns={columns}
@@ -276,6 +281,14 @@ export default function DaftarInvoiceTab() {
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus invoice {deleteTarget?.nomor_invoice}? Tindakan ini tidak dapat dibatalkan.</p>
             </ConfirmDialog>
+
+            <DialogUnduhRekapBulanan
+                isOpen={rekapOpen}
+                judul="Rincian Hutang dan PPh Vendor"
+                keterangan="Excel berisi semua invoice vendor berstatus Diverifikasi dengan tanggal invoice di bulan yang dipilih, lengkap dengan DPP, PPh, dan total hutangnya. Filter daftar tidak berpengaruh."
+                onClose={() => setRekapOpen(false)}
+                onUnduh={invoiceVendorService.unduhRekapHutang}
+            />
         </div>
     )
 }

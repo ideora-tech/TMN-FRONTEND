@@ -231,6 +231,8 @@ export const API_ENDPOINTS = {
     FAKTUR_AJUKAN_APPROVAL: (id: string) => `/api/proxy/faktur/${id}/ajukan-approval`,
     FAKTUR_OUTSTANDING: '/api/proxy/faktur/outstanding',
     FAKTUR_OUTSTANDING_EXPORT: '/api/proxy/faktur/outstanding/export/excel',
+    FAKTUR_EXPORT_REKAP_BULANAN: '/api/proxy/faktur/export/rekap-bulanan',
+    FAKTUR_NOMOR_FAKTUR_PAJAK: (id: string) => `/api/proxy/faktur/${id}/nomor-faktur-pajak`,
     FAKTUR_PEMBAYARAN: (id: string) => `/api/proxy/faktur/${id}/pembayaran`,
     FAKTUR_PEMBAYARAN_HAPUS: (id: string, idPembayaran: string) => `/api/proxy/faktur/${id}/pembayaran/${idPembayaran}`,
 
@@ -243,6 +245,7 @@ export const API_ENDPOINTS = {
     KONSOLIDASI_VENDOR_EXPORT_EXCEL: '/api/proxy/konsolidasi-vendor/export/excel',
     INVOICE_VENDOR:            '/api/proxy/invoice-vendor',
     INVOICE_VENDOR_MONITORING: '/api/proxy/invoice-vendor/monitoring',
+    INVOICE_VENDOR_EXPORT_REKAP_HUTANG: '/api/proxy/invoice-vendor/export/rekap-hutang',
     INVOICE_VENDOR_TRIP_SIAP_TAGIH: '/api/proxy/invoice-vendor/trip-siap-tagih',
     INVOICE_VENDOR_RINGKASAN_KONTRAK: (idKontrak: string) => `/api/proxy/invoice-vendor/ringkasan-kontrak/${idKontrak}`,
     INVOICE_VENDOR_DETAIL:     (id: string) => `/api/proxy/invoice-vendor/${id}`,

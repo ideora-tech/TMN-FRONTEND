@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 
 export interface TripSiapTagihVendor {
     id_trip: string
@@ -235,5 +236,8 @@ export const invoiceVendorService = {
     },
     async deletePembayaran(idInvoice: string, idPembayaran: string) {
         await axios.delete(API_ENDPOINTS.INVOICE_VENDOR_PEMBAYARAN_DELETE(idInvoice, idPembayaran))
+    },
+    async unduhRekapHutang(bulan: string) {
+        await unduhDariApi(API_ENDPOINTS.INVOICE_VENDOR_EXPORT_REKAP_HUTANG, { bulan }, `hutang-pph-vendor-${bulan}.xlsx`)
     },
 }
