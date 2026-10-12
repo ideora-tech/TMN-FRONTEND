@@ -1,19 +1,16 @@
 ﻿'use client'
-import { usePratinjauBerkas } from '@/components/shared/PratinjauBerkasProvider'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, Upload, Pagination, toast, Notification, Spinner } from '@/components/ui'
+import { Card, Button, Dialog, FormItem, Input, DatePicker, Tooltip, toast, Notification, Spinner } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import UploadBerkas from '@/components/shared/UploadBerkas'
 import { LampiranMasterPanel } from '@/components/shared/LampiranMaster'
-import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle, HiOutlinePaperClip, HiOutlineSearch } from 'react-icons/hi'
+import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { vendorService, Vendor, KontrakVendor, RekeningVendor } from '@/services/vendor.service'
-import { dokumenVendorService, DokumenVendor } from '@/services/dokumenVendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
 import { supirVendorService, SupirVendor } from '@/services/supirVendor.service'
 
@@ -35,39 +32,6 @@ const JENIS_VENDOR_OPTIONS = [
     { value: 'CV',         label: 'CV' },
     { value: 'Perorangan', label: 'Perorangan' },
 ]
-
-const JENIS_DOKUMEN_OPTIONS = [
-    { value: 'STNK',                label: 'STNK' },
-    { value: 'KIR',                 label: 'KIR' },
-    { value: 'SIM Supir',           label: 'SIM Supir' },
-    { value: 'Profil Perusahaan',   label: 'Profil Perusahaan' },
-    { value: 'Kontrak',             label: 'Kontrak' },
-    { value: 'NPWP',                label: 'NPWP' },
-    { value: 'NIB',                 label: 'NIB' },
-    { value: 'SIUP',                label: 'SIUP' },
-    { value: 'TDP',                 label: 'TDP' },
-    { value: 'Akta Perusahaan',     label: 'Akta Perusahaan' },
-    { value: 'PKP',                 label: 'PKP' },
-    { value: 'Asuransi',            label: 'Asuransi' },
-    { value: 'Sertifikat ISO',      label: 'Sertifikat ISO' },
-    { value: 'Lainnya',             label: 'Lainnya' },
-]
-
-const MAKS_DOKUMEN_SEKALI = 20
-const UKURAN_HALAMAN_DOKUMEN = 10
-const MAKS_UKURAN_DOKUMEN = 5 * 1024 * 1024
-const EKSTENSI_DOKUMEN = ['pdf', 'jpg', 'jpeg', 'png']
-
-type BarisDokumen = { kunci: string; file: File; jenis_dokumen: string; nomor: string; berlaku_sampai: string; galat: string }
-
-const tebakJenisDokumen = (namaFile: string): string => {
-    const nama = namaFile.toLowerCase()
-    return JENIS_DOKUMEN_OPTIONS.find(o => {
-        if (o.value === 'Lainnya') return false
-        const kata = o.value.toLowerCase().split(' ')[0]
-        return new RegExp(`(^|[^a-z0-9])${kata}([^a-z0-9]|$)`).test(nama)
-    })?.value ?? ''
-}
 
 const MATA_UANG_OPTIONS = [
     { value: 'IDR', label: 'IDR' },
@@ -95,36 +59,9 @@ function validateRekening(f: typeof REKENING_FORM_KOSONG): RekeningFormErrors {
     return e
 }
 
-// --- helpers ---
-
-function getExpiryInfo(berlakuSampai: string | null): {
-    label: string
-    className: string
-    daysLeft: number | null
-    urgent: boolean
-} {
-    if (!berlakuSampai) return { label: '—', className: 'bg-gray-100 text-gray-400', daysLeft: null, urgent: false }
-    const days = Math.ceil((new Date(berlakuSampai).getTime() - Date.now()) / 86400000)
-    if (days < 0)   return { label: 'Habis Masa Berlaku', className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',       daysLeft: days, urgent: true }
-    if (days <= 14) return { label: `${days} hari lagi`, className: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400',   daysLeft: days, urgent: true }
-    if (days <= 30) return { label: `${days} hari lagi`, className: 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400', daysLeft: days, urgent: true }
-    if (days <= 60) return { label: `${days} hari lagi`, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400', daysLeft: days, urgent: false }
-    return { label: `${days} hari lagi`, className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400', daysLeft: days, urgent: false }
-}
-
-function sortDokumen(list: DokumenVendor[]): DokumenVendor[] {
-    return [...list].sort((a, b) => {
-        if (!a.berlaku_sampai && !b.berlaku_sampai) return 0
-        if (!a.berlaku_sampai) return 1
-        if (!b.berlaku_sampai) return -1
-        return new Date(a.berlaku_sampai).getTime() - new Date(b.berlaku_sampai).getTime()
-    })
-}
-
 // --- component ---
 
 export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { klik } = usePratinjauBerkas()
     const { id } = use(params)
     const router = useRouter()
     const [vendor, setVendor]   = useState<Vendor | null>(null)
@@ -137,23 +74,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     const [showKontrakForm, setShowKontrakForm] = useState(false)
     const [kontrakForm, setKontrakForm] = useState({ mekanisme: 'unit_only' as Mekanisme, nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '', pajak_persen: '', termin_pembayaran_hari: '', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
     const [addingKontrak, setAddingKontrak] = useState(false)
-
-    // dokumen
-    const [dokumen, setDokumen]         = useState<DokumenVendor[]>([])
-    const [docLoading, setDocLoading]   = useState(false)
-    const [showDocForm, setShowDocForm] = useState(false)
-    const [docRows, setDocRows]         = useState<BarisDokumen[]>([])
-    const [resetPilihDok, setResetPilihDok] = useState(0)
-    const [cariDokInput, setCariDokInput] = useState('')
-    const [cariDok, setCariDok]         = useState('')
-    const [halamanDok, setHalamanDok]   = useState(1)
-    const [addingDoc, setAddingDoc]     = useState(false)
-    const [editDocTarget, setEditDocTarget] = useState<DokumenVendor | null>(null)
-    const [editDocForm, setEditDocForm]     = useState({ jenis_dokumen: '', nomor: '', berlaku_sampai: '' })
-    const [editDocFile, setEditDocFile]     = useState<File | null>(null)
-    const [updatingDoc, setUpdatingDoc]     = useState(false)
-    const [deleteDocTarget, setDeleteDocTarget] = useState<DokumenVendor | null>(null)
-    const [deletingDoc, setDeletingDoc]         = useState(false)
 
     // rekening bank
     const [rekening, setRekening]           = useState<RekeningVendor[]>([])
@@ -189,15 +109,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     }, [id])
 
     useEffect(() => { loadData() }, [loadData])
-
-    const fetchDokumen = useCallback(async () => {
-        setDocLoading(true)
-        try { setDokumen(await dokumenVendorService.list(id)) }
-        catch (err) { toast.push(<Notification type="danger" title={parseApiError(err)} />) }
-        finally { setDocLoading(false) }
-    }, [id])
-
-    useEffect(() => { fetchDokumen() }, [fetchDokumen])
 
     const fetchRekening = useCallback(async () => {
         setRekLoading(true)
@@ -290,108 +201,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
         }
     }
 
-    // --- handlers dokumen ---
-    const pilihFileDokumen = (files: File[]) => {
-        setResetPilihDok(n => n + 1)
-        const baru: BarisDokumen[] = []
-        files.forEach((f, i) => {
-            const ekstensi = (f.name.split('.').pop() ?? '').toLowerCase()
-            if (!EKSTENSI_DOKUMEN.includes(ekstensi)) {
-                toast.push(<Notification type="danger" title={`${f.name} bukan PDF, JPG, atau PNG`} />)
-                return
-            }
-            if (f.size > MAKS_UKURAN_DOKUMEN) {
-                toast.push(<Notification type="danger" title={`${f.name} melebihi 5 MB`} />)
-                return
-            }
-            baru.push({
-                kunci: `${Date.now()}-${i}-${f.name}`,
-                file: f,
-                jenis_dokumen: tebakJenisDokumen(f.name),
-                nomor: '',
-                berlaku_sampai: '',
-                galat: '',
-            })
-        })
-        const sisa = MAKS_DOKUMEN_SEKALI - docRows.length
-        if (baru.length > sisa) {
-            toast.push(<Notification type="danger" title={`Maksimal ${MAKS_DOKUMEN_SEKALI} dokumen sekali simpan`} />)
-        }
-        setDocRows([...docRows, ...baru.slice(0, Math.max(sisa, 0))])
-    }
-
-    const ubahBarisDokumen = (kunci: string, patch: Partial<BarisDokumen>) =>
-        setDocRows(prev => prev.map(r => (r.kunci === kunci ? { ...r, ...patch } : r)))
-
-    const tutupFormDokumen = () => { setShowDocForm(false); setDocRows([]) }
-
-    const handleAddDokumen = async () => {
-        if (addingDoc || docRows.length === 0) return
-        if (docRows.some(r => !r.jenis_dokumen)) {
-            setDocRows(prev => prev.map(r => ({ ...r, galat: r.jenis_dokumen ? '' : 'Pilih jenis dokumen' })))
-            toast.push(<Notification type="danger" title="Lengkapi jenis dokumen di setiap baris" />)
-            return
-        }
-
-        setAddingDoc(true)
-        const gagal: BarisDokumen[] = []
-        let berhasil = 0
-        for (const baris of docRows) {
-            try {
-                await dokumenVendorService.create(id, {
-                    jenis_dokumen:  baris.jenis_dokumen,
-                    nomor:          baris.nomor.trim() || null,
-                    berlaku_sampai: baris.berlaku_sampai || null,
-                }, baris.file)
-                berhasil++
-            } catch (err) {
-                gagal.push({ ...baris, galat: parseApiError(err) })
-            }
-        }
-        setAddingDoc(false)
-        setDocRows(gagal)
-
-        if (berhasil > 0) {
-            toast.push(<Notification type="success" title={`${berhasil} dokumen berhasil ditambahkan`} />)
-            fetchDokumen()
-        }
-        if (gagal.length > 0) {
-            toast.push(<Notification type="danger" title={`${gagal.length} dokumen gagal disimpan — periksa baris yang tersisa`} />)
-        } else {
-            setShowDocForm(false)
-        }
-    }
-
-    const handleEditDokumen = async () => {
-        if (!editDocTarget) return
-        setUpdatingDoc(true)
-        try {
-            await dokumenVendorService.update(id, editDocTarget.id_dokumen_vendor, {
-                jenis_dokumen:  editDocForm.jenis_dokumen,
-                nomor:          editDocForm.nomor || null,
-                berlaku_sampai: editDocForm.berlaku_sampai || null,
-            }, editDocFile ?? undefined)
-            toast.push(<Notification type="success" title="Dokumen berhasil diperbarui" />)
-            setEditDocTarget(null); setEditDocFile(null)
-            fetchDokumen()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally { setUpdatingDoc(false) }
-    }
-
-    const handleDeleteDokumen = async () => {
-        if (!deleteDocTarget) return
-        setDeletingDoc(true)
-        try {
-            await dokumenVendorService.delete(id, deleteDocTarget.id_dokumen_vendor)
-            toast.push(<Notification type="success" title="Dokumen berhasil dihapus" />)
-            setDeleteDocTarget(null); fetchDokumen()
-        } catch (err) {
-            toast.push(<Notification type="danger" title={parseApiError(err)} />)
-            setDeleteDocTarget(null)
-        } finally { setDeletingDoc(false) }
-    }
-
     // --- handlers rekening bank ---
     const handleAddRekening = async () => {
         const e = validateRekening(rekForm)
@@ -453,14 +262,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     if (!vendor) return <div className="p-6 text-red-500">Vendor tidak ditemukan.</div>
 
     const initial       = vendor.nama_vendor?.charAt(0).toUpperCase() ?? 'V'
-    const sortedDokumen = sortDokumen(dokumen)
-    const kataDok = cariDok.toLowerCase()
-    const dokumenTersaring = kataDok
-        ? sortedDokumen.filter(d => d.jenis_dokumen.toLowerCase().includes(kataDok) || (d.nomor ?? '').toLowerCase().includes(kataDok))
-        : sortedDokumen
-    const halamanDokAktif = Math.min(halamanDok, Math.max(1, Math.ceil(dokumenTersaring.length / UKURAN_HALAMAN_DOKUMEN)))
-    const dokumenHalaman = dokumenTersaring.slice((halamanDokAktif - 1) * UKURAN_HALAMAN_DOKUMEN, halamanDokAktif * UKURAN_HALAMAN_DOKUMEN)
-    const urgentCount   = sortedDokumen.filter(d => getExpiryInfo(d.berlaku_sampai).urgent).length
 
     return (
         <div className="flex flex-col gap-4">
@@ -477,14 +278,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-gray-500 text-sm mt-0.5">Informasi vendor dan kontrak</p>
                 </div>
             </div>
-
-            {/* Alert dokumen urgent */}
-            {urgentCount > 0 && (
-                <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-                    <HiOutlineExclamationCircle className="text-lg flex-shrink-0" />
-                    <span><strong>{urgentCount} dokumen</strong> habis masa berlaku atau hampir habis masa berlaku — segera perbarui.</span>
-                </div>
-            )}
 
             {/* Vendor info card */}
             <Card>
@@ -607,197 +400,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         </div>
                         </form>
                     </>
-                )}
-            </Card>
-
-            {/* Dokumen Vendor */}
-            <Card>
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
-                    <div>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                            Dokumen Vendor{dokumen.length > 0 ? ` (${formatNum(dokumen.length)})` : ''}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5">Diurutkan berdasarkan tanggal habis masa berlaku terdekat</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {dokumen.length > UKURAN_HALAMAN_DOKUMEN && (
-                            <Input
-                                size="sm"
-                                className="w-64"
-                                placeholder="Cari jenis atau nomor... (tekan Enter)"
-                                suffix={cariDokInput
-                                    ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariDokInput(''); setCariDok(''); setHalamanDok(1) }} />
-                                    : <HiOutlineSearch className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={() => { setCariDok(cariDokInput.trim()); setHalamanDok(1) }} />}
-                                value={cariDokInput}
-                                onChange={e => setCariDokInput(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setCariDok(cariDokInput.trim()); setHalamanDok(1) } }}
-                            />
-                        )}
-                        <Button size="sm" variant="solid" icon={<HiPlusCircle />} disabled={addingDoc} onClick={() => setShowDocForm(v => !v)}>
-                            Tambah Dokumen
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Form tambah dokumen */}
-                {showDocForm && (
-                    <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-xs text-gray-400">
-                                Pilih beberapa file sekaligus — tiap file menjadi satu dokumen. PDF/JPG/PNG · maks. 5 MB per file · maks. {MAKS_DOKUMEN_SEKALI} dokumen sekali simpan.
-                            </p>
-                            <Upload key={resetPilihDok} multiple accept=".pdf,.jpg,.jpeg,.png" showList={false} fileList={[]} disabled={addingDoc}
-                                onChange={pilihFileDokumen}>
-                                <Button type="button" size="sm" variant="default" icon={<HiOutlinePaperClip />} disabled={addingDoc}>Pilih File</Button>
-                            </Upload>
-                        </div>
-                        {docRows.length === 0 ? (
-                            <p className="text-gray-400 text-sm py-4 text-center">Belum ada file dipilih</p>
-                        ) : (
-                            <div className="overflow-x-auto mt-3">
-                                <table className="min-w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                                            <th className="py-2 pr-3 w-8">No</th>
-                                            <th className="py-2 pr-3">File</th>
-                                            <th className="py-2 pr-3">Jenis Dokumen <span className="text-red-500">*</span></th>
-                                            <th className="py-2 pr-3">Nomor Dokumen</th>
-                                            <th className="py-2 pr-3">Berlaku Sampai</th>
-                                            <th className="py-2 w-10"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {docRows.map((r, i) => (
-                                            <tr key={r.kunci} className="border-t border-gray-100 dark:border-gray-700 align-top">
-                                                <td className="py-2 pr-3 pt-4 text-gray-400">{i + 1}</td>
-                                                <td className="py-2 pr-3 pt-3 min-w-40 max-w-56">
-                                                    <p className="text-sm text-gray-800 dark:text-gray-200 truncate" title={r.file.name}>{r.file.name}</p>
-                                                    <p className="text-xs text-gray-400">{(r.file.size / 1024 / 1024).toFixed(1)} MB</p>
-                                                    {r.galat && <p className="text-xs text-red-500 mt-0.5 [overflow-wrap:anywhere]">{r.galat}</p>}
-                                                </td>
-                                                <td className="py-2 pr-3 min-w-44">
-                                                    <Select size="sm" isSearchable={false} placeholder="Pilih jenis..." isDisabled={addingDoc}
-                                                        options={JENIS_DOKUMEN_OPTIONS}
-                                                        value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === r.jenis_dokumen) ?? null}
-                                                        menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                                                        styles={{ menuPortal: base => ({ ...base, zIndex: 60 }) }}
-                                                        onChange={opt => ubahBarisDokumen(r.kunci, { jenis_dokumen: opt?.value ?? '', galat: '' })} />
-                                                </td>
-                                                <td className="py-2 pr-3 min-w-40">
-                                                    <Input size="sm" placeholder="Contoh: 12/PKS/2026" maxLength={100} disabled={addingDoc} value={r.nomor}
-                                                        onChange={e => ubahBarisDokumen(r.kunci, { nomor: e.target.value })} />
-                                                </td>
-                                                <td className="py-2 pr-3 min-w-40">
-                                                    <DatePicker size="sm" inputFormat="DD/MM/YYYY" disabled={addingDoc}
-                                                        value={r.berlaku_sampai ? dayjs(r.berlaku_sampai).toDate() : null}
-                                                        onChange={date => ubahBarisDokumen(r.kunci, { berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
-                                                </td>
-                                                <td className="py-2 pt-3">
-                                                    {!addingDoc && (
-                                                        <span
-                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                            onClick={() => setDocRows(prev => prev.filter(b => b.kunci !== r.kunci))}>
-                                                            <HiOutlineTrash className="text-lg" />
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button size="sm" variant="plain" icon={<HiOutlineX />} disabled={addingDoc} onClick={tutupFormDokumen}>
-                                Kembali
-                            </Button>
-                            <Button size="sm" variant="solid" loading={addingDoc} disabled={docRows.length === 0} onClick={handleAddDokumen}>
-                                {docRows.length > 1 ? `Simpan ${docRows.length} Dokumen` : 'Simpan'}
-                            </Button>
-                        </div>
-                        <div className="border-t border-gray-100 dark:border-gray-700 mt-5" />
-                    </div>
-                )}
-
-                {docLoading ? (
-                    <div className="flex justify-center py-6"><Spinner /></div>
-                ) : sortedDokumen.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-6 text-center">Belum ada dokumen tercatat</p>
-                ) : dokumenTersaring.length === 0 ? (
-                    <p className="text-gray-400 text-sm py-6 text-center">Tidak ada dokumen yang cocok dengan pencarian</p>
-                ) : (
-                    <div className="overflow-x-auto mt-4">
-                        <table className="w-full text-sm">
-                            <thead className="bg-blue-50 dark:bg-blue-500/10">
-                                <tr className="border-b border-gray-100 dark:border-gray-700">
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Jenis</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Nomor</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Berlaku s/d</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Status</th>
-                                    <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">File</th>
-                                    <th className="py-2.5" />
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {dokumenHalaman.map(d => {
-                                    const expiry = getExpiryInfo(d.berlaku_sampai)
-                                    return (
-                                        <tr key={d.id_dokumen_vendor}>
-                                            <td className="py-3 pr-4 font-medium text-gray-800 dark:text-gray-200">{d.jenis_dokumen}</td>
-                                            <td className="py-3 pr-4 font-mono text-xs text-gray-600 dark:text-gray-400">{d.nomor ?? '—'}</td>
-                                            <td className="py-3 pr-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                                {d.berlaku_sampai ? dayjs(d.berlaku_sampai).format('DD MMM YYYY') : '—'}
-                                            </td>
-                                            <td className="py-3 pr-4">
-                                                <Tag className={`text-xs font-semibold ${expiry.className}`}>
-                                                    {expiry.label}
-                                                </Tag>
-                                            </td>
-                                            <td className="py-3 pr-4">
-                                                {d.url_file
-                                                    ? <a href={d.url_file} onClick={klik(d.url_file, 'Dokumen vendor', 'dokumen-vendor')} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Lihat</a>
-                                                    : <span className="text-gray-400 text-xs">—</span>}
-                                            </td>
-                                            <td className="py-3 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Tooltip title="Edit">
-                                                        <span
-                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
-                                                            onClick={() => {
-                                                                setEditDocTarget(d)
-                                                                setEditDocForm({
-                                                                    jenis_dokumen:  d.jenis_dokumen,
-                                                                    nomor:          d.nomor ?? '',
-                                                                    berlaku_sampai: d.berlaku_sampai ?? '',
-                                                                })
-                                                                setEditDocFile(null)
-                                                            }}
-                                                        >
-                                                            <HiOutlinePencilAlt className="text-lg" />
-                                                        </span>
-                                                    </Tooltip>
-                                                    <Tooltip title="Hapus">
-                                                        <span
-                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                                                            onClick={() => setDeleteDocTarget(d)}
-                                                        >
-                                                            <HiOutlineTrash className="text-lg" />
-                                                        </span>
-                                                    </Tooltip>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                        {dokumenTersaring.length > UKURAN_HALAMAN_DOKUMEN && (
-                            <div className="flex justify-end pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
-                                <Pagination currentPage={halamanDokAktif} pageSize={UKURAN_HALAMAN_DOKUMEN}
-                                    total={dokumenTersaring.length} onChange={setHalamanDok} />
-                            </div>
-                        )}
-                    </div>
                 )}
             </Card>
 
@@ -1190,54 +792,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                 )}
             </Card>
-
-            {/* Dialog Edit Dokumen */}
-            <Dialog isOpen={!!editDocTarget} onRequestClose={() => setEditDocTarget(null)} onClose={() => setEditDocTarget(null)} width={520}>
-                <h5 className="text-base font-semibold mb-5">Edit Dokumen</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <FormItem label="Jenis Dokumen" asterisk>
-                        <Select isSearchable={false} placeholder="Pilih jenis..."
-                            options={JENIS_DOKUMEN_OPTIONS}
-                            value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === editDocForm.jenis_dokumen) ?? null}
-                            onChange={opt => setEditDocForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '' }))} />
-                    </FormItem>
-                    <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Contoh: 12/PKS/2026" value={editDocForm.nomor}
-                            onChange={e => setEditDocForm(p => ({ ...p, nomor: e.target.value }))} />
-                    </FormItem>
-                    <FormItem label="Berlaku Sampai">
-                        <DatePicker
-                            value={editDocForm.berlaku_sampai ? new Date(editDocForm.berlaku_sampai) : null}
-                            onChange={date => setEditDocForm(p => ({ ...p, berlaku_sampai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                    </FormItem>
-                    <FormItem label="Ganti File (opsional)">
-                        <UploadBerkas
-                            file={editDocFile}
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            label="Pilih file baru..."
-                            hint="PDF/JPG/PNG"
-                            existingUrl={editDocTarget?.url_file ?? null}
-                            existingLabel="File saat ini"
-                            emptyText="Belum ada file tersimpan"
-                            onChange={setEditDocFile}
-                        />
-                    </FormItem>
-                </div>
-                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <Button variant="plain" onClick={() => { setEditDocTarget(null); setEditDocFile(null) }}>Kembali</Button>
-                    <Button variant="solid" loading={updatingDoc} onClick={handleEditDokumen}>Simpan</Button>
-                </div>
-            </Dialog>
-
-            {/* Confirm Hapus Dokumen */}
-            <ConfirmDialog isOpen={!!deleteDocTarget} type="danger" title="Hapus Dokumen"
-                confirmText="Ya, Hapus" cancelText="Batal"
-                onClose={() => setDeleteDocTarget(null)}
-                onCancel={() => setDeleteDocTarget(null)}
-                onConfirm={handleDeleteDokumen}
-                confirmButtonProps={{ loading: deletingDoc }}>
-                <p>Hapus dokumen <strong>{deleteDocTarget?.jenis_dokumen}</strong>?</p>
-            </ConfirmDialog>
 
             {/* Dialog Edit Rekening */}
             <Dialog isOpen={!!editRekTarget} onRequestClose={() => setEditRekTarget(null)} onClose={() => setEditRekTarget(null)} width={520}>

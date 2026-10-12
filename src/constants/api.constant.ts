@@ -406,9 +406,6 @@ export const API_ENDPOINTS = {
     LAPORAN_PERJALANAN_FOTO_DELETE: (id: string, idFoto: string) => `/api/proxy/laporan-perjalanan/${id}/foto/${idFoto}`,
 
     // Dokumen Vendor
-    VENDOR_DOKUMEN:        (idVendor: string) => `/api/proxy/vendor/${idVendor}/dokumen`,
-    VENDOR_DOKUMEN_UPDATE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
-    VENDOR_DOKUMEN_DELETE: (idVendor: string, id: string) => `/api/proxy/vendor/${idVendor}/dokumen/${id}`,
 
     // Rekening Vendor
     VENDOR_REKENING:        (idVendor: string) => `/api/proxy/vendor/${idVendor}/rekening`,
