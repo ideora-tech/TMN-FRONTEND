@@ -112,8 +112,8 @@ export default function UnitProyekSection({ idProyek }: { idProyek: string }) {
         if (pilihan.length === 0) return
         setMenyimpan(true)
         try {
-            await proyekUnitService.tambah(idProyek, pilihan.map(kePayload))
-            toast.push(<Notification type="success" title={`${pilihan.length} unit ditambahkan ke proyek`} />)
+            const hasil = await proyekUnitService.tambah(idProyek, pilihan.map(kePayload))
+            toast.push(<Notification type="success" title={hasil.pesan ?? `${pilihan.length} unit ditambahkan ke proyek`} />)
             setDialogOpen(false)
             muatDaftar()
         } catch (err) {
