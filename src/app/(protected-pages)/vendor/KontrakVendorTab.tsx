@@ -103,6 +103,19 @@ export default function KontrakVendorTab() {
             ),
         },
         {
+            header: 'No. PO', accessorKey: 'nomor_po', size: 170,
+            cell: ({ row }) => row.original.nomor_po
+                ? (
+                    <div>
+                        <span className="font-mono text-sm text-gray-600 dark:text-gray-400">{row.original.nomor_po}</span>
+                        {row.original.tanggal_po && (
+                            <p className="text-xs text-gray-400 mt-0.5">{dayjs(row.original.tanggal_po).format('DD MMM YYYY')}</p>
+                        )}
+                    </div>
+                )
+                : <span className="text-gray-400">—</span>,
+        },
+        {
             header: 'Mekanisme', accessorKey: 'mekanisme', size: 160,
             cell: ({ row }) => (
                 <Tag className="bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">

@@ -70,31 +70,24 @@ export type UangJalanFilter = {
     search?: string
     status?: string
     id_proyek?: string
+    dari?: string
+    sampai?: string
 }
 
 export interface KelompokUangJalan {
     kunci: string
-    tipe_driver: TipeDriver
-    kunci_driver: string
     id_proyek: string | null
-    nama_driver: string
-    nama_vendor: string | null
     kode_proyek: string | null
     nama_proyek: string | null
     jumlah: number
+    jumlah_driver: number
     total_trip: number
     total_nominal: number
     tanggal_awal: string
     tanggal_akhir: string
-    jumlah_nopol: number
-    nopol: string
-    jumlah_rute: number
-    rute: string
     status: Partial<Record<StatusPengajuan, number>>
     tunggal: UangJalan | null
 }
-
-export type KunciKelompokUangJalan = Pick<KelompokUangJalan, 'tipe_driver' | 'kunci_driver' | 'id_proyek'>
 
 type MetaHalaman = { page: number; total: number; totalPages: number; limit: number }
 
@@ -185,7 +178,7 @@ export interface RateCardRincian {
 }
 
 export const uangJalanService = {
-    async list(page = 1, limit = 10, filter: UangJalanFilter = {}, kelompok?: KunciKelompokUangJalan) {
+    async list(page = 1, limit = 10, filter: UangJalanFilter = {}) {
         const { data } = await axios.get(API_ENDPOINTS.UANG_JALAN, {
             params: {
                 page,
@@ -193,9 +186,8 @@ export const uangJalanService = {
                 search: filter.search || undefined,
                 status: filter.status || undefined,
                 id_proyek: filter.id_proyek || undefined,
-                kelompok_tipe: kelompok?.tipe_driver,
-                kelompok_driver: kelompok?.kunci_driver,
-                kelompok_proyek: kelompok?.id_proyek ?? undefined,
+                dari: filter.dari || undefined,
+                sampai: filter.sampai || undefined,
             },
         })
         return data as { data: UangJalan[]; meta: MetaHalaman }
@@ -209,6 +201,8 @@ export const uangJalanService = {
                 search: filter.search || undefined,
                 status: filter.status || undefined,
                 id_proyek: filter.id_proyek || undefined,
+                dari: filter.dari || undefined,
+                sampai: filter.sampai || undefined,
             },
         })
         return data as { data: KelompokUangJalan[]; meta: MetaHalaman }

@@ -81,6 +81,8 @@ export const API_ENDPOINTS = {
     SPAREPART_MUTASI:       (id: string) => `/api/proxy/sparepart/${id}/mutasi`,
     SPAREPART_FOTO:         (id: string) => `/api/proxy/sparepart/${id}/foto`,
     SPAREPART_FOTO_DETAIL:  (id: string, idFoto: string) => `/api/proxy/sparepart/${id}/foto/${idFoto}`,
+    LAMPIRAN_MASTER:        (jenis: 'vendor' | 'supplier', id: string) => `/api/proxy/${jenis}/${id}/lampiran`,
+    LAMPIRAN_MASTER_DETAIL: (jenis: 'vendor' | 'supplier', id: string, idLampiran: string) => `/api/proxy/${jenis}/${id}/lampiran/${idLampiran}`,
     SPAREPART_RIWAYAT_HARGA: (id: string) => `/api/proxy/sparepart/${id}/riwayat-harga`,
     SPAREPART_IMPORT_TEMPLATE: '/api/proxy/sparepart/import/template',
     SPAREPART_IMPORT:          '/api/proxy/sparepart/import',
@@ -197,7 +199,10 @@ export const API_ENDPOINTS = {
     KONTRAK_VENDOR:        '/api/proxy/kontrak-vendor',
     KONTRAK_VENDOR_DETAIL: (id: string) => `/api/proxy/kontrak-vendor/${id}`,
     KONTRAK_VENDOR_TEMPLATE_PASANGAN: '/api/proxy/kontrak-vendor/template-pasangan',
+    KONTRAK_VENDOR_TEMPLATE_UNIT: '/api/proxy/kontrak-vendor/template-unit',
     KONTRAK_VENDOR_EXPORT_PDF: (id: string) => `/api/proxy/kontrak-vendor/${id}/export/pdf`,
+    KONTRAK_VENDOR_PO: (id: string) => `/api/proxy/kontrak-vendor/${id}/po`,
+    KONTRAK_VENDOR_PO_PDF: (id: string) => `/api/proxy/kontrak-vendor/${id}/po/pdf`,
     KONTRAK_VENDOR_PARSE_PASANGAN: '/api/proxy/kontrak-vendor/parse-pasangan',
     KONTRAK_VENDOR_PARSE_UNIT:  '/api/proxy/kontrak-vendor/parse-unit',
     KONTRAK_VENDOR_PARSE_SUPIR: '/api/proxy/kontrak-vendor/parse-supir',
@@ -349,6 +354,8 @@ export const API_ENDPOINTS = {
     // Perusahaan
     PERUSAHAAN:        '/api/proxy/perusahaan',
     PERUSAHAAN_DETAIL: (id: string) => `/api/proxy/perusahaan/${id}`,
+    REKENING_PERUSAHAAN:        '/api/proxy/rekening-perusahaan',
+    REKENING_PERUSAHAAN_DETAIL: (id: string) => `/api/proxy/rekening-perusahaan/${id}`,
 
     // Menu
     MENU:        '/api/proxy/menu',

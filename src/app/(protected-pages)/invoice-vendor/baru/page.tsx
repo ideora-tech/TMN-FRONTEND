@@ -200,6 +200,7 @@ export default function InvoiceVendorBaruPage() {
                 ...p,
                 id_kontrak_vendor: idKontrak,
                 no_kontrak: kontrak?.nomor_kontrak ?? p.no_kontrak,
+                no_po: kontrak?.nomor_po ? kontrak.nomor_po : (selectedKontrak?.nomor_po ? '' : p.no_po),
                 jatuh_tempo: auto ?? (jatuhTempoManual ? p.jatuh_tempo : ''),
             }
         })
@@ -298,6 +299,7 @@ export default function InvoiceVendorBaruPage() {
                                 ...p,
                                 id_vendor: opt?.value ?? '',
                                 id_kontrak_vendor: '',
+                                no_po: selectedKontrak?.nomor_po ? '' : p.no_po,
                                 jatuh_tempo: jatuhTempoManual ? p.jatuh_tempo : '',
                             }))} />
                     </FormItem>
@@ -458,8 +460,9 @@ export default function InvoiceVendorBaruPage() {
                                 setForm(p => ({ ...p, jatuh_tempo: date ? dayjs(date).format('YYYY-MM-DD') : '' }))
                             }} />
                     </FormItem>
-                    <FormItem label="No. PO">
-                        <Input placeholder="Nomor purchase order" value={form.no_po}
+                    <FormItem label="No. PO"
+                        extra={selectedKontrak?.nomor_po ? <span className="text-xs text-gray-400">Terisi otomatis dari PO kontrak terpilih</span> : undefined}>
+                        <Input placeholder="Nomor purchase order" value={form.no_po} disabled={!!selectedKontrak?.nomor_po}
                             onChange={e => setForm(p => ({ ...p, no_po: e.target.value }))} />
                     </FormItem>
                     <FormItem label="No. Kontrak"

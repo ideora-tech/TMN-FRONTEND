@@ -27,6 +27,8 @@ export interface KontrakVendor {
     tanggal_mulai: string | null
     tanggal_selesai: string | null
     status: string | null
+    nomor_po?: string | null
+    tanggal_po?: string | null
     alasan_ditolak_internal?: string | null
     dibuat_pada: string
     diubah_pada: string
@@ -51,6 +53,7 @@ export interface KontrakUnitInput {
     kapasitas?: string | null
     masa_berlaku_stnk?: string | null
     masa_berlaku_kir?: string | null
+    harga_kontrak?: number | null
     supir_index?: number | null
 }
 
@@ -68,6 +71,7 @@ export interface BarisGagal {
 export interface HasilParseExcel<T> {
     baris_valid: T[]
     baris_gagal: BarisGagal[]
+    ada_kolom_harga?: boolean
 }
 
 export const kontrakVendorService = {
@@ -92,6 +96,10 @@ export const kontrakVendorService = {
     },
     async ajukanApproval(id: string) {
         const { data } = await axios.post(API_ENDPOINTS.KONTRAK_VENDOR_AJUKAN_APPROVAL(id))
+        return data.data as KontrakVendor
+    },
+    async terbitkanPo(id: string) {
+        const { data } = await axios.post(API_ENDPOINTS.KONTRAK_VENDOR_PO(id))
         return data.data as KontrakVendor
     },
     async selesaikan(id: string) {

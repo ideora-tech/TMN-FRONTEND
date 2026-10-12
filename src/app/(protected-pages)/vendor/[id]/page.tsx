@@ -6,6 +6,7 @@ import { Card, Button, Dialog, FormItem, Input, DatePicker, Tag, Tooltip, toast,
 import Select from '@/components/ui/Select'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import UploadBerkas from '@/components/shared/UploadBerkas'
+import { LampiranMasterPanel } from '@/components/shared/LampiranMaster'
 import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineX, HiOutlineExclamationCircle } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
@@ -659,6 +660,10 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                         </table>
                     </div>
                 )}
+            </Card>
+
+            <Card>
+                <LampiranMasterPanel jenis="vendor" idPemilik={id} namaPemilik={vendor.nama_vendor} />
             </Card>
 
             {/* Rekening Bank */}

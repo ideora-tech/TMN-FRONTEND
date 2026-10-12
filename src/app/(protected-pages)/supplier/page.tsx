@@ -7,6 +7,8 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { supplierService, Supplier } from '@/services/supplier.service'
+import { lampiranMasterService } from '@/services/lampiran-master.service'
+import { LampiranMasterPanel, PilihLampiranMaster } from '@/components/shared/LampiranMaster'
 
 type FormState = { nama: string; telepon: string; alamat: string; aktif: boolean }
 const EMPTY_FORM: FormState = { nama: '', telepon: '', alamat: '', aktif: true }
@@ -24,6 +26,7 @@ export default function SupplierPage() {
     const [editTarget, setEditTarget] = useState<Supplier | null>(null)
     const [form, setForm] = useState<FormState>(EMPTY_FORM)
     const [errNama, setErrNama] = useState('')
+    const [lampiranBaru, setLampiranBaru] = useState<File[]>([])
     const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null)
 
     const fetchData = useCallback(async () => {
@@ -41,7 +44,7 @@ export default function SupplierPage() {
 
     useEffect(() => { fetchData() }, [fetchData])
 
-    const bukaTambah = () => { setEditTarget(null); setForm(EMPTY_FORM); setErrNama(''); setFormOpen(true) }
+    const bukaTambah = () => { setEditTarget(null); setForm(EMPTY_FORM); setErrNama(''); setLampiranBaru([]); setFormOpen(true) }
     const bukaEdit = (s: Supplier) => {
         setEditTarget(s)
         setForm({ nama: s.nama, telepon: s.telepon ?? '', alamat: s.alamat ?? '', aktif: s.aktif })
@@ -59,8 +62,21 @@ export default function SupplierPage() {
                 alamat: form.alamat.trim() || null,
                 aktif: form.aktif,
             }
-            if (editTarget) await supplierService.update(editTarget.id_supplier, payload)
-            else await supplierService.create(payload)
+            if (editTarget) {
+                await supplierService.update(editTarget.id_supplier, payload)
+            } else {
+                const baru = await supplierService.create(payload)
+                if (lampiranBaru.length > 0) {
+                    try {
+                        await lampiranMasterService.upload('supplier', baru.id_supplier, lampiranBaru)
+                    } catch (err) {
+                        toast.push(<Notification type="danger" title={`Supplier tersimpan, tetapi lampiran gagal diunggah: ${parseApiError(err)}`} />)
+                        bukaEdit(baru)
+                        fetchData()
+                        return
+                    }
+                }
+            }
             toast.push(<Notification type="success" title={editTarget ? 'Supplier diperbarui' : 'Supplier ditambahkan'} />)
             setFormOpen(false)
             fetchData()
@@ -146,24 +162,31 @@ export default function SupplierPage() {
                     onSelectChange={size => { setPageSize(size); setCurrentPage(1) }} />
             </Card>
 
-            <Dialog isOpen={formOpen} onClose={() => setFormOpen(false)} onRequestClose={() => setFormOpen(false)}>
+            <Dialog isOpen={formOpen} width={640} onClose={() => setFormOpen(false)} onRequestClose={() => setFormOpen(false)}>
                 <h5 className="mb-4">{editTarget ? 'Edit Supplier' : 'Tambah Supplier'}</h5>
                 <form onSubmit={handleSubmit}>
-                    <FormItem label="Nama Supplier" asterisk invalid={!!errNama} errorMessage={errNama}>
-                        <Input value={form.nama} placeholder="Nama toko/supplier"
-                            onChange={e => { setForm({ ...form, nama: e.target.value }); setErrNama('') }} />
-                    </FormItem>
-                    <FormItem label="Telepon">
-                        <Input value={form.telepon} placeholder="08xxxxxxxxxx"
-                            onChange={e => setForm({ ...form, telepon: e.target.value })} />
-                    </FormItem>
-                    <FormItem label="Alamat">
-                        <Input textArea rows={2} value={form.alamat} placeholder="Alamat supplier (opsional)"
-                            onChange={e => setForm({ ...form, alamat: e.target.value })} />
-                    </FormItem>
-                    <FormItem label="Aktif">
-                        <Switcher checked={form.aktif} onChange={checked => setForm({ ...form, aktif: checked })} />
-                    </FormItem>
+                    <div className="max-h-[65vh] overflow-y-auto pr-1">
+                        <FormItem label="Nama Supplier" asterisk invalid={!!errNama} errorMessage={errNama}>
+                            <Input value={form.nama} placeholder="Nama toko/supplier"
+                                onChange={e => { setForm({ ...form, nama: e.target.value }); setErrNama('') }} />
+                        </FormItem>
+                        <FormItem label="Telepon">
+                            <Input value={form.telepon} placeholder="08xxxxxxxxxx"
+                                onChange={e => setForm({ ...form, telepon: e.target.value })} />
+                        </FormItem>
+                        <FormItem label="Alamat">
+                            <Input textArea rows={2} value={form.alamat} placeholder="Alamat supplier (opsional)"
+                                onChange={e => setForm({ ...form, alamat: e.target.value })} />
+                        </FormItem>
+                        <FormItem label="Aktif">
+                            <Switcher checked={form.aktif} onChange={checked => setForm({ ...form, aktif: checked })} />
+                        </FormItem>
+                        <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                            {editTarget
+                                ? <LampiranMasterPanel key={editTarget.id_supplier} jenis="supplier" idPemilik={editTarget.id_supplier} namaPemilik={editTarget.nama} />
+                                : <PilihLampiranMaster files={lampiranBaru} onChange={setLampiranBaru} />}
+                        </div>
+                    </div>
                     <div className="flex justify-end gap-2 mt-4">
                         <Button type="button" onClick={() => setFormOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={submitting}>Simpan</Button>

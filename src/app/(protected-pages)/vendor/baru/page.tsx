@@ -8,6 +8,8 @@ import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { vendorService } from '@/services/vendor.service'
+import { lampiranMasterService } from '@/services/lampiran-master.service'
+import { PilihLampiranMaster } from '@/components/shared/LampiranMaster'
 
 const JENIS_VENDOR_OPTIONS = [
     { value: 'PT',         label: 'PT' },
@@ -20,6 +22,7 @@ export default function VendorBaruPage() {
     const [form, setForm] = useState({ nama_vendor: '', telepon: '', alamat: '', email: '', jenis_vendor: '', pic_nama: '', npwp: '', tanggal_bergabung: '' })
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
+    const [lampiran, setLampiran] = useState<File[]>([])
 
     const validate = () => {
         const e: Partial<typeof form> = {}
@@ -36,7 +39,7 @@ export default function VendorBaruPage() {
         }
         setLoading(true)
         try {
-            await vendorService.create({
+            const vendor = await vendorService.create({
                 nama_vendor: form.nama_vendor,
                 telepon: form.telepon || undefined,
                 alamat: form.alamat || undefined,
@@ -47,11 +50,19 @@ export default function VendorBaruPage() {
                 tanggal_bergabung: form.tanggal_bergabung || undefined,
                 aktif: true,
             })
+            if (lampiran.length > 0) {
+                try {
+                    await lampiranMasterService.upload('vendor', vendor.id_vendor, lampiran)
+                } catch (err) {
+                    toast.push(<Notification type="danger" title={`Vendor tersimpan, tetapi lampiran gagal diunggah: ${parseApiError(err)}`} />)
+                    router.push(ROUTES.VENDOR_DETAIL(vendor.id_vendor))
+                    return
+                }
+            }
             toast.push(<Notification type="success" title="Vendor berhasil ditambahkan" />)
             router.push(ROUTES.VENDOR)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
-        } finally {
             setLoading(false)
         }
     }
@@ -110,6 +121,9 @@ export default function VendorBaruPage() {
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800" />
                         </FormItem>
                     </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <PilihLampiranMaster files={lampiran} onChange={setLampiran} />
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>

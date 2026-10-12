@@ -31,6 +31,7 @@ export interface KontrakVendor {
     pajak_persen?: number | null
     termin_pembayaran_hari?: number | null
     nilai_kontrak?: number
+    nomor_po?: string | null
     tanggal_mulai?: string
     tanggal_selesai?: string
 }

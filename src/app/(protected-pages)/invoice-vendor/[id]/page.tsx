@@ -181,6 +181,7 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
             .catch(() => setKontrakList([]))
     }, [editing, data?.id_vendor])
 
+    const poKontrakTerpilih = kontrakList.find(k => k.id_kontrak_vendor === form.id_kontrak_vendor)?.nomor_po ?? null
     const kontrakOptions = kontrakList.map(k => ({
         value: k.id_kontrak_vendor,
         label: `${k.nomor_kontrak ?? 'Tanpa nomor'} · ${MEKANISME_LABEL[k.mekanisme] ?? k.mekanisme}`,
@@ -570,7 +571,14 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                 <Select isSearchable isClearable placeholder="Pilih kontrak (opsional)..."
                                     options={kontrakOptions}
                                     value={kontrakOptions.find(o => o.value === form.id_kontrak_vendor) ?? null}
-                                    onChange={opt => setForm(p => ({ ...p, id_kontrak_vendor: opt?.value ?? '' }))} />
+                                    onChange={opt => {
+                                        const kontrakBaru = kontrakList.find(k => k.id_kontrak_vendor === (opt?.value ?? '')) ?? null
+                                        setForm(p => ({
+                                            ...p,
+                                            id_kontrak_vendor: opt?.value ?? '',
+                                            no_po: kontrakBaru?.nomor_po ? kontrakBaru.nomor_po : (poKontrakTerpilih ? '' : p.no_po),
+                                        }))
+                                    }} />
                             </FormItem>
                             <FormItem label="Nomor Invoice" asterisk invalid={!!formErrors.nomor_invoice} errorMessage={formErrors.nomor_invoice}>
                                 <Input value={form.nomor_invoice} invalid={!!formErrors.nomor_invoice}
@@ -586,8 +594,10 @@ export default function InvoiceVendorDetailPage({ params }: { params: Promise<{ 
                                     value={form.jatuh_tempo ? dayjs(form.jatuh_tempo).toDate() : null}
                                     onChange={date => setForm(p => ({ ...p, jatuh_tempo: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                             </FormItem>
-                            <FormItem label="No. PO">
-                                <Input value={form.no_po} onChange={e => setForm(p => ({ ...p, no_po: e.target.value }))} />
+                            <FormItem label="No. PO"
+                                extra={poKontrakTerpilih ? <span className="text-xs text-gray-400">Terisi otomatis dari PO kontrak terpilih</span> : undefined}>
+                                <Input value={poKontrakTerpilih ?? form.no_po} disabled={!!poKontrakTerpilih}
+                                    onChange={e => setForm(p => ({ ...p, no_po: e.target.value }))} />
                             </FormItem>
                             <FormItem label="No. Kontrak">
                                 <Input value={form.no_kontrak} onChange={e => setForm(p => ({ ...p, no_kontrak: e.target.value }))} />

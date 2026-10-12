@@ -2,7 +2,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
-import { Card, Button, Input, Select, Tag, Tooltip, Pagination, Spinner, toast, Notification } from '@/components/ui'
+import { Card, Button, DatePicker, Input, Select, Tag, Tooltip, Pagination, Spinner, toast, Notification } from '@/components/ui'
 import Table from '@/components/ui/Table'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineTrash, HiOutlineEye, HiOutlinePencilAlt, HiOutlineClipboardList, HiOutlineChevronDown } from 'react-icons/hi'
 import Loading from '@/components/shared/Loading'
@@ -48,8 +48,12 @@ const KOLOM: { label: string; lebar: number }[] = [
     { label: '', lebar: 190 },
 ]
 
-const JUMLAH_ANAK_PER_MUAT = 10
-const MAKS_HALAMAN_SEGARKAN = 10
+const KOLOM_IDENTITAS = 5
+
+const JUMLAH_ANAK_PER_MUAT = 25
+const MAKS_HALAMAN_SEGARKAN = 4
+
+type RentangTanggal = [Date | null, Date | null]
 
 type PermintaanAnak = { halaman: number; segarkan: boolean }
 type AnakKelompok = { data: UangJalan[]; total: number; halaman: number; loading: boolean; gagal: PermintaanAnak | null }
@@ -77,6 +81,9 @@ export default function UangJalanPage() {
     const [statusFilter, setStatusFilter] = useState<'' | StatusPengajuan>('')
     const [proyekFilter, setProyekFilter] = useState('')
     const [proyekOptions, setProyekOptions] = useState<OpsiProyek[]>([])
+    const [rentang, setRentang]         = useState<RentangTanggal>([null, null])
+    const [dari, setDari]               = useState('')
+    const [sampai, setSampai]           = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
@@ -91,8 +98,8 @@ export default function UangJalanPage() {
     const { bukaLog, dialogLog } = useLogPengajuan(uangJalanService.riwayat)
 
     const filter = useMemo(
-        () => ({ search, status: statusFilter, id_proyek: proyekFilter }),
-        [search, statusFilter, proyekFilter],
+        () => ({ search, status: statusFilter, id_proyek: proyekFilter, dari, sampai }),
+        [search, statusFilter, proyekFilter, dari, sampai],
     )
 
     const fetchData = useCallback(async (pertahankanTerbuka = false) => {
@@ -139,10 +146,11 @@ export default function UangJalanPage() {
         const usang = () => generasi !== generasiRef.current || urutanAnakRef.current[k.kunci] !== urutan
 
         setAnak(prev => ({ ...prev, [k.kunci]: { ...(prev[k.kunci] ?? ANAK_KOSONG), loading: true, gagal: null } }))
+        const filterAnak = { ...filter, id_proyek: k.id_proyek ?? FILTER_DI_LUAR_PROYEK }
         try {
             const res = segarkan
-                ? await uangJalanService.list(1, halaman * JUMLAH_ANAK_PER_MUAT, filter, k)
-                : await uangJalanService.list(halaman, JUMLAH_ANAK_PER_MUAT, filter, k)
+                ? await uangJalanService.list(1, halaman * JUMLAH_ANAK_PER_MUAT, filterAnak)
+                : await uangJalanService.list(halaman, JUMLAH_ANAK_PER_MUAT, filterAnak)
             if (usang()) return
             setAnak(prev => {
                 const lama = segarkan || halaman === 1 ? [] : (prev[k.kunci]?.data ?? [])
@@ -176,6 +184,20 @@ export default function UangJalanPage() {
 
     const handleSearchSubmit = () => { setSearch(searchInput); setCurrentPage(1) }
     const handleSearchClear  = () => { setSearchInput(''); setSearch(''); setCurrentPage(1) }
+
+    const pilihRentang = (nilai: RentangTanggal) => {
+        setRentang(nilai)
+        const [awal, akhir] = nilai
+        if (awal && akhir) {
+            setDari(dayjs(awal).format('YYYY-MM-DD'))
+            setSampai(dayjs(akhir).format('YYYY-MM-DD'))
+            setCurrentPage(1)
+        } else if (!awal && !akhir) {
+            setDari('')
+            setSampai('')
+            setCurrentPage(1)
+        }
+    }
 
     const tutupHapus = () => { if (!submitting) setDeleteTarget(null) }
 
@@ -212,8 +234,14 @@ export default function UangJalanPage() {
         }
 
         const daftarBaru = await terkiniRef.current.fetchData(true)
-        if (!kelompok || generasi !== generasiRef.current) return
-        if (!daftarBaru?.some(k => k.kunci === kelompok.kunci && !k.tunggal)) return
+        if (!daftarBaru || generasi !== generasiRef.current) return
+
+        const masihKelompok = new Set(daftarBaru.filter(k => !k.tunggal).map(k => k.kunci))
+        const sisakan = <T,>(peta: Record<string, T>) => Object.fromEntries(Object.entries(peta).filter(([kunci]) => masihKelompok.has(kunci)))
+        setTerbuka(sisakan)
+        setAnak(sisakan)
+
+        if (!kelompok || !masihKelompok.has(kelompok.kunci)) return
         const halamanDimuat = terkiniRef.current.anak[kelompok.kunci]?.halaman ?? 1
         terkiniRef.current.muatAnak(kelompok, Math.min(MAKS_HALAMAN_SEGARKAN, Math.max(1, halamanDimuat)), true)
     }
@@ -287,7 +315,7 @@ export default function UangJalanPage() {
                     <span className="text-xs text-gray-400">{dayjs(u.tanggal).format('DD MMM YYYY')}</span>
                 </div>
             </Td>
-            <Td>{!kelompok && selDriver(u)}</Td>
+            <Td>{selDriver(u)}</Td>
             <Td><span className="whitespace-nowrap">{u.nopol}</span></Td>
             <Td>{u.rute}</Td>
             <Td>{kelompok ? selAlasanLuarProyek(u.alasan_tanpa_proyek) : selProyek(u, u.alasan_tanpa_proyek)}</Td>
@@ -361,27 +389,22 @@ export default function UangJalanPage() {
             <Fragment key={k.kunci}>
                 <Tr className="cursor-pointer bg-gray-50 dark:bg-gray-700/40" onClick={() => toggleKelompok(k)}>
                     <Td>{no}</Td>
-                    <Td>
-                        <div className="flex items-start gap-2">
-                            <HiOutlineChevronDown className={`mt-0.5 shrink-0 text-gray-400 transition-transform ${buka ? '' : '-rotate-90'}`} />
-                            <div className="flex flex-col">
-                                <span className="font-semibold text-xs whitespace-nowrap">{formatNum(k.jumlah)} uang jalan</span>
-                                <span className="text-xs text-gray-400 whitespace-nowrap">{rentangTanggal(k.tanggal_awal, k.tanggal_akhir)}</span>
-                            </div>
+                    <Td colSpan={KOLOM_IDENTITAS}>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <HiOutlineChevronDown className={`shrink-0 text-gray-400 transition-transform ${buka ? '' : '-rotate-90'}`} />
+                            {k.id_proyek ? (
+                                <>
+                                    <span className="font-semibold text-gray-800 dark:text-gray-100">{k.nama_proyek}</span>
+                                    <span className="text-xs text-gray-400 font-mono">{k.kode_proyek}</span>
+                                </>
+                            ) : (
+                                <span className="font-semibold text-gray-600 dark:text-gray-300">Di luar proyek</span>
+                            )}
+                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                                {formatNum(k.jumlah)} uang jalan · {formatNum(k.jumlah_driver)} driver · {rentangTanggal(k.tanggal_awal, k.tanggal_akhir)}
+                            </span>
                         </div>
                     </Td>
-                    <Td>{selDriver(k)}</Td>
-                    <Td>
-                        {k.jumlah_nopol > 1
-                            ? <span className="text-gray-500 whitespace-nowrap">{formatNum(k.jumlah_nopol)} unit</span>
-                            : <span className="whitespace-nowrap">{k.nopol}</span>}
-                    </Td>
-                    <Td>
-                        {k.jumlah_rute > 1
-                            ? <span className="text-gray-500 whitespace-nowrap">{formatNum(k.jumlah_rute)} rute</span>
-                            : k.rute}
-                    </Td>
-                    <Td>{selProyek(k)}</Td>
                     <Td><span className="whitespace-nowrap">{formatNum(k.total_trip)} trip</span></Td>
                     <Td><span className="tabular-nums font-semibold whitespace-nowrap">{formatRupiah(k.total_nominal)}</span></Td>
                     <Td>
@@ -443,6 +466,13 @@ export default function UangJalanPage() {
                             options={proyekSelectOptions}
                             value={proyekSelectOptions.find(o => o.value === proyekFilter) ?? null}
                             onChange={opt => { setProyekFilter((opt as { value: string } | null)?.value ?? ''); setCurrentPage(1) }} />
+                    </div>
+                    <div className="w-64 shrink-0">
+                        <DatePicker.DatePickerRange
+                            placeholder="Semua tanggal"
+                            inputFormat="DD/MM/YYYY"
+                            value={rentang}
+                            onChange={pilihRentang} />
                     </div>
                 </div>
                 <Loading loading={loading && list.length !== 0} type="cover">

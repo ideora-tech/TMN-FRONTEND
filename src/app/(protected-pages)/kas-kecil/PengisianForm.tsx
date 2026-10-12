@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import { Alert, Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import DatePicker from '@/components/ui/DatePicker'
+import Select from '@/components/ui/Select'
 import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
@@ -12,8 +13,9 @@ import { kasKecilService, PengisianKasKecil, RingkasanKasKecil } from '@/service
 import { angkaRupiah } from '../kasbon/kasbonMeta'
 import { MAKS_NOMINAL, errorPerField } from './kasKecilMeta'
 
-type FieldKey = 'tanggal' | 'nominal' | 'keterangan'
+type FieldKey = 'tanggal' | 'nominal' | 'keterangan' | 'id_rekening_perusahaan'
 type FormErrors = Partial<Record<FieldKey, string>>
+type RekeningOption = { value: string; label: string }
 
 export default function PengisianForm({ mode, initial }: { mode: 'baru' | 'edit'; initial?: PengisianKasKecil }) {
     const router = useRouter()
@@ -24,20 +26,38 @@ export default function PengisianForm({ mode, initial }: { mode: 'baru' | 'edit'
     const [loading, setLoading]       = useState(false)
     const [ringkasan, setRingkasan]   = useState<RingkasanKasKecil | null>(null)
     const [gagalRingkasan, setGagalRingkasan] = useState(false)
+    const [idRekening, setIdRekening] = useState(initial?.id_rekening_perusahaan ?? '')
 
     useEffect(() => {
-        kasKecilService.ringkasan().then(setRingkasan).catch(() => setGagalRingkasan(true))
-    }, [])
+        kasKecilService.ringkasan()
+            .then(hasil => {
+                setRingkasan(hasil)
+                setIdRekening(sekarang => {
+                    if (sekarang && hasil.daftar_rekening.some(r => r.id_rekening_perusahaan === sekarang)) return sekarang
+                    if (initial) {
+                        return hasil.daftar_rekening.find(r => r.nama_bank === initial.nama_bank && r.nomor_rekening === initial.nomor_rekening)
+                            ?.id_rekening_perusahaan ?? ''
+                    }
+                    return hasil.daftar_rekening.find(r => r.utama)?.id_rekening_perusahaan ?? hasil.daftar_rekening[0]?.id_rekening_perusahaan ?? ''
+                })
+            })
+            .catch(() => setGagalRingkasan(true))
+    }, [initial])
 
     const nilaiNominal = Number(nominal)
     const hapusError = (key: FieldKey) => setErrors(prev => (prev[key] ? { ...prev, [key]: undefined } : prev))
 
-    const rekening = (() => {
+    const rekeningOptions: RekeningOption[] = (ringkasan?.daftar_rekening ?? []).map(r => ({
+        value: r.id_rekening_perusahaan,
+        label: [r.nama_bank, r.nomor_rekening, r.atas_nama_rekening].filter(Boolean).join(' · ') + (r.utama ? ' (utama)' : ''),
+    }))
+    const rekeningLama = initial && !idRekening
+        ? [initial.nama_bank, initial.nomor_rekening, initial.atas_nama_rekening].filter(Boolean).join(' · ')
+        : ''
+    const pesanRekening = (() => {
         if (!ringkasan) return gagalRingkasan ? 'Rekening perusahaan tidak bisa dimuat' : 'Memuat...'
-        if (!ringkasan.rekening_sumber) return 'Rekening perusahaan belum diisi di profil perusahaan'
-
-        return [ringkasan.rekening_sumber.nama_bank, ringkasan.rekening_sumber.nomor_rekening, ringkasan.rekening_sumber.atas_nama_rekening]
-            .filter(Boolean).join(' · ')
+        if (rekeningOptions.length === 0) return rekeningLama || 'Belum ada rekening di master Rekening Perusahaan'
+        return ''
     })()
 
     const validasi = (): FormErrors => {
@@ -59,7 +79,7 @@ export default function PengisianForm({ mode, initial }: { mode: 'baru' | 'edit'
             return
         }
 
-        const payload = { tanggal, nominal: nilaiNominal, keterangan: keterangan.trim() }
+        const payload = { tanggal, nominal: nilaiNominal, keterangan: keterangan.trim(), id_rekening_perusahaan: ringkasan && idRekening ? idRekening : undefined }
         setLoading(true)
         try {
             const hasil = mode === 'edit' && initial
@@ -119,9 +139,17 @@ export default function PengisianForm({ mode, initial }: { mode: 'baru' | 'edit'
                                 onChange={e => { setNominal(angkaRupiah(e.target.value)); hapusError('nominal') }} />
                         </FormItem>
                         <div className="sm:col-span-2">
-                            <FormItem label="Rekening Sumber"
-                                extra={<span className="text-xs text-gray-400 ml-2">dari profil perusahaan</span>}>
-                                <Input disabled value={rekening} />
+                            <FormItem label="Rekening Sumber" invalid={!!errors.id_rekening_perusahaan} errorMessage={errors.id_rekening_perusahaan}
+                                extra={<span className="text-xs text-gray-400 ml-2">dari master Rekening Perusahaan</span>}>
+                                {pesanRekening ? (
+                                    <Input disabled value={pesanRekening} />
+                                ) : (
+                                    <Select<RekeningOption> isSearchable={false} isClearable
+                                        placeholder={rekeningLama ? `${rekeningLama} — sudah tidak ada di master, pilih rekening lain bila perlu` : 'Pilih rekening sumber...'}
+                                        options={rekeningOptions}
+                                        value={rekeningOptions.find(o => o.value === idRekening) ?? null}
+                                        onChange={opt => { setIdRekening((opt as RekeningOption | null)?.value ?? ''); hapusError('id_rekening_perusahaan') }} />
+                                )}
                             </FormItem>
                         </div>
                         <div className="sm:col-span-2">

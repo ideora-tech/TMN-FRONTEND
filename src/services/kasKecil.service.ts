@@ -14,6 +14,7 @@ export interface PengisianKasKecil {
     tanggal: string
     nominal: number
     keterangan: string
+    id_rekening_perusahaan: string | null
     nama_bank: string | null
     nomor_rekening: string | null
     atas_nama_rekening: string | null
@@ -56,6 +57,14 @@ export interface OpsiKategoriKasKecil {
     label: string
 }
 
+export interface RekeningSumberKasKecil {
+    id_rekening_perusahaan: string
+    nama_bank: string
+    nomor_rekening: string
+    atas_nama_rekening: string | null
+    utama: boolean
+}
+
 export interface RingkasanKasKecil {
     saldo: number
     masuk_bulan_ini: number
@@ -64,7 +73,8 @@ export interface RingkasanKasKecil {
     ada_transaksi: boolean
     ada_saldo_awal: boolean
     boleh_saldo_awal: boolean
-    rekening_sumber: { nama_bank: string | null; nomor_rekening: string | null; atas_nama_rekening: string | null } | null
+    rekening_sumber: RekeningSumberKasKecil | null
+    daftar_rekening: RekeningSumberKasKecil[]
     opsi_kategori: OpsiKategoriKasKecil[]
 }
 
@@ -91,6 +101,7 @@ export type PengisianKasKecilPayload = {
     tanggal: string
     nominal: number
     keterangan: string
+    id_rekening_perusahaan?: string
 }
 
 export type PengeluaranKasKecilPayload = {

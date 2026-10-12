@@ -6,7 +6,7 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import dayjs from 'dayjs'
 import axios from 'axios'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineCheckCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineTrash, HiPlusCircle, HiOutlineDownload, HiOutlineUpload, HiOutlineClipboardList, HiOutlinePaperAirplane, HiOutlineCheckCircle, HiOutlineDocumentText } from 'react-icons/hi'
 import { PiFilePdfDuotone } from 'react-icons/pi'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import LogApprovalDialog from '@/components/shared/LogApprovalDialog'
@@ -14,6 +14,7 @@ import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { kontrakVendorService, KontrakVendor, HasilTimpaPasangan } from '@/services/kontrak-vendor.service'
@@ -69,6 +70,7 @@ const LANGKAH_KONTRAK: Record<string, { judul: string; keterangan: string }> = {
 type TambahUnitForm = {
     nopol: string; merk: string; jenis: string; id_jenis_kendaraan: string
     tahun: string; kapasitas: string; masa_berlaku_stnk: string; masa_berlaku_kir: string
+    harga: string
     id_supir_vendor_default: string
     mode_driver: 'ada' | 'baru'
     driver_nama: string; driver_telepon: string; driver_no_sim: string
@@ -79,6 +81,7 @@ type ItemGagal = { label: string; alasan: string }
 const emptyTambahUnit = (): TambahUnitForm => ({
     nopol: '', merk: '', jenis: '', id_jenis_kendaraan: '',
     tahun: '', kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
+    harga: '',
     id_supir_vendor_default: '',
     mode_driver: 'ada',
     driver_nama: '', driver_telepon: '', driver_no_sim: '',
@@ -116,6 +119,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [menghapusUnit, setMenghapusUnit] = useState(false)
     const [logOpen, setLogOpen] = useState(false)
     const [downloadingExport, setDownloadingExport] = useState(false)
+    const [prosesPo, setProsesPo] = useState<'' | 'terbit' | 'cetak'>('')
     const [kontrakPayungOptions, setKontrakPayungOptions] = useState<{ value: string; label: string }[]>([])
 
     const toFormState = (d: KontrakVendor) => ({
@@ -207,7 +211,6 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 nilai_kontrak:   Number(form.nilai_kontrak_str || '0'),
                 tanggal_mulai:   form.tanggal_mulai ?? null,
                 tanggal_selesai: form.tanggal_selesai ?? null,
-                status:          form.status ?? null,
                 id_kontrak_induk: form.id_kontrak_induk ?? null,
             })
             setData(updated)
@@ -257,6 +260,31 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         }
     }
 
+    const handleTerbitkanPo = async () => {
+        setProsesPo('terbit')
+        try {
+            const updated = await kontrakVendorService.terbitkanPo(id)
+            setData(updated)
+            setForm(toFormState(updated))
+            toast.push(<Notification type="success" title={`PO ${updated.nomor_po ?? ''} berhasil diterbitkan`} />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setProsesPo('')
+        }
+    }
+
+    const handleCetakPo = async () => {
+        setProsesPo('cetak')
+        try {
+            await unduhDariApi(API_ENDPOINTS.KONTRAK_VENDOR_PO_PDF(id), {}, `${data?.nomor_po ?? 'purchase-order'}.pdf`)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setProsesPo('')
+        }
+    }
+
     const tutupDialogTambah = () => {
         setDialogTambah('')
         setUnitEdit(null)
@@ -278,6 +306,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             kapasitas: u.kapasitas ?? '',
             masa_berlaku_stnk: u.masa_berlaku_stnk ?? '',
             masa_berlaku_kir: u.masa_berlaku_kir ?? '',
+            harga: u.harga_kontrak != null && u.harga_kontrak > 0 ? String(Math.round(u.harga_kontrak)) : '',
             id_supir_vendor_default: u.id_supir_vendor_default ?? '',
             mode_driver: 'ada',
             driver_nama: driverDariUnit(u)?.nama ?? '',
@@ -318,6 +347,10 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             setDraftErrors(prev => ({ ...prev, [i]: !row.nopol.trim() ? 'Nopol wajib diisi' : 'Habis masa berlaku STNK & KIR wajib diisi' }))
             return
         }
+        if (nilaiDariUnit && !(Number(row.harga) > 0)) {
+            setDraftErrors(prev => ({ ...prev, [i]: 'Harga wajib diisi — unit lain di kontrak ini sudah berharga' }))
+            return
+        }
         setMenyimpanDraft(i)
         try {
             let idDriverDefault: string | null = null
@@ -343,6 +376,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 kapasitas: row.kapasitas.trim() || null,
                 masa_berlaku_stnk: row.masa_berlaku_stnk || null,
                 masa_berlaku_kir: row.masa_berlaku_kir || null,
+                harga_kontrak: Number(row.harga) > 0 ? Number(row.harga) : null,
                 id_supir_vendor_default: idDriverDefault,
                 id_kontrak_vendor: id,
             })
@@ -363,6 +397,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         if (!unitForm.nopol.trim()) eV.nopol = 'Nopol wajib diisi'
         if (!unitForm.masa_berlaku_stnk) eV.stnk = 'Habis masa berlaku STNK wajib diisi'
         if (!unitForm.masa_berlaku_kir) eV.kir = 'Habis masa berlaku KIR wajib diisi'
+        if (unitEdit && nilaiDariUnit && !(Number(unitForm.harga) > 0)) eV.harga = 'Harga wajib diisi — unit lain di kontrak ini sudah berharga'
         if (Object.keys(eV).length > 0) {
             setTambahErrors(eV)
             return
@@ -394,6 +429,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 kapasitas: unitForm.kapasitas.trim() || null,
                 masa_berlaku_stnk: unitForm.masa_berlaku_stnk || null,
                 masa_berlaku_kir: unitForm.masa_berlaku_kir || null,
+                harga_kontrak: Number(unitForm.harga) > 0 ? Number(unitForm.harga) : null,
                 id_supir_vendor_default: kontrakPaket ? idDriverDefault : null,
             }
             if (unitEdit) {
@@ -404,6 +440,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             toast.push(<Notification type="success" title={unitEdit ? 'Unit berhasil diperbarui' : 'Unit berhasil ditambahkan ke kontrak'} />)
             tutupDialogTambah()
             muatTerikat()
+            muatKontrak()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -441,7 +478,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         try {
             const res = await axios.get(
                 jenis === 'unit'
-                    ? (data?.mekanisme !== 'unit_only' ? API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_PASANGAN : API_ENDPOINTS.ARMADA_VENDOR_IMPORT_TEMPLATE)
+                    ? (data?.mekanisme !== 'unit_only' ? API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_PASANGAN : API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_UNIT)
                     : API_ENDPOINTS.SUPIR_VENDOR_IMPORT_TEMPLATE,
                 { responseType: 'blob' },
             )
@@ -449,7 +486,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
             const link = document.createElement('a')
             link.href = href
             link.download = jenis === 'unit'
-                ? (data?.mekanisme !== 'unit_only' ? 'template-import-pasangan-unit-driver.xlsx' : 'template-import-armada-vendor.xlsx')
+                ? (data?.mekanisme !== 'unit_only' ? 'template-import-pasangan-unit-driver.xlsx' : 'template-import-unit-kontrak.xlsx')
                 : 'template-import-supir-vendor.xlsx'
             document.body.appendChild(link)
             link.click()
@@ -504,6 +541,10 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
 
     const vendorName = data.vendor?.nama_vendor ?? 'Kontrak Vendor'
     const kontrakPaket = data.mekanisme !== 'unit_only'
+    const unitBerharga = unitTerikat.filter(u => (u.harga_kontrak ?? 0) > 0).length
+    const nilaiDariUnit = unitTerikat.length > 0 && unitBerharga === unitTerikat.length
+    const totalHargaUnit = unitTerikat.reduce((total, u) => total + (u.harga_kontrak ?? 0), 0)
+    const poBisaDicetak = !!data.nomor_po && (data.status === 'aktif' || data.status === 'selesai')
     const driverDariUnit = (u: ArmadaVendor) => supirTerikat.find(s => s.id_supir_vendor === u.id_supir_vendor_default) ?? null
     const idDriverTerpakai = new Set(unitTerikat.map(u => u.id_supir_vendor_default).filter(Boolean))
     const driverCadangan = supirTerikat.filter(s => !idDriverTerpakai.has(s.id_supir_vendor))
@@ -618,6 +659,18 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         Payung · {data.jumlah_turunan} turunan
                                     </span>
                                 )}
+                                {data.status === 'aktif' && !data.nomor_po && (
+                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentText />}
+                                        loading={prosesPo === 'terbit'} onClick={handleTerbitkanPo}>
+                                        Terbitkan PO
+                                    </Button>
+                                )}
+                                {poBisaDicetak && (
+                                    <Button size="sm" variant="default" icon={<HiOutlineDocumentText />}
+                                        loading={prosesPo === 'cetak'} onClick={handleCetakPo}>
+                                        Cetak PO
+                                    </Button>
+                                )}
                                 <Tooltip title="Cetak PDF">
                                     <span
                                         className={`cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30 transition-colors ${downloadingExport ? 'opacity-50 pointer-events-none' : ''}`}
@@ -649,7 +702,18 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         </span>
                                     ),
                                 }] : []),
-                                { label: 'Nilai Kontrak',     value: data.nilai_kontrak ? formatRupiah(data.nilai_kontrak) : <span className="text-gray-400">—</span> },
+                                {
+                                    label: 'No. PO',
+                                    value: data.nomor_po
+                                        ? <>{data.nomor_po}{data.tanggal_po && <span className="text-xs font-normal text-gray-400"> · {dayjs(data.tanggal_po).format('DD/MM/YYYY')}</span>}</>
+                                        : <span className="text-gray-400 font-normal">Terbit otomatis saat kontrak aktif</span>,
+                                },
+                                {
+                                    label: 'Nilai Kontrak',
+                                    value: data.nilai_kontrak
+                                        ? <>{formatRupiah(data.nilai_kontrak)}{nilaiDariUnit && <span className="text-xs font-normal text-gray-400"> · dari harga unit</span>}</>
+                                        : <span className="text-gray-400">—</span>,
+                                },
                                 { label: 'Rate',              value: data.rate ? formatRupiah(data.rate) : <span className="text-gray-400">—</span> },
                                 { label: 'Satuan Kontrak',    value: data.satuan ?? <span className="text-gray-400">—</span> },
                                 { label: 'Pajak',             value: data.pajak_persen != null ? `${data.pajak_persen} %` : <span className="text-gray-400">—</span> },
@@ -690,9 +754,12 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     onChange={e => setForm(p => ({ ...p, nomor_kontrak: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Nilai Kontrak">
-                                <Input prefix="Rp" placeholder="0"
+                                <Input prefix="Rp" placeholder="0" disabled={nilaiDariUnit}
                                     value={form.nilai_kontrak_str ? formatNum(Number(form.nilai_kontrak_str)) : ''}
                                     onChange={e => setForm(p => ({ ...p, nilai_kontrak_str: e.target.value.replace(/\D/g, '') }))} />
+                                {nilaiDariUnit && (
+                                    <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari jumlah harga unit — ubah lewat kolom Harga di tabel unit</p>
+                                )}
                             </FormItem>
                             <FormItem label="Rate" asterisk={form.satuan === 'per trip'} invalid={!!errorRate} errorMessage={errorRate}>
                                 <Input prefix="Rp" placeholder="0"
@@ -890,6 +957,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                             {kontrakPaket && <th className="py-2 pr-3 font-medium">No. SIM</th>}
                                             <th className="py-2 pr-3 font-medium">Habis STNK</th>
                                             <th className="py-2 pr-3 font-medium">Habis KIR</th>
+                                            <th className="py-2 pr-3 font-medium text-right">Harga</th>
                                             <th className="py-2 font-medium text-right">Aksi</th>
                                         </tr>
                                     </thead>
@@ -957,6 +1025,12 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                         onChange={date => setUnitForm(p => ({ ...p, masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                                                     {tambahErrors.kir && <p className="text-xs text-red-500 mt-0.5">{tambahErrors.kir}</p>}
                                                 </td>
+                                                <td className="py-2 pr-3 min-w-36">
+                                                    <Input size="sm" prefix="Rp" placeholder="0" invalid={!!tambahErrors.harga}
+                                                        value={unitForm.harga ? formatNum(Number(unitForm.harga)) : ''}
+                                                        onChange={e => setUnitForm(p => ({ ...p, harga: e.target.value.replace(/\D/g, '').slice(0, 12) }))} />
+                                                    {tambahErrors.harga && <p className="text-xs text-red-500 mt-0.5">{tambahErrors.harga}</p>}
+                                                </td>
                                                 <td className="py-2 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-1.5">
                                                         <Button type="button" size="xs" variant="solid" loading={menyimpanTambah}
@@ -984,6 +1058,9 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                 {kontrakPaket && <td className="py-2.5 pr-3">{driverDariUnit(u)?.no_sim ?? '—'}</td>}
                                                 <td className="py-2.5 pr-3 whitespace-nowrap">{u.masa_berlaku_stnk ? dayjs(u.masa_berlaku_stnk).format('DD/MM/YYYY') : '—'}</td>
                                                 <td className="py-2.5 pr-3 whitespace-nowrap">{u.masa_berlaku_kir ? dayjs(u.masa_berlaku_kir).format('DD/MM/YYYY') : '—'}</td>
+                                                <td className="py-2.5 pr-3 text-right whitespace-nowrap">
+                                                    {(u.harga_kontrak ?? 0) > 0 ? formatRupiah(u.harga_kontrak as number) : <span className="text-gray-400">—</span>}
+                                                </td>
                                                 <td className="py-2.5 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-1.5">
                                                         <span className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/20 dark:text-amber-300 dark:hover:bg-amber-500/30 transition-colors"
@@ -1061,6 +1138,11 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                                         value={row.masa_berlaku_kir ? dayjs(row.masa_berlaku_kir).toDate() : null}
                                                         onChange={date => ubahDraftUnit(i, { masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
                                                 </td>
+                                                <td className="py-2 pr-3 min-w-36">
+                                                    <Input size="sm" prefix="Rp" placeholder={nilaiDariUnit ? 'Harga *' : 'Harga'}
+                                                        value={row.harga ? formatNum(Number(row.harga)) : ''}
+                                                        onChange={e => ubahDraftUnit(i, { harga: e.target.value.replace(/\D/g, '').slice(0, 12) })} />
+                                                </td>
                                                 <td className="py-2 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-1.5">
                                                         <Button type="button" size="xs" variant="solid" loading={menyimpanDraft === i}
@@ -1074,6 +1156,15 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                         ))}
                                     </tbody>
                                 </table>
+                                {unitBerharga > 0 && (
+                                    <p className="text-sm text-right mt-3">
+                                        <span className="text-gray-500">Total harga unit: </span>
+                                        <span className="font-semibold">{formatRupiah(totalHargaUnit)}</span>
+                                        {nilaiDariUnit
+                                            ? <span className="text-xs text-gray-400"> — menjadi nilai kontrak</span>
+                                            : <span className="text-xs text-amber-600 dark:text-amber-400"> — {formatNum(unitTerikat.length - unitBerharga)} unit belum berharga, nilai kontrak masih diisi manual</span>}
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>

@@ -39,6 +39,7 @@ const SATUAN_OPTIONS = [
 type UnitRow = {
     nopol: string; merk: string; jenis: string; id_jenis_kendaraan: string
     tahun: string; kapasitas: string; masa_berlaku_stnk: string; masa_berlaku_kir: string
+    harga: string
     supir_index: string
     driver_nama: string; driver_telepon: string; driver_no_sim: string
 }
@@ -47,6 +48,7 @@ type SupirRow = { nama: string; telepon: string; no_sim: string }
 const emptyUnitRow = (): UnitRow => ({
     nopol: '', merk: '', jenis: '', id_jenis_kendaraan: '',
     tahun: '', kapasitas: '', masa_berlaku_stnk: '', masa_berlaku_kir: '',
+    harga: '',
     supir_index: '',
     driver_nama: '', driver_telepon: '', driver_no_sim: '',
 })
@@ -61,6 +63,7 @@ const unitInputKeRow = (u: KontrakUnitInput): UnitRow => ({
     kapasitas: u.kapasitas ?? '',
     masa_berlaku_stnk: u.masa_berlaku_stnk ?? '',
     masa_berlaku_kir: u.masa_berlaku_kir ?? '',
+    harga: u.harga_kontrak != null && u.harga_kontrak > 0 ? String(Math.round(u.harga_kontrak)) : '',
     supir_index: '',
     driver_nama: '', driver_telepon: '', driver_no_sim: '',
 })
@@ -164,7 +167,7 @@ export default function KontrakVendorBaruPage() {
         try {
             const res = await axios.get(
                 jenis === 'unit'
-                    ? (pakaiSupir ? API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_PASANGAN : API_ENDPOINTS.ARMADA_VENDOR_IMPORT_TEMPLATE)
+                    ? (pakaiSupir ? API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_PASANGAN : API_ENDPOINTS.KONTRAK_VENDOR_TEMPLATE_UNIT)
                     : API_ENDPOINTS.SUPIR_VENDOR_IMPORT_TEMPLATE,
                 { responseType: 'blob' },
             )
@@ -172,7 +175,7 @@ export default function KontrakVendorBaruPage() {
             const link = document.createElement('a')
             link.href = href
             link.download = jenis === 'unit'
-                ? (pakaiSupir ? 'template-import-pasangan-unit-driver.xlsx' : 'template-import-armada-vendor.xlsx')
+                ? (pakaiSupir ? 'template-import-pasangan-unit-driver.xlsx' : 'template-import-unit-kontrak.xlsx')
                 : 'template-import-supir-vendor.xlsx'
             document.body.appendChild(link)
             link.click()
@@ -242,6 +245,11 @@ export default function KontrakVendorBaruPage() {
 
     const rateWajib = form.satuan === 'per trip'
 
+    const jumlahUnitBerharga = unitRows.filter(u => Number(u.harga) > 0).length
+    const nilaiDariUnit = unitRows.length > 0 && jumlahUnitBerharga === unitRows.length
+    const totalHargaUnit = unitRows.reduce((total, u) => total + (Number(u.harga) || 0), 0)
+    const nilaiKontrakEfektif = nilaiDariUnit ? String(totalHargaUnit) : form.nilai_kontrak
+
     const estimasiRate = (() => {
         const rate = Number(form.rate)
         if (!form.rate || !rate) return null
@@ -254,9 +262,9 @@ export default function KontrakVendorBaruPage() {
         const e: Record<string, string> = {}
         if (!form.id_vendor) e.id_vendor = 'Vendor wajib dipilih'
         if (!form.nomor_kontrak.trim()) e.nomor_kontrak = 'No. kontrak wajib diisi'
-        if (!form.nilai_kontrak) e.nilai_kontrak = 'Nilai kontrak wajib diisi'
+        if (!nilaiKontrakEfektif) e.nilai_kontrak = 'Nilai kontrak wajib diisi'
         if (rateWajib && !(Number(form.rate) > 0)) e.rate = 'Rate wajib diisi untuk satuan Per Trip'
-        else if (form.rate && form.nilai_kontrak && Number(form.rate) > Number(form.nilai_kontrak)) e.rate = 'Rate tidak boleh lebih besar dari nilai kontrak'
+        else if (form.rate && nilaiKontrakEfektif && Number(form.rate) > Number(nilaiKontrakEfektif)) e.rate = 'Rate tidak boleh lebih besar dari nilai kontrak'
         if (!form.satuan) e.satuan = 'Satuan kontrak wajib dipilih'
         if (!form.tanggal_mulai) e.tanggal_mulai = 'Tanggal mulai wajib diisi'
         if (!form.tanggal_selesai) e.tanggal_selesai = 'Tanggal selesai wajib diisi'
@@ -264,6 +272,7 @@ export default function KontrakVendorBaruPage() {
             if (!u.nopol.trim()) e[`unit_${i}_nopol`] = 'Nopol wajib diisi'
             if (!u.masa_berlaku_stnk) e[`unit_${i}_stnk`] = 'Habis masa berlaku STNK wajib diisi'
             if (!u.masa_berlaku_kir) e[`unit_${i}_kir`] = 'Habis masa berlaku KIR wajib diisi'
+            if (jumlahUnitBerharga > 0 && !(Number(u.harga) > 0)) e[`unit_${i}_harga`] = 'Harga wajib diisi — unit lain sudah diberi harga'
         })
         if (pakaiSupir) supirRows.forEach((s, i) => { if (!s.nama.trim()) e[`supir_${i}_nama`] = 'Nama wajib diisi' })
         setErrors(e)
@@ -289,7 +298,7 @@ export default function KontrakVendorBaruPage() {
                 termin_pembayaran_hari: form.termin_pembayaran_hari ? Number(form.termin_pembayaran_hari) : null,
                 jumlah_trip: form.jumlah_trip ? Number(form.jumlah_trip) : null,
                 jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
-                nilai_kontrak: form.nilai_kontrak ? Number(form.nilai_kontrak) : null,
+                nilai_kontrak: nilaiKontrakEfektif ? Number(nilaiKontrakEfektif) : null,
                 tanggal_mulai: form.tanggal_mulai || null,
                 tanggal_selesai: form.tanggal_selesai || null,
                 ...(() => {
@@ -307,12 +316,13 @@ export default function KontrakVendorBaruPage() {
                         return {
                             nopol: u.nopol.trim(),
                             merk: u.merk.trim() || null,
-                            jenis: u.jenis.trim() || null,
+                            jenis: (jenisKendaraanOptions.find(o => o.value === u.id_jenis_kendaraan)?.label ?? u.jenis).trim().slice(0, 100) || null,
                             id_jenis_kendaraan: u.id_jenis_kendaraan || null,
                             tahun: u.tahun ? Number(u.tahun) : null,
                             kapasitas: u.kapasitas.trim() || null,
                             masa_berlaku_stnk: u.masa_berlaku_stnk || null,
                             masa_berlaku_kir: u.masa_berlaku_kir || null,
+                            harga_kontrak: Number(u.harga) > 0 ? Number(u.harga) : null,
                             supir_index: supirIndex,
                         }
                     })
@@ -414,9 +424,18 @@ export default function KontrakVendorBaruPage() {
                             onChange={e => setForm(p => ({ ...p, nomor_kontrak: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Nilai Kontrak" asterisk invalid={!!errors.nilai_kontrak} errorMessage={errors.nilai_kontrak}>
-                        <Input prefix="Rp" placeholder="0"
-                            value={form.nilai_kontrak ? formatNum(Number(form.nilai_kontrak)) : ''}
+                        <Input prefix="Rp" placeholder="0" disabled={nilaiDariUnit}
+                            value={nilaiKontrakEfektif ? formatNum(Number(nilaiKontrakEfektif)) : ''}
                             onChange={e => setForm(p => ({ ...p, nilai_kontrak: e.target.value.replace(/\D/g, '') }))} />
+                        {nilaiDariUnit && (
+                            <p className="text-xs text-gray-400 mt-1">Dihitung otomatis dari jumlah harga {formatNum(unitRows.length)} unit di bawah</p>
+                        )}
+                        {!nilaiDariUnit && jumlahUnitBerharga > 0 && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Lengkapi harga semua unit agar nilai kontrak terhitung otomatis</p>
+                        )}
+                        {!nilaiDariUnit && jumlahUnitBerharga === 0 && (
+                            <p className="text-xs text-gray-400 mt-1">Bisa dihitung otomatis — isi kolom Harga tiap unit di bawah</p>
+                        )}
                     </FormItem>
                     <FormItem label="Rate" asterisk={rateWajib} invalid={!!errors.rate} errorMessage={errors.rate}>
                         <Input prefix="Rp" placeholder="0"
@@ -544,7 +563,6 @@ export default function KontrakVendorBaruPage() {
                                         <th className="py-2 pr-2 w-8">No</th>
                                         <th className="py-2 pr-2">Nopol <span className="text-red-500">*</span></th>
                                         <th className="py-2 pr-2">Merk</th>
-                                        {!pakaiSupir && <th className="py-2 pr-2">Jenis</th>}
                                         <th className="py-2 pr-2">Jenis Kendaraan</th>
                                         {!pakaiSupir && <th className="py-2 pr-2">Tahun</th>}
                                         {!pakaiSupir && <th className="py-2 pr-2">Kapasitas / Muatan / Kubikasi</th>}
@@ -553,6 +571,7 @@ export default function KontrakVendorBaruPage() {
                                         {pakaiSupir && <th className="py-2 pr-2">No. SIM</th>}
                                         <th className="py-2 pr-2">Habis Masa Berlaku STNK <span className="text-red-500">*</span></th>
                                         <th className="py-2 pr-2">Habis Masa Berlaku KIR <span className="text-red-500">*</span></th>
+                                        <th className="py-2 pr-2">Harga</th>
                                         <th className="py-2 w-10"></th>
                                     </tr>
                                 </thead>
@@ -569,12 +588,6 @@ export default function KontrakVendorBaruPage() {
                                                 <Input size="sm" placeholder="Hino Dutro" value={u.merk}
                                                     onChange={e => ubahUnitRow(i, { merk: e.target.value })} />
                                             </td>
-                                            {!pakaiSupir && (
-                                                <td className="py-2 pr-2 min-w-32">
-                                                    <Input size="sm" placeholder="Truk Box" value={u.jenis}
-                                                        onChange={e => ubahUnitRow(i, { jenis: e.target.value })} />
-                                                </td>
-                                            )}
                                             <td className="py-2 pr-2 min-w-44">
                                                 <Select size="sm" isSearchable isClearable placeholder="Pilih..."
                                                     options={jenisKendaraanOptions}
@@ -625,6 +638,12 @@ export default function KontrakVendorBaruPage() {
                                                     onChange={date => ubahUnitRow(i, { masa_berlaku_kir: date ? dayjs(date).format('YYYY-MM-DD') : '' })} />
                                                 {errors[`unit_${i}_kir`] && <p className="text-red-500 text-xs mt-1">{errors[`unit_${i}_kir`]}</p>}
                                             </td>
+                                            <td className="py-2 pr-2 min-w-40">
+                                                <Input size="sm" prefix="Rp" placeholder="0" invalid={!!errors[`unit_${i}_harga`]}
+                                                    value={u.harga ? formatNum(Number(u.harga)) : ''}
+                                                    onChange={e => ubahUnitRow(i, { harga: e.target.value.replace(/\D/g, '').slice(0, 12) })} />
+                                                {errors[`unit_${i}_harga`] && <p className="text-red-500 text-xs mt-1">{errors[`unit_${i}_harga`]}</p>}
+                                            </td>
                                             <td className="py-2 pt-3">
                                                 <button type="button"
                                                     onClick={() => setUnitRows(prev => prev.filter((_, idx) => idx !== i))}
@@ -636,6 +655,13 @@ export default function KontrakVendorBaruPage() {
                                     ))}
                                 </tbody>
                             </table>
+                            {jumlahUnitBerharga > 0 && (
+                                <p className="text-sm text-right mt-3">
+                                    <span className="text-gray-500">Total harga unit: </span>
+                                    <span className="font-semibold">{formatRupiah(totalHargaUnit)}</span>
+                                    {nilaiDariUnit && <span className="text-xs text-gray-400"> — menjadi nilai kontrak</span>}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
