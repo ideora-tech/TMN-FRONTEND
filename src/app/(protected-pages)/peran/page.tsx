@@ -94,6 +94,14 @@ export default function PeranPage() {
                 </Tag>
             ),
         },
+        { header: 'Jumlah Pengguna', accessorKey: 'jumlah_pengguna', size: 150,
+            cell: ({ row }: CellContext<Peran, unknown>) => {
+                const jumlah = row.original.jumlah_pengguna ?? 0
+                return jumlah > 0
+                    ? <span className="font-semibold">{jumlah} <span className="font-normal text-gray-500 dark:text-gray-400">pengguna</span></span>
+                    : <span className="text-gray-400">Belum ada</span>
+            },
+        },
         { header: 'Status', accessorKey: 'aktif', size: 110,
             cell: ({ row }: CellContext<Peran, unknown>) => (
                 <Tag className={row.original.aktif

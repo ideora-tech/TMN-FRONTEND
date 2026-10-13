@@ -9,6 +9,7 @@ export interface MenuItem {
     icon: string | null
     urutan: number
     aktif: boolean
+    tampil_sidebar: boolean
     children?: MenuItem[]
     dibuat_pada: string
     diubah_pada: string

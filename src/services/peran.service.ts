@@ -8,6 +8,7 @@ export interface Peran {
     nama_peran: string
     is_platform: boolean
     aktif: boolean
+    jumlah_pengguna?: number | null
 }
 
 export const peranService = {

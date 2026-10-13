@@ -308,7 +308,9 @@ export default function ProjectBaruPage() {
                         <PilihRuteDialog isOpen={dialogRuteTerbuka} konteks="proyek"
                             onClose={() => setDialogRuteTerbuka(false)}
                             onPilih={tambahRuteDariDialog}
-                            onRuteBaru={() => muatRuteOptions()} />
+                            onRuteBaru={() => muatRuteOptions()}
+                            onRuteDihapus={() => muatRuteOptions()}
+                            idRuteDipakai={manualRuteRows.map(r => r.id_rute).filter(Boolean)} />
                     </div>
                 )}
 

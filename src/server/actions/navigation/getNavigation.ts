@@ -15,17 +15,29 @@ type ApiMenuItem = {
     path: string | null
     icon: string | null
     urutan: number
+    tampil_sidebar?: boolean
     children?: ApiMenuItem[]
 }
 
-const MENU_DISEMBUNYIKAN_WEB = new Set(['/pembelian-sparepart'])
+export type NavigasiPengguna = {
+    navigationTree: NavigationTree[]
+    pathTersembunyi: string[]
+}
 
-function saringItem(item: ApiMenuItem): ApiMenuItem | null {
-    if (item.path && MENU_DISEMBUNYIKAN_WEB.has(item.path)) return null
+function kumpulkanPath(item: ApiMenuItem, hasil: string[]) {
+    if (item.path) hasil.push(item.path)
+    item.children?.forEach(anak => kumpulkanPath(anak, hasil))
+}
+
+function saringItem(item: ApiMenuItem, tersembunyi: string[]): ApiMenuItem | null {
+    if (item.tampil_sidebar === false) {
+        kumpulkanPath(item, tersembunyi)
+        return null
+    }
 
     const asalPunyaAnak = (item.children?.length ?? 0) > 0
     const children = item.children
-        ? item.children.map(saringItem).filter((anak): anak is ApiMenuItem => anak !== null)
+        ? item.children.map(anak => saringItem(anak, tersembunyi)).filter((anak): anak is ApiMenuItem => anak !== null)
         : item.children
 
     if (!item.path && asalPunyaAnak && (children?.length ?? 0) === 0) return null
@@ -33,8 +45,8 @@ function saringItem(item: ApiMenuItem): ApiMenuItem | null {
     return { ...item, children }
 }
 
-function saringMenu(items: ApiMenuItem[]): ApiMenuItem[] {
-    return items.map(saringItem).filter((item): item is ApiMenuItem => item !== null)
+function saringMenu(items: ApiMenuItem[], tersembunyi: string[]): ApiMenuItem[] {
+    return items.map(item => saringItem(item, tersembunyi)).filter((item): item is ApiMenuItem => item !== null)
 }
 
 function mapMenuTree(items: ApiMenuItem[]): NavigationTree[] {
@@ -64,12 +76,13 @@ function mapMenuTree(items: ApiMenuItem[]): NavigationTree[] {
     })
 }
 
-export async function getNavigation(): Promise<NavigationTree[]> {
+export async function getNavigation(): Promise<NavigasiPengguna> {
+    const cadangan: NavigasiPengguna = { navigationTree: navigationConfig, pathTersembunyi: [] }
     const session = await auth()
     const token = (session as unknown as Record<string, unknown>)
         ?.accessToken as string | undefined
 
-    if (!token) return navigationConfig
+    if (!token) return cadangan
 
     try {
         const res = await fetch(`${BACKEND_URL}/api/menu/tree`, {
@@ -80,18 +93,21 @@ export async function getNavigation(): Promise<NavigationTree[]> {
             cache: 'no-store',
         })
 
-        if (!res.ok) return navigationConfig
+        if (!res.ok) return cadangan
 
         const json = await res.json()
 
-        if (!Array.isArray(json?.data)) return navigationConfig
+        if (!Array.isArray(json?.data)) return cadangan
 
         const items: ApiMenuItem[] = json.data
 
-        if (items.length === 0) return []
+        if (items.length === 0) return { navigationTree: [], pathTersembunyi: [] }
 
-        return mapMenuTree(saringMenu(items))
+        const pathTersembunyi: string[] = []
+        const navigationTree = mapMenuTree(saringMenu(items, pathTersembunyi))
+
+        return { navigationTree, pathTersembunyi }
     } catch {
-        return navigationConfig
+        return cadangan
     }
 }

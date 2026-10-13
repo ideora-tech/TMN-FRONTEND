@@ -14,17 +14,17 @@ const kumpulkanPath = (pohon: NavigationTree[], peran: string[], hasil: Set<stri
 }
 
 export default function useAksesMenu() {
-    const { navigationTree } = useContext(NavigationContext)
+    const { navigationTree, pathTersembunyi } = useContext(NavigationContext)
     const { session } = useCurrentSession()
     const peran = useMemo(
         () => ((session?.user?.authority ?? []) as string[]).map(a => a.toLowerCase()),
         [session],
     )
     const daftarPath = useMemo(() => {
-        const hasil = new Set<string>()
+        const hasil = new Set<string>(pathTersembunyi)
         kumpulkanPath(navigationTree, peran, hasil)
         return hasil
-    }, [navigationTree, peran])
+    }, [navigationTree, pathTersembunyi, peran])
 
     return useCallback((...paths: string[]) => paths.some(path => daftarPath.has(path)), [daftarPath])
 }

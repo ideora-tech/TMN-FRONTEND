@@ -922,7 +922,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <PilihRuteDialog isOpen={dialogRuteTerbuka} konteks="proyek"
                 onClose={() => setDialogRuteTerbuka(false)}
                 onPilih={tambahRuteDariDialog}
-                onRuteBaru={() => muatRuteOptions()} />
+                onRuteBaru={() => muatRuteOptions()}
+                onRuteDihapus={() => muatRuteOptions()}
+                idRuteDipakai={ruteRows.map(r => r.id_rute).filter(Boolean)} />
 
             {/* Dialog Edit Rute Proyek */}
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={800}>

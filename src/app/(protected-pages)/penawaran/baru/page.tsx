@@ -414,6 +414,8 @@ export default function PenawaranBaruPage() {
                 onClose={() => setDialogRuteTerbuka(false)}
                 onPilih={tambahItemDariDialog}
                 onRuteBaru={tambahRuteOption}
+                onRuteDihapus={idRute => setRuteOptions(prev => prev.filter(o => o.value !== idRute))}
+                idRuteDipakai={items.map(it => it.id_rute).filter(Boolean)}
             />
         </div>
     )

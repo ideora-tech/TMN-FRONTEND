@@ -10,9 +10,6 @@ export const onSignInWithCredentials = async (
     callbackUrl?: string,
 ) => {
     try {
-        // console.log('onSignInWithCredentials:------------- ', email, password, callbackUrl)
-                console.log('callbackUrl-----------', callbackUrl)
-
         await signIn('credentials', {
             email,
             password,

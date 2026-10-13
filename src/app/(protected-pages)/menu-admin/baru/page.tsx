@@ -12,10 +12,15 @@ const AKTIF_OPTIONS = [
     { value: '0', label: 'Nonaktif' },
 ]
 
+const SIDEBAR_OPTIONS = [
+    { value: '1', label: 'Ya' },
+    { value: '0', label: 'Tidak — disembunyikan' },
+]
+
 export default function MenuAdminBaruPage() {
     const router = useRouter()
     const [form, setForm] = useState({
-        nama_menu: '', path: '', id_menu_induk: '', icon: '', urutan: '1', aktif: true,
+        nama_menu: '', path: '', id_menu_induk: '', icon: '', urutan: '1', aktif: true, tampil_sidebar: true,
     })
     const [indukOptions, setIndukOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
@@ -51,6 +56,7 @@ export default function MenuAdminBaruPage() {
                 icon:          form.icon || null,
                 urutan:        Number(form.urutan) || 1,
                 aktif:         form.aktif,
+                tampil_sidebar: form.tampil_sidebar,
             })
             toast.push(<Notification type="success" title="Menu berhasil ditambahkan" />)
             router.push(ROUTES.MENU_ADMIN)
@@ -102,6 +108,12 @@ export default function MenuAdminBaruPage() {
                         <Select isSearchable={false} options={AKTIF_OPTIONS}
                             value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
                             onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
+                    </FormItem>
+                    <FormItem label="Tampil di Sidebar"
+                        extra={<span className="text-xs text-gray-400">Pilih Tidak untuk menyembunyikan menu dari sidebar tanpa menonaktifkannya — izinnya tetap bisa diatur di Peran &amp; Akses</span>}>
+                        <Select isSearchable={false} options={SIDEBAR_OPTIONS}
+                            value={SIDEBAR_OPTIONS.find(o => o.value === (form.tampil_sidebar ? '1' : '0')) ?? null}
+                            onChange={(opt) => setForm(p => ({ ...p, tampil_sidebar: opt?.value === '1' }))} />
                     </FormItem>
                 </div>
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

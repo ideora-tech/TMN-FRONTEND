@@ -45,6 +45,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
     const [errorNama, setErrorNama] = useState('')
     const [menyimpanUbah, setMenyimpanUbah] = useState(false)
     const [grup, setGrup]       = useState<GrupMenu[]>([])
+    const [menuTersembunyi, setMenuTersembunyi] = useState<Set<string>>(new Set())
     const [perms, setPerms]     = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(true)
     const [statusSimpan, setStatusSimpan] = useState<StatusSimpan>('diam')
@@ -73,7 +74,10 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                 .filter(m => (m.id_menu_induk ?? null) === idInduk)
                 .sort((a, b) => a.urutan - b.urutan)
             const grupList: GrupMenu[] = []
-            const telusuri = (node: MenuItem, jejak: string[]) => {
+            const tersembunyi = new Set<string>()
+            const telusuri = (node: MenuItem, jejak: string[], indukTersembunyi = false) => {
+                const disembunyikan = indukTersembunyi || node.tampil_sidebar === false
+                if (disembunyikan) tersembunyi.add(node.id_menu)
                 const anak = anakDari(node.id_menu)
                 const items = [
                     ...(node.path && jejak.length === 0 ? [node] : []),
@@ -81,10 +85,11 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                 ]
                 const jejakBaru = [...jejak, node.nama_menu]
                 if (items.length > 0) grupList.push({ root: node, label: jejakBaru.join(' › '), items })
-                anak.forEach(m => telusuri(m, jejakBaru))
+                anak.forEach(m => telusuri(m, jejakBaru, disembunyikan))
             }
             anakDari(null).forEach(root => telusuri(root, []))
             setGrup(grupList)
+            setMenuTersembunyi(tersembunyi)
 
             const kunci = grupList.flatMap(g => g.items.flatMap(m => AKSI.map(a => permKey(m.id_menu, a))))
             const map = await muatPetaIzin(p.kode_peran, kunci)
@@ -303,6 +308,7 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                         <h5 className="font-semibold">Izin Akses</h5>
                         <p className="text-gray-400 text-xs mt-0.5">Centang aksi yang diizinkan per menu — setiap perubahan langsung tersimpan, tanpa tombol Simpan.</p>
                         <p className="text-gray-400 text-xs mt-0.5">Centang &quot;Lihat&quot; juga menentukan menu yang tampil di sidebar peran ini.</p>
+                        <p className="text-gray-400 text-xs mt-0.5">Menu bertanda &quot;tidak tampil di sidebar&quot; disembunyikan lewat halaman Menu — izinnya tetap berlaku dan tetap diatur di sini.</p>
                     </div>
 
                     <div className="mb-4">
@@ -406,6 +412,11 @@ export default function PeranDetailPage({ params }: { params: Promise<{ id: stri
                                                             <td className={`py-2.5 px-3 font-medium ${adaAnak ? 'pl-8' : ''}`}>
                                                                 {m.nama_menu}
                                                                 <span className="text-xs text-gray-400 font-normal font-mono ml-2">{m.path}</span>
+                                                                {menuTersembunyi.has(m.id_menu) && (
+                                                                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                                                        tidak tampil di sidebar
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="py-2.5 px-3 text-center">
                                                                 <input

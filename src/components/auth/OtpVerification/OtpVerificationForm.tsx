@@ -39,8 +39,7 @@ const OtpVerificationForm = (props: OtpVerificationFormProps) => {
         resolver: zodResolver(validationSchema),
     })
 
-    const onOtpSend = async (values: ForgotPasswordFormSchema) => {
-        const { otp } = values
+    const onOtpSend = async () => {
         setSubmitting(true)
         try {
             /** simulate api call with sleep */
@@ -54,7 +53,6 @@ const OtpVerificationForm = (props: OtpVerificationFormProps) => {
             setSubmitting(false)
         }
 
-        console.log('otp', otp)
         setSubmitting(false)
     }
 

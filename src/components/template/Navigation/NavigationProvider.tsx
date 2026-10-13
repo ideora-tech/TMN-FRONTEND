@@ -7,14 +7,16 @@ import type { CommonProps } from '@/@types/common'
 
 interface NavigationProviderProps extends CommonProps {
     navigationTree: NavigationTree[]
+    pathTersembunyi?: string[]
 }
 
 const NavigationProvider = ({
     navigationTree,
+    pathTersembunyi = [],
     children,
 }: NavigationProviderProps) => {
     return (
-        <NavigationContext.Provider value={{ navigationTree }}>
+        <NavigationContext.Provider value={{ navigationTree, pathTersembunyi }}>
             {children}
         </NavigationContext.Provider>
     )

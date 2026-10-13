@@ -21,7 +21,6 @@ const SignInClient = () => {
     }: OnSignInPayload) => {
         setSubmitting(true)
 
-        console.log('SignInClient: handleSignIn----------------', values)
         // Call the server action to handle sign-in with credentials    
         onSignInWithCredentials(values, callbackUrl || '').then((data) => {
             if (data?.error) {

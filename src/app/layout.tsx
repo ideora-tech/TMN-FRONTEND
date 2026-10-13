@@ -19,7 +19,7 @@ export default async function RootLayout({
 }>) {
     const session = await auth()
 
-    const navigationTree = await getNavigation()
+    const { navigationTree, pathTersembunyi } = await getNavigation()
 
     const theme = await getTheme()
 
@@ -32,7 +32,7 @@ export default async function RootLayout({
             >
                 <body suppressHydrationWarning>
                     <ThemeProvider theme={theme}>
-                        <NavigationProvider navigationTree={navigationTree}>
+                        <NavigationProvider navigationTree={navigationTree} pathTersembunyi={pathTersembunyi}>
                             {children}
                         </NavigationProvider>
                     </ThemeProvider>

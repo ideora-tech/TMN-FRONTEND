@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Button, Dialog, Input, Tooltip, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineSearch, HiOutlineX, HiPlusCircle } from 'react-icons/hi'
+import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineSearch, HiOutlineTrash, HiOutlineX, HiPlusCircle } from 'react-icons/hi'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { ruteService, Rute } from '@/services/rute.service'
 import { parseApiError } from '@/utils/error.util'
 import { RuteBaruForm } from '@/components/shared/RuteBaruDialog'
@@ -15,6 +16,8 @@ type Props = {
     onClose: () => void
     onPilih: (pilihan: PilihanItemRute) => void
     onRuteBaru: (rute: Rute) => void
+    onRuteDihapus?: (idRute: string) => void
+    idRuteDipakai?: string[]
     konteks?: string
 }
 
@@ -22,10 +25,13 @@ type Tampilan = 'daftar' | 'buat' | 'edit'
 
 const LIMIT_RUTE = 20
 
-export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, konteks = 'penawaran' }: Props) {
+export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, onRuteDihapus, idRuteDipakai = [], konteks = 'penawaran' }: Props) {
     const [tampilan, setTampilan] = useState<Tampilan>('daftar')
     const [ruteEdit, setRuteEdit] = useState<Rute | null>(null)
     const [ruteBaruDibuat, setRuteBaruDibuat] = useState<Rute | null>(null)
+    const [ruteHapus, setRuteHapus] = useState<Rute | null>(null)
+    const [hapusOpen, setHapusOpen] = useState(false)
+    const [menghapus, setMenghapus] = useState(false)
 
     const [cariInput, setCariInput] = useState('')
     const [cari, setCari] = useState('')
@@ -41,6 +47,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         setTampilan('daftar')
         setRuteEdit(null)
         setRuteBaruDibuat(null)
+        setHapusOpen(false)
         setCariInput('')
         setCari('')
     }, [isOpen])
@@ -103,6 +110,32 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
         setTampilan('daftar')
     }
 
+    const mintaHapus = (rute: Rute) => {
+        if (idRuteDipakai.includes(rute.id_rute)) {
+            toast.push(<Notification type="warning" title={`Rute ini sedang dipakai di ${konteks} yang sedang diisi — hapus dulu barisnya`} />)
+            return
+        }
+        setRuteHapus(rute)
+        setHapusOpen(true)
+    }
+
+    const hapusRute = async () => {
+        if (!ruteHapus || menghapus) return
+        setMenghapus(true)
+        try {
+            await ruteService.delete(ruteHapus.id_rute)
+            toast.push(<Notification type="success" title="Rute berhasil dihapus" />)
+            onRuteDihapus?.(ruteHapus.id_rute)
+            if (ruteBaruDibuat?.id_rute === ruteHapus.id_rute) setRuteBaruDibuat(null)
+            setVersiDaftar(v => v + 1)
+            setHapusOpen(false)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setMenghapus(false)
+        }
+    }
+
     const ruteEditTersimpan = (rute: Rute) => {
         onRuteBaru(rute)
         if (ruteBaruDibuat?.id_rute === rute.id_rute) setRuteBaruDibuat(rute)
@@ -113,6 +146,7 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
     }
 
     return (
+        <>
         <Dialog isOpen={isOpen} onRequestClose={onClose} onClose={onClose} width={800}>
             {tampilan === 'daftar' ? (
                 <>
@@ -175,6 +209,13 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
                                                 <HiOutlinePencilAlt className="text-base" />
                                             </span>
                                         </Tooltip>
+                                        <Tooltip title="Hapus Rute">
+                                            <span
+                                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+                                                onClick={() => mintaHapus(r)}>
+                                                <HiOutlineTrash className="text-base" />
+                                            </span>
+                                        </Tooltip>
                                         <Button type="button" size="sm" variant="solid"
                                             onClick={() => pilihRute(r.id_rute)}>
                                             Pilih
@@ -223,5 +264,14 @@ export default function PilihRuteDialog({ isOpen, onClose, onPilih, onRuteBaru, 
                 </>
             )}
         </Dialog>
+        <ConfirmDialog isOpen={hapusOpen} type="danger" title="Hapus Rute?" confirmText="Ya, Hapus" cancelText="Batal"
+            confirmButtonProps={{ loading: menghapus }}
+            onClose={() => setHapusOpen(false)} onCancel={() => setHapusOpen(false)} onConfirm={hapusRute}>
+            <p className="text-sm">
+                Rute <span className="font-semibold">{ruteHapus?.nama_rute}</span> ({ruteHapus?.kode_rute}) akan dihapus.
+                Rute yang sudah dipakai penawaran, proyek, atau penugasan tidak bisa dihapus.
+            </p>
+        </ConfirmDialog>
+        </>
     )
 }

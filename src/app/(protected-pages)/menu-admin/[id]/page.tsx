@@ -12,6 +12,11 @@ const AKTIF_OPTIONS = [
     { value: '0', label: 'Nonaktif' },
 ]
 
+const SIDEBAR_OPTIONS = [
+    { value: '1', label: 'Ya' },
+    { value: '0', label: 'Tidak — disembunyikan' },
+]
+
 export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
@@ -56,6 +61,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                 icon:          form.icon || null,
                 urutan:        form.urutan,
                 aktif:         form.aktif,
+                tampil_sidebar: form.tampil_sidebar,
             })
             setMenu(updated)
             setEditing(false)
@@ -116,6 +122,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                                 { label: 'Path',      value: menu.path ? <span className="font-mono text-xs">{menu.path}</span> : <span className="text-gray-400">—</span> },
                                 { label: 'Icon',      value: menu.icon ? <span className="font-mono text-xs">{menu.icon}</span> : <span className="text-gray-400">—</span> },
                                 { label: 'Urutan',    value: String(menu.urutan) },
+                                { label: 'Tampil di Sidebar', value: menu.tampil_sidebar ? 'Ya' : 'Tidak — disembunyikan, izinnya tetap bisa diatur' },
                             ]).map(({ label, value }) => (
                                 <div key={label}>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{label}</p>
@@ -164,6 +171,12 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                                 <Select isSearchable={false} options={AKTIF_OPTIONS}
                                     value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
                                     onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
+                            </FormItem>
+                            <FormItem label="Tampil di Sidebar"
+                                extra={<span className="text-xs text-gray-400">Pilih Tidak untuk menyembunyikan menu dari sidebar tanpa menonaktifkannya — izinnya tetap bisa diatur di Peran &amp; Akses</span>}>
+                                <Select isSearchable={false} options={SIDEBAR_OPTIONS}
+                                    value={SIDEBAR_OPTIONS.find(o => o.value === (form.tampil_sidebar === false ? '0' : '1')) ?? null}
+                                    onChange={(opt) => setForm(p => ({ ...p, tampil_sidebar: opt?.value === '1' }))} />
                             </FormItem>
                         </div>
                         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">

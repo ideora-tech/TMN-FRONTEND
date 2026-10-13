@@ -104,6 +104,21 @@ export default function MenuAdminPage() {
         }
     }
 
+    const handleToggleSidebar = async (menu: MenuItem) => {
+        setTogglingId(menu.id_menu)
+        try {
+            await menuService.update(menu.id_menu, { tampil_sidebar: !menu.tampil_sidebar })
+            setList(prev => prev.map(m => m.id_menu === menu.id_menu ? { ...m, tampil_sidebar: !m.tampil_sidebar } : m))
+            toast.push(<Notification type="success" title={!menu.tampil_sidebar
+                ? 'Menu ditampilkan di sidebar'
+                : 'Menu disembunyikan dari sidebar — izinnya tetap bisa diatur di Peran & Akses'} />)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setTogglingId(null)
+        }
+    }
+
     const handleDelete = async () => {
         if (!deleteTarget) return
         setSubmitting(true)
@@ -135,6 +150,20 @@ export default function MenuAdminPage() {
                             checked={row.original.aktif}
                             isLoading={togglingId === row.original.id_menu}
                             onChange={() => handleToggleAktif(row.original)}
+                        />
+                    </span>
+                </Tooltip>
+            ),
+        },
+        {
+            header: 'Tampil di Sidebar', accessorKey: 'tampil_sidebar',
+            cell: ({ row }) => (
+                <Tooltip title={row.original.tampil_sidebar ? 'Sembunyikan dari sidebar' : 'Tampilkan di sidebar'}>
+                    <span>
+                        <Switcher
+                            checked={row.original.tampil_sidebar}
+                            isLoading={togglingId === row.original.id_menu}
+                            onChange={() => handleToggleSidebar(row.original)}
                         />
                     </span>
                 </Tooltip>
