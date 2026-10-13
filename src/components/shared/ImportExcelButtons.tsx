@@ -2,8 +2,9 @@
 import { useState } from 'react'
 import axios from 'axios'
 import { Button, Dialog, Upload, toast, Notification } from '@/components/ui'
-import { HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi'
+import { HiOutlineDownload, HiOutlineUpload, HiOutlineDocumentDownload } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 
 type ImportGagal = { baris: number; kunci: string; alasan: string }
 type ImportResult = { berhasil: number; gagal: ImportGagal[] }
@@ -12,6 +13,8 @@ type Props = {
     templateUrl: string
     importUrl: string
     templateFilename: string
+    exportUrl?: string
+    exportFilename?: string
     /** Label entitas untuk judul dialog & toast, mis. "vendor", "armada vendor". */
     entityLabel: string
     /** Label kolom kunci di tabel hasil gagal, mis. "Kode", "Nopol", "Nama". */
@@ -21,28 +24,33 @@ type Props = {
 }
 
 export default function ImportExcelButtons({
-    templateUrl, importUrl, templateFilename, entityLabel, kunciLabel = 'Data', onImported,
+    templateUrl, importUrl, templateFilename, exportUrl, exportFilename, entityLabel, kunciLabel = 'Data', onImported,
 }: Props) {
     const [downloadingTemplate, setDownloadingTemplate] = useState(false)
     const [importing, setImporting]                     = useState(false)
+    const [exporting, setExporting]                     = useState(false)
     const [importResult, setImportResult]               = useState<ImportResult | null>(null)
 
     const handleDownloadTemplate = async () => {
         setDownloadingTemplate(true)
         try {
-            const res = await axios.get(templateUrl, { responseType: 'blob' })
-            const href = URL.createObjectURL(res.data)
-            const link = document.createElement('a')
-            link.href = href
-            link.download = templateFilename
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-            URL.revokeObjectURL(href)
+            await unduhDariApi(templateUrl, {}, templateFilename)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
             setDownloadingTemplate(false)
+        }
+    }
+
+    const handleExport = async () => {
+        if (!exportUrl || exporting) return
+        setExporting(true)
+        try {
+            await unduhDariApi(exportUrl, {}, exportFilename ?? `data-${entityLabel.replace(/\s+/g, '-')}.xlsx`)
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+        } finally {
+            setExporting(false)
         }
     }
 
@@ -54,7 +62,10 @@ export default function ImportExcelButtons({
             const fd = new FormData()
             fd.append('file', file)
             const { data } = await axios.post(importUrl, fd)
-            const result = data.data as ImportResult
+            const result = data?.data as ImportResult | undefined
+            if (!result || typeof result.berhasil !== 'number' || !Array.isArray(result.gagal)) {
+                throw new Error('Sesi berakhir atau jawaban server tidak dikenali — masuk lagi lalu ulangi import')
+            }
             setImportResult(result)
             if (result.berhasil > 0 && result.gagal.length === 0) {
                 toast.push(<Notification type="success" title={`${result.berhasil} ${entityLabel} berhasil diimport`} />)
@@ -74,6 +85,16 @@ export default function ImportExcelButtons({
 
     return (
         <>
+            {exportUrl && (
+                <Button
+                    type="button" size="sm" variant="default"
+                    icon={<HiOutlineDocumentDownload />}
+                    loading={exporting}
+                    onClick={handleExport}
+                >
+                    Export Excel
+                </Button>
+            )}
             <Button
                 type="button" size="sm" variant="default"
                 icon={<HiOutlineDownload />}
@@ -82,7 +103,7 @@ export default function ImportExcelButtons({
             >
                 Unduh Template
             </Button>
-            <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} onChange={handleImportFile}>
+            <Upload accept=".xlsx,.xls" showList={false} uploadLimit={1} disabled={importing} onChange={handleImportFile}>
                 <Button
                     type="button" size="sm" variant="default"
                     icon={<HiOutlineUpload />}

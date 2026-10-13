@@ -3,11 +3,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash, HiPlusCircle } from 'react-icons/hi'
 import { ruteService, Rute } from '@/services/rute.service'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum } from '@/utils/formatNumber'
 
@@ -155,7 +157,19 @@ export default function RutePage() {
                     <h3 className="font-bold">Rute</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master rute perjalanan</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.RUTE_BARU)}>Tambah Rute</Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.RUTE_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.RUTE_IMPORT}
+                        templateFilename="template-import-rute.xlsx"
+                        exportUrl={API_ENDPOINTS.RUTE_EXPORT_EXCEL}
+                        exportFilename="data-rute.xlsx"
+                        entityLabel="rute"
+                        kunciLabel="Nama"
+                        onImported={() => { if (currentPage === 1) load(); else setCurrentPage(1) }}
+                    />
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={() => router.push(ROUTES.RUTE_BARU)}>Tambah Rute</Button>
+                </div>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-700">

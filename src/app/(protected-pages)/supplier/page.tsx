@@ -4,8 +4,10 @@ import { Card, Button, Input, Tag, Tooltip, Dialog, FormItem, toast, Notificatio
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import type { ColumnDef } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { supplierService, Supplier } from '@/services/supplier.service'
 import { lampiranMasterService } from '@/services/lampiran-master.service'
 import { LampiranMasterPanel, PilihLampiranMaster } from '@/components/shared/LampiranMaster'
@@ -142,7 +144,19 @@ export default function SupplierPage() {
                     <h3 className="font-bold">Supplier</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Master data supplier untuk pembelian barang, jasa, spare part & aset</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={bukaTambah}>Tambah Supplier</Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.SUPPLIER_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.SUPPLIER_IMPORT}
+                        templateFilename="template-import-supplier.xlsx"
+                        exportUrl={API_ENDPOINTS.SUPPLIER_EXPORT_EXCEL}
+                        exportFilename="data-supplier.xlsx"
+                        entityLabel="supplier"
+                        kunciLabel="Nama"
+                        onImported={() => { if (currentPage === 1) fetchData(); else setCurrentPage(1) }}
+                    />
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={bukaTambah}>Tambah Supplier</Button>
+                </div>
             </div>
 
             <Card bodyClass="p-0">

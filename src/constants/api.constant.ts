@@ -11,6 +11,9 @@ export const API_ENDPOINTS = {
     // Klien
     KLIEN:        '/api/proxy/klien',
     KLIEN_DETAIL: (id: string) => `/api/proxy/klien/${id}`,
+    KLIEN_IMPORT_TEMPLATE: '/api/proxy/klien/import/template',
+    KLIEN_IMPORT:          '/api/proxy/klien/import',
+    KLIEN_EXPORT_EXCEL:    '/api/proxy/klien/export/excel',
 
     // Proyek
     PROYEK:        '/api/proxy/proyek',
@@ -105,6 +108,9 @@ export const API_ENDPOINTS = {
     // Supplier
     SUPPLIER:        '/api/proxy/supplier',
     SUPPLIER_DETAIL: (id: string) => `/api/proxy/supplier/${id}`,
+    SUPPLIER_IMPORT_TEMPLATE: '/api/proxy/supplier/import/template',
+    SUPPLIER_IMPORT:          '/api/proxy/supplier/import',
+    SUPPLIER_EXPORT_EXCEL:    '/api/proxy/supplier/export/excel',
 
     // Pembelian Sparepart
     PEMBELIAN_SPAREPART:                 '/api/proxy/pembelian-sparepart',
@@ -119,6 +125,9 @@ export const API_ENDPOINTS = {
     // Barang & Permintaan Pembelian
     BARANG:                    '/api/proxy/barang',
     BARANG_BUAT_CEPAT:         '/api/proxy/barang/buat-cepat',
+    BARANG_IMPORT_TEMPLATE:    '/api/proxy/barang/import/template',
+    BARANG_IMPORT:             '/api/proxy/barang/import',
+    BARANG_EXPORT_EXCEL:       '/api/proxy/barang/export/excel',
     BARANG_DETAIL:             (id: string) => `/api/proxy/barang/${id}`,
     BARANG_MUTASI:             (id: string) => `/api/proxy/barang/${id}/mutasi`,
     BARANG_PEMAKAIAN:          (id: string) => `/api/proxy/barang/${id}/pemakaian`,
@@ -265,6 +274,9 @@ export const API_ENDPOINTS = {
     // Karyawan
     KARYAWAN:        '/api/proxy/karyawan',
     KARYAWAN_DETAIL: (id: string) => `/api/proxy/karyawan/${id}`,
+    KARYAWAN_IMPORT_TEMPLATE: '/api/proxy/karyawan/import/template',
+    KARYAWAN_IMPORT:          '/api/proxy/karyawan/import',
+    KARYAWAN_EXPORT_EXCEL:    '/api/proxy/karyawan/export/excel',
     KARYAWAN_RIWAYAT_JABATAN: (id: string) => `/api/proxy/karyawan/${id}/riwayat-jabatan`,
     KARYAWAN_RIWAYAT_JABATAN_DETAIL: (id: string, idRiwayat: string) => `/api/proxy/karyawan/${id}/riwayat-jabatan/${idRiwayat}`,
     KARYAWAN_JABATAN: (id: string) => `/api/proxy/karyawan/${id}/jabatan`,
@@ -372,6 +384,9 @@ export const API_ENDPOINTS = {
     RUTE:        '/api/proxy/rute',
     RUTE_DETAIL: (id: string) => `/api/proxy/rute/${id}`,
     RUTE_ESTIMASI_BOK: '/api/proxy/rute/estimasi-bok',
+    RUTE_IMPORT_TEMPLATE: '/api/proxy/rute/import/template',
+    RUTE_IMPORT:          '/api/proxy/rute/import',
+    RUTE_EXPORT_EXCEL:    '/api/proxy/rute/export/excel',
 
     // Penawaran
     PENAWARAN:        '/api/proxy/penawaran',
@@ -443,6 +458,9 @@ export const API_ENDPOINTS = {
     // Lokasi
     LOKASI:        '/api/proxy/lokasi',
     LOKASI_DETAIL: (id: string) => `/api/proxy/lokasi/${id}`,
+    LOKASI_IMPORT_TEMPLATE: '/api/proxy/lokasi/import/template',
+    LOKASI_IMPORT:          '/api/proxy/lokasi/import',
+    LOKASI_EXPORT_EXCEL:    '/api/proxy/lokasi/export/excel',
 
     // Jenis BBM
     JENIS_BBM:        '/api/proxy/jenis-bbm',

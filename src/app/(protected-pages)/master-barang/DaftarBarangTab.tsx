@@ -5,11 +5,13 @@ import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import type { ColumnDef } from '@/components/shared/DataTable'
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineClipboardList, HiOutlineMinusCircle, HiOutlineAdjustments } from 'react-icons/hi'
 import { PiCubeDuotone, PiWarningCircleDuotone } from 'react-icons/pi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { barangService, type Barang, type KategoriBarang, type BarangPayload } from '@/services/barang.service'
 import MutasiBarangDrawer from './MutasiBarangDrawer'
@@ -137,7 +139,17 @@ export default function DaftarBarangTab() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+                <ImportExcelButtons
+                    templateUrl={API_ENDPOINTS.BARANG_IMPORT_TEMPLATE}
+                    importUrl={API_ENDPOINTS.BARANG_IMPORT}
+                    templateFilename="template-import-barang.xlsx"
+                    exportUrl={API_ENDPOINTS.BARANG_EXPORT_EXCEL}
+                    exportFilename="data-barang.xlsx"
+                    entityLabel="barang"
+                    kunciLabel="Nama"
+                    onImported={() => { if (currentPage === 1) fetchData(); else setCurrentPage(1) }}
+                />
                 <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={bukaTambah}>Tambah Barang</Button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

@@ -5,9 +5,11 @@ import { Card, Button, Input, Select, Tag, Tooltip, toast, Notification } from '
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import type { ColumnDef, CellContext, OnSortParam } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { klienService, Klien } from '@/services/klien.service'
 
 type AktifOption = { value: '' | '1' | '0'; label: string }
@@ -161,14 +163,26 @@ export default function KlienPage() {
                     <h3 className="font-bold">Klien</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master klien</p>
                 </div>
-                <Button
-                    variant="solid"
-                    size="sm"
-                    icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.KLIEN_BARU)}
-                >
-                    Tambah Klien
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.KLIEN_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.KLIEN_IMPORT}
+                        templateFilename="template-import-klien.xlsx"
+                        exportUrl={API_ENDPOINTS.KLIEN_EXPORT_EXCEL}
+                        exportFilename="data-klien.xlsx"
+                        entityLabel="klien"
+                        kunciLabel="Nama"
+                        onImported={() => { if (currentPage === 1) fetchData(); else setCurrentPage(1) }}
+                    />
+                    <Button
+                        variant="solid"
+                        size="sm"
+                        icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.KLIEN_BARU)}
+                    >
+                        Tambah Klien
+                    </Button>
+                </div>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">

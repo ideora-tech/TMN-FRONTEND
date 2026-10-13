@@ -7,9 +7,11 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ExportDropdownButton from '@/components/shared/ExportDropdownButton'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import DataTable from '@/components/shared/DataTable'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
+import { unduhDariApi } from '@/utils/unduhBerkas'
 import { ROUTES } from '@/constants/route.constant'
 import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
@@ -32,16 +34,28 @@ export default function KaryawanPage() {
     const [list, setList]               = useState<Karyawan[]>([])
     const [loading, setLoading]         = useState(false)
     const [downloading, setDownloading] = useState<'excel' | 'pdf' | null>(null)
+    const [submitting, setSubmitting]   = useState(false)
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch]           = useState('')
+    const [statusFilter, setStatusFilter] = useState('')
 
     const handleExport = async (format: 'excel' | 'pdf') => {
         setDownloading(format)
+        const tanggal = new Date().toISOString().slice(0, 10)
         try {
-            const url = format === 'excel' ? API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_EXCEL : API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_PDF
-            const res = await axios.get(url, { responseType: 'blob' })
+            if (format === 'excel') {
+                await unduhDariApi(
+                    API_ENDPOINTS.KARYAWAN_EXPORT_EXCEL,
+                    { search: search || undefined, status: statusFilter || undefined },
+                    `data-karyawan-${tanggal}.xlsx`,
+                )
+                return
+            }
+            const res = await axios.get(API_ENDPOINTS.LAPORAN_KARYAWAN_EXPORT_PDF, { responseType: 'blob' })
             const href = URL.createObjectURL(res.data)
             const link = document.createElement('a')
             link.href = href
-            link.download = `data-karyawan-${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+            link.download = `data-karyawan-${tanggal}.pdf`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
@@ -52,10 +66,6 @@ export default function KaryawanPage() {
             setDownloading(null)
         }
     }
-    const [submitting, setSubmitting]   = useState(false)
-    const [searchInput, setSearchInput] = useState('')
-    const [search, setSearch]           = useState('')
-    const [statusFilter, setStatusFilter] = useState('')
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
@@ -180,6 +190,14 @@ export default function KaryawanPage() {
                         loading={downloading}
                         onExportExcel={() => handleExport('excel')}
                         onExportPdf={() => handleExport('pdf')}
+                    />
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.KARYAWAN_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.KARYAWAN_IMPORT}
+                        templateFilename="template-import-karyawan.xlsx"
+                        entityLabel="karyawan"
+                        kunciLabel="NIK / Nama"
+                        onImported={() => { if (currentPage === 1) fetchData(); else setCurrentPage(1) }}
                     />
                     <Button variant="solid" size="sm" icon={<HiPlusCircle />}
                         onClick={() => router.push(ROUTES.KARYAWAN_BARU)}>

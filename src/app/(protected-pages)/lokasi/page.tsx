@@ -5,9 +5,11 @@ import { Card, Button, Input, Tag, Tooltip, toast, Notification } from '@/compon
 import { HiPlusCircle, HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ImportExcelButtons from '@/components/shared/ImportExcelButtons'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { API_ENDPOINTS } from '@/constants/api.constant'
 import { lokasiService, Lokasi } from '@/services/lokasi.service'
 
 export default function LokasiPage() {
@@ -118,10 +120,22 @@ export default function LokasiPage() {
                     <h3 className="font-bold">Lokasi</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master lokasi rute</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.LOKASI_BARU)}>
-                    Tambah Lokasi
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ImportExcelButtons
+                        templateUrl={API_ENDPOINTS.LOKASI_IMPORT_TEMPLATE}
+                        importUrl={API_ENDPOINTS.LOKASI_IMPORT}
+                        templateFilename="template-import-lokasi.xlsx"
+                        exportUrl={API_ENDPOINTS.LOKASI_EXPORT_EXCEL}
+                        exportFilename="data-lokasi.xlsx"
+                        entityLabel="lokasi"
+                        kunciLabel="Nama"
+                        onImported={() => { if (currentPage === 1) fetchData(); else setCurrentPage(1) }}
+                    />
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.LOKASI_BARU)}>
+                        Tambah Lokasi
+                    </Button>
+                </div>
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
