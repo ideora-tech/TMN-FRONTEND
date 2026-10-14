@@ -514,6 +514,13 @@ export const API_ENDPOINTS = {
     KASBON_OPSI_KARYAWAN:  '/api/proxy/kasbon/opsi/karyawan',
     KASBON_EXPORT_EXCEL:   '/api/proxy/kasbon/export/excel',
 
+    // Fee Supir On Call
+    FEE_SUPIR:              '/api/proxy/fee-supir',
+    FEE_SUPIR_REKAP:        '/api/proxy/fee-supir/rekap',
+    FEE_SUPIR_RINGKASAN:    '/api/proxy/fee-supir/ringkasan',
+    FEE_SUPIR_EXPORT_EXCEL: '/api/proxy/fee-supir/export/excel',
+    FEE_SUPIR_URUTAN_TRIP:  '/api/proxy/fee-supir/urutan-trip',
+
     // Pemasukan
     ARUS_KAS_PEMASUKAN:        '/api/proxy/arus-kas/pemasukan',
     ARUS_KAS_PEMASUKAN_DETAIL: (id: string) => `/api/proxy/arus-kas/pemasukan/${id}`,

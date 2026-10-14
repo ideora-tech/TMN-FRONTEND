@@ -32,6 +32,7 @@ export interface Penugasan {
     tanggal_tugas: string | null
     status: StatusPenugasan
     estimasi_biaya?: number | null
+    fee_supir?: number | null
     sumber: SumberPenugasan
     id_kontrak_vendor: string | null
     id_armada_vendor: string | null

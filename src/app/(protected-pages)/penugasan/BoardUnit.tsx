@@ -9,6 +9,7 @@ import dayjs, { Dayjs } from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import { tipeHargaPerRit } from '@/constants/tipeHarga.constant'
 import {
     penugasanHarianService,
     BoardUnit as BoardUnitRow,
@@ -18,6 +19,7 @@ import {
 import { penugasanService, TitikDropInput } from '@/services/penugasan.service'
 import { projectService } from '@/services/project.service'
 import { proyekRuteService, ProyekRute } from '@/services/proyekRute.service'
+import { feeSupirService } from '@/services/feeSupir.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { supirVendorService } from '@/services/supirVendor.service'
 import { tripService, Trip } from '@/services/trip.service'
@@ -80,6 +82,9 @@ type TitikDropRow = { lokasi: string; uang_jalan_tambahan: string }
 const emptyTitikDrop = (): TitikDropRow[] => []
 const emptyTitikDropRow = (): TitikDropRow => ({ lokasi: '', uang_jalan_tambahan: '' })
 
+const keteranganFee = (tripKe: number | null, rentang: boolean) =>
+    `${tripKe != null ? `Rit ke-${tripKe} supir ini pada tanggal tersebut. ` : ''}Fee per trip, dicatat saat trip selesai — isi 0 bila tanpa fee.${rentang ? ' Berlaku untuk semua tanggal di rentang.' : ''}`
+
 type HasilAssign = { sukses: number; gagal: AssignHarianGagal[] }
 
 export default function BoardUnit() {
@@ -94,6 +99,7 @@ export default function BoardUnit() {
     const [supirAktif, setSupirAktif] = useState<Supir[]>([])
     const [supirVendorOptions, setSupirVendorOptions] = useState<Option[]>([])
     const [proyekOptions, setProyekOptions] = useState<Option[]>([])
+    const [tipeHargaProyek, setTipeHargaProyek] = useState<Record<string, string>>({})
 
     const [assignDialogOpen, setAssignDialogOpen] = useState(false)
     const [assignUnit, setAssignUnit] = useState<BoardUnitRow | null>(null)
@@ -104,6 +110,9 @@ export default function BoardUnit() {
     const [assignRuteId, setAssignRuteId] = useState<string | null>(null)
     const [assignRuteRows, setAssignRuteRows] = useState<ProyekRute[]>([])
     const [assignUangJalan, setAssignUangJalan] = useState('')
+    const [assignFeeSupir, setAssignFeeSupir] = useState('')
+    const [assignTripKe, setAssignTripKe] = useState<number | null>(null)
+    const assignUrutanRef = useRef(0)
     const [assignTitikDrop, setAssignTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
     const [assignKeterangan, setAssignKeterangan] = useState('')
     const [assignSubmitting, setAssignSubmitting] = useState(false)
@@ -123,6 +132,9 @@ export default function BoardUnit() {
     const [aksiRuteId, setAksiRuteId] = useState<string | null>(null)
     const [aksiRuteRows, setAksiRuteRows] = useState<ProyekRute[]>([])
     const [aksiUangJalan, setAksiUangJalan] = useState('')
+    const [aksiFeeSupir, setAksiFeeSupir] = useState('')
+    const [aksiTripKe, setAksiTripKe] = useState<number | null>(null)
+    const aksiUrutanRef = useRef(0)
     const [aksiTitikDrop, setAksiTitikDrop] = useState<TitikDropRow[]>(emptyTitikDrop())
     const [aksiKeterangan, setAksiKeterangan] = useState('')
     const [aksiSaving, setAksiSaving] = useState(false)
@@ -191,9 +203,10 @@ export default function BoardUnit() {
 
     useEffect(() => {
         supirService.list(1, 500, undefined, 'aktif').then(res => setSupirAktif(res.data)).catch(() => {})
-        projectService.list(1, 500).then(res => setProyekOptions(
-            res.data.map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` }))
-        )).catch(() => {})
+        projectService.list(1, 500).then(res => {
+            setProyekOptions(res.data.map(p => ({ value: p.id_proyek, label: `${p.kode_proyek} — ${p.nama_proyek}` })))
+            setTipeHargaProyek(Object.fromEntries(res.data.map(p => [p.id_proyek, p.tipe_harga])))
+        }).catch(() => {})
     }, [])
 
     const supirDefaultOptions = useMemo<Option[]>(() => {
@@ -292,6 +305,8 @@ export default function BoardUnit() {
         setAssignRuteId(null)
         setAssignRuteRows([])
         setAssignUangJalan('')
+        setAssignFeeSupir('')
+        setAssignTripKe(null)
         setAssignTitikDrop(emptyTitikDrop())
         setAssignKeterangan('')
         setAssignDialogOpen(true)
@@ -310,10 +325,27 @@ export default function BoardUnit() {
 
     const wajibKeteranganAssign = supirBedaDefault(assignUnit, assignSupirId)
     const wajibKeteranganAksi = supirBedaDefault(aksiUnit, aksiSupirId)
+    const feeTampilAssign = !!assignUnit && !unitPaketVendor(assignUnit) && !!assignProyekId && tipeHargaPerRit(tipeHargaProyek[assignProyekId])
+    const feeTampilAksi = !!aksiAssignment && !!aksiUnit && !unitPaketVendor(aksiUnit)
+        && tipeHargaPerRit(aksiAssignment.tipe_harga_proyek ?? tipeHargaProyek[aksiAssignment.id_proyek])
+    const feeTampilDetail = !!detailAssignment && !!detailUnit && !unitPaketVendor(detailUnit) && !!detailAssignment.id_supir
+        && tipeHargaPerRit(detailAssignment.tipe_harga_proyek ?? tipeHargaProyek[detailAssignment.id_proyek])
+
+    useEffect(() => {
+        const urutan = ++assignUrutanRef.current
+        if (!assignDialogOpen || !feeTampilAssign || !assignSupirId || !assignTanggalMulai) {
+            setAssignTripKe(null)
+            return
+        }
+        feeSupirService.urutanTrip({ id_proyek: assignProyekId, id_supir: assignSupirId, tanggal: assignTanggalMulai })
+            .then(res => { if (urutan === assignUrutanRef.current) setAssignTripKe(res.trip_ke) })
+            .catch(() => { if (urutan === assignUrutanRef.current) setAssignTripKe(null) })
+    }, [assignDialogOpen, feeTampilAssign, assignSupirId, assignProyekId, assignTanggalMulai])
 
     const handleSubmitAssign = async () => {
         if (!assignUnit || !assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai) return
         if (wajibKeteranganAssign && !assignKeterangan.trim()) return
+        if (feeTampilAssign && assignFeeSupir === '') return
         setAssignSubmitting(true)
         try {
             const pakaiRentang = !!assignTanggalSampai && assignTanggalSampai > assignTanggalMulai
@@ -327,6 +359,7 @@ export default function BoardUnit() {
                 id_proyek: assignProyekId,
                 id_rute: assignRuteId,
                 uang_jalan: assignUangJalan !== '' ? Number(assignUangJalan) : null,
+                ...(feeTampilAssign ? { fee_supir: assignFeeSupir !== '' ? Number(assignFeeSupir) : null } : {}),
                 ...(assignUnit.tipe === 'internal' ? { id_armada: assignUnit.id_armada } : { id_armada_vendor: assignUnit.id_armada_vendor }),
                 ...(titikDropBersih.length > 0 ? { titik_drop: titikDropBersih } : {}),
                 keterangan: assignKeterangan.trim() || null,
@@ -385,6 +418,8 @@ export default function BoardUnit() {
         }
         setAksiRuteId(assignment.id_rute)
         setAksiUangJalan(assignment.estimasi_biaya != null ? String(Math.round(assignment.estimasi_biaya)) : '')
+        setAksiFeeSupir(assignment.fee_supir != null ? String(Math.round(assignment.fee_supir)) : '')
+        setAksiTripKe(null)
         setAksiTitikDrop(emptyTitikDrop())
         setAksiKeterangan(assignment.keterangan ?? '')
         setAksiRuteRows([])
@@ -410,6 +445,19 @@ export default function BoardUnit() {
             .catch(() => { if (aksiFetchRef.current === idPenugasanDiminta) setAksiRuteRows([]) })
     }, [aksiDialogOpen, aksiAssignment])
 
+    useEffect(() => {
+        const urutan = ++aksiUrutanRef.current
+        if (!aksiDialogOpen || !aksiAssignment || !feeTampilAksi || !aksiSupirId) {
+            setAksiTripKe(null)
+            return
+        }
+        feeSupirService.urutanTrip({
+            id_proyek: aksiAssignment.id_proyek, id_supir: aksiSupirId, tanggal: aksiAssignment.tanggal, id_penugasan: aksiAssignment.id_penugasan,
+        })
+            .then(res => { if (urutan === aksiUrutanRef.current) setAksiTripKe(res.trip_ke) })
+            .catch(() => { if (urutan === aksiUrutanRef.current) setAksiTripKe(null) })
+    }, [aksiDialogOpen, aksiAssignment, feeTampilAksi, aksiSupirId])
+
     const tutupAksi = () => setAksiDialogOpen(false)
 
     const bukaEditDariDetail = () => {
@@ -421,12 +469,14 @@ export default function BoardUnit() {
     const handleSubmitAksi = async () => {
         if (!aksiAssignment || !aksiSupirId || !aksiRuteId) return
         if (wajibKeteranganAksi && !aksiKeterangan.trim()) return
+        if (feeTampilAksi && aksiFeeSupir === '') return
         setAksiSaving(true)
         try {
             await penugasanHarianService.update(aksiAssignment.id_penugasan, {
                 ...(unitPaketVendor(aksiUnit) ? { id_supir_vendor: aksiSupirId } : { id_supir: aksiSupirId }),
                 id_rute:        aksiRuteId,
                 estimasi_biaya: aksiUangJalan !== '' ? Number(aksiUangJalan) : null,
+                ...(feeTampilAksi ? { fee_supir: aksiFeeSupir !== '' ? Number(aksiFeeSupir) : null } : {}),
                 titik_drop:     aksiTitikDrop
                     .filter(r => r.lokasi.trim())
                     .map(r => ({ lokasi: r.lokasi.trim(), uang_jalan_tambahan: r.uang_jalan_tambahan ? Number(r.uang_jalan_tambahan) : 0 })),
@@ -895,12 +945,25 @@ export default function BoardUnit() {
                                 }} />
                         </FormItem>
                         <div className="sm:col-span-2">
-                            <FormItem label="Estimasi Uang Jalan" extra="Otomatis dari rate card rute — bisa diubah. Pengajuan uang jalan dibuat lewat menu Uang Jalan">
+                            <FormItem label="Estimasi Uang Jalan">
                                 <Input prefix="Rp" placeholder="0"
                                     value={assignUangJalan ? formatNum(Number(assignUangJalan)) : ''}
                                     onChange={e => setAssignUangJalan(e.target.value.replace(/\D/g, ''))} />
+                                <p className="text-xs text-gray-400 mt-1">Otomatis dari rate card rute — bisa diubah. Pengajuan uang jalan dibuat lewat menu Uang Jalan</p>
                             </FormItem>
                         </div>
+                        {feeTampilAssign && (
+                            <div className="sm:col-span-2">
+                                <FormItem label="Fee Supir On Call" asterisk>
+                                    <Input prefix="Rp" placeholder="Ketik fee untuk rit ini"
+                                        value={assignFeeSupir ? formatNum(Number(assignFeeSupir)) : ''}
+                                        onChange={e => setAssignFeeSupir(e.target.value.replace(/\D/g, ''))} />
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {keteranganFee(assignTripKe, !!assignTanggalSampai && assignTanggalSampai > assignTanggalMulai)}
+                                    </p>
+                                </FormItem>
+                            </div>
+                        )}
                     </div>
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
@@ -946,7 +1009,7 @@ export default function BoardUnit() {
                         <Button type="button" variant="plain" onClick={() => setAssignDialogOpen(false)}>Kembali</Button>
                         <Button type="submit" variant="solid" loading={assignSubmitting}
                             disabled={!assignSupirId || !assignProyekId || !assignRuteId || !assignTanggalMulai || kontrakBelumDisetujui(assignUnit)
-                                || (wajibKeteranganAssign && !assignKeterangan.trim())}>
+                                || (wajibKeteranganAssign && !assignKeterangan.trim()) || (feeTampilAssign && assignFeeSupir === '')}>
                             Simpan
                         </Button>
                     </div>
@@ -1032,6 +1095,14 @@ export default function BoardUnit() {
                             {detailAssignment?.estimasi_biaya != null ? formatRupiah(detailAssignment.estimasi_biaya) : <span className="text-gray-400">—</span>}
                         </p>
                     </div>
+                    {feeTampilDetail && (
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Fee Supir On Call</p>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {detailAssignment?.fee_supir != null ? formatRupiah(detailAssignment.fee_supir) : <span className="text-gray-400">Belum diisi</span>}
+                            </p>
+                        </div>
+                    )}
                     {detailAssignment?.keterangan && (
                         <div className="sm:col-span-2">
                             <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Keterangan</p>
@@ -1204,6 +1275,16 @@ export default function BoardUnit() {
                                     onChange={e => setAksiUangJalan(e.target.value.replace(/\D/g, ''))} />
                             </FormItem>
                         </div>
+                        {feeTampilAksi && (
+                            <div className="sm:col-span-2">
+                                <FormItem label="Fee Supir On Call" asterisk>
+                                    <Input prefix="Rp" placeholder="Ketik fee untuk rit ini"
+                                        value={aksiFeeSupir ? formatNum(Number(aksiFeeSupir)) : ''}
+                                        onChange={e => setAksiFeeSupir(e.target.value.replace(/\D/g, ''))} />
+                                    <p className="text-xs text-gray-400 mt-1">{keteranganFee(aksiTripKe, false)}</p>
+                                </FormItem>
+                            </div>
+                        )}
                     </div>
                     <div className="mt-1 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-1">
@@ -1252,7 +1333,7 @@ export default function BoardUnit() {
                             Hapus Penugasan
                         </Button>
                         <Button type="submit" variant="solid" loading={aksiSaving}
-                            disabled={!aksiSupirId || !aksiRuteId || (wajibKeteranganAksi && !aksiKeterangan.trim())}>
+                            disabled={!aksiSupirId || !aksiRuteId || (wajibKeteranganAksi && !aksiKeterangan.trim()) || (feeTampilAksi && aksiFeeSupir === '')}>
                             Simpan
                         </Button>
                     </div>

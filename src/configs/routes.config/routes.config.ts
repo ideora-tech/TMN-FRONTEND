@@ -88,6 +88,7 @@ export const protectedRoutes: Routes = {
     '/laporan-pemasukan': { key: 'laporan-pemasukan', authority: [] },
     '/laporan-pengeluaran': { key: 'laporan-pengeluaran', authority: [] },
     '/rekap-pajak': { key: 'rekap-pajak', authority: [] },
+    '/fee-supir': { key: 'fee-supir', authority: [] },
     ...listRoute('perusahaan', 'perusahaan', ADMIN_ONLY),
     ...listRoute('menu-admin', 'menu-admin', ADMIN_ONLY),
     '/log-error': { key: 'log-error', authority: [] },

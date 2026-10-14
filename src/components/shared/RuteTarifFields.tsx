@@ -157,9 +157,9 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         <p className="text-xs text-amber-500 mt-1">Ritase terkunci — ubah lewat penawaran revisi</p>
                     )}
                 </FormItem>
-                <FormItem label="Uang Jalan"
-                    extra={<span className="text-xs text-gray-400">Otomatis: Estimasi Tol + BBM + Biaya Lain</span>}>
+                <FormItem label="Uang Jalan">
                     <Input prefix="Rp" disabled value={formatNum(totalUangJalan(value))} />
+                    <p className="text-xs text-gray-400 mt-1">Otomatis: Estimasi Tol + BBM + Biaya Lain</p>
                 </FormItem>
                 <FormItem label="Estimasi Tol">
                     <Input prefix="Rp" placeholder="0"

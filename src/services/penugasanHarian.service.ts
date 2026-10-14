@@ -41,6 +41,8 @@ export interface BoardAssignment {
     id_rute: string | null
     nama_rute: string | null
     estimasi_biaya: number | null
+    fee_supir: number | null
+    tipe_harga_proyek: string | null
     id_pengajuan: string | null
     status: StatusPenugasan
     keterangan?: string | null
@@ -62,6 +64,7 @@ export interface AssignHarianPayload {
     id_proyek: string
     id_rute: string
     uang_jalan?: number | null
+    fee_supir?: number | null
     titik_drop?: TitikDropInput[]
     keterangan?: string | null
 }

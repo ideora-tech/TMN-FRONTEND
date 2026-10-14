@@ -156,6 +156,7 @@ export const ROUTES = {
     KASBON_BARU:   '/kasbon/baru',
     KASBON_DETAIL: (id: string) => `/kasbon/${id}`,
     KASBON_EDIT:   (id: string) => `/kasbon/${id}/edit`,
+    FEE_SUPIR:     '/fee-supir',
 
     PENUGASAN:        '/penugasan',
     PENUGASAN_DETAIL: (id: string) => `/penugasan/${id}`,
