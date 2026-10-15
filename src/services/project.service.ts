@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from '@/constants/api.constant'
 import { TipeHarga } from '@/constants/tipeHarga.constant'
 import { ParameterPenawaranTerisi } from '@/constants/parameterPenawaran.constant'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
+import type { UnitProyekPayload } from '@/services/proyekUnit.service'
 import { Penawaran } from '@/services/penawaran.service'
 import { Faktur } from '@/services/faktur.service'
 
@@ -72,7 +73,7 @@ export const projectService = {
         const { data } = await axios.get(API_ENDPOINTS.PROYEK_DETAIL(id))
         return data.data as Project
     },
-    async create(payload: Partial<Omit<Project, 'id_proyek' | 'kode_proyek' | 'status' | 'realisasi'>> & { nama_proyek: string; status?: string; id_penawaran?: string; rute?: ProyekRutePayload[] }) {
+    async create(payload: Partial<Omit<Project, 'id_proyek' | 'kode_proyek' | 'status' | 'realisasi'>> & { nama_proyek: string; status?: string; id_penawaran?: string; rute?: ProyekRutePayload[]; unit?: UnitProyekPayload[] }) {
         const { data } = await axios.post(API_ENDPOINTS.PROYEK, payload)
         return data.data as Project
     },

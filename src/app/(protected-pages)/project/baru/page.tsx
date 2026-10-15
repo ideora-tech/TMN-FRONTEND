@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Select, Tooltip, toast, Notification } from '@/components/ui'
-import { HiArrowLeft, HiPlusCircle, HiOutlineViewList } from 'react-icons/hi'
+import { Card, Button, FormItem, Input, DatePicker, Select, Tag, Tooltip, toast, Notification } from '@/components/ui'
+import { HiArrowLeft, HiPlusCircle, HiOutlineViewList, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -15,6 +15,8 @@ import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
 import { komponenUangJalanService, KomponenUangJalan } from '@/services/komponenUangJalan.service'
+import { proyekUnitService, type OpsiUnitProyek } from '@/services/proyekUnit.service'
+import PilihUnitProyekDialog, { SUMBER_UNIT_TAG, MAKS_UNIT_PROYEK, kunciUnit, kePayloadUnit, ringkasUnit } from '../PilihUnitProyekDialog'
 import RuteTarifRows from '@/components/shared/RuteTarifRows'
 import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
 import {
@@ -57,6 +59,9 @@ export default function ProjectBaruPage() {
     const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
     const [hargaDiketikManual, setHargaDiketikManual] = useState({ penawaran: false, proyek: false })
     const [komponenOpsi, setKomponenOpsi] = useState<KomponenUangJalan[]>([])
+    const [unitDipilih, setUnitDipilih] = useState<OpsiUnitProyek[]>([])
+    const [dialogUnitTerbuka, setDialogUnitTerbuka] = useState(false)
+    const muatOpsiUnit = useCallback(() => proyekUnitService.opsiProyekBaru(), [])
 
     useEffect(() => {
         komponenUangJalanService.opsi().then(setKomponenOpsi)
@@ -155,6 +160,7 @@ export default function ProjectBaruPage() {
                 status: form.status || undefined, keterangan: form.keterangan || undefined,
                 id_penawaran: fromPenawaran || undefined,
                 rute: rute.length > 0 ? rute : undefined,
+                unit: unitDipilih.length > 0 ? unitDipilih.map(kePayloadUnit) : undefined,
             })
             toast.push(<Notification type="success" title="Proyek berhasil ditambahkan" />)
             router.push(ROUTES.PROYEK)
@@ -318,6 +324,77 @@ export default function ProjectBaruPage() {
                             idRuteDipakai={manualRuteRows.map(r => r.id_rute).filter(Boolean)} />
                     </div>
                 )}
+
+                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-1">
+                        <div>
+                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Unit Proyek (opsional)</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{unitDipilih.length} unit akan ditambahkan · supir pemegang unit ikut masuk ke proyek</p>
+                        </div>
+                        <Button type="button" size="sm" variant="solid" icon={<HiPlusCircle />}
+                            disabled={unitDipilih.length >= MAKS_UNIT_PROYEK}
+                            onClick={() => setDialogUnitTerbuka(true)}>
+                            Tambah Unit
+                        </Button>
+                    </div>
+
+                    {unitDipilih.length > 0 && (
+                        <div className="overflow-x-auto mt-4">
+                            <table className="w-full text-sm">
+                                <thead className="bg-blue-50 dark:bg-blue-500/10">
+                                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                                        <th className="py-2.5 pl-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4 w-12">No</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Unit</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Kepemilikan</th>
+                                        <th className="py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-100 uppercase tracking-wide pr-4">Supir</th>
+                                        <th className="py-2.5" />
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {unitDipilih.map((u, i) => {
+                                        const sumber = SUMBER_UNIT_TAG[u.sumber] ?? SUMBER_UNIT_TAG.internal
+                                        const detail = ringkasUnit(u)
+                                        return (
+                                            <tr key={kunciUnit(u)}>
+                                                <td className="py-3 pl-3 pr-4 text-gray-500">{i + 1}</td>
+                                                <td className="py-3 pr-4">
+                                                    <p className="font-medium text-gray-800 dark:text-gray-200">{u.nopol ?? '—'}</p>
+                                                    {detail && <p className="text-xs text-gray-400">{detail}</p>}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    <Tag className={`text-xs font-semibold ${sumber.tag}`}>{sumber.label}</Tag>
+                                                    {u.sumber === 'vendor' && u.nama_vendor && <p className="text-xs text-gray-400 mt-1">{u.nama_vendor}</p>}
+                                                </td>
+                                                <td className="py-3 pr-4">
+                                                    {u.nama_supir
+                                                        ? <span className="text-gray-700 dark:text-gray-300">{u.nama_supir}</span>
+                                                        : <span className="text-xs text-gray-400">Belum ada pemegang</span>}
+                                                </td>
+                                                <td className="py-3 text-right whitespace-nowrap">
+                                                    <Tooltip title="Batal pilih unit">
+                                                        <span
+                                                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                                            onClick={() => setUnitDipilih(prev => prev.filter(x => kunciUnit(x) !== kunciUnit(u)))}>
+                                                            <HiOutlineTrash className="text-lg" />
+                                                        </span>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    <PilihUnitProyekDialog isOpen={dialogUnitTerbuka} onClose={() => setDialogUnitTerbuka(false)}
+                        muatOpsi={muatOpsiUnit}
+                        kecualiKunci={unitDipilih.map(kunciUnit)}
+                        maks={MAKS_UNIT_PROYEK - unitDipilih.length}
+                        pesanKosong={unitDipilih.length > 0 ? 'Semua unit yang tersedia sudah dipilih' : 'Belum ada unit aktif yang bisa dipilih'}
+                        keterangan="Centang unit yang dipakai di proyek ini. Unit disimpan bersama proyek dan supir pemegang unit ikut masuk ke proyek. Penugasan harian tetap dibuat di halaman Penugasan."
+                        onSimpan={pilihan => { setUnitDipilih(prev => [...prev, ...pilihan]); setDialogUnitTerbuka(false) }} />
+                </div>
 
                 <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <Button type="button" variant="plain" onClick={() => router.back()}>Kembali</Button>

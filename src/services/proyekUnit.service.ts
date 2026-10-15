@@ -31,6 +31,9 @@ export const proyekUnitService = {
     opsi: (idProyek: string): Promise<OpsiUnitProyek[]> =>
         axios.get(API_ENDPOINTS.PROYEK_UNIT_OPSI(idProyek)).then(r => r.data?.data ?? []),
 
+    opsiProyekBaru: (): Promise<OpsiUnitProyek[]> =>
+        axios.get(API_ENDPOINTS.PROYEK_UNIT_OPSI_BARU).then(r => r.data?.data ?? []),
+
     tambah: (idProyek: string, unit: UnitProyekPayload[]): Promise<{ unit: UnitProyek[]; pesan: string | null }> =>
         axios.post(API_ENDPOINTS.PROYEK_UNIT(idProyek), { unit })
             .then(r => ({ unit: r.data?.data ?? [], pesan: typeof r.data?.message === 'string' ? r.data.message : null })),

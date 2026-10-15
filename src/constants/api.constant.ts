@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
     PROYEK_RUTE_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/rute/${id}`,
     PROYEK_UNIT:        (idProyek: string) => `/api/proxy/proyek/${idProyek}/unit`,
     PROYEK_UNIT_OPSI:   (idProyek: string) => `/api/proxy/proyek/${idProyek}/unit/opsi`,
+    PROYEK_UNIT_OPSI_BARU: '/api/proxy/proyek-unit/opsi',
     PROYEK_UNIT_DETAIL: (idProyek: string, id: string) => `/api/proxy/proyek/${idProyek}/unit/${id}`,
     PROYEK_PDF:         (id: string) => `/api/proxy/proyek/${id}/pdf`,
     PROYEK_PENAWARAN_REVISI: (id: string) => `/api/proxy/proyek/${id}/penawaran-revisi`,

@@ -62,6 +62,26 @@ const kontrakBelumDisetujui = (u: BoardUnitRow | null) =>
 const tidakAdaKontrak = (u: BoardUnitRow | null) =>
     !!u && u.tipe === 'vendor' && !u.id_kontrak_vendor
 
+const KONTRAK_AKTIF = '__kontrak_aktif__'
+const KONTRAK_HABIS = '__kontrak_habis__'
+const KONTRAK_BELUM_DISETUJUI = '__kontrak_belum_disetujui__'
+const KONTRAK_TIDAK_ADA = '__kontrak_tidak_ada__'
+const KONTRAK_STATUS_OPTIONS: Option[] = [
+    { value: KONTRAK_AKTIF, label: 'Kontrak aktif' },
+    { value: KONTRAK_HABIS, label: 'Kontrak habis' },
+    { value: KONTRAK_BELUM_DISETUJUI, label: 'Kontrak belum disetujui' },
+    { value: KONTRAK_TIDAK_ADA, label: 'Tidak ada kontrak' },
+]
+
+const cocokFilterKontrak = (u: BoardUnitRow, filter: string) => {
+    if (u.tipe !== 'vendor') return false
+    if (filter === KONTRAK_TIDAK_ADA) return tidakAdaKontrak(u)
+    if (filter === KONTRAK_BELUM_DISETUJUI) return kontrakBelumDisetujui(u)
+    if (filter === KONTRAK_HABIS) return !!u.kontrak_habis && !kontrakBelumDisetujui(u) && !tidakAdaKontrak(u)
+    if (filter === KONTRAK_AKTIF) return !u.kontrak_habis && !kontrakBelumDisetujui(u) && !tidakAdaKontrak(u)
+    return u.id_kontrak_vendor === filter
+}
+
 /**
  * suffix WAJIB selalu berupa node yang sama (bukan undefined saat kosong) —
  * Input.tsx merender struktur DOM berbeda (bare <input> vs dibungkus span
@@ -94,6 +114,8 @@ export default function BoardUnit() {
     const [assignments, setAssignments] = useState<BoardAssignment[]>([])
     const [filterUnit, setFilterUnit] = useState<string>('semua')
     const [filterSupirDefault, setFilterSupirDefault] = useState<string | null>(null)
+    const [filterVendor, setFilterVendor] = useState<string | null>(null)
+    const [filterKontrak, setFilterKontrak] = useState<string | null>(null)
     const todayColRef = useRef<HTMLTableCellElement>(null)
 
     const [supirAktif, setSupirAktif] = useState<Supir[]>([])
@@ -231,6 +253,37 @@ export default function BoardUnit() {
         return [...KATEGORI_UNIT_OPTIONS, ...daftarUnit]
     }, [units])
 
+    const vendorFilterOptions = useMemo<Option[]>(() => {
+        const peta = new Map<string, string>()
+        units.forEach(u => {
+            if (u.tipe === 'vendor' && u.id_vendor) peta.set(u.id_vendor, u.nama_vendor ?? 'Vendor')
+        })
+        return [...peta.entries()]
+            .map(([value, label]) => ({ value, label }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+    }, [units])
+
+    const kontrakFilterOptions = useMemo<Option[]>(() => {
+        const peta = new Map<string, string>()
+        units.forEach(u => {
+            if (u.tipe !== 'vendor' || !u.id_kontrak_vendor) return
+            if (filterVendor && u.id_vendor !== filterVendor) return
+            peta.set(u.id_kontrak_vendor, [u.nomor_kontrak || 'Kontrak tanpa nomor', filterVendor ? null : u.nama_vendor].filter(Boolean).join(' · '))
+        })
+        const daftar = [...peta.entries()]
+            .map(([value, label]) => ({ value, label }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        return [...KONTRAK_STATUS_OPTIONS, ...daftar]
+    }, [units, filterVendor])
+
+    const pilihFilterVendor = (idVendor: string | null) => {
+        setFilterVendor(idVendor)
+        if (idVendor && filterKontrak && !KONTRAK_STATUS_OPTIONS.some(o => o.value === filterKontrak)
+            && !units.some(u => u.id_kontrak_vendor === filterKontrak && u.id_vendor === idVendor)) {
+            setFilterKontrak(null)
+        }
+    }
+
     const unitsTampil = useMemo(() => {
         const isKategori = (KATEGORI_UNIT_VALUES as string[]).includes(filterUnit)
         let terurut = [...units]
@@ -245,8 +298,10 @@ export default function BoardUnit() {
             if (filterSupirDefault === TANPA_SUPIR_DEFAULT) return !idSupirDefault(u)
             return idSupirDefault(u) === filterSupirDefault
         })
+        if (filterVendor) terurut = terurut.filter(u => u.tipe === 'vendor' && u.id_vendor === filterVendor)
+        if (filterKontrak) terurut = terurut.filter(u => cocokFilterKontrak(u, filterKontrak))
         return terurut.sort((a, b) => a.nopol.localeCompare(b.nopol))
-    }, [units, filterUnit, filterSupirDefault])
+    }, [units, filterUnit, filterSupirDefault, filterVendor, filterKontrak])
 
     const tanggalList = useMemo(() => {
         const n = bulan.daysInMonth()
@@ -648,6 +703,18 @@ export default function BoardUnit() {
                 <Button size="sm" variant="default" icon={<HiOutlineChevronRight />}
                     onClick={() => setBulan(b => b.add(1, 'month'))} />
                 <div className="ml-auto flex items-center gap-2 flex-wrap">
+                    <div className="w-52">
+                        <Select size="sm" isClearable placeholder="Filter vendor..."
+                            options={vendorFilterOptions}
+                            value={vendorFilterOptions.find(o => o.value === filterVendor) ?? null}
+                            onChange={opt => pilihFilterVendor(opt?.value ?? null)} />
+                    </div>
+                    <div className="w-56">
+                        <Select size="sm" isClearable placeholder="Filter kontrak..."
+                            options={kontrakFilterOptions}
+                            value={kontrakFilterOptions.find(o => o.value === filterKontrak) ?? null}
+                            onChange={opt => setFilterKontrak(opt?.value ?? null)} />
+                    </div>
                     <div className="w-56">
                         <Select size="sm" isClearable placeholder="Filter supir default..."
                             options={supirDefaultOptions}

@@ -18,6 +18,7 @@ export interface BoardUnit {
     nama_supir_default?: string | null
     id_kontrak_vendor?: string | null
     id_kontrak_vendor_unit?: string | null
+    nomor_kontrak?: string | null
     kontrak_habis?: boolean
     status_kontrak?: 'draft' | 'menunggu_approval' | 'aktif' | 'selesai' | 'batal' | null
 }
