@@ -31,6 +31,7 @@ import { PENAWARAN_STATUS_CLASS, PENAWARAN_STATUS_LABEL } from '@/utils/penawara
 import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
 import { TampilanParameterPenawaran } from '../../penawaran/ParameterPenawaran'
 import RuteTarifRows from '@/components/shared/RuteTarifRows'
+import { komponenUangJalanService, KomponenUangJalan } from '@/services/komponenUangJalan.service'
 import RuteTarifFields, {
     RuteTarifState, EMPTY_RUTE_TARIF_STATE, RuteOption,
     ruteTarifValid, toProyekRutePayload, stateFromProyekRute,
@@ -207,6 +208,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         }
     }, [id])
+
+    const [komponenOpsi, setKomponenOpsi] = useState<KomponenUangJalan[]>([])
+
+    useEffect(() => {
+        komponenUangJalanService.opsi().then(setKomponenOpsi)
+            .catch(err => toast.push(<Notification type="danger" title={`Komponen uang jalan gagal dimuat: ${parseApiError(err)}`} />))
+    }, [])
 
     useEffect(() => {
         fetchProject().finally(() => setLoading(false))
@@ -821,6 +829,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             onHapusRow={hapusBarisRute}
                             ruteOptions={ruteOptionsMaster}
                             jenisOptions={jenisOptionsMaster}
+                            komponenOpsi={komponenOpsi}
                             onRuteCreated={() => muatRuteOptions()}
                         />
                         {ruteRowsError && <p className="text-red-500 text-sm mt-2">{ruteRowsError}</p>}
@@ -930,7 +939,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <Dialog isOpen={!!editRuteTarget} onRequestClose={() => setEditRuteTarget(null)} onClose={() => setEditRuteTarget(null)} width={800}>
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
-                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster}
+                    ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} komponenOpsi={komponenOpsi}
                     onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} modeEdit />
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Kembali</Button>

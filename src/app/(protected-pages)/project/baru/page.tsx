@@ -14,6 +14,7 @@ import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ruteService, Rute, labelRute } from '@/services/rute.service'
 import { jenisKendaraanService, JenisKendaraan } from '@/services/jenis-kendaraan.service'
 import { ProyekRutePayload } from '@/services/proyekRute.service'
+import { komponenUangJalanService, KomponenUangJalan } from '@/services/komponenUangJalan.service'
 import RuteTarifRows from '@/components/shared/RuteTarifRows'
 import PilihRuteDialog, { PilihanItemRute } from '../../penawaran/PilihRuteDialog'
 import {
@@ -55,8 +56,11 @@ export default function ProjectBaruPage() {
     const [ruteRowsError, setRuteRowsError] = useState('')
     const [dialogRuteTerbuka, setDialogRuteTerbuka] = useState(false)
     const [hargaDiketikManual, setHargaDiketikManual] = useState({ penawaran: false, proyek: false })
+    const [komponenOpsi, setKomponenOpsi] = useState<KomponenUangJalan[]>([])
 
     useEffect(() => {
+        komponenUangJalanService.opsi().then(setKomponenOpsi)
+            .catch(err => toast.push(<Notification type="danger" title={`Komponen uang jalan gagal dimuat: ${parseApiError(err)}`} />))
         klienService.list(1).then(res =>
             setKlienOptions(res.data.map((k: Klien) => ({ value: k.id_klien, label: `${k.kode_klien} — ${k.nama_klien}` })))
         ).catch(() => {})
@@ -293,6 +297,7 @@ export default function ProjectBaruPage() {
                                     onHapusRow={hapusBarisRute}
                                     ruteOptions={ruteOptionsMaster}
                                     jenisOptions={jenisOptionsMaster}
+                                    komponenOpsi={komponenOpsi}
                                     onRuteCreated={() => muatRuteOptions()}
                                 />
                                 <div className="flex justify-end mt-3">

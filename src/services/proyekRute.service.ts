@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import type { RincianKomponenUangJalan } from '@/services/komponenUangJalan.service'
 
 export interface ProyekRute {
     id_proyek_rute: string
@@ -15,9 +16,7 @@ export interface ProyekRute {
     estimasi_ritase: number
     subtotal: number | null
     uang_jalan: number | null
-    estimasi_tol: number | null
-    estimasi_bbm: number | null
-    estimasi_biaya_lain: number | null
+    komponen_uang_jalan: RincianKomponenUangJalan[]
     estimasi_biaya: number | null
     keterangan: string | null
     dibuat_pada: string
@@ -30,9 +29,7 @@ export interface ProyekRutePayload {
     harga_penawaran?: number | null
     estimasi_ritase?: number
     uang_jalan?: number | null
-    estimasi_tol?: number | null
-    estimasi_bbm?: number | null
-    estimasi_biaya_lain?: number | null
+    komponen_uang_jalan?: { id_komponen_uang_jalan: string; nominal: number }[]
     keterangan?: string | null
 }
 

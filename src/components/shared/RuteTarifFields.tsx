@@ -6,7 +6,11 @@ import { HiPlusCircle } from 'react-icons/hi'
 import { formatNum } from '@/utils/formatNumber'
 import { ProyekRute, ProyekRutePayload } from '@/services/proyekRute.service'
 import { Rute } from '@/services/rute.service'
+import type { KomponenUangJalan, RincianKomponenUangJalan } from '@/services/komponenUangJalan.service'
 import RuteBaruDialog from '@/components/shared/RuteBaruDialog'
+import KomponenUangJalanFields, {
+    NilaiKomponen, nilaiDariRincian, rincianDariNilai, totalKomponen,
+} from '@/components/shared/KomponenUangJalanFields'
 
 export type RuteTarifState = {
     id_rute: string
@@ -14,9 +18,8 @@ export type RuteTarifState = {
     harga_penawaran: string
     estimasi_ritase: string
     uang_jalan: string
-    estimasi_tol: string
-    estimasi_bbm: string
-    estimasi_biaya_lain: string
+    komponen: NilaiKomponen
+    komponen_asal: RincianKomponenUangJalan[]
     keterangan: string
 }
 
@@ -26,9 +29,8 @@ export const EMPTY_RUTE_TARIF_STATE: RuteTarifState = {
     harga_penawaran: '',
     estimasi_ritase: '1',
     uang_jalan: '',
-    estimasi_tol: '',
-    estimasi_bbm: '',
-    estimasi_biaya_lain: '',
+    komponen: {},
+    komponen_asal: [],
     keterangan: '',
 }
 
@@ -48,6 +50,7 @@ type Props = {
     onChange: (next: RuteTarifState) => void
     ruteOptions: RuteOption[]
     jenisOptions: Option[]
+    komponenOpsi: KomponenUangJalan[]
     onRuteCreated?: (rute: Rute) => void
     hargaTerkunci?: boolean
     modeEdit?: boolean
@@ -66,11 +69,7 @@ function angka(v: string): string {
     return v.replace(/\D/g, '')
 }
 
-function totalUangJalan(state: Pick<RuteTarifState, 'estimasi_tol' | 'estimasi_bbm' | 'estimasi_biaya_lain'>): number {
-    return (Number(state.estimasi_tol) || 0) + (Number(state.estimasi_bbm) || 0) + (Number(state.estimasi_biaya_lain) || 0)
-}
-
-export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, onRuteCreated, hargaTerkunci, modeEdit }: Props) {
+export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated, hargaTerkunci, modeEdit }: Props) {
     const [showRuteBaru, setShowRuteBaru] = useState(false)
     const ruteHargaTerkunci = !!hargaTerkunci || !!modeEdit
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
@@ -82,6 +81,9 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
     const jenisOptionsSemua = [JENIS_SEMUA, ...jenisOptions]
 
     const setField = (patch: Partial<RuteTarifState>) => onChange({ ...value, ...patch })
+    const totalAsal = value.komponen_asal.reduce((jumlah, r) => jumlah + r.nominal, 0)
+    const totalTersimpan = Number(value.uang_jalan) || 0
+    const totalLamaBeda = !!modeEdit && Math.abs(totalTersimpan - totalAsal) >= 1
 
     return (
         <div>
@@ -157,24 +159,17 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
                         <p className="text-xs text-amber-500 mt-1">Ritase terkunci — ubah lewat penawaran revisi</p>
                     )}
                 </FormItem>
+                <KomponenUangJalanFields opsi={komponenOpsi} asal={value.komponen_asal}
+                    nilai={value.komponen} onChange={komponen => setField({ komponen })} />
                 <FormItem label="Uang Jalan">
-                    <Input prefix="Rp" disabled value={formatNum(totalUangJalan(value))} />
-                    <p className="text-xs text-gray-400 mt-1">Otomatis: Estimasi Tol + BBM + Biaya Lain</p>
-                </FormItem>
-                <FormItem label="Estimasi Tol">
-                    <Input prefix="Rp" placeholder="0"
-                        value={value.estimasi_tol ? formatNum(Number(value.estimasi_tol)) : ''}
-                        onChange={e => setField({ estimasi_tol: angka(e.target.value) })} />
-                </FormItem>
-                <FormItem label="Estimasi BBM">
-                    <Input prefix="Rp" placeholder="0"
-                        value={value.estimasi_bbm ? formatNum(Number(value.estimasi_bbm)) : ''}
-                        onChange={e => setField({ estimasi_bbm: angka(e.target.value) })} />
-                </FormItem>
-                <FormItem label="Estimasi Biaya Lain">
-                    <Input prefix="Rp" placeholder="0"
-                        value={value.estimasi_biaya_lain ? formatNum(Number(value.estimasi_biaya_lain)) : ''}
-                        onChange={e => setField({ estimasi_biaya_lain: angka(e.target.value) })} />
+                    <Input prefix="Rp" disabled value={formatNum(totalKomponen(value.komponen))} />
+                    <p className="text-xs text-gray-400 mt-1">Otomatis: jumlah semua komponen uang jalan di atas</p>
+                    {totalLamaBeda && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Data lama: uang jalan tersimpan {formatNum(totalTersimpan)} tidak sama dengan jumlah rinciannya {formatNum(totalAsal)}.
+                            Setelah disimpan, uang jalan mengikuti jumlah rincian dan dipakai sebagai estimasi di Penugasan.
+                        </p>
+                    )}
                 </FormItem>
                 <div className="sm:col-span-2">
                     <FormItem label="Keterangan">
@@ -199,16 +194,12 @@ export function ruteTarifValid(state: RuteTarifState): boolean {
 }
 
 export function toProyekRutePayload(state: RuteTarifState): ProyekRutePayload {
-    const jumlahUangJalan = totalUangJalan(state)
     return {
         id_rute: state.id_rute,
         id_jenis_kendaraan: state.id_jenis_kendaraan || null,
         harga_penawaran: state.harga_penawaran !== '' ? Number(state.harga_penawaran) : null,
         estimasi_ritase: state.estimasi_ritase !== '' ? Number(state.estimasi_ritase) : 1,
-        uang_jalan: jumlahUangJalan > 0 ? jumlahUangJalan : null,
-        estimasi_tol: state.estimasi_tol !== '' ? Number(state.estimasi_tol) : null,
-        estimasi_bbm: state.estimasi_bbm !== '' ? Number(state.estimasi_bbm) : null,
-        estimasi_biaya_lain: state.estimasi_biaya_lain !== '' ? Number(state.estimasi_biaya_lain) : null,
+        komponen_uang_jalan: rincianDariNilai(state.komponen),
         keterangan: state.keterangan.trim() || null,
     }
 }
@@ -220,9 +211,8 @@ export function stateFromProyekRute(r: ProyekRute): RuteTarifState {
         harga_penawaran: r.harga_penawaran != null ? String(r.harga_penawaran) : '',
         estimasi_ritase: String(r.estimasi_ritase ?? 1),
         uang_jalan: r.uang_jalan != null ? String(r.uang_jalan) : '',
-        estimasi_tol: r.estimasi_tol != null ? String(r.estimasi_tol) : '',
-        estimasi_bbm: r.estimasi_bbm != null ? String(r.estimasi_bbm) : '',
-        estimasi_biaya_lain: r.estimasi_biaya_lain != null ? String(r.estimasi_biaya_lain) : '',
+        komponen: nilaiDariRincian(r.komponen_uang_jalan),
+        komponen_asal: r.komponen_uang_jalan ?? [],
         keterangan: r.keterangan ?? '',
     }
 }

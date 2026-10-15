@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_ENDPOINTS } from '@/constants/api.constant'
+import type { RincianKomponenUangJalan } from '@/services/komponenUangJalan.service'
 import type { PengajuanKeuanganInfo, StatusPengajuan } from './arusKas.service'
 
 export type TipeDriver = 'internal' | 'vendor'
@@ -24,9 +25,7 @@ export interface UangJalan {
     nama_vendor: string | null
     nopol: string
     rute: string
-    tol_per_trip: number
-    bbm_per_trip: number
-    biaya_lain_per_trip: number
+    rincian?: RincianKomponenUangJalan[]
     uang_jalan_per_trip: number
     jumlah_trip: number
     nominal: number
@@ -55,9 +54,7 @@ export type UangJalanPayload = {
     id_proyek: string | null
     alasan_tanpa_proyek: string | null
     id_penugasan: string | null
-    tol_per_trip: number
-    bbm_per_trip: number
-    biaya_lain_per_trip: number
+    rincian: { id_komponen_uang_jalan: string; nominal: number }[]
     jumlah_trip: number
     nomor_rekening: string
     nama_bank: string
@@ -171,9 +168,7 @@ export interface OpsiPenugasan {
 }
 
 export interface RateCardRincian {
-    tol_per_trip: number
-    bbm_per_trip: number
-    biaya_lain_per_trip: number
+    rincian: RincianKomponenUangJalan[]
     uang_jalan_per_trip: number
 }
 

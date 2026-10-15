@@ -9,6 +9,8 @@ import { HiArrowLeft } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import { komponenUangJalanService, KomponenUangJalan, RincianKomponenUangJalan } from '@/services/komponenUangJalan.service'
+import KomponenUangJalanFields, { NilaiKomponen, nilaiDariRincian, rincianDariNilai, totalKomponen } from '@/components/shared/KomponenUangJalanFields'
 import {
     uangJalanService,
     OpsiProyek,
@@ -65,9 +67,9 @@ export default function UangJalanForm({ mode, initial }: Props) {
     const [idSupirVendor, setIdSupirVendor] = useState(initial?.id_supir_vendor ?? '')
     const [idArmadaVendor, setIdArmadaVendor] = useState(initial?.id_armada_vendor ?? '')
     const [idRute, setIdRute] = useState(initial?.id_rute ?? '')
-    const [tolPerTrip, setTolPerTrip] = useState(initial?.tol_per_trip ? String(Math.round(initial.tol_per_trip)) : '')
-    const [bbmPerTrip, setBbmPerTrip] = useState(initial?.bbm_per_trip ? String(Math.round(initial.bbm_per_trip)) : '')
-    const [biayaLainPerTrip, setBiayaLainPerTrip] = useState(initial?.biaya_lain_per_trip ? String(Math.round(initial.biaya_lain_per_trip)) : '')
+    const [komponen, setKomponen] = useState<NilaiKomponen>(() => nilaiDariRincian(initial?.rincian))
+    const [komponenOpsi, setKomponenOpsi] = useState<KomponenUangJalan[]>([])
+    const [rincianRateCard, setRincianRateCard] = useState<RincianKomponenUangJalan[]>([])
     const [jumlahTrip, setJumlahTrip] = useState(initial ? String(initial.jumlah_trip) : '1')
     const [nomorRekening, setNomorRekening] = useState(initial?.nomor_rekening ?? '')
     const [namaBank, setNamaBank] = useState(initial?.nama_bank ?? '')
@@ -86,6 +88,9 @@ export default function UangJalanForm({ mode, initial }: Props) {
     const [sumberRateCard, setSumberRateCard] = useState(false)
 
     useEffect(() => {
+        komponenUangJalanService.opsi()
+            .then(setKomponenOpsi)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
         uangJalanService.opsi()
             .then(setOpsi)
             .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
@@ -112,15 +117,15 @@ export default function UangJalanForm({ mode, initial }: Props) {
     }
 
     const kosongkanRincian = () => {
-        setTolPerTrip('')
-        setBbmPerTrip('')
-        setBiayaLainPerTrip('')
+        setKomponen({})
+        setRincianRateCard([])
         isiDariRateCard.current = false
         setSumberRateCard(false)
     }
 
-    const ubahRincian = (setter: (nilai: string) => void, nilai: string) => {
-        setter(nilai)
+    const ubahRincian = (nilai: NilaiKomponen) => {
+        rateCardTerbaru.current++
+        setKomponen(nilai)
         isiDariRateCard.current = false
         setSumberRateCard(false)
         hapusError('uang_jalan_per_trip')
@@ -132,7 +137,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
             if (isiDariRateCard.current) kosongkanRincian()
             return
         }
-        const adaIsiManual = !isiDariRateCard.current && !!(tolPerTrip || bbmPerTrip || biayaLainPerTrip)
+        const adaIsiManual = !isiDariRateCard.current && totalKomponen(komponen) > 0
         uangJalanService.tarifRateCard({
             id_proyek: proyekId,
             id_rute: ruteId,
@@ -142,9 +147,8 @@ export default function UangJalanForm({ mode, initial }: Props) {
             .then(hasil => {
                 if (urutan !== rateCardTerbaru.current || adaIsiManual) return
                 if (hasil) {
-                    setTolPerTrip(String(Math.round(hasil.tol_per_trip)))
-                    setBbmPerTrip(String(Math.round(hasil.bbm_per_trip)))
-                    setBiayaLainPerTrip(String(Math.round(hasil.biaya_lain_per_trip)))
+                    setKomponen(nilaiDariRincian(hasil.rincian))
+                    setRincianRateCard(hasil.rincian)
                     isiDariRateCard.current = true
                     setSumberRateCard(true)
                     hapusError('uang_jalan_per_trip')
@@ -307,7 +311,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
         return r?.nama_bank === namaBank && r?.nomor_rekening === nomorRekening
     }) ?? null
 
-    const totalPerTrip = (Number(tolPerTrip) || 0) + (Number(bbmPerTrip) || 0) + (Number(biayaLainPerTrip) || 0)
+    const totalPerTrip = totalKomponen(komponen)
     const nominalTransfer = totalPerTrip * (Number(jumlahTrip) || 0)
     const dataLama = mode === 'edit' && !!initial && !initial.id_rute
     const rutePlaceholder = !idProyek
@@ -336,7 +340,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
             if (!idArmadaVendor) e.id_armada_vendor = 'Unit vendor wajib dipilih'
         }
         if (!idRute) e.id_rute = 'Rute wajib dipilih'
-        if (totalPerTrip < 1) e.uang_jalan_per_trip = 'Isi minimal salah satu rincian biaya per trip (tol, BBM, atau biaya lain)'
+        if (totalPerTrip < 1) e.uang_jalan_per_trip = 'Isi minimal salah satu komponen uang jalan per trip'
         else if (totalPerTrip > MAKS_UJ_PER_TRIP) e.uang_jalan_per_trip = `Total uang jalan per trip maksimal ${formatRupiah(MAKS_UJ_PER_TRIP)}`
         if (!jumlahTrip) e.jumlah_trip = 'Jumlah trip wajib diisi'
         else if (Number(jumlahTrip) < 1) e.jumlah_trip = 'Jumlah trip minimal 1'
@@ -366,9 +370,7 @@ export default function UangJalanForm({ mode, initial }: Props) {
             id_proyek: kosongkanNull(idProyek),
             alasan_tanpa_proyek: luarProyek ? alasanLuarProyek.trim() : null,
             id_penugasan: null,
-            tol_per_trip: Number(tolPerTrip) || 0,
-            bbm_per_trip: Number(bbmPerTrip) || 0,
-            biaya_lain_per_trip: Number(biayaLainPerTrip) || 0,
+            rincian: rincianDariNilai(komponen),
             jumlah_trip: Number(jumlahTrip),
             nomor_rekening: nomorRekening.trim(),
             nama_bank: namaBank.trim(),
@@ -509,21 +511,11 @@ export default function UangJalanForm({ mode, initial }: Props) {
                         </div>
 
                         <p className={SECTION_CLASS}>Nominal</p>
-                        <FormItem label="Estimasi Tol">
-                            <Input prefix="Rp" placeholder="0" value={tolPerTrip ? formatNum(Number(tolPerTrip)) : ''}
-                                onChange={e => ubahRincian(setTolPerTrip, e.target.value.replace(/\D/g, '').slice(0, 9))} />
-                        </FormItem>
-                        <FormItem label="Estimasi BBM">
-                            <Input prefix="Rp" placeholder="0" value={bbmPerTrip ? formatNum(Number(bbmPerTrip)) : ''}
-                                onChange={e => ubahRincian(setBbmPerTrip, e.target.value.replace(/\D/g, '').slice(0, 9))} />
-                        </FormItem>
-                        <FormItem label="Estimasi Biaya Lain">
-                            <Input prefix="Rp" placeholder="0" value={biayaLainPerTrip ? formatNum(Number(biayaLainPerTrip)) : ''}
-                                onChange={e => ubahRincian(setBiayaLainPerTrip, e.target.value.replace(/\D/g, '').slice(0, 9))} />
-                        </FormItem>
-                        <FormItem label="UJ per Trip" invalid={!!errors.uang_jalan_per_trip} errorMessage={errors.uang_jalan_per_trip}
-                            extra={<span className="text-xs text-gray-400">{sumberRateCard ? 'Diisi dari rate card proyek & rute — bisa diubah' : 'Otomatis: Estimasi Tol + BBM + Biaya Lain'}</span>}>
+                        <KomponenUangJalanFields opsi={komponenOpsi} asal={[...(initial?.rincian ?? []), ...rincianRateCard]}
+                            nilai={komponen} onChange={ubahRincian} maksDigit={9} />
+                        <FormItem label="UJ per Trip" invalid={!!errors.uang_jalan_per_trip} errorMessage={errors.uang_jalan_per_trip}>
                             <Input disabled prefix="Rp" value={totalPerTrip > 0 ? formatNum(totalPerTrip) : ''} placeholder="0" />
+                            <p className="text-xs text-gray-400 mt-1">{sumberRateCard ? 'Diisi dari rate card proyek & rute — bisa diubah' : 'Otomatis: jumlah semua komponen uang jalan di atas'}</p>
                         </FormItem>
                         <FormItem label="Jumlah Trip" asterisk invalid={!!errors.jumlah_trip} errorMessage={errors.jumlah_trip}>
                             <Input placeholder="1" value={jumlahTrip} invalid={!!errors.jumlah_trip}

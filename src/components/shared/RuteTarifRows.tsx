@@ -3,6 +3,7 @@ import { HiOutlineTrash } from 'react-icons/hi'
 import { formatRupiah } from '@/utils/formatNumber'
 import RuteTarifFields, { RuteTarifState, RuteOption } from '@/components/shared/RuteTarifFields'
 import { Rute } from '@/services/rute.service'
+import type { KomponenUangJalan } from '@/services/komponenUangJalan.service'
 
 type Option = { value: string; label: string }
 
@@ -12,6 +13,7 @@ type Props = {
     onHapusRow: (index: number) => void
     ruteOptions: RuteOption[]
     jenisOptions: Option[]
+    komponenOpsi: KomponenUangJalan[]
     onRuteCreated?: (rute: Rute) => void
 }
 
@@ -19,7 +21,7 @@ export function subtotalRuteTarif(row: RuteTarifState): number {
     return (Number(row.harga_penawaran) || 0) * (Number(row.estimasi_ritase) || 1)
 }
 
-export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptions, jenisOptions, onRuteCreated }: Props) {
+export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated }: Props) {
     return (
         <div className="flex flex-col gap-4">
             {rows.map((row, i) => {
@@ -42,6 +44,7 @@ export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptio
                             onChange={next => onChangeRow(i, next)}
                             ruteOptions={ruteOptions}
                             jenisOptions={jenisOptions}
+                            komponenOpsi={komponenOpsi}
                             onRuteCreated={onRuteCreated}
                         />
 
