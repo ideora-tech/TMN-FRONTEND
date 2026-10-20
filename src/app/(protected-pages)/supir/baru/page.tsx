@@ -7,9 +7,8 @@ import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
-import { supirService, OpsiPenggunaSupir } from '@/services/supir.service'
+import { supirService, OpsiPenggunaSupir, OpsiKaryawanSupir } from '@/services/supir.service'
 import { armadaService, Armada } from '@/services/armada.service'
-import { karyawanService, Karyawan } from '@/services/karyawan.service'
 
 const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
@@ -19,7 +18,7 @@ export default function SupirBaruPage() {
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
     const [armadaOptions, setArmadaOptions] = useState<{ value: string; label: string }[]>([])
-    const [karyawanOptions, setKaryawanOptions] = useState<{ value: string; label: string }[]>([])
+    const [karyawanOpsi, setKaryawanOpsi] = useState<OpsiKaryawanSupir[]>([])
     const [penggunaOptions, setPenggunaOptions] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
@@ -33,12 +32,26 @@ export default function SupirBaruPage() {
                 .filter((a: Armada) => a.aktif !== false)
                 .map((a: Armada) => ({ value: a.id_armada, label: `${a.nopol} — ${a.merk ?? ''}`.trim() }))))
             .catch(() => {})
-        karyawanService.list(1, 500)
-            .then(res => setKaryawanOptions(res.data
-                .filter((k: Karyawan) => k.aktif)
-                .map((k: Karyawan) => ({ value: k.id_karyawan, label: `${k.nik} — ${k.nama_karyawan}` }))))
-            .catch(() => {})
+        supirService.opsiKaryawan()
+            .then(setKaryawanOpsi)
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [])
+
+    const karyawanOptions = karyawanOpsi.map(k => ({
+        value: k.id_karyawan,
+        label: k.id_supir_tertaut ? `${k.nik} — ${k.nama_karyawan} (sudah punya profil supir)` : `${k.nik} — ${k.nama_karyawan}`,
+        isDisabled: !!k.id_supir_tertaut,
+    }))
+
+    const pilihKaryawan = (idKaryawan: string) => {
+        const k = karyawanOpsi.find(o => o.id_karyawan === idKaryawan)
+        setForm(p => ({
+            ...p,
+            id_karyawan: idKaryawan,
+            ...(k ? { nama: k.nama_karyawan, telepon: k.telepon ?? p.telepon } : {}),
+        }))
+        if (k) setErrors(e => ({ ...e, nama: undefined }))
+    }
 
     const validate = () => {
         const e: Partial<typeof form> = {}
@@ -90,6 +103,15 @@ export default function SupirBaruPage() {
             <Card>
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                    <FormItem label="Tautkan ke Karyawan (opsional)" className="sm:col-span-2"
+                        extra={<span className="text-xs text-gray-400">Hanya karyawan berjabatan supir. Nama &amp; telepon terisi otomatis dari data karyawan</span>}>
+                        <Select isClearable isSearchable
+                            placeholder="Pilih karyawan..."
+                            options={karyawanOptions}
+                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
+                            noOptionsMessage={({ inputValue }) => inputValue ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan berjabatan supir — aktifkan "Jabatan Supir" di Data Master → Jabatan'}
+                            onChange={(option) => pilihKaryawan(option?.value ?? '')} />
+                    </FormItem>
                     <FormItem label="Nama" asterisk invalid={!!errors.nama} errorMessage={errors.nama}>
                         <Input placeholder="Nama lengkap supir" value={form.nama} invalid={!!errors.nama}
                             onChange={(e) => setForm(p => ({ ...p, nama: e.target.value }))} />
@@ -119,14 +141,6 @@ export default function SupirBaruPage() {
                             options={armadaOptions}
                             value={armadaOptions.find(o => o.value === form.id_armada_default) ?? null}
                             onChange={(option) => setForm(p => ({ ...p, id_armada_default: option?.value ?? '' }))} />
-                    </FormItem>
-                    <FormItem label="Tautkan ke Karyawan (opsional)"
-                        extra={<span className="text-xs text-gray-400">Hubungkan profil supir dengan data karyawan (gaji, kontrak, BPJS)</span>}>
-                        <Select isClearable isSearchable
-                            placeholder="Pilih karyawan..."
-                            options={karyawanOptions}
-                            value={karyawanOptions.find(o => o.value === form.id_karyawan) ?? null}
-                            onChange={(option) => setForm(p => ({ ...p, id_karyawan: option?.value ?? '' }))} />
                     </FormItem>
                     <FormItem label="Akun Login Mobile (opsional)"
                         extra={<span className="text-xs text-gray-400">Akun berperan SUPIR untuk login aplikasi mobile — buat akunnya di menu Pengaturan → Pengguna</span>}>

@@ -24,6 +24,17 @@ export interface OpsiPenggunaSupir {
     nama_supir_tertaut: string | null
 }
 
+export interface OpsiKaryawanSupir {
+    id_karyawan: string
+    nik: string
+    nama_karyawan: string
+    telepon: string | null
+    nama_jabatan: string | null
+    id_supir_tertaut: string | null
+    nama_supir_tertaut: string | null
+    no_sim_tertaut: string | null
+}
+
 async function unduhExcel(url: string, namaFile: string) {
     const res = await axios.get(url, { responseType: 'blob' })
     const href = URL.createObjectURL(res.data)
@@ -61,6 +72,10 @@ export const supirService = {
     async opsiPengguna() {
         const { data } = await axios.get(API_ENDPOINTS.SUPIR_OPSI_PENGGUNA)
         return data.data as OpsiPenggunaSupir[]
+    },
+    async opsiKaryawan(idSupir?: string) {
+        const { data } = await axios.get(API_ENDPOINTS.SUPIR_OPSI_KARYAWAN, { params: idSupir ? { id_supir: idSupir } : undefined })
+        return data.data as OpsiKaryawanSupir[]
     },
     async exportRiwayatArmada(id: string, nama: string) {
         await unduhExcel(API_ENDPOINTS.SUPIR_RIWAYAT_ARMADA_EXPORT(id), `riwayat-armada-${slugNama(nama)}.xlsx`)
