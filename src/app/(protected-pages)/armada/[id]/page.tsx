@@ -18,6 +18,7 @@ import { perawatanArmadaService, PerawatanArmada, PrediksiPerawatanItem } from '
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { supirService, Supir } from '@/services/supir.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
+import { perusahaanGrupService, labelPerusahaanGrup, PerusahaanGrup } from '@/services/perusahaan-grup.service'
 
 const RAWAT_STATUS_CLASS: Record<string, string> = {
     terjadwal:    'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
@@ -138,6 +139,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [editFoto, setEditFoto] = useState<File | null>(null)
     const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
+    const [grupAktif, setGrupAktif] = useState<PerusahaanGrup[]>([])
 
     // dokumen
     const [dokumen, setDokumen]         = useState<DokumenArmada[]>([])
@@ -175,7 +177,17 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisOptions(res.data.map(j => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => setJenisOptions([]))
+        perusahaanGrupService.opsiAktif()
+            .then(setGrupAktif)
+            .catch(() => setGrupAktif([]))
     }, [])
+
+    const grupOptions = [
+        ...grupAktif.map(g => ({ value: g.id_perusahaan_grup, label: labelPerusahaanGrup(g) })),
+        ...(armada?.id_perusahaan_grup && !grupAktif.some(g => g.id_perusahaan_grup === armada.id_perusahaan_grup)
+            ? [{ value: armada.id_perusahaan_grup, label: `${armada.singkatan_perusahaan_grup ?? 'Perusahaan'} (nonaktif)` }]
+            : []),
+    ]
 
     const fetchDokumen = useCallback(async () => {
         setDocLoading(true)
@@ -224,6 +236,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     // --- handlers armada ---
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
+        if (!form.id_perusahaan_grup) e.id_perusahaan_grup = 'Perusahaan pemilik wajib dipilih'
         if (!form.nopol?.trim()) e.nopol = 'Nopol wajib diisi'
         if (!form.merk?.trim())  e.merk  = 'Merk wajib diisi'
         if (!form.tahun)         e.tahun = 'Tahun wajib diisi'
@@ -240,6 +253,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
         setSaving(true)
         try {
             const updated = await armadaService.update(id, {
+                id_perusahaan_grup:  form.id_perusahaan_grup ?? undefined,
                 nopol:               form.nopol,
                 merk:                form.merk,
                 model:               form.model ?? '',
@@ -362,6 +376,9 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <div className="my-5 border-t border-gray-100 dark:border-gray-700" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
+                                { label: 'Perusahaan Pemilik', value: armada.singkatan_perusahaan_grup
+                                    ? labelPerusahaanGrup({ singkatan: armada.singkatan_perusahaan_grup, nama_lengkap: armada.nama_lengkap_perusahaan_grup ?? null })
+                                    : <span className="text-amber-600">Belum diisi — klik Edit untuk memilih</span> },
                                 { label: 'Nopol',            value: <span className="font-mono">{armada.nopol}</span> },
                                 { label: 'Merk',             value: armada.merk },
                                 { label: 'Model',            value: armada.model ?? <span className="text-gray-400">—</span> },
@@ -410,6 +427,13 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                         <div className="border-t border-gray-100 dark:border-gray-700 mb-5" />
                         <form onSubmit={e => { e.preventDefault(); handleSave() }}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                <FormItem label="Perusahaan Pemilik" asterisk invalid={!!errors.id_perusahaan_grup} errorMessage={errors.id_perusahaan_grup}>
+                                    <Select placeholder="Pilih perusahaan pemilik..."
+                                        value={grupOptions.find(o => o.value === form.id_perusahaan_grup) ?? null}
+                                        options={grupOptions}
+                                        noOptionsMessage={() => 'Belum ada data — tambahkan di Data Master → Perusahaan Grup'}
+                                        onChange={opt => setForm(p => ({ ...p, id_perusahaan_grup: opt?.value ?? null }))} />
+                                </FormItem>
                                 <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
                                     <Input value={form.nopol ?? ''} invalid={!!errors.nopol}
                                         onChange={e => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))} />

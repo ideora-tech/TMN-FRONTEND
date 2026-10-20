@@ -56,7 +56,6 @@ export default function SupirBaruPage() {
     const validate = () => {
         const e: Partial<typeof form> = {}
         if (!form.nama.trim())   e.nama   = 'Nama wajib diisi'
-        if (!form.no_sim.trim()) e.no_sim = 'No SIM wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -71,7 +70,7 @@ export default function SupirBaruPage() {
         try {
             await supirService.create({
                 nama: form.nama,
-                no_sim: form.no_sim,
+                no_sim: form.no_sim.trim() || null,
                 jenis_sim: form.jenis_sim,
                 tgl_kadaluarsa_sim: form.tgl_kadaluarsa_sim || undefined,
                 telepon: form.telepon || undefined,
@@ -120,8 +119,8 @@ export default function SupirBaruPage() {
                         <Input placeholder="Nomor telepon" value={form.telepon}
                             onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
                     </FormItem>
-                    <FormItem label="No SIM" asterisk invalid={!!errors.no_sim} errorMessage={errors.no_sim}>
-                        <Input placeholder="Nomor SIM" value={form.no_sim} invalid={!!errors.no_sim}
+                    <FormItem label="No SIM">
+                        <Input placeholder="Nomor SIM (boleh dikosongkan)" value={form.no_sim}
                             onChange={(e) => setForm(p => ({ ...p, no_sim: e.target.value }))} />
                     </FormItem>
                     <FormItem label="Jenis SIM">

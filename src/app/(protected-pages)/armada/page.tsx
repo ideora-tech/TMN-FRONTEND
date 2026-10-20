@@ -19,6 +19,7 @@ import { formatNum } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { armadaService, Armada, ArmadaServisJatuhTempo } from '@/services/armada.service'
+import { perusahaanGrupService, PerusahaanGrup } from '@/services/perusahaan-grup.service'
 import { ketersediaanVendorService, type RingkasanKetersediaan, type StatusKetersediaan, type UnitKetersediaan } from '@/services/ketersediaanVendor.service'
 import { SUMBER_UNIT, STATUS_KETERSEDIAAN, formatTanggal, keteranganStatus, tagDokumen } from '../ketersediaan-vendor/ketersediaanVendor.shared'
 import axios from 'axios'
@@ -74,6 +75,8 @@ export default function ArmadaPage() {
     const [searchInput, setSearchInput]   = useState('')
     const [search, setSearch]             = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [grupFilter, setGrupFilter]     = useState('')
+    const [grupAktif, setGrupAktif]       = useState<PerusahaanGrup[]>([])
     const [currentPage, setCurrentPage]   = useState(1)
     const [pageSize, setPageSize]         = useState(10)
     const [total, setTotal]               = useState(0)
@@ -87,7 +90,7 @@ export default function ArmadaPage() {
     const fetchData = useCallback(async () => {
         setLoading(true)
         try {
-            const res = await armadaService.list(currentPage, pageSize, search, statusFilter)
+            const res = await armadaService.list(currentPage, pageSize, search, statusFilter, grupFilter)
             setList(res.data)
             setTotal(res.meta.total)
         } catch (err) {
@@ -95,9 +98,19 @@ export default function ArmadaPage() {
         } finally {
             setLoading(false)
         }
-    }, [currentPage, pageSize, search, statusFilter])
+    }, [currentPage, pageSize, search, statusFilter, grupFilter])
 
     useEffect(() => { fetchData() }, [fetchData])
+
+    useEffect(() => {
+        perusahaanGrupService.opsiAktif().then(setGrupAktif).catch(() => setGrupAktif([]))
+    }, [])
+
+    const grupFilterOptions: StatusOption[] = [
+        { value: '', label: 'Semua Pemilik' },
+        ...grupAktif.map(g => ({ value: g.id_perusahaan_grup, label: g.singkatan })),
+        { value: 'kosong', label: 'Pemilik belum diisi' },
+    ]
 
     useEffect(() => {
         armadaService.servisJatuhTempo().then(setServisJatuhTempo).catch(() => {})
@@ -257,6 +270,14 @@ export default function ArmadaPage() {
             cell: ({ row }: CellContext<Armada, unknown>) => (
                 <span className="font-mono font-semibold">{row.original.nopol}</span>
             ),
+        },
+        {
+            header: 'Pemilik', id: 'pemilik', size: 120,
+            cell: ({ row }: CellContext<Armada, unknown>) => row.original.singkatan_perusahaan_grup
+                ? <Tag className="text-xs font-semibold bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200">{row.original.singkatan_perusahaan_grup}</Tag>
+                : pakaiKetersediaan
+                    ? <span className="text-gray-400">—</span>
+                    : <span className="text-xs text-amber-600">Belum diisi</span>,
         },
         { header: 'Merk / Tipe', accessorKey: 'merk', size: 260,
             cell: ({ row }: CellContext<Armada, unknown>) => {
@@ -476,6 +497,14 @@ export default function ArmadaPage() {
                             options={STATUS_OPTIONS}
                             value={STATUS_OPTIONS.find(o => o.value === statusFilter) ?? STATUS_OPTIONS[0]}
                             onChange={(opt) => { setStatusFilter((opt as StatusOption).value); setCurrentPage(1) }}
+                        />
+                    </div>
+                    <div className="w-48 shrink-0">
+                        <Select<StatusOption>
+                            isDisabled={pakaiKetersediaan}
+                            options={grupFilterOptions}
+                            value={grupFilterOptions.find(o => o.value === grupFilter) ?? grupFilterOptions[0]}
+                            onChange={(opt) => { setGrupFilter((opt as StatusOption).value); setCurrentPage(1) }}
                         />
                     </div>
                 </div>

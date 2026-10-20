@@ -185,7 +185,6 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
     const validate = () => {
         const e: Partial<Record<keyof Supir, string>> = {}
         if (!form.nama?.trim())   e.nama   = 'Nama wajib diisi'
-        if (!form.no_sim?.trim()) e.no_sim = 'No SIM wajib diisi'
         setErrors(e)
         return Object.keys(e).length === 0
     }
@@ -345,8 +344,8 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 <FormItem label="Telepon">
                                     <Input value={form.telepon ?? ''} onChange={e => setForm(p => ({ ...p, telepon: e.target.value }))} />
                                 </FormItem>
-                                <FormItem label="No SIM" asterisk invalid={!!errors.no_sim} errorMessage={errors.no_sim}>
-                                    <Input value={form.no_sim ?? ''} invalid={!!errors.no_sim} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
+                                <FormItem label="No SIM">
+                                    <Input placeholder="Boleh dikosongkan" value={form.no_sim ?? ''} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />
                                 </FormItem>
                                 <FormItem label="Jenis SIM">
                                     <Select isSearchable={false}

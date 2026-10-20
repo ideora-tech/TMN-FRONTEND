@@ -12,6 +12,7 @@ import { ROUTES } from '@/constants/route.constant'
 import { armadaService } from '@/services/armada.service'
 import { jenisKendaraanService } from '@/services/jenis-kendaraan.service'
 import { permintaanPembelianService } from '@/services/permintaanPembelian.service'
+import { perusahaanGrupService, labelPerusahaanGrup } from '@/services/perusahaan-grup.service'
 
 type SumberPr = { id_permintaan: string; id_item: string; nomor_permintaan: string; nama_item: string; qty: number; qty_diterima: number }
 
@@ -49,6 +50,7 @@ export default function ArmadaBaruPage() {
     const idItemParam = searchParams.get('id_item')
     const [sumberPr, setSumberPr] = useState<SumberPr | null>(null)
     const [form, setForm] = useState({
+        id_perusahaan_grup: '',
         nopol: '', merk: '', model: '',
         tahun: new Date().getFullYear().toString(),
         status: 'tersedia' as Status,
@@ -60,6 +62,7 @@ export default function ArmadaBaruPage() {
     })
     const [foto, setFoto] = useState<File | null>(null)
     const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
+    const [grupOptions, setGrupOptions] = useState<{ value: string; label: string }[]>([])
     const [loading, setLoading] = useState(false)
     const [errors, setErrors] = useState<Partial<typeof form>>({})
 
@@ -67,6 +70,12 @@ export default function ArmadaBaruPage() {
         jenisKendaraanService.list(1, 100)
             .then(res => setJenisOptions(res.data.filter(j => j.aktif).map(j => ({ value: j.id_jenis_kendaraan, label: j.nama_jenis }))))
             .catch(() => setJenisOptions([]))
+        perusahaanGrupService.opsiAktif()
+            .then(res => {
+                setGrupOptions(res.map(g => ({ value: g.id_perusahaan_grup, label: labelPerusahaanGrup(g) })))
+                if (res.length === 1) setForm(p => ({ ...p, id_perusahaan_grup: p.id_perusahaan_grup || res[0].id_perusahaan_grup }))
+            })
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [])
 
     useEffect(() => {
@@ -106,6 +115,7 @@ export default function ArmadaBaruPage() {
 
     const validate = () => {
         const e: Partial<typeof form> = {}
+        if (!form.id_perusahaan_grup) e.id_perusahaan_grup = 'Perusahaan pemilik wajib dipilih'
         if (!form.nopol.trim()) e.nopol = 'Nopol wajib diisi'
         if (!form.merk.trim())  e.merk  = 'Merk wajib diisi'
         if (!form.tahun)        e.tahun = 'Tahun wajib diisi'
@@ -122,6 +132,7 @@ export default function ArmadaBaruPage() {
         setLoading(true)
         try {
             await armadaService.create({
+                id_perusahaan_grup:  form.id_perusahaan_grup,
                 nopol:               form.nopol,
                 merk:                form.merk,
                 model:               form.model || undefined,
@@ -170,6 +181,13 @@ export default function ArmadaBaruPage() {
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <SectionTitle>Identitas Kendaraan</SectionTitle>
+                    <FormItem label="Perusahaan Pemilik" asterisk invalid={!!errors.id_perusahaan_grup} errorMessage={errors.id_perusahaan_grup}>
+                        <Select placeholder="Pilih perusahaan pemilik..."
+                            value={grupOptions.find(o => o.value === form.id_perusahaan_grup) ?? null}
+                            options={grupOptions}
+                            noOptionsMessage={() => 'Belum ada data — tambahkan di Data Master → Perusahaan Grup'}
+                            onChange={(option) => setForm(p => ({ ...p, id_perusahaan_grup: option?.value ?? '' }))} />
+                    </FormItem>
                     <FormItem label="Nopol" asterisk invalid={!!errors.nopol} errorMessage={errors.nopol}>
                         <Input placeholder="Contoh: B 1234 XYZ" value={form.nopol} invalid={!!errors.nopol}
                             onChange={(e) => setForm(p => ({ ...p, nopol: e.target.value.toUpperCase() }))} />
