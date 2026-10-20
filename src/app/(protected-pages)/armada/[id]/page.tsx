@@ -139,7 +139,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
     const [errors, setErrors]   = useState<Partial<Record<keyof typeof form, string>>>({})
     const [editFoto, setEditFoto] = useState<File | null>(null)
     const [jenisOptions, setJenisOptions] = useState<{ value: string; label: string }[]>([])
-    const [grupAktif, setGrupAktif] = useState<PerusahaanGrup[]>([])
+    const [grupAktif, setGrupAktif] = useState<PerusahaanGrup[] | null>(null)
 
     // dokumen
     const [dokumen, setDokumen]         = useState<DokumenArmada[]>([])
@@ -179,13 +179,13 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
             .catch(() => setJenisOptions([]))
         perusahaanGrupService.opsiAktif()
             .then(setGrupAktif)
-            .catch(() => setGrupAktif([]))
+            .catch(err => toast.push(<Notification type="danger" title={parseApiError(err)} />))
     }, [])
 
     const grupOptions = [
-        ...grupAktif.map(g => ({ value: g.id_perusahaan_grup, label: labelPerusahaanGrup(g) })),
-        ...(armada?.id_perusahaan_grup && !grupAktif.some(g => g.id_perusahaan_grup === armada.id_perusahaan_grup)
-            ? [{ value: armada.id_perusahaan_grup, label: `${armada.singkatan_perusahaan_grup ?? 'Perusahaan'} (nonaktif)` }]
+        ...(grupAktif ?? []).map(g => ({ value: g.id_perusahaan_grup, label: labelPerusahaanGrup(g) })),
+        ...(armada?.id_perusahaan_grup && !(grupAktif ?? []).some(g => g.id_perusahaan_grup === armada.id_perusahaan_grup)
+            ? [{ value: armada.id_perusahaan_grup, label: `${armada.singkatan_perusahaan_grup ?? 'Perusahaan'}${grupAktif !== null ? ' (nonaktif)' : ''}` }]
             : []),
     ]
 
@@ -802,7 +802,7 @@ export default function ArmadaDetailPage({ params }: { params: Promise<{ id: str
                                             {supir ? (
                                                 <div>
                                                     <p className="text-gray-800 dark:text-gray-100 font-medium">{supir.nama}</p>
-                                                    <p className="text-xs text-gray-400">{supir.jenis_sim} · {supir.no_sim}</p>
+                                                    <p className="text-xs text-gray-400">{supir.jenis_sim ?? '-'} · {supir.no_sim || 'SIM belum diisi'}</p>
                                                 </div>
                                             ) : (
                                                 <span className="text-gray-400">—</span>
