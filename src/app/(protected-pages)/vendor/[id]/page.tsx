@@ -9,6 +9,7 @@ import { HiArrowLeft, HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash, HiOutlin
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
+import PajakKontrakFields, { persenAtauNull } from '../../kontrak-vendor/PajakKontrakFields'
 import { ROUTES } from '@/constants/route.constant'
 import { vendorService, Vendor, KontrakVendor, RekeningVendor } from '@/services/vendor.service'
 import { armadaVendorService, ArmadaVendor } from '@/services/armadaVendor.service'
@@ -72,7 +73,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     const [saving, setSaving]   = useState(false)
     const [errors, setErrors]   = useState<Partial<Record<keyof Vendor, string>>>({})
     const [showKontrakForm, setShowKontrakForm] = useState(false)
-    const [kontrakForm, setKontrakForm] = useState({ mekanisme: 'unit_only' as Mekanisme, nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '', pajak_persen: '', termin_pembayaran_hari: '', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
+    const [kontrakForm, setKontrakForm] = useState({ mekanisme: 'unit_only' as Mekanisme, nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '', ppn_persen: '', pph_persen: '', termin_pembayaran_hari: '', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
     const [addingKontrak, setAddingKontrak] = useState(false)
 
     // rekening bank
@@ -184,7 +185,8 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                 jenis_layanan: kontrakForm.jenis_layanan || undefined,
                 rate: kontrakForm.rate ? Number(kontrakForm.rate) : undefined,
                 satuan: kontrakForm.satuan || undefined,
-                pajak_persen: kontrakForm.pajak_persen !== '' ? Number(kontrakForm.pajak_persen) : undefined,
+                ppn_persen: persenAtauNull(kontrakForm.ppn_persen) ?? undefined,
+                pph_persen: persenAtauNull(kontrakForm.pph_persen) ?? undefined,
                 termin_pembayaran_hari: kontrakForm.termin_pembayaran_hari !== '' ? Number(kontrakForm.termin_pembayaran_hari) : undefined,
                 nilai_kontrak: kontrakForm.nilai_kontrak ? Number(kontrakForm.nilai_kontrak) : undefined,
                 tanggal_mulai: kontrakForm.tanggal_mulai || undefined,
@@ -192,7 +194,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
             })
             toast.push(<Notification type="success" title="Kontrak berhasil ditambahkan" />)
             setShowKontrakForm(false)
-            setKontrakForm({ mekanisme: 'unit_only', nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '', pajak_persen: '', termin_pembayaran_hari: '', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
+            setKontrakForm({ mekanisme: 'unit_only', nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '', ppn_persen: '', pph_persen: '', termin_pembayaran_hari: '', nilai_kontrak: '', tanggal_mulai: '', tanggal_selesai: '' })
             setKontraks(await vendorService.listKontrak(id))
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -685,16 +687,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                                     onChange={(opt) => setKontrakForm(p => ({ ...p, satuan: opt?.value ?? '' }))}
                                 />
                             </FormItem>
-                            <FormItem label="Pajak (%)">
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    placeholder="0"
-                                    value={kontrakForm.pajak_persen}
-                                    onChange={(e) => setKontrakForm(p => ({ ...p, pajak_persen: e.target.value }))}
-                                />
-                            </FormItem>
+                            <PajakKontrakFields
+                                nilaiKontrak={Number(kontrakForm.nilai_kontrak) || 0}
+                                ppn={kontrakForm.ppn_persen}
+                                pph={kontrakForm.pph_persen}
+                                onPpnChange={v => setKontrakForm(p => ({ ...p, ppn_persen: v }))}
+                                onPphChange={v => setKontrakForm(p => ({ ...p, pph_persen: v }))} />
                             <FormItem label="Termin Pembayaran (hari)">
                                 <Input
                                     type="number"

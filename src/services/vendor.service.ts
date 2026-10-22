@@ -29,6 +29,8 @@ export interface KontrakVendor {
     rate?: number | null
     satuan?: string | null
     pajak_persen?: number | null
+    ppn_persen?: number | null
+    pph_persen?: number | null
     termin_pembayaran_hari?: number | null
     nilai_kontrak?: number
     nomor_po?: string | null

@@ -14,6 +14,7 @@ import AjukanApprovalDialog from '@/components/shared/AjukanApprovalDialog'
 import PanelAlurStatus, { KELAS_IKON_LOG_APPROVAL } from '@/components/shared/PanelAlurStatus'
 import { parseApiError } from '@/utils/error.util'
 import { formatRupiah, formatNum } from '@/utils/formatNumber'
+import PajakKontrakFields, { persenAtauNull, labelPersen } from '../PajakKontrakFields'
 import { unduhDariApi } from '@/utils/unduhBerkas'
 import { ROUTES } from '@/constants/route.constant'
 import { API_ENDPOINTS } from '@/constants/api.constant'
@@ -94,7 +95,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
     const [data, setData]     = useState<KontrakVendor | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
-    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; pajak_str?: string; termin_str?: string; jumlah_trip_str?: string; jumlah_hari_str?: string }>({})
+    const [form, setForm]       = useState<Partial<KontrakVendor> & { nilai_kontrak_str?: string; rate_str?: string; ppn_str?: string; pph_str?: string; termin_str?: string; jumlah_trip_str?: string; jumlah_hari_str?: string }>({})
     const [saving, setSaving]   = useState(false)
     const [errorRate, setErrorRate] = useState('')
     const [selesaiOpen, setSelesaiOpen] = useState(false)
@@ -126,7 +127,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
         ...d,
         nilai_kontrak_str: d.nilai_kontrak ? String(d.nilai_kontrak) : '',
         rate_str:          d.rate != null ? String(d.rate) : '',
-        pajak_str:         d.pajak_persen != null ? String(d.pajak_persen) : '',
+        ppn_str:           d.ppn_persen != null ? String(d.ppn_persen) : '',
+        pph_str:           d.pph_persen != null ? String(d.pph_persen) : '',
         termin_str:        d.termin_pembayaran_hari != null ? String(d.termin_pembayaran_hari) : '',
         jumlah_trip_str:   d.jumlah_trip != null ? String(d.jumlah_trip) : '',
         jumlah_hari_str:   d.jumlah_hari != null ? String(d.jumlah_hari) : '',
@@ -204,7 +206,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                 jenis_layanan:   form.jenis_layanan?.trim() || null,
                 rate:            form.rate_str ? Number(form.rate_str) : null,
                 satuan:          form.satuan || null,
-                pajak_persen:    form.pajak_str ? Number(form.pajak_str) : null,
+                ppn_persen:      persenAtauNull(form.ppn_str),
+                pph_persen:      persenAtauNull(form.pph_str),
                 termin_pembayaran_hari: form.termin_str ? Number(form.termin_str) : null,
                 jumlah_trip:     form.jumlah_trip_str ? Number(form.jumlah_trip_str) : null,
                 jumlah_hari:     form.jumlah_hari_str ? Number(form.jumlah_hari_str) : null,
@@ -716,7 +719,8 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 },
                                 { label: 'Rate',              value: data.rate ? formatRupiah(data.rate) : <span className="text-gray-400">—</span> },
                                 { label: 'Satuan Kontrak',    value: data.satuan ?? <span className="text-gray-400">—</span> },
-                                { label: 'Pajak',             value: data.pajak_persen != null ? `${data.pajak_persen} %` : <span className="text-gray-400">—</span> },
+                                { label: 'PPN',               value: data.ppn_persen ? `${labelPersen(data.ppn_persen)} % · ${formatRupiah(Math.round((data.nilai_kontrak ?? 0) * data.ppn_persen / 100))}` : <span className="text-gray-400">—</span> },
+                                { label: 'PPh',               value: data.pph_persen ? `${labelPersen(data.pph_persen)} % · ${formatRupiah(Math.round((data.nilai_kontrak ?? 0) * data.pph_persen / 100))}` : <span className="text-gray-400">—</span> },
                                 { label: 'Termin Pembayaran', value: data.termin_pembayaran_hari != null ? `${data.termin_pembayaran_hari} hari` : <span className="text-gray-400">—</span> },
                                 { label: 'Jumlah Trip',       value: data.jumlah_trip != null ? `${data.jumlah_trip} trip` : <span className="text-gray-400">—</span> },
                                 { label: 'Jumlah Hari',       value: data.jumlah_hari != null ? `${data.jumlah_hari} hari` : <span className="text-gray-400">—</span> },
@@ -774,14 +778,12 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                     value={SATUAN_OPTIONS.find(o => o.value === form.satuan) ?? null}
                                     onChange={opt => { setErrorRate(''); setForm(p => ({ ...p, satuan: opt?.value ?? null })) }} />
                             </FormItem>
-                            <FormItem label="Pajak">
-                                <Input suffix="%" placeholder="0"
-                                    value={form.pajak_str ?? ''}
-                                    onChange={e => {
-                                        const v = e.target.value.replace(/\D/g, '')
-                                        setForm(p => ({ ...p, pajak_str: v && Number(v) > 100 ? '100' : v }))
-                                    }} />
-                            </FormItem>
+                            <PajakKontrakFields
+                                nilaiKontrak={Number(form.nilai_kontrak_str) || 0}
+                                ppn={form.ppn_str ?? ''}
+                                pph={form.pph_str ?? ''}
+                                onPpnChange={v => setForm(p => ({ ...p, ppn_str: v }))}
+                                onPphChange={v => setForm(p => ({ ...p, pph_str: v }))} />
                             <FormItem label="Termin Pembayaran">
                                 <Input suffix="hari" placeholder="0"
                                     value={form.termin_str ?? ''}

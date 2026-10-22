@@ -222,7 +222,7 @@ export default function KontrakVendorTab() {
                 onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
                 confirmButtonProps={{ loading: submitting }}>
                 <p>Hapus kontrak ini? Tindakan ini tidak dapat dibatalkan.</p>
-                <p className="text-sm text-gray-500 mt-2">Unit &amp; supir yang tertaut akan dilepas menjadi milik vendor umum, pengajuan approval yang berjalan dibatalkan, dan permintaan vendor asalnya dikembalikan ke Pengadaan. Kontrak yang sudah punya riwayat penugasan, invoice vendor, atau sudah memenuhi permintaan vendor tidak bisa dihapus — nonaktifkan saja.</p>
+                <p className="text-sm text-gray-500 mt-2">Unit &amp; supir yang didaftarkan lewat kontrak ini ikut dihapus dari master; unit &amp; supir lama yang sudah ada sebelum kontrak ini hanya dilepas. Pengajuan approval yang berjalan dibatalkan, dan permintaan vendor asalnya dikembalikan ke Pengadaan. Kontrak yang sudah punya riwayat penugasan, invoice vendor, atau sudah memenuhi permintaan vendor tidak bisa dihapus — nonaktifkan saja.</p>
             </ConfirmDialog>
         </div>
     )

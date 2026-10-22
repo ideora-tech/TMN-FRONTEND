@@ -4,8 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import axios from 'axios'
 import { Card, Input, Tag, Tooltip, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
-import { HiOutlineSearch, HiOutlineX, HiOutlineEye } from 'react-icons/hi'
+import { HiOutlineSearch, HiOutlineX, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import DataTable from '@/components/shared/DataTable'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import type { ColumnDef, CellContext } from '@/components/shared/DataTable'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
@@ -29,6 +30,8 @@ export default function ArmadaVendorTab() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize]       = useState(10)
     const [total, setTotal]             = useState(0)
+    const [deleteTarget, setDeleteTarget] = useState<ArmadaVendor | null>(null)
+    const [submitting, setSubmitting]     = useState(false)
     const [vendorOptions, setVendorOptions] = useState<VendorOption[]>([])
     const [kontrakLabelMap, setKontrakLabelMap] = useState<Record<string, string>>({})
 
@@ -112,9 +115,9 @@ export default function ArmadaVendorTab() {
             ),
         },
         {
-            header: '', id: 'aksi', size: 70,
+            header: '', id: 'aksi', size: 100,
             cell: ({ row }) => (
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-2">
                     <Tooltip title="Detail">
                         <span
                             className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 transition-colors"
@@ -123,10 +126,34 @@ export default function ArmadaVendorTab() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
+                    <Tooltip title="Hapus">
+                        <span
+                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                            onClick={() => setDeleteTarget(row.original)}
+                        >
+                            <HiOutlineTrash className="text-lg" />
+                        </span>
+                    </Tooltip>
                 </div>
             ),
         },
     ]
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return
+        setSubmitting(true)
+        try {
+            await armadaVendorService.delete(deleteTarget.id_armada_vendor)
+            toast.push(<Notification type="success" title="Unit vendor berhasil dihapus" />)
+            setDeleteTarget(null)
+            fetchData()
+        } catch (err) {
+            toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            setDeleteTarget(null)
+        } finally {
+            setSubmitting(false)
+        }
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -165,6 +192,14 @@ export default function ArmadaVendorTab() {
                     onSelectChange={(size) => { setPageSize(size); setCurrentPage(1) }}
                 />
             </Card>
+
+            <ConfirmDialog isOpen={!!deleteTarget} type="danger" title="Hapus Unit Vendor?"
+                confirmText="Ya, Hapus" cancelText="Batal"
+                confirmButtonProps={{ loading: submitting, customColorClass: () => 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white border-red-500' }}
+                onClose={() => setDeleteTarget(null)} onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete}>
+                <p className="text-sm">Unit <span className="font-semibold font-mono">{deleteTarget?.nopol}</span> akan dihapus dari master armada vendor.</p>
+                <p className="text-sm text-gray-500 mt-2">Bila unit tertaut kontrak, nilai kontrak dihitung ulang dan kontrak yang aktif perlu approval ulang. Unit yang masih dipakai penugasan aktif tidak bisa dihapus.</p>
+            </ConfirmDialog>
         </div>
     )
 }

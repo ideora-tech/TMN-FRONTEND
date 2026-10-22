@@ -11,6 +11,7 @@ import axios from 'axios'
 import { parseApiError } from '@/utils/error.util'
 import { formatNum, formatRupiah } from '@/utils/formatNumber'
 import { ROUTES } from '@/constants/route.constant'
+import PajakKontrakFields, { persenAtauNull } from '../PajakKontrakFields'
 import { API_ENDPOINTS } from '@/constants/api.constant'
 import { kontrakVendorService, KontrakVendor, KontrakUnitInput, KontrakSupirInput, BarisGagal } from '@/services/kontrak-vendor.service'
 import { permintaanVendorService, PermintaanVendor, ringkasanJenisDiminta } from '@/services/permintaan-vendor.service'
@@ -84,7 +85,7 @@ export default function KontrakVendorBaruPage() {
     const [form, setForm] = useState({
         id_vendor: '', mekanisme: 'unit_only', nilai_kontrak: '',
         nomor_kontrak: '', jenis_layanan: '', rate: '', satuan: '',
-        pajak_persen: '', termin_pembayaran_hari: '', jumlah_trip: '', jumlah_hari: '',
+        ppn_persen: '', pph_persen: '', termin_pembayaran_hari: '', jumlah_trip: '', jumlah_hari: '',
         tanggal_mulai: '', tanggal_selesai: '', id_proyek: '',
     })
     const [proyekOptions, setProyekOptions] = useState<{ value: string; label: string }[]>([])
@@ -294,7 +295,8 @@ export default function KontrakVendorBaruPage() {
                 jenis_layanan: form.jenis_layanan.trim() || null,
                 rate: form.rate ? Number(form.rate) : null,
                 satuan: form.satuan || null,
-                pajak_persen: form.pajak_persen ? Number(form.pajak_persen) : null,
+                ppn_persen: persenAtauNull(form.ppn_persen),
+                pph_persen: persenAtauNull(form.pph_persen),
                 termin_pembayaran_hari: form.termin_pembayaran_hari ? Number(form.termin_pembayaran_hari) : null,
                 jumlah_trip: form.jumlah_trip ? Number(form.jumlah_trip) : null,
                 jumlah_hari: form.jumlah_hari ? Number(form.jumlah_hari) : null,
@@ -463,14 +465,12 @@ export default function KontrakVendorBaruPage() {
                             value={form.tanggal_selesai ? dayjs(form.tanggal_selesai).toDate() : null}
                             onChange={date => setForm(p => ({ ...p, tanggal_selesai: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
                     </FormItem>
-                    <FormItem label="Pajak">
-                        <Input suffix="%" placeholder="0"
-                            value={form.pajak_persen}
-                            onChange={e => {
-                                const v = e.target.value.replace(/\D/g, '')
-                                setForm(p => ({ ...p, pajak_persen: v && Number(v) > 100 ? '100' : v }))
-                            }} />
-                    </FormItem>
+                    <PajakKontrakFields
+                        nilaiKontrak={Number(nilaiKontrakEfektif) || 0}
+                        ppn={form.ppn_persen}
+                        pph={form.pph_persen}
+                        onPpnChange={v => setForm(p => ({ ...p, ppn_persen: v }))}
+                        onPphChange={v => setForm(p => ({ ...p, pph_persen: v }))} />
                     <FormItem label="Termin Pembayaran">
                         <Input suffix="hari" placeholder="0"
                             value={form.termin_pembayaran_hari}
