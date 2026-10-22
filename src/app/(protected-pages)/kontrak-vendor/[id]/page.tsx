@@ -695,7 +695,7 @@ export default function KontrakVendorDetailPage({ params }: { params: Promise<{ 
                                 { label: 'Vendor',            value: vendorName },
                                 { label: 'Mekanisme',         value: MEKANISME_LABEL[data.mekanisme] ?? data.mekanisme },
                                 { label: 'No. Kontrak',       value: data.nomor_kontrak ?? <span className="text-gray-400">—</span> },
-                                ...(data.nama_proyek ? [{ label: 'Proyek', value: data.nama_proyek }] : []),
+                                { label: 'Proyek',            value: data.nama_proyek ?? <span className="text-gray-400">—</span> },
                                 ...(data.nomor_permintaan && data.id_permintaan ? [{
                                     label: 'No. Permintaan',
                                     value: (
