@@ -481,7 +481,7 @@ export default function ArmadaPage() {
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <Input
                         className="flex-1 min-w-60"
-                        placeholder="Cari nopol atau merk... (tekan Enter)"
+                        placeholder="Cari nopol, merk, atau no rangka... (tekan Enter)"
                         suffix={
                             searchInput
                                 ? <HiOutlineX className="text-gray-400 text-lg cursor-pointer hover:text-gray-600" onClick={handleSearchClear} />
