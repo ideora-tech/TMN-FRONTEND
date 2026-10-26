@@ -29,6 +29,34 @@ function buildFormData(payload: DokumenPayload, file: File): FormData {
     return fd
 }
 
+export const dokumenSupirService = {
+    async list(idSupir: string) {
+        const { data } = await axios.get(API_ENDPOINTS.SUPIR_DOKUMEN_KARYAWAN(idSupir))
+        return data.data as DokumenKaryawan[]
+    },
+
+    async create(idSupir: string, payload: DokumenPayload, file?: File | null) {
+        const body = file ? buildFormData(payload, file) : payload
+        const { data } = await axios.post(API_ENDPOINTS.SUPIR_DOKUMEN_KARYAWAN(idSupir), body)
+        return data.data as DokumenKaryawan
+    },
+
+    async update(idSupir: string, id: string, payload: Partial<DokumenPayload>, file?: File | null) {
+        if (file) {
+            const fd = buildFormData({ jenis_dokumen: payload.jenis_dokumen ?? '', ...payload }, file)
+            fd.append('_method', 'PUT')
+            const { data } = await axios.post(API_ENDPOINTS.SUPIR_DOKUMEN_KARYAWAN_DETAIL(idSupir, id), fd)
+            return data.data as DokumenKaryawan
+        }
+        const { data } = await axios.put(API_ENDPOINTS.SUPIR_DOKUMEN_KARYAWAN_DETAIL(idSupir, id), payload)
+        return data.data as DokumenKaryawan
+    },
+
+    async delete(idSupir: string, id: string) {
+        await axios.delete(API_ENDPOINTS.SUPIR_DOKUMEN_KARYAWAN_DETAIL(idSupir, id))
+    },
+}
+
 export const dokumenKaryawanService = {
     async listAll(params?: { page?: number; limit?: number; id_karyawan?: string; jenis_dokumen?: string; search?: string }) {
         const { data } = await axios.get(API_ENDPOINTS.DOKUMEN_KARYAWAN, { params })

@@ -72,7 +72,7 @@ export default function SupirBaruPage() {
                 nama: form.nama,
                 no_sim: form.no_sim.trim() || null,
                 jenis_sim: form.jenis_sim,
-                tgl_kadaluarsa_sim: form.tgl_kadaluarsa_sim || undefined,
+                tgl_kadaluarsa_sim: form.id_karyawan ? undefined : (form.tgl_kadaluarsa_sim || undefined),
                 telepon: form.telepon || undefined,
                 id_armada_default: form.id_armada_default || undefined,
                 id_karyawan: form.id_karyawan || undefined,
@@ -130,9 +130,16 @@ export default function SupirBaruPage() {
                             onChange={(option) => option && setForm(p => ({ ...p, jenis_sim: option.value }))} />
                     </FormItem>
                     <FormItem label="Tgl Habis Masa Berlaku SIM">
-                        <DatePicker
-                            value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
-                            onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                        {form.id_karyawan ? (
+                            <>
+                                <Input disabled placeholder="Otomatis dari dokumen SIM karyawan" value="" />
+                                <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — setelah disimpan, unggah SIM lewat bagian Dokumen di halaman supir</p>
+                            </>
+                        ) : (
+                            <DatePicker
+                                value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
+                                onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                        )}
                     </FormItem>
                     <FormItem label="Armada Default">
                         <Select isClearable

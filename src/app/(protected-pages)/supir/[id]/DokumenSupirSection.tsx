@@ -8,7 +8,7 @@ import UploadBerkas from '@/components/shared/UploadBerkas'
 import { HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
-import { dokumenKaryawanService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
+import { dokumenSupirService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
 
 const JENIS_DOKUMEN_OPTIONS = ['SIM', 'KTP', 'NPWP', 'Sertifikat', 'Kontrak Kerja', 'Ijazah', 'Lainnya'].map(v => ({ value: v, label: v }))
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -25,7 +25,7 @@ function getExpiryInfo(berlakuSampai: string | null): { label: string; className
 
 const kosong = <span className="text-gray-300 dark:text-gray-600">—</span>
 
-export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKaryawan: string | null | undefined; namaSupir: string }) {
+export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: { idSupir: string; idKaryawan: string | null | undefined; namaSupir: string }) {
     const { klik } = usePratinjauBerkas()
     const [list, setList]     = useState<DokumenKaryawan[]>([])
     const [open, setOpen]     = useState(false)
@@ -38,10 +38,13 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
 
     const muat = useCallback(() => {
         if (!idKaryawan) return
-        dokumenKaryawanService.list(idKaryawan)
+        dokumenSupirService.list(idSupir)
             .then(setList)
-            .catch(() => setList([]))
-    }, [idKaryawan])
+            .catch(err => {
+                setList([])
+                toast.push(<Notification type="danger" title={parseApiError(err)} />)
+            })
+    }, [idSupir, idKaryawan])
 
     useEffect(() => { muat() }, [muat])
 
@@ -81,10 +84,10 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
                 berlaku_sampai: form.berlaku_sampai || null,
             }
             if (edit) {
-                await dokumenKaryawanService.update(idKaryawan, edit.id_dokumen_karyawan, payload, file ?? undefined)
+                await dokumenSupirService.update(idSupir, edit.id_dokumen_karyawan, payload, file ?? undefined)
                 toast.push(<Notification type="success" title="Dokumen berhasil diperbarui" />)
             } else {
-                await dokumenKaryawanService.create(idKaryawan, payload, file)
+                await dokumenSupirService.create(idSupir, payload, file)
                 toast.push(<Notification type="success" title="Dokumen berhasil ditambahkan" />)
             }
             setOpen(false)
@@ -100,7 +103,7 @@ export default function DokumenSupirSection({ idKaryawan, namaSupir }: { idKarya
         if (!idKaryawan || !hapus) return
         setDeleting(true)
         try {
-            await dokumenKaryawanService.delete(idKaryawan, hapus.id_dokumen_karyawan)
+            await dokumenSupirService.delete(idSupir, hapus.id_dokumen_karyawan)
             toast.push(<Notification type="success" title="Dokumen berhasil dihapus" />)
             setHapus(null)
             muat()

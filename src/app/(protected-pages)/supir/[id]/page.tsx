@@ -354,9 +354,17 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         onChange={opt => opt && setForm(p => ({ ...p, jenis_sim: opt.value }))} />
                                 </FormItem>
                                 <FormItem label="Tgl Habis Masa Berlaku SIM">
-                                    <DatePicker
-                                        value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
-                                        onChange={date => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                                    {form.id_karyawan ? (
+                                        <>
+                                            <Input disabled placeholder="Belum ada dokumen SIM"
+                                                value={form.tgl_kadaluarsa_sim ? dayjs(form.tgl_kadaluarsa_sim).format('DD/MM/YYYY') : ''} />
+                                            <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — tambah atau perbarui lewat bagian Dokumen di bawah</p>
+                                        </>
+                                    ) : (
+                                        <DatePicker
+                                            value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
+                                            onChange={date => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
+                                    )}
                                 </FormItem>
                                 <FormItem label="Status">
                                     <Select isSearchable={false}
@@ -399,7 +407,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DokumenSupirSection idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama} />
+            <DokumenSupirSection idSupir={supir.id_supir} idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama} />
 
             {/* Riwayat Armada (Penugasan) */}
             <Card>

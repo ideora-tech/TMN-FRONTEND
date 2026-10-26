@@ -287,6 +287,8 @@ export const API_ENDPOINTS = {
     DOKUMEN_KARYAWAN:        '/api/proxy/dokumen-karyawan',
     KARYAWAN_DOKUMEN:        (idKaryawan: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen`,
     KARYAWAN_DOKUMEN_DETAIL: (idKaryawan: string, id: string) => `/api/proxy/karyawan/${idKaryawan}/dokumen/${id}`,
+    SUPIR_DOKUMEN_KARYAWAN:        (idSupir: string) => `/api/proxy/supir/${idSupir}/dokumen-karyawan`,
+    SUPIR_DOKUMEN_KARYAWAN_DETAIL: (idSupir: string, id: string) => `/api/proxy/supir/${idSupir}/dokumen-karyawan/${id}`,
 
     // Cuti & Izin
     JENIS_CUTI:               '/api/proxy/jenis-cuti',
