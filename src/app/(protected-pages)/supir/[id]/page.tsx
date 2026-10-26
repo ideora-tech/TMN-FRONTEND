@@ -7,13 +7,13 @@ import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineE
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { opsiJenisSim } from '@/constants/jenisSim.constant'
 import { supirService, Supir, OpsiPenggunaSupir, OpsiKaryawanSupir } from '@/services/supir.service'
 import { tripService, Trip } from '@/services/trip.service'
 import { penugasanService, Penugasan } from '@/services/penugasan.service'
 import { armadaService, Armada } from '@/services/armada.service'
 import DokumenSupirSection from './DokumenSupirSection'
 
-const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
 
 const STATUS_OPTIONS = [
     { value: 'aktif',    label: 'Aktif' },
@@ -349,8 +349,8 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 </FormItem>
                                 <FormItem label="Jenis SIM">
                                     <Select isSearchable={false}
-                                        value={JENIS_SIM_OPTIONS.find(o => o.value === form.jenis_sim) ?? null}
-                                        options={JENIS_SIM_OPTIONS}
+                                        value={opsiJenisSim(supir.jenis_sim).find(o => o.value === form.jenis_sim) ?? null}
+                                        options={opsiJenisSim(supir.jenis_sim)}
                                         onChange={opt => opt && setForm(p => ({ ...p, jenis_sim: opt.value }))} />
                                 </FormItem>
                                 <FormItem label="Tgl Habis Masa Berlaku SIM">

@@ -7,10 +7,11 @@ import { HiArrowLeft } from 'react-icons/hi'
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
+import { opsiJenisSim } from '@/constants/jenisSim.constant'
 import { supirService, OpsiPenggunaSupir, OpsiKaryawanSupir } from '@/services/supir.service'
 import { armadaService, Armada } from '@/services/armada.service'
 
-const JENIS_SIM_OPTIONS = ['A', 'B1', 'B2', 'C', 'D'].map(j => ({ value: j, label: j }))
+const JENIS_SIM_OPTIONS = opsiJenisSim()
 
 export default function SupirBaruPage() {
     const router = useRouter()
