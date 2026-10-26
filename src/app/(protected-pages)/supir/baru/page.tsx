@@ -1,10 +1,9 @@
 ﻿'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, toast, Notification } from '@/components/ui'
+import { Card, Button, FormItem, Input, toast, Notification } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft } from 'react-icons/hi'
-import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { opsiJenisSim } from '@/constants/jenisSim.constant'
@@ -73,13 +72,12 @@ export default function SupirBaruPage() {
                 nama: form.nama,
                 no_sim: form.no_sim.trim() || null,
                 jenis_sim: form.jenis_sim,
-                tgl_kadaluarsa_sim: form.id_karyawan ? undefined : (form.tgl_kadaluarsa_sim || undefined),
                 telepon: form.telepon || undefined,
                 id_armada_default: form.id_armada_default || undefined,
                 id_karyawan: form.id_karyawan || undefined,
                 id_pengguna: form.id_pengguna || undefined,
             })
-            toast.push(<Notification type="success" title="Supir berhasil ditambahkan" />)
+            toast.push(<Notification type="success" title={form.id_karyawan ? 'Supir berhasil ditambahkan' : 'Supir & data karyawannya berhasil ditambahkan'} />)
             router.push(ROUTES.SUPIR)
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
@@ -104,7 +102,7 @@ export default function SupirBaruPage() {
                 <form onSubmit={e => { e.preventDefault(); handleSubmit() }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                     <FormItem label="Tautkan ke Karyawan (opsional)" className="sm:col-span-2"
-                        extra={<span className="text-xs text-gray-400">Hanya karyawan berjabatan supir. Nama &amp; telepon terisi otomatis dari data karyawan</span>}>
+                        extra={<span className="text-xs text-gray-400">Hanya karyawan berjabatan supir. Kosongkan bila belum terdaftar — data karyawannya dibuat otomatis</span>}>
                         <Select isClearable isSearchable
                             placeholder="Pilih karyawan..."
                             options={karyawanOptions}
@@ -131,16 +129,8 @@ export default function SupirBaruPage() {
                             onChange={(option) => option && setForm(p => ({ ...p, jenis_sim: option.value }))} />
                     </FormItem>
                     <FormItem label="Tgl Habis Masa Berlaku SIM">
-                        {form.id_karyawan ? (
-                            <>
-                                <Input disabled placeholder="Otomatis dari dokumen SIM karyawan" value="" />
-                                <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — setelah disimpan, unggah SIM lewat bagian Dokumen di halaman supir</p>
-                            </>
-                        ) : (
-                            <DatePicker
-                                value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
-                                onChange={(date) => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                        )}
+                        <Input disabled placeholder="Otomatis dari dokumen SIM" value="" />
+                        <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — setelah disimpan, unggah SIM lewat bagian Dokumen di halaman supir</p>
                     </FormItem>
                     <FormItem label="Armada Default">
                         <Select isClearable

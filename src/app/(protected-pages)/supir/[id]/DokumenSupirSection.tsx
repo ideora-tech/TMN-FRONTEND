@@ -25,7 +25,15 @@ function getExpiryInfo(berlakuSampai: string | null): { label: string; className
 
 const kosong = <span className="text-gray-300 dark:text-gray-600">—</span>
 
-export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: { idSupir: string; idKaryawan: string | null | undefined; namaSupir: string }) {
+type Props = {
+    idSupir: string
+    idKaryawan: string | null | undefined
+    namaSupir: string
+    nikKtp?: string | null
+    onBerubah?: () => void
+}
+
+export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, nikKtp, onBerubah }: Props) {
     const { klik } = usePratinjauBerkas()
     const [list, setList]     = useState<DokumenKaryawan[]>([])
     const [open, setOpen]     = useState(false)
@@ -37,16 +45,17 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
     const [deleting, setDeleting] = useState(false)
 
     const muat = useCallback(() => {
-        if (!idKaryawan) return
         dokumenSupirService.list(idSupir)
             .then(setList)
             .catch(err => {
                 setList([])
                 toast.push(<Notification type="danger" title={parseApiError(err)} />)
             })
-    }, [idSupir, idKaryawan])
+    }, [idSupir])
 
     useEffect(() => { muat() }, [muat])
+
+    const ktpTerkunci = form.jenis_dokumen === 'KTP' && !!nikKtp
 
     const bukaTambah = () => {
         setEdit(null)
@@ -75,12 +84,12 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
     }
 
     const handleSimpan = async () => {
-        if (!idKaryawan || !form.jenis_dokumen || (!edit && !file)) return
+        if (!form.jenis_dokumen || (!edit && !file)) return
         setSaving(true)
         try {
             const payload = {
                 jenis_dokumen: form.jenis_dokumen,
-                nomor: form.nomor || null,
+                nomor: ktpTerkunci ? nikKtp : (form.nomor || null),
                 berlaku_sampai: form.berlaku_sampai || null,
             }
             if (edit) {
@@ -92,6 +101,7 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
             }
             setOpen(false)
             muat()
+            onBerubah?.()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -100,13 +110,14 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
     }
 
     const handleHapus = async () => {
-        if (!idKaryawan || !hapus) return
+        if (!hapus) return
         setDeleting(true)
         try {
             await dokumenSupirService.delete(idSupir, hapus.id_dokumen_karyawan)
             toast.push(<Notification type="success" title="Dokumen berhasil dihapus" />)
             setHapus(null)
             muat()
+            onBerubah?.()
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
             setHapus(null)
@@ -125,18 +136,16 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
                             SIM, KTP, sertifikat, dan dokumen lain beserta masa berlakunya — SIM boleh lebih dari satu, unggah SIM baru saat perpanjangan tanpa menghapus yang lama
                         </p>
                     </div>
-                    {idKaryawan && (
-                        <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={bukaTambah}>
-                            Tambah Dokumen
-                        </Button>
-                    )}
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />} onClick={bukaTambah}>
+                        Tambah Dokumen
+                    </Button>
                 </div>
-                {!idKaryawan ? (
-                    <p className="text-gray-400 text-sm text-center py-6">
-                        Tautkan supir ini ke karyawan (field <span className="font-semibold">Tautkan ke Karyawan</span> di atas)
-                        untuk mulai mengelola dokumennya.
+                {!idKaryawan && (
+                    <p className="text-xs text-gray-400 -mt-2 mb-3">
+                        Supir ini belum tertaut ke data karyawan — dokumen disimpan di profil supir dan ikut pindah ke data karyawan saat supir ditautkan.
                     </p>
-                ) : list.length === 0 ? (
+                )}
+                {list.length === 0 ? (
                     <p className="text-gray-400 text-sm text-center py-6">Belum ada dokumen.</p>
                 ) : (
                     <div className="overflow-x-auto">
@@ -205,11 +214,12 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir }: 
                         <Select isSearchable={false} placeholder="Pilih jenis..."
                             options={JENIS_DOKUMEN_OPTIONS}
                             value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === form.jenis_dokumen) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '' }))} />
+                            onChange={opt => setForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: opt?.value === 'KTP' && nikKtp ? nikKtp : p.nomor }))} />
                     </FormItem>
                     <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Nomor dokumen (opsional)" value={form.nomor}
+                        <Input placeholder="Nomor dokumen (opsional)" value={ktpTerkunci ? (nikKtp ?? '') : form.nomor} disabled={ktpTerkunci}
                             onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} />
+                        {ktpTerkunci && <p className="text-xs text-gray-400 mt-1">Mengikuti NIK KTP di data karyawan</p>}
                     </FormItem>
                     <FormItem label="Berlaku Sampai" extra={<span className="text-xs text-gray-400">Kosongkan bila tidak ada masa berlaku</span>}>
                         <DatePicker inputFormat="DD/MM/YYYY"

@@ -25,6 +25,7 @@ const LABEL_ENTITAS: Record<EntitasKode, string> = {
     barang: 'Barang',
     permintaan_pembelian: 'Permintaan Pembelian',
     purchase_order: 'Purchase Order (PO)',
+    nik_supir: 'NIK Karyawan dari Supir Baru',
 }
 
 const URUTAN_ENTITAS: EntitasKode[] = [
@@ -43,6 +44,7 @@ const URUTAN_ENTITAS: EntitasKode[] = [
     'purchase_order',
     'jabatan',
     'departemen',
+    'nik_supir',
 ]
 
 const RESET_OPTIONS: { value: ResetKode; label: string }[] = [

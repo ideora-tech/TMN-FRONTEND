@@ -374,9 +374,10 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
         if (!dokumenForm.jenis_dokumen || (!dokumenEdit && !dokumenFile)) return
         setDokumenSaving(true)
         try {
+            const nikKtp = karyawan?.nik_ktp?.trim() || null
             const payload = {
                 jenis_dokumen: dokumenForm.jenis_dokumen,
-                nomor: dokumenForm.nomor || null,
+                nomor: dokumenForm.jenis_dokumen === 'KTP' && nikKtp ? nikKtp : (dokumenForm.nomor || null),
                 berlaku_sampai: dokumenForm.berlaku_sampai || null,
             }
             if (dokumenEdit) {
@@ -388,6 +389,9 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
             }
             setDokumenOpen(false)
             muatDokumen()
+            if (dokumenForm.jenis_dokumen === 'KTP') {
+                karyawanService.get(id).then(k => setKaryawan(p => (p ? { ...p, nik_ktp: k.nik_ktp } : k))).catch(() => {})
+            }
         } catch (err) {
             toast.push(<Notification type="danger" title={parseApiError(err)} />)
         } finally {
@@ -933,11 +937,16 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         <Select isSearchable={false} placeholder="Pilih jenis..."
                             options={JENIS_DOKUMEN_OPTIONS}
                             value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === dokumenForm.jenis_dokumen) ?? null}
-                            onChange={opt => setDokumenForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '' }))} />
+                            onChange={opt => setDokumenForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: opt?.value === 'KTP' && karyawan?.nik_ktp ? karyawan.nik_ktp : p.nomor }))} />
                     </FormItem>
                     <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Nomor dokumen (opsional)" value={dokumenForm.nomor}
+                        <Input placeholder="Nomor dokumen (opsional)"
+                            value={dokumenForm.jenis_dokumen === 'KTP' && karyawan?.nik_ktp ? karyawan.nik_ktp : dokumenForm.nomor}
+                            disabled={dokumenForm.jenis_dokumen === 'KTP' && !!karyawan?.nik_ktp}
                             onChange={e => setDokumenForm(p => ({ ...p, nomor: e.target.value }))} />
+                        {dokumenForm.jenis_dokumen === 'KTP' && karyawan?.nik_ktp && (
+                            <p className="text-xs text-gray-400 mt-1">Mengikuti NIK KTP karyawan ini</p>
+                        )}
                     </FormItem>
                     <FormItem label="Berlaku Sampai" extra={<span className="text-xs text-gray-400">Kosongkan bila tidak ada masa berlaku</span>}>
                         <DatePicker inputFormat="DD/MM/YYYY"

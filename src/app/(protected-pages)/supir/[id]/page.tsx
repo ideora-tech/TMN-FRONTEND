@@ -1,7 +1,7 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, Button, FormItem, Input, DatePicker, Tag, Tooltip, toast, Notification, Spinner, Pagination } from '@/components/ui'
+import { Card, Button, FormItem, Input, Tag, Tooltip, toast, Notification, Spinner, Pagination } from '@/components/ui'
 import Select from '@/components/ui/Select'
 import { HiArrowLeft, HiOutlinePencilAlt, HiOutlineExclamationCircle, HiOutlineEye, HiOutlineDocumentDownload } from 'react-icons/hi'
 import dayjs from 'dayjs'
@@ -291,6 +291,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         : <span className="text-gray-400">—</span>,
                                 },
                                 { label: 'Telepon', value: supir.telepon ?? <span className="text-gray-400">—</span> },
+                                { label: 'No KTP', value: supir.no_ktp ?? <span className="text-gray-400">—</span> },
                                 {
                                     label: 'Armada Default',
                                     value: supir.id_armada_default
@@ -354,17 +355,9 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                         onChange={opt => opt && setForm(p => ({ ...p, jenis_sim: opt.value }))} />
                                 </FormItem>
                                 <FormItem label="Tgl Habis Masa Berlaku SIM">
-                                    {form.id_karyawan ? (
-                                        <>
-                                            <Input disabled placeholder="Belum ada dokumen SIM"
-                                                value={form.tgl_kadaluarsa_sim ? dayjs(form.tgl_kadaluarsa_sim).format('DD/MM/YYYY') : ''} />
-                                            <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — tambah atau perbarui lewat bagian Dokumen di bawah</p>
-                                        </>
-                                    ) : (
-                                        <DatePicker
-                                            value={form.tgl_kadaluarsa_sim ? new Date(form.tgl_kadaluarsa_sim) : null}
-                                            onChange={date => setForm(p => ({ ...p, tgl_kadaluarsa_sim: date ? dayjs(date).format('YYYY-MM-DD') : '' }))} />
-                                    )}
+                                    <Input disabled placeholder="Belum ada dokumen SIM"
+                                        value={form.tgl_kadaluarsa_sim ? dayjs(form.tgl_kadaluarsa_sim).format('DD/MM/YYYY') : ''} />
+                                    <p className="text-xs text-gray-400 mt-1">Diambil dari dokumen SIM — tambah atau perbarui lewat bagian Dokumen di bawah</p>
                                 </FormItem>
                                 <FormItem label="Status">
                                     <Select isSearchable={false}
@@ -407,7 +400,9 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DokumenSupirSection idSupir={supir.id_supir} idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama} />
+            <DokumenSupirSection idSupir={supir.id_supir} idKaryawan={supir.id_karyawan ?? null} namaSupir={supir.nama}
+                nikKtp={supir.nik_ktp_karyawan ?? null}
+                onBerubah={() => { supirService.get(id).then(s => setSupir(p => (p ? { ...p, no_ktp: s.no_ktp, nik_ktp_karyawan: s.nik_ktp_karyawan, tgl_kadaluarsa_sim: s.tgl_kadaluarsa_sim } : s))).catch(() => {}) }} />
 
             {/* Riwayat Armada (Penugasan) */}
             <Card>
