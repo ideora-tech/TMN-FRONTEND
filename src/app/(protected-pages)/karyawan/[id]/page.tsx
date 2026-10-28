@@ -18,6 +18,7 @@ import { karyawanExitService, JenisExit } from '@/services/karyawanExit.service'
 import { kasbonService } from '@/services/kasbon.service'
 import { kontrakKaryawanService, KontrakKaryawan, JenisKontrak } from '@/services/kontrakKaryawan.service'
 import { dokumenKaryawanService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
+import { nomorAwalDokumen, nomorSaatGantiJenis } from '@/utils/dokumenKtp.util'
 import { LokasiKantor } from '@/services/lokasi-kantor.service'
 import RiwayatJabatanSection from './RiwayatJabatanSection'
 
@@ -363,7 +364,7 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
         setDokumenEdit(d)
         setDokumenForm({
             jenis_dokumen: d.jenis_dokumen,
-            nomor: d.nomor ?? '',
+            nomor: nomorAwalDokumen(d.jenis_dokumen, d.nomor, karyawan?.nik_ktp),
             berlaku_sampai: d.berlaku_sampai ?? '',
         })
         setDokumenFile(null)
@@ -374,10 +375,9 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
         if (!dokumenForm.jenis_dokumen || (!dokumenEdit && !dokumenFile)) return
         setDokumenSaving(true)
         try {
-            const nikKtp = karyawan?.nik_ktp?.trim() || null
             const payload = {
                 jenis_dokumen: dokumenForm.jenis_dokumen,
-                nomor: dokumenForm.jenis_dokumen === 'KTP' && nikKtp ? nikKtp : (dokumenForm.nomor || null),
+                nomor: dokumenForm.nomor.trim() || null,
                 berlaku_sampai: dokumenForm.berlaku_sampai || null,
             }
             if (dokumenEdit) {
@@ -937,15 +937,14 @@ export default function KaryawanDetailPage({ params }: { params: Promise<{ id: s
                         <Select isSearchable={false} placeholder="Pilih jenis..."
                             options={JENIS_DOKUMEN_OPTIONS}
                             value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === dokumenForm.jenis_dokumen) ?? null}
-                            onChange={opt => setDokumenForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: opt?.value === 'KTP' && karyawan?.nik_ktp ? karyawan.nik_ktp : p.nomor }))} />
+                            onChange={opt => setDokumenForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: nomorSaatGantiJenis(p.jenis_dokumen, opt?.value ?? '', p.nomor, karyawan?.nik_ktp) }))} />
                     </FormItem>
                     <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Nomor dokumen (opsional)"
-                            value={dokumenForm.jenis_dokumen === 'KTP' && karyawan?.nik_ktp ? karyawan.nik_ktp : dokumenForm.nomor}
-                            disabled={dokumenForm.jenis_dokumen === 'KTP' && !!karyawan?.nik_ktp}
+                        <Input placeholder={dokumenForm.jenis_dokumen === 'KTP' ? 'Nomor KTP' : 'Nomor dokumen (opsional)'}
+                            value={dokumenForm.nomor} maxLength={dokumenForm.jenis_dokumen === 'KTP' ? 20 : 100}
                             onChange={e => setDokumenForm(p => ({ ...p, nomor: e.target.value }))} />
-                        {dokumenForm.jenis_dokumen === 'KTP' && karyawan?.nik_ktp && (
-                            <p className="text-xs text-gray-400 mt-1">Mengikuti NIK KTP karyawan ini</p>
+                        {dokumenForm.jenis_dokumen === 'KTP' && (
+                            <p className="text-xs text-gray-400 mt-1">Nomor ini juga menjadi NIK KTP karyawan ini</p>
                         )}
                     </FormItem>
                     <FormItem label="Berlaku Sampai" extra={<span className="text-xs text-gray-400">Kosongkan bila tidak ada masa berlaku</span>}>

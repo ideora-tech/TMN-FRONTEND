@@ -9,6 +9,7 @@ import { HiPlusCircle, HiOutlinePencilAlt, HiOutlineTrash } from 'react-icons/hi
 import dayjs from 'dayjs'
 import { parseApiError } from '@/utils/error.util'
 import { dokumenSupirService, DokumenKaryawan } from '@/services/dokumenKaryawan.service'
+import { nomorAwalDokumen, nomorSaatGantiJenis } from '@/utils/dokumenKtp.util'
 
 const JENIS_DOKUMEN_OPTIONS = ['SIM', 'KTP', 'NPWP', 'Sertifikat', 'Kontrak Kerja', 'Ijazah', 'Lainnya'].map(v => ({ value: v, label: v }))
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -55,7 +56,7 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, ni
 
     useEffect(() => { muat() }, [muat, nikKtp, idKaryawan])
 
-    const ktpTerkunci = form.jenis_dokumen === 'KTP' && !!nikKtp
+    const jenisKtp = form.jenis_dokumen === 'KTP'
 
     const bukaTambah = () => {
         setEdit(null)
@@ -68,7 +69,7 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, ni
         setEdit(d)
         setForm({
             jenis_dokumen: d.jenis_dokumen,
-            nomor: d.nomor ?? '',
+            nomor: nomorAwalDokumen(d.jenis_dokumen, d.nomor, nikKtp),
             berlaku_sampai: d.berlaku_sampai ?? '',
         })
         setFile(null)
@@ -89,7 +90,7 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, ni
         try {
             const payload = {
                 jenis_dokumen: form.jenis_dokumen,
-                nomor: ktpTerkunci ? nikKtp : (form.nomor || null),
+                nomor: form.nomor.trim() || null,
                 berlaku_sampai: form.berlaku_sampai || null,
             }
             if (edit) {
@@ -214,12 +215,12 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, ni
                         <Select isSearchable={false} placeholder="Pilih jenis..."
                             options={JENIS_DOKUMEN_OPTIONS}
                             value={JENIS_DOKUMEN_OPTIONS.find(o => o.value === form.jenis_dokumen) ?? null}
-                            onChange={opt => setForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: opt?.value === 'KTP' && nikKtp ? nikKtp : p.nomor }))} />
+                            onChange={opt => setForm(p => ({ ...p, jenis_dokumen: opt?.value ?? '', nomor: nomorSaatGantiJenis(p.jenis_dokumen, opt?.value ?? '', p.nomor, nikKtp) }))} />
                     </FormItem>
                     <FormItem label="Nomor Dokumen">
-                        <Input placeholder="Nomor dokumen (opsional)" value={ktpTerkunci ? (nikKtp ?? '') : form.nomor} disabled={ktpTerkunci}
+                        <Input placeholder={jenisKtp ? 'Nomor KTP' : 'Nomor dokumen (opsional)'} value={form.nomor} maxLength={jenisKtp ? 20 : 100}
                             onChange={e => setForm(p => ({ ...p, nomor: e.target.value }))} />
-                        {ktpTerkunci && <p className="text-xs text-gray-400 mt-1">Mengikuti NIK KTP di data karyawan</p>}
+                        {jenisKtp && idKaryawan && <p className="text-xs text-gray-400 mt-1">Nomor ini juga menjadi NIK KTP di data karyawan</p>}
                     </FormItem>
                     <FormItem label="Berlaku Sampai" extra={<span className="text-xs text-gray-400">Kosongkan bila tidak ada masa berlaku</span>}>
                         <DatePicker inputFormat="DD/MM/YYYY"
