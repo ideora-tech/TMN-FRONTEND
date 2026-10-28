@@ -98,7 +98,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
             if (supir && idKaryawan === supir.id_karyawan) {
                 return { ...p, id_karyawan: idKaryawan, nama: supir.nama, telepon: supir.telepon }
             }
-            return { ...p, id_karyawan: idKaryawan, ...(k ? { nama: k.nama_karyawan, telepon: k.telepon ?? p.telepon } : {}) }
+            return { ...p, id_karyawan: idKaryawan, no_ktp: supir?.no_ktp ?? null, ...(k ? { nama: k.nama_karyawan, telepon: k.telepon ?? p.telepon } : {}) }
         })
     }
 
@@ -197,7 +197,8 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
         }
         setSaving(true)
         try {
-            const updated = await supirService.update(id, form)
+            const { no_ktp, ...lain } = form
+            const updated = await supirService.update(id, (no_ktp ?? '') !== (supir?.no_ktp ?? '') ? { ...lain, no_ktp } : lain)
             setSupir(updated); setEditing(false); setErrors({})
             toast.push(<Notification type="success" title="Data supir berhasil diperbarui" />)
         } catch (err) {
@@ -212,6 +213,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
         ? Math.ceil((new Date(supir.tgl_kadaluarsa_sim).getTime() - Date.now()) / 86400000)
         : null
     const simWarning = daysLeft !== null && daysLeft < 30
+    const noKtpBisaDiubah = !!supir.id_karyawan && form.id_karyawan === supir.id_karyawan
     const initial    = supir.nama?.charAt(0).toUpperCase() ?? '?'
 
     return (
@@ -344,6 +346,17 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
                                 </FormItem>
                                 <FormItem label="Telepon">
                                     <Input value={form.telepon ?? ''} onChange={e => setForm(p => ({ ...p, telepon: e.target.value }))} />
+                                </FormItem>
+                                <FormItem label="No KTP">
+                                    <Input placeholder="Nomor KTP" maxLength={20} value={form.no_ktp ?? ''} disabled={!noKtpBisaDiubah}
+                                        onChange={e => setForm(p => ({ ...p, no_ktp: e.target.value }))} />
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {!supir.id_karyawan
+                                            ? 'Tautkan supir ke karyawan dulu untuk mengisi No KTP'
+                                            : form.id_karyawan !== supir.id_karyawan
+                                                ? 'Simpan tautan karyawan yang baru dulu, lalu ubah No KTP'
+                                                : 'Ikut mengubah NIK KTP di data karyawan dan dokumen KTP'}
+                                    </p>
                                 </FormItem>
                                 <FormItem label="No SIM">
                                     <Input placeholder="Boleh dikosongkan" value={form.no_sim ?? ''} onChange={e => setForm(p => ({ ...p, no_sim: e.target.value }))} />

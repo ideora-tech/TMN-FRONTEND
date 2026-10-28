@@ -53,7 +53,7 @@ export default function DokumenSupirSection({ idSupir, idKaryawan, namaSupir, ni
             })
     }, [idSupir])
 
-    useEffect(() => { muat() }, [muat])
+    useEffect(() => { muat() }, [muat, nikKtp, idKaryawan])
 
     const ktpTerkunci = form.jenis_dokumen === 'KTP' && !!nikKtp
 
