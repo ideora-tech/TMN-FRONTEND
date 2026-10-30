@@ -9,6 +9,7 @@ import { HiPlusCircle, HiOutlineEye, HiOutlineTrash, HiOutlineSearch, HiOutlineX
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { menuService, MenuItem } from '@/services/menu.service'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 
 type FilterOption = { value: string; label: string }
 
@@ -26,6 +27,8 @@ const INDUK_OPTIONS: FilterOption[] = [
 
 export default function MenuAdminPage() {
     const router = useRouter()
+    const { session } = useCurrentSession()
+    const superadmin = ((session?.user?.authority ?? []) as string[]).some(a => a.toLowerCase() === 'superadmin')
     const [list, setList]         = useState<MenuItem[]>([])
     const [loading, setLoading]   = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -206,14 +209,16 @@ export default function MenuAdminPage() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
-                    <Tooltip title="Hapus">
-                        <span
-                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                            onClick={() => setDeleteTarget(row.original)}
-                        >
-                            <HiOutlineTrash className="text-lg" />
-                        </span>
-                    </Tooltip>
+                    {superadmin && (
+                        <Tooltip title="Hapus">
+                            <span
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                onClick={() => setDeleteTarget(row.original)}
+                            >
+                                <HiOutlineTrash className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
                 </div>
                 )
             },
@@ -227,10 +232,12 @@ export default function MenuAdminPage() {
                     <h3 className="font-bold">Manajemen Menu</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Konfigurasi navigasi sidebar sistem</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.MENU_ADMIN_BARU)}>
-                    Tambah Menu
-                </Button>
+                {superadmin && (
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.MENU_ADMIN_BARU)}>
+                        Tambah Menu
+                    </Button>
+                )}
             </div>
             <Card bodyClass="p-0">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">

@@ -7,8 +7,6 @@ const listRoute = (path: string, key: string, authority: string[] = []): Routes 
     [`/${path}/[id]`]: { key, authority, dynamicRoute: true },
 })
 
-const ADMIN_ONLY = ['manager', 'admin', 'superadmin']
-
 export const protectedRoutes: Routes = {
     '/home': {
         key: 'home',
@@ -60,15 +58,15 @@ export const protectedRoutes: Routes = {
     '/proses-pembayaran': { key: 'proses-pembayaran', authority: [] },
     ...listRoute('uang-jalan', 'uang-jalan'),
     '/uang-jalan/[id]/edit': { key: 'uang-jalan', authority: [], dynamicRoute: true },
-    '/konfigurasi-approval': { key: 'konfigurasi-approval', authority: ['superadmin', 'admin'] },
-    ...listRoute('pengguna', 'pengguna', ADMIN_ONLY),
-    ...listRoute('peran', 'peran', ADMIN_ONLY),
+    '/konfigurasi-approval': { key: 'konfigurasi-approval', authority: [] },
+    ...listRoute('pengguna', 'pengguna'),
+    ...listRoute('peran', 'peran'),
     ...listRoute('jenis-kendaraan', 'jenis-kendaraan'),
     ...listRoute('lokasi-kantor', 'lokasi-kantor'),
     ...listRoute('lokasi', 'lokasi'),
     ...listRoute('jenis-bbm', 'jenis-bbm'),
     ...listRoute('komponen-uang-jalan', 'komponen-uang-jalan'),
-    ...listRoute('parameter-bok', 'parameter-bok', ADMIN_ONLY),
+    ...listRoute('parameter-bok', 'parameter-bok'),
     ...listRoute('departemen', 'departemen'),
     ...listRoute('jabatan', 'jabatan'),
     '/struktur-organisasi': { key: 'struktur-organisasi', authority: [] },
@@ -90,11 +88,13 @@ export const protectedRoutes: Routes = {
     '/laporan-pengeluaran': { key: 'laporan-pengeluaran', authority: [] },
     '/rekap-pajak': { key: 'rekap-pajak', authority: [] },
     '/fee-supir': { key: 'fee-supir', authority: [] },
-    ...listRoute('perusahaan', 'perusahaan', ADMIN_ONLY),
-    ...listRoute('menu-admin', 'menu-admin', ADMIN_ONLY),
+    ...listRoute('perusahaan', 'perusahaan'),
+    '/perusahaan/baru': { key: 'perusahaan', authority: ['superadmin'] },
+    ...listRoute('menu-admin', 'menu-admin'),
+    '/menu-admin/baru': { key: 'menu-admin', authority: ['superadmin'] },
     '/log-error': { key: 'log-error', authority: [] },
     '/log-error/[id]': { key: 'log-error', authority: [], dynamicRoute: true },
-    '/format-kode': { key: 'format-kode', authority: ['superadmin', 'admin'] },
+    '/format-kode': { key: 'format-kode', authority: [] },
 }
 
 export const publicRoutes: Routes = {

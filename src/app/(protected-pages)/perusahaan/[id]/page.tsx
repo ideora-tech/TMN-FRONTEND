@@ -6,6 +6,7 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { perusahaanService, Perusahaan } from '@/services/perusahaan.service'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -15,6 +16,8 @@ const AKTIF_OPTIONS = [
 export default function PerusahaanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const { session } = useCurrentSession()
+    const superadmin = ((session?.user?.authority ?? []) as string[]).some(a => a.toLowerCase() === 'superadmin')
     const [perusahaan, setPerusahaan] = useState<Perusahaan | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
@@ -170,11 +173,13 @@ export default function PerusahaanDetailPage({ params }: { params: Promise<{ id:
                             <FormItem label="Telepon">
                                 <Input value={form.telepon ?? ''} onChange={(e) => setForm(p => ({ ...p, telepon: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Status">
-                                <Select options={AKTIF_OPTIONS}
-                                    value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
-                                    onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
-                            </FormItem>
+                            {superadmin && (
+                                <FormItem label="Status">
+                                    <Select options={AKTIF_OPTIONS}
+                                        value={AKTIF_OPTIONS.find(o => o.value === (form.aktif ? '1' : '0')) ?? null}
+                                        onChange={(opt) => setForm(p => ({ ...p, aktif: opt?.value === '1' }))} />
+                                </FormItem>
+                            )}
                             <div className="sm:col-span-2">
                                 <FormItem label="Alamat">
                                     <textarea rows={3} value={form.alamat ?? ''}

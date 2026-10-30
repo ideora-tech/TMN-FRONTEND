@@ -6,6 +6,7 @@ import { HiArrowLeft, HiOutlinePencilAlt } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { menuService, MenuItem } from '@/services/menu.service'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 
 const AKTIF_OPTIONS = [
     { value: '1', label: 'Aktif' },
@@ -20,6 +21,8 @@ const SIDEBAR_OPTIONS = [
 export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const router = useRouter()
+    const { session } = useCurrentSession()
+    const superadmin = ((session?.user?.authority ?? []) as string[]).some(a => a.toLowerCase() === 'superadmin')
     const [menu, setMenu]     = useState<MenuItem | null>(null)
     const [loading, setLoading] = useState(true)
     const [editing, setEditing] = useState(false)
@@ -56,8 +59,7 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
         try {
             const updated = await menuService.update(id, {
                 nama_menu:     form.nama_menu,
-                path:          form.path || null,
-                id_menu_induk: form.id_menu_induk || null,
+                ...(superadmin ? { path: form.path || null, id_menu_induk: form.id_menu_induk || null } : {}),
                 icon:          form.icon || null,
                 urutan:        form.urutan,
                 aktif:         form.aktif,
@@ -150,11 +152,12 @@ export default function MenuAdminDetailPage({ params }: { params: Promise<{ id: 
                                     onChange={(e) => setForm(p => ({ ...p, nama_menu: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Path (URL)">
-                                <Input value={form.path ?? ''}
+                                <Input value={form.path ?? ''} disabled={!superadmin}
                                     onChange={(e) => setForm(p => ({ ...p, path: e.target.value }))} />
+                                {!superadmin && <p className="text-xs text-gray-400 mt-1">Hanya Superadmin yang bisa mengubah path dan menu induk</p>}
                             </FormItem>
                             <FormItem label="Menu Induk">
-                                <Select placeholder="Tanpa induk (root)..." options={indukOptions}
+                                <Select placeholder="Tanpa induk (root)..." options={indukOptions} isDisabled={!superadmin}
                                     value={indukOptions.find(o => o.value === form.id_menu_induk) ?? null}
                                     onChange={(opt) => setForm(p => ({ ...p, id_menu_induk: opt?.value ?? null }))}
                                     isClearable />

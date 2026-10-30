@@ -9,9 +9,12 @@ import { HiPlusCircle, HiOutlineEye, HiOutlineTrash } from 'react-icons/hi'
 import { parseApiError } from '@/utils/error.util'
 import { ROUTES } from '@/constants/route.constant'
 import { perusahaanService, Perusahaan } from '@/services/perusahaan.service'
+import useCurrentSession from '@/utils/hooks/useCurrentSession'
 
 export default function PerusahaanPage() {
     const router = useRouter()
+    const { session } = useCurrentSession()
+    const superadmin = ((session?.user?.authority ?? []) as string[]).some(a => a.toLowerCase() === 'superadmin')
     const [list, setList]         = useState<Perusahaan[]>([])
     const [loading, setLoading]   = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -78,14 +81,16 @@ export default function PerusahaanPage() {
                             <HiOutlineEye className="text-lg" />
                         </span>
                     </Tooltip>
-                    <Tooltip title="Hapus">
-                        <span
-                            className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
-                            onClick={() => setDeleteTarget(row.original)}
-                        >
-                            <HiOutlineTrash className="text-lg" />
-                        </span>
-                    </Tooltip>
+                    {superadmin && (
+                        <Tooltip title="Hapus">
+                            <span
+                                className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30 transition-colors"
+                                onClick={() => setDeleteTarget(row.original)}
+                            >
+                                <HiOutlineTrash className="text-lg" />
+                            </span>
+                        </Tooltip>
+                    )}
                 </div>
             ),
         },
@@ -98,10 +103,12 @@ export default function PerusahaanPage() {
                     <h3 className="font-bold">Perusahaan</h3>
                     <p className="text-gray-500 text-sm mt-0.5">Data master perusahaan</p>
                 </div>
-                <Button variant="solid" size="sm" icon={<HiPlusCircle />}
-                    onClick={() => router.push(ROUTES.PERUSAHAAN_BARU)}>
-                    Tambah Perusahaan
-                </Button>
+                {superadmin && (
+                    <Button variant="solid" size="sm" icon={<HiPlusCircle />}
+                        onClick={() => router.push(ROUTES.PERUSAHAAN_BARU)}>
+                        Tambah Perusahaan
+                    </Button>
+                )}
             </div>
             <Card>
                 <DataTable columns={columns} data={list} loading={loading}
