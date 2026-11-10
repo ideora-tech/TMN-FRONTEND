@@ -25,7 +25,7 @@ export default function SupirBaruPage() {
         supirService.opsiPengguna()
             .then(res => setPenggunaOptions(res
                 .filter((o: OpsiPenggunaSupir) => !o.id_supir_tertaut)
-                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: `${o.username} — ${o.email}` }))))
+                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: o.email ? `${o.username} — ${o.email}` : o.username }))))
             .catch(() => {})
         armadaService.list(1, 100)
             .then(res => setArmadaOptions(res.data

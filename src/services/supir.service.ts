@@ -21,7 +21,7 @@ export interface Supir {
 export interface OpsiPenggunaSupir {
     id_pengguna: string
     username: string
-    email: string
+    email: string | null
     id_supir_tertaut: string | null
     nama_supir_tertaut: string | null
 }

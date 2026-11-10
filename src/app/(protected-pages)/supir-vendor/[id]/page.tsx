@@ -74,7 +74,7 @@ export default function SupirVendorDetailPage({ params }: { params: Promise<{ id
                 setAkunMap(Object.fromEntries(akun.map(u => [u.id_pengguna, u.username])))
                 setAkunOptions(akun
                     .filter(u => !dipakai.has(u.id_pengguna))
-                    .map(u => ({ value: u.id_pengguna, label: `${u.username} — ${u.email ?? ''}` })))
+                    .map(u => ({ value: u.id_pengguna, label: u.email ? `${u.username} — ${u.email}` : u.username })))
             })
             .catch(() => {})
     }, [id])

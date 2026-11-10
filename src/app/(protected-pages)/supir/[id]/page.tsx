@@ -79,7 +79,7 @@ export default function SupirDetailPage({ params }: { params: Promise<{ id: stri
         supirService.opsiPengguna()
             .then(res => setPenggunaOptions(res
                 .filter((o: OpsiPenggunaSupir) => !o.id_supir_tertaut || o.id_supir_tertaut === id)
-                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: `${o.username} — ${o.email}` }))))
+                .map((o: OpsiPenggunaSupir) => ({ value: o.id_pengguna, label: o.email ? `${o.username} — ${o.email}` : o.username }))))
             .catch(() => {})
     }, [id])
 

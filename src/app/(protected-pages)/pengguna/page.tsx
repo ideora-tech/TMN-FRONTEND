@@ -82,7 +82,7 @@ export default function PenggunaPage() {
         },
         { header: 'Email', accessorKey: 'email',
             cell: ({ row }: CellContext<Pengguna, unknown>) => (
-                <span className="text-sm text-gray-600 dark:text-gray-400">{row.original.email}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{row.original.email ?? '—'}</span>
             ),
         },
         { header: 'Peran', accessorKey: 'kode_peran',

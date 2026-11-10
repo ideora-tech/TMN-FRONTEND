@@ -6,7 +6,7 @@ export interface Pengguna {
     id_perusahaan: string | null
     id_karyawan: string | null
     username: string
-    email: string
+    email: string | null
     kode_peran: string | null
     aktif: boolean
     harus_ganti_password: boolean

@@ -77,7 +77,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
         try {
             const updated = await penggunaService.update(id, {
                 username:    form.username,
-                email:       form.email,
+                email:       form.email?.trim() || null,
                 kode_peran:  form.kode_peran ?? null,
                 aktif:       form.aktif,
                 id_karyawan: peranSupir(form.kode_peran) ? null : (form.id_karyawan ?? null),
@@ -138,7 +138,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <div>
                     <h3 className="font-bold">{data.username}</h3>
-                    <p className="text-gray-500 text-sm mt-0.5">{data.email}</p>
+                    <p className="text-gray-500 text-sm mt-0.5">{data.email ?? 'Tanpa email'}</p>
                 </div>
             </div>
             <Card>
@@ -151,7 +151,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 </div>
                                 <div>
                                     <p className="font-semibold text-base text-gray-800 dark:text-gray-100 leading-tight">{data.username}</p>
-                                    <p className="text-sm text-gray-500 mt-1">{data.email}</p>
+                                    <p className="text-sm text-gray-500 mt-1">{data.email ?? 'Tanpa email'}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -167,7 +167,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                             {([
                                 { label: 'Username',      value: data.username },
-                                { label: 'Email',         value: data.email },
+                                { label: 'Email',         value: data.email ?? <span className="text-gray-400">—</span> },
                                 { label: 'Peran',         value: peranOptions.find(o => o.value === data.kode_peran)?.label ?? data.kode_peran ?? <span className="text-gray-400">—</span> },
                                 { label: 'Login Terakhir', value: data.login_terakhir ? dayjs(data.login_terakhir).format('DD MMM YYYY HH:mm') : <span className="text-gray-400">—</span> },
                                 ...(data.kode_peran === PERAN_SUPIR ? [{
@@ -227,7 +227,7 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                             <FormItem label="Username">
                                 <Input value={form.username ?? ''} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} />
                             </FormItem>
-                            <FormItem label="Email">
+                            <FormItem label="Email (opsional)">
                                 <Input type="email" value={form.email ?? ''} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
                             </FormItem>
                             <FormItem label="Peran">
@@ -271,9 +271,12 @@ export default function PenggunaDetailPage({ params }: { params: Promise<{ id: s
                                 </FormItem>
                             )}
                         </div>
-                        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setTautan(tautanDari(opsiSupir, id)) }}>Kembali</Button>
-                            <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
+                        <div className="flex items-center justify-between gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <Button type="button" variant="plain" icon={<HiOutlineLockClosed />} onClick={() => setPwOpen(true)}>Ganti Kata Sandi</Button>
+                            <div className="flex gap-2">
+                                <Button type="button" variant="plain" onClick={() => { setEditing(false); setForm(data); setTautan(tautanDari(opsiSupir, id)) }}>Kembali</Button>
+                                <Button type="submit" variant="solid" loading={saving}>Simpan</Button>
+                            </div>
                         </div>
                         </form>
                     </>

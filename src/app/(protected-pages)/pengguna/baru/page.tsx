@@ -43,7 +43,6 @@ export default function PenggunaBaruPage() {
     const validate = () => {
         const e: Record<string, string> = {}
         if (!form.username.trim()) e.username = 'Username wajib diisi'
-        if (!form.email.trim()) e.email = 'Email wajib diisi'
         if (!form.kata_sandi.trim()) e.kata_sandi = 'Kata sandi wajib diisi'
         else if (form.kata_sandi.length < 8) e.kata_sandi = 'Kata sandi minimal 8 karakter'
         setErrors(e)
@@ -62,7 +61,7 @@ export default function PenggunaBaruPage() {
                 id_perusahaan: null,
                 id_karyawan: peranSupir(form.kode_peran) ? null : (form.id_karyawan || null),
                 username: form.username,
-                email: form.email,
+                email: form.email.trim() || null,
                 kata_sandi: form.kata_sandi,
                 kode_peran: form.kode_peran || null,
                 aktif: form.aktif,
@@ -100,7 +99,7 @@ export default function PenggunaBaruPage() {
                         <Input placeholder="Username login" value={form.username} invalid={!!errors.username}
                             onChange={e => setForm(p => ({ ...p, username: e.target.value }))} />
                     </FormItem>
-                    <FormItem label="Email" asterisk invalid={!!errors.email} errorMessage={errors.email}>
+                    <FormItem label="Email (opsional)" invalid={!!errors.email} errorMessage={errors.email}>
                         <Input type="email" placeholder="email@tmn.com" value={form.email} invalid={!!errors.email}
                             onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
                     </FormItem>
