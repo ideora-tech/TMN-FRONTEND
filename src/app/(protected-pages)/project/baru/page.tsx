@@ -101,16 +101,21 @@ export default function ProjectBaruPage() {
             .catch(() => {})
     }, [fromPenawaran])
 
+    // Tipe nilai tetap: nilai kontrak diketik manual, harga per rute tidak dipakai (sama seperti form penawaran)
+    const nilaiTetap = tipeHargaNilaiTetap(form.tipe_harga)
+
     useEffect(() => {
         if (fromPenawaran) return
-        const total = manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0)
+        const total = nilaiTetap
+            ? 0
+            : manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0)
         const nilai = total > 0 ? String(total) : ''
         setForm(p => ({
             ...p,
             harga_penawaran: hargaDiketikManual.penawaran ? p.harga_penawaran : nilai,
             harga_proyek:    hargaDiketikManual.proyek    ? p.harga_proyek    : nilai,
         }))
-    }, [manualRuteRows, fromPenawaran, hargaDiketikManual])
+    }, [manualRuteRows, fromPenawaran, hargaDiketikManual, nilaiTetap])
 
     const validate = () => {
         const e: Partial<Record<keyof typeof form, string>> = {}
@@ -149,7 +154,8 @@ export default function ProjectBaruPage() {
         }
         setLoading(true)
         try {
-            const rute: ProyekRutePayload[] = manualRuteRows.map(row => toProyekRutePayload(row))
+            const rute: ProyekRutePayload[] = manualRuteRows.map(row =>
+                toProyekRutePayload(nilaiTetap ? { ...row, harga_penawaran: '' } : row))
 
             await projectService.create({
                 id_klien: form.id_klien, nama_proyek: form.nama_proyek,
@@ -305,14 +311,17 @@ export default function ProjectBaruPage() {
                                     jenisOptions={jenisOptionsMaster}
                                     komponenOpsi={komponenOpsi}
                                     onRuteCreated={() => muatRuteOptions()}
+                                    nilaiTetap={nilaiTetap}
                                 />
-                                <div className="flex justify-end mt-3">
-                                    <p className="text-sm">Total Nilai Penawaran:{' '}
-                                        <span className="font-bold text-base">
-                                            {formatRupiah(manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0))}
-                                        </span>
-                                    </p>
-                                </div>
+                                {!nilaiTetap && (
+                                    <div className="flex justify-end mt-3">
+                                        <p className="text-sm">Total Nilai Penawaran:{' '}
+                                            <span className="font-bold text-base">
+                                                {formatRupiah(manualRuteRows.reduce((sum, r) => sum + (Number(r.harga_penawaran) || 0) * (Number(r.estimasi_ritase) || 1), 0))}
+                                            </span>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 

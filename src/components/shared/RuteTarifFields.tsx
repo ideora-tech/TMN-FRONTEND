@@ -54,6 +54,10 @@ type Props = {
     onRuteCreated?: (rute: Rute) => void
     hargaTerkunci?: boolean
     modeEdit?: boolean
+    /** Proyek bertipe nilai tetap (borongan/unit only/unit + driver/all in): harga ada di level proyek, bukan per rute. */
+    nilaiTetap?: boolean
+    /** Nilai penawaran proyek, ditampilkan read-only di modal edit saat nilaiTetap. */
+    nilaiPenawaranProyek?: number | null
 }
 
 const JENIS_SEMUA: Option = { value: '', label: 'Semua jenis' }
@@ -69,7 +73,7 @@ function angka(v: string): string {
     return v.replace(/\D/g, '')
 }
 
-export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated, hargaTerkunci, modeEdit }: Props) {
+export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated, hargaTerkunci, modeEdit, nilaiTetap, nilaiPenawaranProyek }: Props) {
     const [showRuteBaru, setShowRuteBaru] = useState(false)
     const ruteHargaTerkunci = !!hargaTerkunci || !!modeEdit
     const ruteTerpilih = ruteOptions.find(o => o.value === value.id_rute)
@@ -141,16 +145,27 @@ export default function RuteTarifFields({ value, onChange, ruteOptions, jenisOpt
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <FormItem label="Harga Penawaran">
-                    <Input prefix="Rp" placeholder="0" disabled={ruteHargaTerkunci}
-                        value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
-                        onChange={e => setField({ harga_penawaran: angka(e.target.value) })} />
-                    {ruteHargaTerkunci && (
-                        <p className="text-xs text-amber-500 mt-1">
-                            {hargaTerkunci ? 'Harga terkunci — ubah lewat penawaran revisi' : 'Harga penawaran diatur lewat penawaran, bukan dari sini'}
-                        </p>
-                    )}
-                </FormItem>
+                {nilaiTetap ? (
+                    modeEdit && (
+                        <FormItem label="Nilai Penawaran Proyek">
+                            <Input prefix="Rp" disabled value={formatNum(nilaiPenawaranProyek ?? 0)} />
+                            <p className="text-xs text-gray-400 mt-1">
+                                Berlaku untuk seluruh rute proyek — ubah lewat penawaran revisi
+                            </p>
+                        </FormItem>
+                    )
+                ) : (
+                    <FormItem label="Harga Penawaran">
+                        <Input prefix="Rp" placeholder="0" disabled={ruteHargaTerkunci}
+                            value={value.harga_penawaran ? formatNum(Number(value.harga_penawaran)) : ''}
+                            onChange={e => setField({ harga_penawaran: angka(e.target.value) })} />
+                        {ruteHargaTerkunci && (
+                            <p className="text-xs text-amber-500 mt-1">
+                                {hargaTerkunci ? 'Harga terkunci — ubah lewat penawaran revisi' : 'Harga penawaran diatur lewat penawaran, bukan dari sini'}
+                            </p>
+                        )}
+                    </FormItem>
+                )}
                 <FormItem label="Estimasi Ritase">
                     <Input type="number" min="1" disabled={hargaTerkunci}
                         value={value.estimasi_ritase}

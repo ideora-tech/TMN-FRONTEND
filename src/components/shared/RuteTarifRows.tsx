@@ -15,13 +15,15 @@ type Props = {
     jenisOptions: Option[]
     komponenOpsi: KomponenUangJalan[]
     onRuteCreated?: (rute: Rute) => void
+    /** Proyek nilai tetap: harga per rute tidak dipakai, jadi field harga dan subtotal disembunyikan. */
+    nilaiTetap?: boolean
 }
 
 export function subtotalRuteTarif(row: RuteTarifState): number {
     return (Number(row.harga_penawaran) || 0) * (Number(row.estimasi_ritase) || 1)
 }
 
-export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated }: Props) {
+export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptions, jenisOptions, komponenOpsi, onRuteCreated, nilaiTetap }: Props) {
     return (
         <div className="flex flex-col gap-4">
             {rows.map((row, i) => {
@@ -46,14 +48,17 @@ export default function RuteTarifRows({ rows, onChangeRow, onHapusRow, ruteOptio
                             jenisOptions={jenisOptions}
                             komponenOpsi={komponenOpsi}
                             onRuteCreated={onRuteCreated}
+                            nilaiTetap={nilaiTetap}
                         />
 
-                        <div className="flex items-baseline justify-end gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">
-                                {subtotal > 0 ? formatRupiah(subtotal) : '—'}
-                            </span>
-                        </div>
+                        {!nilaiTetap && (
+                            <div className="flex items-baseline justify-end gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Subtotal</span>
+                                <span className="font-semibold text-gray-800 dark:text-gray-100">
+                                    {subtotal > 0 ? formatRupiah(subtotal) : '—'}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )
             })}

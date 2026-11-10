@@ -308,8 +308,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
         setSavingRuteRows(true)
         try {
+            // Proyek nilai tetap: harga ada di level proyek, jadi harga per rute tidak ikut dikirim
+            const nilaiTetap = tipeHargaNilaiTetap(project?.tipe_harga)
             for (const row of ruteRows) {
-                await proyekRuteService.create(id, toProyekRutePayload(row))
+                await proyekRuteService.create(id, toProyekRutePayload(nilaiTetap ? { ...row, harga_penawaran: '' } : row))
             }
             toast.push(<Notification type="success" title="Rute proyek berhasil ditambahkan" />)
             setRuteRows([])
@@ -831,6 +833,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             jenisOptions={jenisOptionsMaster}
                             komponenOpsi={komponenOpsi}
                             onRuteCreated={() => muatRuteOptions()}
+                            nilaiTetap={tipeHargaNilaiTetap(project.tipe_harga)}
                         />
                         {ruteRowsError && <p className="text-red-500 text-sm mt-2">{ruteRowsError}</p>}
                         <div className="flex justify-end gap-2 mt-4">
@@ -940,7 +943,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <h5 className="text-base font-semibold mb-5">Edit Rute Proyek</h5>
                 <RuteTarifFields value={editRuteTarif} onChange={setEditRuteTarif}
                     ruteOptions={ruteOptionsMaster} jenisOptions={jenisOptionsMaster} komponenOpsi={komponenOpsi}
-                    onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} modeEdit />
+                    onRuteCreated={muatRuteOptions} hargaTerkunci={hargaTerkunci} modeEdit
+                    nilaiTetap={tipeHargaNilaiTetap(project.tipe_harga)} nilaiPenawaranProyek={project.harga_penawaran ?? 0} />
                 <div className="flex justify-end gap-2 mt-6">
                     <Button variant="plain" onClick={() => setEditRuteTarget(null)}>Kembali</Button>
                     <Button variant="solid" loading={updatingRute} onClick={handleEditRute}>Simpan</Button>
